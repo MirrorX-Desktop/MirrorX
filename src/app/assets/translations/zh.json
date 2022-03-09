@@ -1,0 +1,20 @@
+{
+    "side_menu": {
+        "connect_to_remote": "远程连接",
+        "lan_discovery": "局域网发现",
+        "file_transfer": "文件传输",
+        "connection_history": "连接历史",
+        "settings": "设置"
+    },
+    "connect_to_remote": {
+        "connect_remote_title": "通过ID连接",
+        "connect": "连接",
+        "local_access_id_title": "本机访问ID",
+        "local_access_id_copy": "复制本机访问ID",
+        "local_access_id_copy_tooltip": "您的本机访问ID已经复制到剪贴板",
+        "local_access_password_title": "本机访问密码",
+        "local_access_password_show": "显示密码",
+        "local_access_password_hide": "隐藏密码",
+        "local_access_password_edit": "修改密码"
+    }
+}

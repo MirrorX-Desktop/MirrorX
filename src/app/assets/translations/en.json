@@ -1,0 +1,20 @@
+{
+    "side_menu": {
+        "connect_to_remote": "Connect\nTo Remote",
+        "lan_discovery": "LAN\nDiscovery",
+        "file_transfer": "File Transfer",
+        "connection_history": "Connection\nHistory",
+        "settings": "Settings"
+    },
+    "connect_to_remote": {
+        "connect_remote_title": "Access With ID",
+        "connect": "Connect",
+        "local_access_id_title": "Local Access ID",
+        "local_access_id_copy": "Copy Access ID",
+        "local_access_id_copy_tooltip": "Your Access ID has been copied to your clipboard",
+        "local_access_password_title": "Local Access Password",
+        "local_access_password_show": "Show Password",
+        "local_access_password_hide": "Hide Password",
+        "local_access_password_edit": "Edit Password"
+    }
+}

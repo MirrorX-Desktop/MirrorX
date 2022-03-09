@@ -1,0 +1,28 @@
+[tasks.format]
+install_crate = "rustfmt"
+command = "cargo"
+args = ["fmt", "--", "--emit=files"]
+
+[tasks.clean]
+command = "cargo"
+args = ["clean"]
+
+[tasks.build]
+mac_alias = "build_macos"
+dependencies = ["clean"]
+
+[tasks.test]
+command = "cargo"
+args = ["test"]
+dependencies = ["clean"]
+
+[tasks.build_macos]
+command = "cargo"
+args = ["build", "--target", "x86_64-apple-darwin", "--release"]
+
+[tasks.make]
+dependencies = [
+    "format",
+    "test",
+    "build"
+]
