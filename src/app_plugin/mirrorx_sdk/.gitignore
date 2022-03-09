@@ -27,3 +27,7 @@
 .dart_tool/
 .packages
 build/
+
+# exteranl dependencies libraries
+/macos/*.dylib
+/macos/*.a
