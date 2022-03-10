@@ -29,8 +29,8 @@ class _DevicePasswordFieldState extends State<DevicePasswordField> {
         ),
         IconButton(
           tooltip: _passwordVisable
-              ? tr("connect_to_remote.local_access_password_hide")
-              : tr("connect_to_remote.local_access_password_show"),
+              ? tr("connect_to_remote.device_password_hide")
+              : tr("connect_to_remote.device_password_show"),
           onPressed: () => setState(() {
             _passwordVisable = !_passwordVisable;
           }),
@@ -43,7 +43,7 @@ class _DevicePasswordFieldState extends State<DevicePasswordField> {
           ),
         ),
         IconButton(
-          tooltip: tr("connect_to_remote.local_access_password_edit"),
+          tooltip: tr("connect_to_remote.device_password_edit"),
           onPressed: () {},
           splashRadius: 14,
           splashColor: Colors.transparent,

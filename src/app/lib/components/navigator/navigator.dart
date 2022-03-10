@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:mirrorx/pages/connection_history/connection_history.dart';
 import 'package:mirrorx/pages/file_transfer/file_transfer.dart';
 import 'package:mirrorx/pages/home/home.dart';
-import 'package:mirrorx/pages/lan/lan.dart';
+import 'package:mirrorx/pages/lan_discovery/lan_discovery.dart';
 import 'package:mirrorx/pages/remote_desktop/remote_desktop.dart';
 import 'package:mirrorx/pages/settings/settings.dart';
 
@@ -14,7 +14,7 @@ class AppNavigator extends ChangeNotifier {
 
   final _systemPages = [
     const HomePage(tag: "home"),
-    const LanPage(tag: "lan"),
+    const LanDiscoveryPage(tag: "lan"),
     const FilePage(tag: "file"),
     const HistoryPage(tag: "history"),
     const SettingsPage(tag: "settings"),

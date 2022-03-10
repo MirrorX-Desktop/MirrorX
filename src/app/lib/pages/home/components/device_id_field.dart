@@ -54,12 +54,12 @@ class _DeviceIDFieldState extends State<DeviceIDField> {
               onPressed: () {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text(
-                        tr("connect_to_remote.local_access_id_copy_tooltip")),
+                    content:
+                        Text(tr("connect_to_remote.device_id_copy_tooltip")),
                   ),
                 );
               },
-              tooltip: tr("connect_to_remote.local_access_id_copy"),
+              tooltip: tr("connect_to_remote.device_id_copy"),
               splashRadius: 14,
               splashColor: Colors.transparent,
               hoverColor: const Color.fromARGB(240, 220, 220, 220),

@@ -38,7 +38,7 @@ class _HomeState extends State<HomePage> {
                 child: SizedBox(
                   width: 320,
                   child: _createBorderedField(
-                      tr("connect_to_remote.local_access_id_title"),
+                      tr("connect_to_remote.device_id_title"),
                       const DeviceIDField()),
                 ),
               ),
@@ -47,7 +47,7 @@ class _HomeState extends State<HomePage> {
                 child: SizedBox(
                   width: 320,
                   child: _createBorderedField(
-                      tr("connect_to_remote.local_access_password_title"),
+                      tr("connect_to_remote.device_password_title"),
                       const DevicePasswordField()),
                 ),
               )
