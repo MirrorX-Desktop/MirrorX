@@ -21,14 +21,14 @@ final _allowInputKey = [
   LogicalKeyboardKey.numpad9,
 ];
 
-class ConnectRemoteField extends StatefulWidget {
-  const ConnectRemoteField({Key? key}) : super(key: key);
+class ConnectIDField extends StatefulWidget {
+  const ConnectIDField({Key? key}) : super(key: key);
 
   @override
-  _ConnectRemoteFieldState createState() => _ConnectRemoteFieldState();
+  _ConnectIDFieldState createState() => _ConnectIDFieldState();
 }
 
-class _ConnectRemoteFieldState extends State<ConnectRemoteField> {
+class _ConnectIDFieldState extends State<ConnectIDField> {
   late AppNavigator _appNavigator;
 
   @override

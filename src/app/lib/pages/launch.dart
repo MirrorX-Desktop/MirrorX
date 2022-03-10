@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mirrorx/components/navigator/navigator.dart';
-import 'package:mirrorx/components/sideMenu/sideMenu.dart';
+import 'package:mirrorx/components/side_menu/side_menu.dart';
 import 'package:provider/provider.dart';
 
 class LaunchPage extends StatefulWidget {

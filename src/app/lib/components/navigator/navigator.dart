@@ -1,10 +1,10 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:mirrorx/pages/file/file.dart';
-import 'package:mirrorx/pages/history/history.dart';
+import 'package:mirrorx/pages/connection_history/connection_history.dart';
+import 'package:mirrorx/pages/file_transfer/file_transfer.dart';
 import 'package:mirrorx/pages/home/home.dart';
 import 'package:mirrorx/pages/lan/lan.dart';
-import 'package:mirrorx/pages/remoteDesktop/remoteDesktop.dart';
+import 'package:mirrorx/pages/remote_desktop/remote_desktop.dart';
 import 'package:mirrorx/pages/settings/settings.dart';
 
 class AppNavigator extends ChangeNotifier {

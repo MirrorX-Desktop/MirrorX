@@ -1,6 +1,6 @@
-use anyhow::anyhow;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
+use std::error::Error;
 
 #[derive(Debug, Deserialize, Serialize)]
 struct AllocIdRequest {
@@ -13,15 +13,13 @@ struct AllocIdResponse {
     device_token: String,
 }
 
-pub fn request_device_token() -> anyhow::Result<String> {
+pub fn request_device_token() -> Result<String, Box<dyn Error>> {
     let mut hash_plain = String::new();
 
     #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
     {
-        match machine_uid::get() {
-            Ok(uid) => hash_plain.push_str(&uid),
-            Err(err) => return Err(anyhow!("{}", err)),
-        };
+        let machine_id = machine_uid::get()?;
+        hash_plain.push_str(&machine_id);
     }
 
     #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]

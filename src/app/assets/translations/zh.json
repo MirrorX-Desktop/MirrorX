@@ -1,4 +1,6 @@
 {
+    "init_sdk_failed_dialog_message": "MirrorX 初始化失败，请重新启动再次尝试！",
+    "init_sdk_failed_dialog_ok": "确定",
     "side_menu": {
         "connect_to_remote": "远程连接",
         "lan_discovery": "局域网发现",
@@ -16,5 +18,8 @@
         "local_access_password_show": "显示密码",
         "local_access_password_hide": "隐藏密码",
         "local_access_password_edit": "修改密码"
+    },
+    "device_id_field": {
+        "load_failed_tooltip": "获取设备ID失败，点击按钮重试！"
     }
 }

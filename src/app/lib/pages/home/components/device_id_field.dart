@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:developer' as dev;
 
 import 'package:easy_localization/easy_localization.dart';
@@ -5,16 +6,15 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:mirrorx_sdk/mirrorx_sdk.dart';
 
-class LocalAccessIdField extends StatefulWidget {
-  const LocalAccessIdField({Key? key}) : super(key: key);
+class DeviceIDField extends StatefulWidget {
+  const DeviceIDField({Key? key}) : super(key: key);
 
   @override
-  _LocalAccessIdFieldState createState() => _LocalAccessIdFieldState();
+  _DeviceIDFieldState createState() => _DeviceIDFieldState();
 }
 
-class _LocalAccessIdFieldState extends State<LocalAccessIdField> {
-  late final Future<String> _loadLocalAccessIdFuture =
-      MirrorXSDK.requestDeviceToken();
+class _DeviceIDFieldState extends State<DeviceIDField> {
+  late Future<String> _getDeviceIDFuture = _getDeviceID();
 
   @override
   Widget build(BuildContext context) {
@@ -24,31 +24,30 @@ class _LocalAccessIdFieldState extends State<LocalAccessIdField> {
         children: [
           Expanded(
             child: FutureBuilder(
-                future: _loadLocalAccessIdFuture,
+                future: _getDeviceIDFuture,
                 builder: (context, snapshot) {
                   if (snapshot.connectionState != ConnectionState.done) {
                     return const CupertinoActivityIndicator();
                   }
 
                   if (snapshot.hasError) {
-                    return const Text("error",
-                        style: TextStyle(color: Colors.red));
+                    return IconButton(
+                        onPressed: _retryGetDeviceID,
+                        tooltip: tr("device_id_field.load_failed_tooltip"),
+                        splashRadius: 14,
+                        splashColor: Colors.transparent,
+                        hoverColor: const Color.fromARGB(240, 220, 220, 220),
+                        icon: const Icon(
+                          Icons.warning,
+                          size: 16,
+                          color: Colors.red,
+                        ));
                   }
 
-                  if (!snapshot.hasData) {
-                    return const Text("no data",
-                        style: TextStyle(color: Colors.red));
-                  }
+                  final deviceID = snapshot.data! as String;
+                  dev.log("get device id: $deviceID");
 
-                  final accessId = snapshot.data! as String;
-                  dev.log(accessId);
-                  final splitted = accessId.split('.');
-                  if (splitted.length != 4) {
-                    return const Text("splitted error",
-                        style: TextStyle(color: Colors.red));
-                  }
-
-                  return NumericPanel(numericStr: splitted[0].padLeft(8, '0'));
+                  return NumericPanel(numericStr: deviceID.padLeft(8, '0'));
                 }),
           ),
           IconButton(
@@ -71,6 +70,35 @@ class _LocalAccessIdFieldState extends State<LocalAccessIdField> {
         ],
       ),
     );
+  }
+
+  Future<String> _getDeviceID() async {
+    try {
+      final sdk = await MirrorXSDK.getInstance();
+      final deviceID = await sdk.config.readConfig("device_id");
+      if (deviceID != null) {
+        return Future.value(deviceID);
+      }
+
+      final deviceToken = await sdk.requestDeviceToken();
+      final splitted = deviceToken.split('.');
+      if (splitted.length != 4) {
+        return Future.error(Exception("invalid device token"));
+      }
+
+      final newDeviceID = splitted[0];
+      await sdk.config.storeConfig("device_id", newDeviceID);
+
+      return Future.value(newDeviceID);
+    } catch (err) {
+      return Future.error(err);
+    }
+  }
+
+  void _retryGetDeviceID() {
+    setState(() {
+      _getDeviceIDFuture = _getDeviceID();
+    });
   }
 }
 

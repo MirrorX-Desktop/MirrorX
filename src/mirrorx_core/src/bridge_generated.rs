@@ -17,6 +17,21 @@ use flutter_rust_bridge::*;
 // Section: wire functions
 
 #[no_mangle]
+pub extern "C" fn wire_init_sdk(port_: i64, config_db_path: *mut wire_uint_8_list) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap(
+        WrapInfo {
+            debug_name: "init_sdk",
+            port: Some(port_),
+            mode: FfiCallMode::Normal,
+        },
+        move || {
+            let api_config_db_path = config_db_path.wire2api();
+            move |task_callback| Ok(init_sdk(api_config_db_path))
+        },
+    )
+}
+
+#[no_mangle]
 pub extern "C" fn wire_request_device_token(port_: i64) {
     FLUTTER_RUST_BRIDGE_HANDLER.wrap(
         WrapInfo {
@@ -28,13 +43,64 @@ pub extern "C" fn wire_request_device_token(port_: i64) {
     )
 }
 
+#[no_mangle]
+pub extern "C" fn wire_read_config(port_: i64, key: *mut wire_uint_8_list) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap(
+        WrapInfo {
+            debug_name: "read_config",
+            port: Some(port_),
+            mode: FfiCallMode::Normal,
+        },
+        move || {
+            let api_key = key.wire2api();
+            move |task_callback| read_config(api_key)
+        },
+    )
+}
+
+#[no_mangle]
+pub extern "C" fn wire_store_config(
+    port_: i64,
+    key: *mut wire_uint_8_list,
+    value: *mut wire_uint_8_list,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap(
+        WrapInfo {
+            debug_name: "store_config",
+            port: Some(port_),
+            mode: FfiCallMode::Normal,
+        },
+        move || {
+            let api_key = key.wire2api();
+            let api_value = value.wire2api();
+            move |task_callback| store_config(api_key, api_value)
+        },
+    )
+}
+
 // Section: wire structs
+
+#[repr(C)]
+#[derive(Clone)]
+pub struct wire_uint_8_list {
+    ptr: *mut u8,
+    len: i32,
+}
 
 // Section: wrapper structs
 
 // Section: static checks
 
 // Section: allocate functions
+
+#[no_mangle]
+pub extern "C" fn new_uint_8_list(len: i32) -> *mut wire_uint_8_list {
+    let ans = wire_uint_8_list {
+        ptr: support::new_leak_vec_ptr(Default::default(), len),
+        len,
+    };
+    support::new_leak_box_ptr(ans)
+}
 
 // Section: impl Wire2Api
 
@@ -51,6 +117,28 @@ where
             None
         } else {
             Some(self.wire2api())
+        }
+    }
+}
+
+impl Wire2Api<String> for *mut wire_uint_8_list {
+    fn wire2api(self) -> String {
+        let vec: Vec<u8> = self.wire2api();
+        String::from_utf8_lossy(&vec).into_owned()
+    }
+}
+
+impl Wire2Api<u8> for u8 {
+    fn wire2api(self) -> u8 {
+        self
+    }
+}
+
+impl Wire2Api<Vec<u8>> for *mut wire_uint_8_list {
+    fn wire2api(self) -> Vec<u8> {
+        unsafe {
+            let wrap = support::box_from_leak_ptr(self);
+            support::vec_from_leak_ptr(wrap.ptr, wrap.len)
         }
     }
 }

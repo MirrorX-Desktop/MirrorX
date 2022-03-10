@@ -21,8 +21,9 @@ sha2 = "0.10.2"
 hex = "0.4.3"
 serde = { version = "1.0.136", features = ["derive"] }
 serde_json = "1.0.79"
-flutter_rust_bridge =  "1.22.2"
+flutter_rust_bridge = "1.22.2"
 anyhow = "1.0.56"
+rusqlite = { version = "0.27.0", features = ["bundled"] }
 
 [build-dependencies]
 cc = "1.0.73"

@@ -1,15 +1,14 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
-class LocalAccessPasswordField extends StatefulWidget {
-  const LocalAccessPasswordField({Key? key}) : super(key: key);
+class DevicePasswordField extends StatefulWidget {
+  const DevicePasswordField({Key? key}) : super(key: key);
 
   @override
-  _LocalAccessPasswordFieldState createState() =>
-      _LocalAccessPasswordFieldState();
+  _DevicePasswordFieldState createState() => _DevicePasswordFieldState();
 }
 
-class _LocalAccessPasswordFieldState extends State<LocalAccessPasswordField> {
+class _DevicePasswordFieldState extends State<DevicePasswordField> {
   bool _passwordVisable = false;
   final String _password = "45678213";
 

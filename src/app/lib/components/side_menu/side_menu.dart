@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:mirrorx/components/navigator/navigator.dart';
 import 'package:mirrorx/constants.dart';
-import 'package:mirrorx/pages/remoteDesktop/remoteDesktop.dart';
+import 'package:mirrorx/pages/remote_desktop/remote_desktop.dart';
 import 'package:provider/provider.dart';
 
 class SideMenu extends StatefulWidget {

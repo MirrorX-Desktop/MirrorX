@@ -14,6 +14,7 @@ dependencies:
     sdk: flutter
   flutter_bloc: ^8.0.1
   flutter_rust_bridge: ^1.22.2
+  path_provider: ^2.0.9
   rxdart: ^0.27.3
   uuid: ^3.0.6
 

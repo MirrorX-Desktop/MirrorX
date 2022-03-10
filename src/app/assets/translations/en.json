@@ -1,4 +1,6 @@
 {
+    "init_sdk_failed_dialog_message": "MirrorX initialize failed, please re-launch this App!",
+    "init_sdk_failed_dialog_ok": "OK",
     "side_menu": {
         "connect_to_remote": "Connect\nTo Remote",
         "lan_discovery": "LAN\nDiscovery",
@@ -16,5 +18,8 @@
         "local_access_password_show": "Show Password",
         "local_access_password_hide": "Hide Password",
         "local_access_password_edit": "Edit Password"
+    },
+    "device_id_field": {
+        "load_failed_tooltip": "Fetch device ID failed, press button to retry!"
     }
 }

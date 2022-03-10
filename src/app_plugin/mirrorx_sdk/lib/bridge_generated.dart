@@ -12,7 +12,14 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge.dart';
 import 'dart:ffi' as ffi;
 
 abstract class MirrorXCore {
+  Future<bool> initSdk({required String configDbPath, dynamic hint});
+
   Future<String> requestDeviceToken({dynamic hint});
+
+  Future<String?> readConfig({required String key, dynamic hint});
+
+  Future<void> storeConfig(
+      {required String key, required String value, dynamic hint});
 }
 
 class MirrorXCoreImpl extends FlutterRustBridgeBase<MirrorXCoreWire>
@@ -21,6 +28,19 @@ class MirrorXCoreImpl extends FlutterRustBridgeBase<MirrorXCoreWire>
       MirrorXCoreImpl.raw(MirrorXCoreWire(dylib));
 
   MirrorXCoreImpl.raw(MirrorXCoreWire inner) : super(inner);
+
+  Future<bool> initSdk({required String configDbPath, dynamic hint}) =>
+      executeNormal(FlutterRustBridgeTask(
+        callFfi: (port_) =>
+            inner.wire_init_sdk(port_, _api2wire_String(configDbPath)),
+        parseSuccessData: _wire2api_bool,
+        constMeta: const FlutterRustBridgeTaskConstMeta(
+          debugName: "init_sdk",
+          argNames: ["configDbPath"],
+        ),
+        argValues: [configDbPath],
+        hint: hint,
+      ));
 
   Future<String> requestDeviceToken({dynamic hint}) =>
       executeNormal(FlutterRustBridgeTask(
@@ -34,7 +54,47 @@ class MirrorXCoreImpl extends FlutterRustBridgeBase<MirrorXCoreWire>
         hint: hint,
       ));
 
+  Future<String?> readConfig({required String key, dynamic hint}) =>
+      executeNormal(FlutterRustBridgeTask(
+        callFfi: (port_) =>
+            inner.wire_read_config(port_, _api2wire_String(key)),
+        parseSuccessData: _wire2api_opt_String,
+        constMeta: const FlutterRustBridgeTaskConstMeta(
+          debugName: "read_config",
+          argNames: ["key"],
+        ),
+        argValues: [key],
+        hint: hint,
+      ));
+
+  Future<void> storeConfig(
+          {required String key, required String value, dynamic hint}) =>
+      executeNormal(FlutterRustBridgeTask(
+        callFfi: (port_) => inner.wire_store_config(
+            port_, _api2wire_String(key), _api2wire_String(value)),
+        parseSuccessData: _wire2api_unit,
+        constMeta: const FlutterRustBridgeTaskConstMeta(
+          debugName: "store_config",
+          argNames: ["key", "value"],
+        ),
+        argValues: [key, value],
+        hint: hint,
+      ));
+
   // Section: api2wire
+  ffi.Pointer<wire_uint_8_list> _api2wire_String(String raw) {
+    return _api2wire_uint_8_list(utf8.encoder.convert(raw));
+  }
+
+  int _api2wire_u8(int raw) {
+    return raw;
+  }
+
+  ffi.Pointer<wire_uint_8_list> _api2wire_uint_8_list(Uint8List raw) {
+    final ans = inner.new_uint_8_list(raw.length);
+    ans.ref.ptr.asTypedList(raw.length).setAll(0, raw);
+    return ans;
+  }
 
   // Section: api_fill_to_wire
 
@@ -45,12 +105,24 @@ String _wire2api_String(dynamic raw) {
   return raw as String;
 }
 
+bool _wire2api_bool(dynamic raw) {
+  return raw as bool;
+}
+
+String? _wire2api_opt_String(dynamic raw) {
+  return raw == null ? null : _wire2api_String(raw);
+}
+
 int _wire2api_u8(dynamic raw) {
   return raw as int;
 }
 
 Uint8List _wire2api_uint_8_list(dynamic raw) {
   return raw as Uint8List;
+}
+
+void _wire2api_unit(dynamic raw) {
+  return;
 }
 
 // ignore_for_file: camel_case_types, non_constant_identifier_names, avoid_positional_boolean_parameters, annotate_overrides, constant_identifier_names
@@ -75,6 +147,23 @@ class MirrorXCoreWire implements FlutterRustBridgeWireBase {
           lookup)
       : _lookup = lookup;
 
+  void wire_init_sdk(
+    int port_,
+    ffi.Pointer<wire_uint_8_list> config_db_path,
+  ) {
+    return _wire_init_sdk(
+      port_,
+      config_db_path,
+    );
+  }
+
+  late final _wire_init_sdkPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Void Function(
+              ffi.Int64, ffi.Pointer<wire_uint_8_list>)>>('wire_init_sdk');
+  late final _wire_init_sdk = _wire_init_sdkPtr
+      .asFunction<void Function(int, ffi.Pointer<wire_uint_8_list>)>();
+
   void wire_request_device_token(
     int port_,
   ) {
@@ -88,6 +177,58 @@ class MirrorXCoreWire implements FlutterRustBridgeWireBase {
           'wire_request_device_token');
   late final _wire_request_device_token =
       _wire_request_device_tokenPtr.asFunction<void Function(int)>();
+
+  void wire_read_config(
+    int port_,
+    ffi.Pointer<wire_uint_8_list> key,
+  ) {
+    return _wire_read_config(
+      port_,
+      key,
+    );
+  }
+
+  late final _wire_read_configPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Void Function(
+              ffi.Int64, ffi.Pointer<wire_uint_8_list>)>>('wire_read_config');
+  late final _wire_read_config = _wire_read_configPtr
+      .asFunction<void Function(int, ffi.Pointer<wire_uint_8_list>)>();
+
+  void wire_store_config(
+    int port_,
+    ffi.Pointer<wire_uint_8_list> key,
+    ffi.Pointer<wire_uint_8_list> value,
+  ) {
+    return _wire_store_config(
+      port_,
+      key,
+      value,
+    );
+  }
+
+  late final _wire_store_configPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Void Function(ffi.Int64, ffi.Pointer<wire_uint_8_list>,
+              ffi.Pointer<wire_uint_8_list>)>>('wire_store_config');
+  late final _wire_store_config = _wire_store_configPtr.asFunction<
+      void Function(
+          int, ffi.Pointer<wire_uint_8_list>, ffi.Pointer<wire_uint_8_list>)>();
+
+  ffi.Pointer<wire_uint_8_list> new_uint_8_list(
+    int len,
+  ) {
+    return _new_uint_8_list(
+      len,
+    );
+  }
+
+  late final _new_uint_8_listPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Pointer<wire_uint_8_list> Function(
+              ffi.Int32)>>('new_uint_8_list');
+  late final _new_uint_8_list = _new_uint_8_listPtr
+      .asFunction<ffi.Pointer<wire_uint_8_list> Function(int)>();
 
   void free_WireSyncReturnStruct(
     WireSyncReturnStruct val,
@@ -116,6 +257,13 @@ class MirrorXCoreWire implements FlutterRustBridgeWireBase {
           'store_dart_post_cobject');
   late final _store_dart_post_cobject = _store_dart_post_cobjectPtr
       .asFunction<void Function(DartPostCObjectFnType)>();
+}
+
+class wire_uint_8_list extends ffi.Struct {
+  external ffi.Pointer<ffi.Uint8> ptr;
+
+  @ffi.Int32()
+  external int len;
 }
 
 typedef DartPostCObjectFnType = ffi.Pointer<

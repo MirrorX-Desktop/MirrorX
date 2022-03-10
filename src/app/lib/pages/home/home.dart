@@ -1,9 +1,9 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:mirrorx/constants.dart';
-import 'package:mirrorx/pages/home/components/connectRemoteField.dart';
-import 'package:mirrorx/pages/home/components/localAccessIdField.dart';
-import 'package:mirrorx/pages/home/components/localAccessPasswordField.dart';
+import 'package:mirrorx/pages/home/components/connect_id_field.dart';
+import 'package:mirrorx/pages/home/components/device_id_field.dart';
+import 'package:mirrorx/pages/home/components/device_password_field.dart';
 import 'package:mirrorx/pages/page.dart';
 
 class HomePage extends AppPage {
@@ -30,7 +30,7 @@ class _HomeState extends State<HomePage> {
                   width: 320,
                   child: _createBorderedField(
                       tr("connect_to_remote.connect_remote_title"),
-                      const ConnectRemoteField()),
+                      const ConnectIDField()),
                 ),
               ),
               Padding(
@@ -39,7 +39,7 @@ class _HomeState extends State<HomePage> {
                   width: 320,
                   child: _createBorderedField(
                       tr("connect_to_remote.local_access_id_title"),
-                      const LocalAccessIdField()),
+                      const DeviceIDField()),
                 ),
               ),
               Padding(
@@ -48,7 +48,7 @@ class _HomeState extends State<HomePage> {
                   width: 320,
                   child: _createBorderedField(
                       tr("connect_to_remote.local_access_password_title"),
-                      const LocalAccessPasswordField()),
+                      const DevicePasswordField()),
                 ),
               )
             ],
