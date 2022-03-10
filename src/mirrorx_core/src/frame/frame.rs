@@ -2,6 +2,7 @@ use std::fmt::{Display, Formatter};
 use std::os::raw::c_int;
 
 #[repr(C)]
+/// cbindgen:ignore
 pub struct Frame {
     pub width: c_int,
     pub height: c_int,

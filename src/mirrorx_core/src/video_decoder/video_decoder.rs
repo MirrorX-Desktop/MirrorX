@@ -1,4 +1,5 @@
 use crate::frame::frame::Frame;
+use crate::video_decoder::bindings;
 use crate::video_decoder::errors::VideoDecoderError;
 use log::{error, trace, warn};
 use std::{
@@ -9,57 +10,6 @@ use std::{
         Arc,
     },
 };
-
-#[allow(non_camel_case_types)]
-#[repr(C)]
-enum AVHWDeviceType {
-    AV_HWDEVICE_TYPE_NONE,
-    AV_HWDEVICE_TYPE_VDPAU,
-    AV_HWDEVICE_TYPE_CUDA,
-    AV_HWDEVICE_TYPE_VAAPI,
-    AV_HWDEVICE_TYPE_DXVA2,
-    AV_HWDEVICE_TYPE_QSV,
-    AV_HWDEVICE_TYPE_VIDEOTOOLBOX,
-    AV_HWDEVICE_TYPE_D3D11VA,
-    AV_HWDEVICE_TYPE_DRM,
-    AV_HWDEVICE_TYPE_OPENCL,
-    AV_HWDEVICE_TYPE_MEDIACODEC,
-    AV_HWDEVICE_TYPE_VULKAN,
-}
-
-#[allow(non_camel_case_types)]
-#[repr(C)]
-#[derive(Debug, Eq, PartialEq)]
-enum AVPixelFormat {
-    AV_PIX_FMT_NONE = -1,
-    AV_PIX_FMT_YUV420P = 0,
-    AV_PIX_FMT_NV12 = 23,
-    AV_PIX_FMT_NV21 = 24,
-}
-
-extern "C" {
-    fn new_video_decoder(
-        decoder_name: *const c_char,
-        device_type: AVHWDeviceType,
-        encode_callback: unsafe extern "C" fn(
-            tx: *mut Sender<Frame>,
-            width: c_int,
-            height: c_int,
-            pix_fmt: AVPixelFormat,
-            plane_linesize: *const c_int,
-            plane_buffer_address: *const *const u8,
-        ),
-    ) -> *const c_void;
-
-    fn video_decode(
-        video_decoder: *const c_void,
-        tx: *mut Sender<Frame>,
-        packet_data: *const u8,
-        packet_size: c_int,
-    ) -> c_int;
-
-    fn free_video_decoder(video_decoder: *const c_void);
-}
 
 pub struct VideoDecoder {
     frame_rx: Receiver<Frame>,
@@ -77,9 +27,9 @@ impl VideoDecoder {
         let (nalu_tx, nalu_rx) = channel();
 
         unsafe {
-            let inner_video_decoder_ptr = new_video_decoder(
+            let inner_video_decoder_ptr = bindings::new_video_decoder(
                 decoder_name_ptr,
-                AVHWDeviceType::AV_HWDEVICE_TYPE_NONE,
+                bindings::AVHWDeviceType::AV_HWDEVICE_TYPE_NONE,
                 VideoDecoder::callback,
             );
 
@@ -143,7 +93,7 @@ impl VideoDecoder {
 
                 match nalu_rx.recv() {
                     Ok(nalu) => {
-                        let result = video_decode(
+                        let result = bindings::video_decode(
                             Arc::into_raw(inner_video_decoder.clone()),
                             &mut frame_tx as *mut Sender<Frame>,
                             nalu.as_ptr(),
@@ -172,7 +122,7 @@ impl VideoDecoder {
         tx: *mut Sender<Frame>,
         width: c_int,
         height: c_int,
-        pix_fmt: AVPixelFormat,
+        pix_fmt: bindings::AVPixelFormat,
         plane_linesize: *const c_int,
         plane_buffer_address: *const *const u8,
     ) {
@@ -217,7 +167,7 @@ impl Drop for VideoDecoder {
             if self.exit_signal_tx.send(()).is_ok() {
                 let _ = self.exit_finish_rx.recv();
             }
-            free_video_decoder(Arc::into_raw(self.inner_video_decoder.clone()));
+            bindings::free_video_decoder(Arc::into_raw(self.inner_video_decoder.clone()));
         }
     }
 }

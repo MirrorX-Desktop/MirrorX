@@ -4,6 +4,7 @@ use std::os::raw::{c_char, c_int};
 
 // this function is the "bridge" from C log function, it should be called from C, don't use it in rust.
 #[no_mangle]
+/// cbindgen:ignore
 pub extern "C" fn log_to_rust(level: c_int, message: *const c_char) {
     unsafe {
         match CStr::from_ptr(message).to_str() {

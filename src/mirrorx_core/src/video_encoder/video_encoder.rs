@@ -1,4 +1,5 @@
 use crate::frame::frame::Frame;
+use crate::video_encoder::bindings;
 use crate::video_encoder::errors::VideoEncoderError;
 use log::{error, trace, warn};
 use std::{
@@ -9,35 +10,6 @@ use std::{
         Arc,
     },
 };
-
-extern "C" {
-    fn new_video_encoder(
-        encoder_name: *const c_char,
-        fps: c_int,
-        src_width: c_int,
-        src_height: c_int,
-        dst_width: c_int,
-        dst_height: c_int,
-        encode_callback: unsafe extern "C" fn(
-            tx: *mut Sender<Vec<u8>>,
-            packet_data: *const u8,
-            packet_size: c_int,
-        ),
-    ) -> *const c_void;
-
-    fn video_encode(
-        video_encoder: *const c_void,
-        tx: *mut Sender<Vec<u8>>,
-        width: c_int,
-        height: c_int,
-        y_line_size: c_int,
-        y_buffer: *const u8,
-        uv_line_size: c_int,
-        uv_buffer: *const u8,
-    ) -> c_int;
-
-    fn free_video_encoder(video_encoder: *const c_void);
-}
 
 pub struct VideoEncoder {
     nalu_rx: Receiver<Vec<u8>>,
@@ -55,7 +27,7 @@ impl VideoEncoder {
         let (nalu_tx, nalu_rx) = channel();
 
         unsafe {
-            let inner_video_encoder_ptr = new_video_encoder(
+            let inner_video_encoder_ptr = bindings::new_video_encoder(
                 encoder_name_ptr,
                 60,
                 1920,
@@ -125,7 +97,7 @@ impl VideoEncoder {
 
                 match frame_rx.recv() {
                     Ok(frame) => {
-                        let result = video_encode(
+                        let result = bindings::video_encode(
                             Arc::into_raw(inner_video_encoder.clone()),
                             &mut nalu_tx as *mut Sender<Vec<u8>>,
                             frame.width,
@@ -183,7 +155,7 @@ impl Drop for VideoEncoder {
             if self.exit_signal_tx.send(()).is_ok() {
                 let _ = self.exit_finish_rx.recv();
             }
-            free_video_encoder(Arc::into_raw(self.inner_video_encoder.clone()));
+            bindings::free_video_encoder(Arc::into_raw(self.inner_video_encoder.clone()));
         }
     }
 }

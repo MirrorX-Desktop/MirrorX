@@ -1,3 +1,4 @@
+use crate::duplicator::bindings;
 use crate::frame::frame::Frame;
 use log::error;
 use std::{
@@ -6,28 +7,6 @@ use std::{
     ptr,
     sync::mpsc::{channel, Receiver, Sender},
 };
-
-extern "C" {
-    fn create_duplication_context(
-        display_index: c_int,
-        tx: *const c_void,
-        cb: extern "C" fn(
-            tx: *const c_void,
-            width: c_int,
-            height: c_int,
-            y_line_size: c_int,
-            y_buffer_address: *const u8,
-            uv_line_size: c_int,
-            uv_buffer_address: *const u8,
-        ),
-    ) -> *const c_void;
-
-    fn release_duplication_context(context: *const c_void);
-
-    fn start_capture(context: *const c_void);
-
-    fn stop_capture(context: *const c_void);
-}
 
 pub struct Duplicator {
     inner_duplicator_context: *const c_void,
@@ -42,8 +21,11 @@ impl Duplicator {
         let tx_ptr: *const Sender<Frame> = Box::leak(tx_box);
 
         unsafe {
-            let inner_duplicator_context =
-                create_duplication_context(0, tx_ptr as *const c_void, Duplicator::callback);
+            let inner_duplicator_context = bindings::create_duplication_context(
+                0,
+                tx_ptr as *const c_void,
+                Duplicator::callback,
+            );
 
             if inner_duplicator_context.is_null() {
                 return Err("Failed to create duplicator".to_string());
@@ -59,13 +41,13 @@ impl Duplicator {
 
     pub fn start_capture(&self) {
         unsafe {
-            start_capture(self.inner_duplicator_context);
+            bindings::start_capture(self.inner_duplicator_context);
         }
     }
 
     pub fn stop_capture(&self) {
         unsafe {
-            stop_capture(self.inner_duplicator_context);
+            bindings::stop_capture(self.inner_duplicator_context);
         }
     }
 
@@ -127,7 +109,7 @@ impl Drop for Duplicator {
         self.stop_capture();
         unsafe {
             Box::from_raw(self.tx_ptr as *mut Sender<Frame>);
-            release_duplication_context(self.inner_duplicator_context);
+            bindings::release_duplication_context(self.inner_duplicator_context);
         }
     }
 }

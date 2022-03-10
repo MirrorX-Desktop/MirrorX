@@ -1,3 +1,4 @@
+# pre-build process
 [tasks.format]
 install_crate = "rustfmt"
 command = "cargo"
@@ -7,22 +8,38 @@ args = ["fmt", "--", "--emit=files"]
 command = "cargo"
 args = ["clean"]
 
-[tasks.build]
-mac_alias = "build_macos"
-dependencies = ["clean"]
-
 [tasks.test]
 command = "cargo"
-args = ["test"]
+args = ["test","--tests"]
+
+# build process
+[tasks.build_debug]
+mac_alias = "build_macos_debug"
+
+[tasks.build_release]
+mac_alias = "build_macos_release"
 dependencies = ["clean"]
 
-[tasks.build_macos]
+## debug build
+[tasks.build_macos_debug]
+command = "cargo"
+args = ["build", "--target", "x86_64-apple-darwin"]
+
+## release build
+[tasks.build_macos_release]
 command = "cargo"
 args = ["build", "--target", "x86_64-apple-darwin", "--release"]
 
-[tasks.make]
+[tasks.make-debug]
 dependencies = [
     "format",
     "test",
-    "build"
+    "build_debug"
+]
+
+[tasks.make-release]
+dependencies = [
+    "format",
+    "test",
+    "build_release"
 ]
