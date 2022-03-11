@@ -17,41 +17,32 @@ class MirrorXSDK {
       : _core = core,
         _config = Config(core);
 
-  static Completer<MirrorXSDK>? _completer;
-
   final MirrorXCore _core;
   final Config _config;
 
   Config get config => _config;
 
-  static Future<MirrorXSDK> getInstance() async {
-    if (_completer == null) {
-      final completer = Completer<MirrorXSDK>();
-
-      try {
-        final applicationSupportDir = await getApplicationSupportDirectory();
-        dev.log("application support dir: $applicationSupportDir");
-
-        final MirrorXCore core = MirrorXCoreImpl(_openLibrary());
-        final success =
-            await core.initSdk(configDbPath: applicationSupportDir.path);
-
-        if (success) {
-          completer.complete(MirrorXSDK._(core));
-        } else {
-          completer.completeError(Exception("init sdk failed"));
-        }
-      } on Exception catch (e) {
-        completer.completeError(e);
-        return completer.future;
-      }
-
-      _completer = completer;
-    }
-    return _completer!.future;
-  }
-
   Future<String> requestDeviceToken() => _core.requestDeviceToken();
+}
+
+Future<MirrorXSDK?> initSDK() async {
+  try {
+    final applicationSupportDir = await getApplicationSupportDirectory();
+    dev.log("application support dir: $applicationSupportDir");
+
+    final MirrorXCore core = MirrorXCoreImpl(_openLibrary());
+    final success =
+        await core.initSdk(configDbPath: applicationSupportDir.path);
+    if (success) {
+      return (MirrorXSDK._(core));
+    } else {
+      dev.log("init sdk failed");
+      return (null);
+    }
+  } catch (err) {
+    dev.log("init sdk failed with error", error: err);
+    return null;
+  }
 }
 
 DynamicLibrary _openLibrary() {

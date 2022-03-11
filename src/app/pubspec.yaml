@@ -38,8 +38,8 @@ dependencies:
   mirrorx_sdk:
     path: ../app_plugin/mirrorx_sdk
   provider: ^6.0.2
-  easy_localization: ^3.0.0
   font_awesome_flutter: ^9.2.0
+  get: ^4.6.1
 
 dev_dependencies:
   flutter_test:
