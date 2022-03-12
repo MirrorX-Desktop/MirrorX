@@ -91,6 +91,10 @@ class PageViewController extends GetxController {
   }
 
   void jumpToPage(String tag) {
+    if (tag == selectedTag) {
+      return;
+    }
+
     var index = _staticPages.indexWhere((element) => element.tag == tag);
     if (index < 0) {
       index = _remoteDesktopPages.indexWhere((element) => element.tag == tag);

@@ -10,6 +10,7 @@ void main() async {
 
   runApp(
     GetMaterialApp(
+      showPerformanceOverlay: false,
       translations: Translation(),
       locale: ui.window.locale,
       fallbackLocale: const Locale('en'),
@@ -20,7 +21,8 @@ void main() async {
         backgroundColor: Colors.white,
       ),
       getPages: AppPages.pages,
-      defaultTransition: Transition.fade,
+      defaultTransition: Transition.circularReveal,
+      transitionDuration: const Duration(milliseconds: 1500),
     ),
   );
 }

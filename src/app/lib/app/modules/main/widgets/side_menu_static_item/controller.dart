@@ -5,16 +5,16 @@ import 'package:mirrorx/app/core/values/colors.dart';
 
 class SideMenuStaticItemController extends GetxController
     with GetSingleTickerProviderStateMixin {
-  SideMenuStaticItemController(String tg) : myTag = tg;
+  SideMenuStaticItemController(String tag) : _tag = tag;
 
-  final String myTag;
+  final String _tag;
 
   late AnimationController animationController;
   late Animation<Color?> titleColorAnimation;
   late Animation<Color?> backgroundColorAnimation;
 
-  Color? _currentTextColor;
-  Color? _currentBackgroundColor;
+  late Color _currentTextColor;
+  late Color _currentBackgroundColor;
 
   late bool _selected;
 
@@ -28,21 +28,38 @@ class SideMenuStaticItemController extends GetxController
     titleColorAnimation = ColorTween().animate(animationController);
     backgroundColorAnimation = ColorTween().animate(animationController);
 
-    _selected = false;
+    _currentTextColor = Colors.black;
+    _currentBackgroundColor = Colors.white;
 
     _pageViewController = Get.find<PageViewController>();
-    _pageViewController.addListener(() {
-      print("tag: $myTag, ${myTag == _pageViewController.selectedTag}");
-      myTag == _pageViewController.selectedTag ? selected() : unselected();
-    });
+
+    _selected = false;
 
     super.onInit();
+  }
+
+  @override
+  void onReady() {
+    subscribePageViewControllerUpdate();
+    _pageViewController.addListener(subscribePageViewControllerUpdate);
+    super.onReady();
+  }
+
+  @override
+  void onClose() {
+    _pageViewController.removeListener(subscribePageViewControllerUpdate);
+    animationController.dispose();
+    super.onClose();
   }
 
   void hoverEnter() {
     if (!_selected) {
       _updateTextColorAnimation(ColorValues.primaryColor, Colors.white);
     }
+  }
+
+  void subscribePageViewControllerUpdate() {
+    _tag == _pageViewController.selectedTag ? selected() : unselected();
   }
 
   void hoverLeave() {
@@ -76,11 +93,5 @@ class SideMenuStaticItemController extends GetxController
     _currentBackgroundColor = backgroundForwardColor;
 
     animationController.forward();
-  }
-
-  @override
-  void dispose() {
-    animationController.dispose();
-    super.dispose();
   }
 }

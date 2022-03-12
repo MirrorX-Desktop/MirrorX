@@ -31,23 +31,23 @@ class SideMenu extends StatelessWidget {
               SideMenuStaticItem(
                   icon: Icons.screen_share,
                   title: "side_menu.connect_to_remote".tr,
-                  jumpPageTag: PageTags.connectRemote),
+                  pageTag: PageTags.connectRemote),
               SideMenuStaticItem(
                   icon: Icons.lan,
                   title: "side_menu.lan_discovery".tr,
-                  jumpPageTag: PageTags.lanDiscovery),
+                  pageTag: PageTags.lanDiscovery),
               SideMenuStaticItem(
                   icon: Icons.drive_file_move_rtl,
                   title: "side_menu.file_transfer".tr,
-                  jumpPageTag: PageTags.fileTransfer),
+                  pageTag: PageTags.fileTransfer),
               SideMenuStaticItem(
                   icon: Icons.history,
                   title: "side_menu.connection_history".tr,
-                  jumpPageTag: PageTags.connectionHistory),
+                  pageTag: PageTags.connectionHistory),
               SideMenuStaticItem(
                   icon: Icons.settings,
                   title: "side_menu.settings".tr,
-                  jumpPageTag: PageTags.settings),
+                  pageTag: PageTags.settings),
             ],
           ),
           Expanded(
