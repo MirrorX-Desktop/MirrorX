@@ -1,16 +1,29 @@
-import 'dart:developer';
-
 import 'package:get/get.dart';
+import 'package:mirrorx_sdk/bridge_generated.dart';
 import 'package:mirrorx_sdk/mirrorx_sdk.dart';
 
-class SDKController extends GetxController {
-  MirrorXSDK? _sdk;
-
+class SDKController extends GetxController with StateMixin<MirrorXCore> {
   @override
   void onReady() async {
-    _sdk = await initSDK();
+    await initMirrorXSDK();
     super.onReady();
   }
 
-  MirrorXSDK? get sdk => _sdk;
+  Future<void> initMirrorXSDK() async {
+    change(null, status: RxStatus.loading());
+
+    await Future.delayed(const Duration(seconds: 2));
+
+    final sdk = await initSDK();
+    sdk == null
+        ? change(null, status: RxStatus.error())
+        : change(sdk, status: RxStatus.success());
+  }
+
+  MirrorXCore getSDKInstance() {
+    if (state == null) {
+      throw Exception("get sdk instance but it's null");
+    }
+    return state!;
+  }
 }

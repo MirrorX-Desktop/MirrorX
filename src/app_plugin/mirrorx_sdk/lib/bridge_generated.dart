@@ -14,12 +14,14 @@ import 'dart:ffi' as ffi;
 abstract class MirrorXCore {
   Future<bool> initSdk({required String configDbPath, dynamic hint});
 
-  Future<String> requestDeviceToken({dynamic hint});
+  Future<String> createOrUpdateToken({String? token, dynamic hint});
 
   Future<String?> readConfig({required String key, dynamic hint});
 
   Future<void> storeConfig(
       {required String key, required String value, dynamic hint});
+
+  Future<String> generateDevicePassword({dynamic hint});
 }
 
 class MirrorXCoreImpl extends FlutterRustBridgeBase<MirrorXCoreWire>
@@ -42,15 +44,16 @@ class MirrorXCoreImpl extends FlutterRustBridgeBase<MirrorXCoreWire>
         hint: hint,
       ));
 
-  Future<String> requestDeviceToken({dynamic hint}) =>
+  Future<String> createOrUpdateToken({String? token, dynamic hint}) =>
       executeNormal(FlutterRustBridgeTask(
-        callFfi: (port_) => inner.wire_request_device_token(port_),
+        callFfi: (port_) => inner.wire_create_or_update_token(
+            port_, _api2wire_opt_String(token)),
         parseSuccessData: _wire2api_String,
         constMeta: const FlutterRustBridgeTaskConstMeta(
-          debugName: "request_device_token",
-          argNames: [],
+          debugName: "create_or_update_token",
+          argNames: ["token"],
         ),
-        argValues: [],
+        argValues: [token],
         hint: hint,
       ));
 
@@ -81,9 +84,25 @@ class MirrorXCoreImpl extends FlutterRustBridgeBase<MirrorXCoreWire>
         hint: hint,
       ));
 
+  Future<String> generateDevicePassword({dynamic hint}) =>
+      executeNormal(FlutterRustBridgeTask(
+        callFfi: (port_) => inner.wire_generate_device_password(port_),
+        parseSuccessData: _wire2api_String,
+        constMeta: const FlutterRustBridgeTaskConstMeta(
+          debugName: "generate_device_password",
+          argNames: [],
+        ),
+        argValues: [],
+        hint: hint,
+      ));
+
   // Section: api2wire
   ffi.Pointer<wire_uint_8_list> _api2wire_String(String raw) {
     return _api2wire_uint_8_list(utf8.encoder.convert(raw));
+  }
+
+  ffi.Pointer<wire_uint_8_list> _api2wire_opt_String(String? raw) {
+    return raw == null ? ffi.nullptr : _api2wire_String(raw);
   }
 
   int _api2wire_u8(int raw) {
@@ -164,19 +183,22 @@ class MirrorXCoreWire implements FlutterRustBridgeWireBase {
   late final _wire_init_sdk = _wire_init_sdkPtr
       .asFunction<void Function(int, ffi.Pointer<wire_uint_8_list>)>();
 
-  void wire_request_device_token(
+  void wire_create_or_update_token(
     int port_,
+    ffi.Pointer<wire_uint_8_list> token,
   ) {
-    return _wire_request_device_token(
+    return _wire_create_or_update_token(
       port_,
+      token,
     );
   }
 
-  late final _wire_request_device_tokenPtr =
-      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
-          'wire_request_device_token');
-  late final _wire_request_device_token =
-      _wire_request_device_tokenPtr.asFunction<void Function(int)>();
+  late final _wire_create_or_update_tokenPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Void Function(ffi.Int64,
+              ffi.Pointer<wire_uint_8_list>)>>('wire_create_or_update_token');
+  late final _wire_create_or_update_token = _wire_create_or_update_tokenPtr
+      .asFunction<void Function(int, ffi.Pointer<wire_uint_8_list>)>();
 
   void wire_read_config(
     int port_,
@@ -214,6 +236,20 @@ class MirrorXCoreWire implements FlutterRustBridgeWireBase {
   late final _wire_store_config = _wire_store_configPtr.asFunction<
       void Function(
           int, ffi.Pointer<wire_uint_8_list>, ffi.Pointer<wire_uint_8_list>)>();
+
+  void wire_generate_device_password(
+    int port_,
+  ) {
+    return _wire_generate_device_password(
+      port_,
+    );
+  }
+
+  late final _wire_generate_device_passwordPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
+          'wire_generate_device_password');
+  late final _wire_generate_device_password =
+      _wire_generate_device_passwordPtr.asFunction<void Function(int)>();
 
   ffi.Pointer<wire_uint_8_list> new_uint_8_list(
     int len,

@@ -13,9 +13,10 @@ pub fn init_sdk(config_db_path: String) -> bool {
                 .format(|buf, record| {
                     writeln!(
                         buf,
-                        "[{}] [{}] {} {}",
+                        "[{}] [{}({})] {} {}",
                         chrono::Local::now().format("%Y-%m-%d %H:%M:%S.%3f"),
                         record.module_path().unwrap_or(""),
+                        record.file().unwrap_or(""),
                         record.level(),
                         record.args()
                     )
@@ -38,9 +39,9 @@ pub fn init_sdk(config_db_path: String) -> bool {
     }
 }
 
-pub fn request_device_token() -> anyhow::Result<String> {
-    crate::service::http::request_device_token().or_else(|err| {
-        error!("request_device_token returns error: {:?}", &err);
+pub fn create_or_update_token(token: Option<String>) -> anyhow::Result<String> {
+    crate::service::http::create_or_update_token(token).or_else(|err| {
+        error!("create_or_update_token returns error: {:?}", &err);
         Err(anyhow::anyhow!(""))
     })
 }
@@ -48,13 +49,17 @@ pub fn request_device_token() -> anyhow::Result<String> {
 pub fn read_config(key: String) -> anyhow::Result<Option<String>> {
     crate::service::config::read_config(&key).or_else(|err| {
         error!("read_config returns error: {:?}", &err);
-        return Err(anyhow::anyhow!(""));
+        Err(anyhow::anyhow!(""))
     })
 }
 
 pub fn store_config(key: String, value: String) -> anyhow::Result<()> {
     crate::service::config::save_config(&key, &value).or_else(|err| {
         error!("store_config returns error: {:?}", &err);
-        return Err(anyhow::anyhow!(""));
+        Err(anyhow::anyhow!(""))
     })
+}
+
+pub fn generate_device_password() -> String {
+    crate::service::base::generate_device_password()
 }

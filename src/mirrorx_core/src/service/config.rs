@@ -8,7 +8,7 @@ lazy_static! {
 }
 
 pub fn init_config(path: PathBuf) -> Result<(), Box<dyn Error>> {
-    update_config_db_path(path);
+    update_config_db_path(path)?;
 
     let config_db_path = CONFIG_DB_PATH.read()?;
     let db = Connection::open(config_db_path.to_path_buf())?;
@@ -37,7 +37,7 @@ pub fn save_config(key: &str, value: &str) -> Result<(), Box<dyn Error>> {
     let config_db_path = CONFIG_DB_PATH.read()?;
 
     let db = Connection::open(config_db_path.to_path_buf())?;
-    let mut stmt = db.prepare("INSERT INTO kv (key,value) VALUES (?1,?2)")?;
+    let mut stmt = db.prepare("INSERT OR REPLACE INTO kv (key, value) VALUES (?1,?2)")?;
     stmt.execute(&[&key, &value])?;
 
     kv.insert(key.to_string(), value.to_string());

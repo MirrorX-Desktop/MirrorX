@@ -9,23 +9,9 @@ import 'dart:ffi';
 import 'dart:io';
 
 import 'package:mirrorx_sdk/bridge_generated.dart';
-import 'package:mirrorx_sdk/config.dart';
 import 'package:path_provider/path_provider.dart';
 
-class MirrorXSDK {
-  MirrorXSDK._(MirrorXCore core)
-      : _core = core,
-        _config = Config(core);
-
-  final MirrorXCore _core;
-  final Config _config;
-
-  Config get config => _config;
-
-  Future<String> requestDeviceToken() => _core.requestDeviceToken();
-}
-
-Future<MirrorXSDK?> initSDK() async {
+Future<MirrorXCore?> initSDK() async {
   try {
     final applicationSupportDir = await getApplicationSupportDirectory();
     dev.log("application support dir: $applicationSupportDir");
@@ -34,10 +20,10 @@ Future<MirrorXSDK?> initSDK() async {
     final success =
         await core.initSdk(configDbPath: applicationSupportDir.path);
     if (success) {
-      return (MirrorXSDK._(core));
+      return core;
     } else {
       dev.log("init sdk failed");
-      return (null);
+      return null;
     }
   } catch (err) {
     dev.log("init sdk failed with error", error: err);

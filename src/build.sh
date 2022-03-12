@@ -10,6 +10,8 @@ status=$?
 
 if [ "$1" = "debug" ]; then
     echo "Building debug version"
+    $cmd_gen_bridge
+
     $cmd_make_debug
 
     if [ $status -ne 0 ]; then
@@ -18,9 +20,10 @@ if [ "$1" = "debug" ]; then
     fi
 
     $cmd_copy_debug_artifacts
-    $cmd_gen_bridge
 elif [ "$1" = "release" ]; then
     echo "Building release version"
+    $cmd_gen_bridge
+
     $cmd_make_release
 
     if [ $status -ne 0 ]; then
@@ -29,7 +32,6 @@ elif [ "$1" = "release" ]; then
     fi
 
     $cmd_copy_release_artifacts
-    $cmd_gen_bridge
 elif [ "$1" = "gen_bridge" ]; then
     echo "Generating Flutter and Rust bridge code"
     $cmd_gen_bridge

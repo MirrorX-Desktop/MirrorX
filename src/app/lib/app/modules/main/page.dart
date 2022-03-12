@@ -5,7 +5,7 @@ import 'package:mirrorx/app/modules/main/widgets/side_menu/widget.dart';
 
 import 'controller.dart';
 
-class MainPage extends GetView<MainController> {
+class MainPage extends StatelessWidget {
   const MainPage({Key? key}) : super(key: key);
 
   @override

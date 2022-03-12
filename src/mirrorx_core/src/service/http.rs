@@ -13,7 +13,7 @@ struct AllocIdResponse {
     device_token: String,
 }
 
-pub fn request_device_token() -> Result<String, Box<dyn Error>> {
+pub fn create_or_update_token(token: Option<String>) -> Result<String, Box<dyn Error>> {
     let mut hash_plain = String::new();
 
     #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
@@ -39,7 +39,7 @@ pub fn request_device_token() -> Result<String, Box<dyn Error>> {
 
     let form_body = AllocIdRequest {
         device_hash: result_hex,
-        device_token: None,
+        device_token: token,
     };
 
     let client = reqwest::blocking::Client::new();

@@ -2,10 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:mirrorx/app/core/values/colors.dart';
 import 'package:mirrorx/app/modules/connect_remote/controller.dart';
-
-import 'components/connect_id_field.dart';
-import 'components/device_id_field.dart';
-import 'components/device_password_field.dart';
+import 'package:mirrorx/app/modules/connect_remote/widgets/connect_to/widget.dart';
+import 'package:mirrorx/app/modules/connect_remote/widgets/device_id/widget.dart';
+import 'package:mirrorx/app/modules/connect_remote/widgets/device_password/widget.dart';
 
 class ConnectRemotePage extends GetView<ConnectRemoteController> {
   const ConnectRemotePage({Key? key, required String staticTag})
@@ -33,7 +32,7 @@ class ConnectRemotePage extends GetView<ConnectRemoteController> {
                   width: 320,
                   child: _createBorderedField(
                       "connect_to_remote.connect_remote_title".tr,
-                      const ConnectIDField()),
+                      const ConnectTo()),
                 ),
               ),
               Padding(
@@ -41,8 +40,7 @@ class ConnectRemotePage extends GetView<ConnectRemoteController> {
                 child: SizedBox(
                   width: 320,
                   child: _createBorderedField(
-                      "connect_to_remote.device_id_title".tr,
-                      const DeviceIDField()),
+                      "connect_to_remote.device_id_title".tr, const DeviceID()),
                 ),
               ),
               Padding(
@@ -51,7 +49,7 @@ class ConnectRemotePage extends GetView<ConnectRemoteController> {
                   width: 320,
                   child: _createBorderedField(
                       "connect_to_remote.device_password_title".tr,
-                      const DevicePasswordField()),
+                      const DevicePassword()),
                 ),
               )
             ],

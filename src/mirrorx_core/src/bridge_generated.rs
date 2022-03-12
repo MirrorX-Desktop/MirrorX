@@ -32,14 +32,17 @@ pub extern "C" fn wire_init_sdk(port_: i64, config_db_path: *mut wire_uint_8_lis
 }
 
 #[no_mangle]
-pub extern "C" fn wire_request_device_token(port_: i64) {
+pub extern "C" fn wire_create_or_update_token(port_: i64, token: *mut wire_uint_8_list) {
     FLUTTER_RUST_BRIDGE_HANDLER.wrap(
         WrapInfo {
-            debug_name: "request_device_token",
+            debug_name: "create_or_update_token",
             port: Some(port_),
             mode: FfiCallMode::Normal,
         },
-        move || move |task_callback| request_device_token(),
+        move || {
+            let api_token = token.wire2api();
+            move |task_callback| create_or_update_token(api_token)
+        },
     )
 }
 
@@ -75,6 +78,18 @@ pub extern "C" fn wire_store_config(
             let api_value = value.wire2api();
             move |task_callback| store_config(api_key, api_value)
         },
+    )
+}
+
+#[no_mangle]
+pub extern "C" fn wire_generate_device_password(port_: i64) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap(
+        WrapInfo {
+            debug_name: "generate_device_password",
+            port: Some(port_),
+            mode: FfiCallMode::Normal,
+        },
+        move || move |task_callback| Ok(generate_device_password()),
     )
 }
 

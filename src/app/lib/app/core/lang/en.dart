@@ -17,6 +17,9 @@ const Map<String, String> en = {
   "connect_to_remote.device_password_show": "Show Password",
   "connect_to_remote.device_password_hide": "Hide Password",
   "connect_to_remote.device_password_edit": "Edit Password",
+  "connect_to_remote.device_password_edit_confirm": "Save Password",
+  "connect_to_remote.device_password_random_generate":
+      "Re-generate Random Password",
   "device_id_field.load_failed_tooltip":
       "Fetch device ID failed, press button to retry!"
 };
