@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:mirrorx/app/controllers/page_view.dart';
 
 import 'controllers/side_menu_item.dart';
 
@@ -32,6 +31,12 @@ class SideMenuSystemItem extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: controller.backgroundColorAnimation.value,
                   borderRadius: const BorderRadius.all(Radius.circular(10)),
+                  boxShadow: [
+                    BoxShadow(
+                        offset: const Offset(0, 1.5),
+                        color: Colors.grey.withOpacity(0.3),
+                        blurRadius: 3)
+                  ],
                 ),
                 child: MouseRegion(
                   cursor: SystemMouseCursors.click,

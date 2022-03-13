@@ -3,8 +3,6 @@ import 'package:get/get.dart';
 import 'package:mirrorx/app/controllers/page_view.dart';
 import 'package:mirrorx/app/modules/main/widgets/side_menu.dart';
 
-import 'controller.dart';
-
 class MainPage extends StatelessWidget {
   const MainPage({Key? key}) : super(key: key);
 

@@ -1,25 +1,24 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:mirrorx/app/core/values/colors.dart';
 import 'package:mirrorx/app/modules/connect_remote/widgets/device_password/controller.dart';
 
-class DevicePassword extends StatelessWidget {
+class DevicePassword extends GetView<DevicePasswordController> {
   const DevicePassword({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    Get.put(DevicePasswordController());
+    final controller = Get.put(DevicePasswordController());
 
     return SizedBox(
       height: 48,
       child: GetBuilder<DevicePasswordController>(
+        init: controller,
         builder: (controller) => Row(
           children: [
             Expanded(
-              child: _buildEditingOrReadonly(controller),
+              child: _buildEditingOrReadonly(),
             ),
             SizedBox(
               height: 32,
@@ -89,7 +88,7 @@ class DevicePassword extends StatelessWidget {
     );
   }
 
-  Widget _buildEditingOrReadonly(DevicePasswordController controller) {
+  Widget _buildEditingOrReadonly() {
     if (!controller.isEditing) {
       if (controller.passwordVisable) {
         return Center(

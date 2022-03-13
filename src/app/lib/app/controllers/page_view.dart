@@ -1,5 +1,6 @@
 import 'dart:developer' as dev;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:mirrorx/app/core/values/page_tag.dart';
@@ -68,7 +69,7 @@ class PageViewController extends GetxController {
     _totalPageViewCount = _staticPages.length + _remoteDesktopPages.length;
     // default select to the new added page
     _selectedIndex = totalPageViewCount - 1;
-    pageController.jumpToPage(_selectedIndex);
+    _antimateToPage(_selectedIndex);
     update();
   }
 
@@ -88,7 +89,8 @@ class PageViewController extends GetxController {
     } else {
       _selectedIndex = totalPageViewCount - 1;
     }
-    pageController.jumpToPage(_selectedIndex);
+
+    _antimateToPage(_selectedIndex);
     update();
   }
 
@@ -108,7 +110,7 @@ class PageViewController extends GetxController {
     }
 
     _selectedIndex = index;
-    pageController.jumpToPage(_selectedIndex);
+    _antimateToPage(_selectedIndex);
     update();
   }
 
@@ -124,6 +126,12 @@ class PageViewController extends GetxController {
     }
 
     throw Exception("build page index greater than exist page count");
+  }
+
+  void _antimateToPage(int selectIndex) {
+    pageController.animateToPage(selectIndex,
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.fastLinearToSlowEaseIn);
   }
 
   String _getSelectedTag() {

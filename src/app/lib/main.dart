@@ -10,7 +10,7 @@ void main() async {
 
   runApp(
     GetMaterialApp(
-      showPerformanceOverlay: false,
+      showPerformanceOverlay: true,
       translations: Translation(),
       locale: ui.window.locale,
       fallbackLocale: const Locale('en'),
@@ -18,8 +18,9 @@ void main() async {
       debugShowCheckedModeBanner: false,
       title: "MirrorX",
       theme: ThemeData(
-        backgroundColor: Colors.white,
-      ),
+          backgroundColor: Colors.white,
+          scrollbarTheme:
+              ScrollbarThemeData(thickness: MaterialStateProperty.all(4))),
       defaultTransition: Transition.circularReveal,
       transitionDuration: const Duration(milliseconds: 1500),
       home: const SplashPage(),

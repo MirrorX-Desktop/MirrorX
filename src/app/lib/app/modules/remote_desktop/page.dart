@@ -17,6 +17,6 @@ class RemoteDesktopPage extends GetView<RemoteDesktopController> {
 
   @override
   Widget build(BuildContext context) {
-    return const Text("RemoteDesktop");
+    return Text("RemoteDesktop: $_remoteID");
   }
 }

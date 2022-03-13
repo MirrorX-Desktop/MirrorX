@@ -29,34 +29,35 @@ class SideMenuDesktopItem extends StatelessWidget {
               return AnimatedBuilder(
                   animation: controller.animationController,
                   builder: (context, child) {
-                    return ClipRRect(
-                      borderRadius: const BorderRadius.all(Radius.circular(10)),
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
+                    return DecoratedBox(
+                      decoration: BoxDecoration(
                           color: controller.backgroundColorAnimation.value,
-                          border: Border.all(
-                              width: 1,
-                              color: (controller
-                                              .pageViewController.selectedTag ==
-                                          pageTag
-                                      ? controller
-                                          .backgroundColorAnimation.value
-                                      : controller.titleColorAnimation.value) ??
-                                  Colors.transparent),
-                          borderRadius: const BorderRadius.all(
-                            Radius.circular(10),
-                          ),
-                        ),
-                        child: MouseRegion(
-                          cursor: SystemMouseCursors.click,
-                          onEnter: (_) => controller.hoverEnter(),
-                          onExit: (_) => controller.hoverLeave(),
-                          child: GestureDetector(
-                            onTap: () => controller.pageViewController
-                                .jumpToPage(pageTag),
-                            behavior: HitTestBehavior.opaque,
-                            child: _buildInnerButton(controller),
-                          ),
+                          // border: Border.all(
+                          //     width: 1,
+                          //     color: (controller
+                          //                     .pageViewController.selectedTag ==
+                          //                 pageTag
+                          //             ? controller
+                          //                 .backgroundColorAnimation.value
+                          //             : controller.titleColorAnimation.value) ??
+                          //         Colors.transparent),
+                          borderRadius:
+                              const BorderRadius.all(Radius.circular(10)),
+                          boxShadow: [
+                            BoxShadow(
+                                // offset: const Offset(0, 1.5),
+                                color: Colors.grey.withOpacity(0.3),
+                                blurRadius: 3)
+                          ]),
+                      child: MouseRegion(
+                        cursor: SystemMouseCursors.click,
+                        onEnter: (_) => controller.hoverEnter(),
+                        onExit: (_) => controller.hoverLeave(),
+                        child: GestureDetector(
+                          onTap: () =>
+                              controller.pageViewController.jumpToPage(pageTag),
+                          behavior: HitTestBehavior.opaque,
+                          child: _buildInnerButton(controller),
                         ),
                       ),
                     );
@@ -101,12 +102,21 @@ class SideMenuDesktopItem extends StatelessWidget {
           ],
         ),
         Positioned(
-          right: -6,
-          bottom: -12,
-          child: FaIcon(
-            FontAwesomeIcons.windows,
-            color: sideMenuItemController.titleColorAnimation.value,
-            size: 45,
+          right: 0,
+          bottom: 0,
+          child: ClipRRect(
+            borderRadius:
+                const BorderRadius.only(bottomRight: Radius.circular(10)),
+            child: Align(
+              alignment: Alignment.topLeft,
+              widthFactor: 0.8,
+              heightFactor: 0.8,
+              child: FaIcon(
+                FontAwesomeIcons.windows,
+                color: sideMenuItemController.titleColorAnimation.value,
+                size: 45,
+              ),
+            ),
           ),
         ),
       ],

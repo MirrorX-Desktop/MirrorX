@@ -3,12 +3,14 @@ import 'package:get/get.dart';
 import 'package:mirrorx/app/controllers/device_profile.dart';
 import 'package:mirrorx/app/model/device_profile.dart';
 
-class DeviceID extends StatelessWidget {
+class DeviceID extends GetView<DeviceProfileController> {
   const DeviceID({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return Get.find<DeviceProfileController>().obx(
+    final controller = Get.put(DeviceProfileController());
+
+    return controller.obx(
       _buildDeviceIDField,
       onLoading: _buildLoading(),
       onError: (error) => _buildRetryButton(),
@@ -55,8 +57,7 @@ class DeviceID extends StatelessWidget {
         children: [
           IconButton(
             padding: EdgeInsets.zero,
-            onPressed: () =>
-                Get.find<DeviceProfileController>().fetchDeviceProfile(),
+            onPressed: controller.fetchDeviceProfile,
             tooltip: "device_id_field.load_failed_tooltip".tr,
             color: Colors.red,
             splashRadius: 18,
