@@ -54,6 +54,10 @@ class DevicePasswordController extends GetxController {
     if (_editing) {
       if (_textController.text.length >= 8 &&
           _textController.text.length <= 16) {
+        if (_textController.text == _password) {
+          return;
+        }
+
         try {
           await _sdkController
               .getSDKInstance()

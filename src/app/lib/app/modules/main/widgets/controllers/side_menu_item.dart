@@ -3,9 +3,9 @@ import 'package:get/get.dart';
 import 'package:mirrorx/app/controllers/page_view.dart';
 import 'package:mirrorx/app/core/values/colors.dart';
 
-class SideMenuStaticItemController extends GetxController
+class SideMenuItemController extends GetxController
     with GetSingleTickerProviderStateMixin {
-  SideMenuStaticItemController(String tag) : _tag = tag;
+  SideMenuItemController(String tag) : _tag = tag;
 
   final String _tag;
 
@@ -19,6 +19,8 @@ class SideMenuStaticItemController extends GetxController
   late bool _selected;
 
   late PageViewController _pageViewController;
+
+  PageViewController get pageViewController => _pageViewController;
 
   @override
   void onInit() {

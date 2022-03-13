@@ -14,7 +14,8 @@ dependencies:
   flutter_rust_bridge: ^1.22.2
   path_provider: ^2.0.9
   uuid: ^3.0.6
-
+  font_awesome_flutter: ^9.2.0
+  
 dev_dependencies:
   flutter_test:
     sdk: flutter

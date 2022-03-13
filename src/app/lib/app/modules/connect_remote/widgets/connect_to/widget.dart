@@ -1,9 +1,9 @@
 import 'dart:math';
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:mirrorx/app/controllers/page_view.dart';
 import 'package:mirrorx/app/core/values/colors.dart';
 import 'package:mirrorx/app/modules/connect_remote/widgets/connect_to/controller.dart';
 
@@ -37,6 +37,8 @@ class ConnectTo extends StatelessWidget {
 
   void _connectTo() {
     final id = 100000 + Random().nextInt(899999);
+    final controller = Get.find<PageViewController>();
+    controller.addNewRemoteDesktopPage(id.toString());
   }
 }
 

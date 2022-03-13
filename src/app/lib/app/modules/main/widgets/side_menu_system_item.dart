@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:mirrorx/app/controllers/page_view.dart';
 
-import 'controller.dart';
+import 'controllers/side_menu_item.dart';
 
-class SideMenuStaticItem extends StatelessWidget {
-  const SideMenuStaticItem(
+class SideMenuSystemItem extends StatelessWidget {
+  const SideMenuSystemItem(
       {Key? key,
       required this.icon,
       required this.title,
@@ -18,11 +18,11 @@ class SideMenuStaticItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Get.put(SideMenuStaticItemController(pageTag), tag: pageTag);
+    Get.lazyPut(() => SideMenuItemController(pageTag), tag: pageTag);
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
-      child: GetBuilder<SideMenuStaticItemController>(
+      child: GetBuilder<SideMenuItemController>(
         tag: pageTag,
         builder: (controller) {
           return AnimatedBuilder(
@@ -39,7 +39,7 @@ class SideMenuStaticItem extends StatelessWidget {
                   onExit: (_) => controller.hoverLeave(),
                   child: GestureDetector(
                     onTap: () =>
-                        Get.find<PageViewController>().jumpToPage(pageTag),
+                        controller.pageViewController.jumpToPage(pageTag),
                     behavior: HitTestBehavior.opaque,
                     child: Padding(
                       padding: const EdgeInsets.all(8.0),

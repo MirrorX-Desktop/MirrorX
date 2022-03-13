@@ -9,12 +9,10 @@ class SplashPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Get.find<SDKController>().obx(
-        (_) => const MainPage(),
-        onLoading: const Center(child: CircularProgressIndicator()),
-        onError: (_) => const ErrorPage(),
-      ),
+    return Get.find<SDKController>().obx(
+      (_) => const MainPage(),
+      onLoading: const Center(child: CircularProgressIndicator()),
+      onError: (_) => const ErrorPage(),
     );
   }
 }

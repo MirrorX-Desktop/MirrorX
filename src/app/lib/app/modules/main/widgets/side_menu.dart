@@ -2,17 +2,16 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:mirrorx/app/controllers/page_view.dart';
 import 'package:mirrorx/app/core/values/page_tag.dart';
-import 'package:mirrorx/app/modules/main/widgets/side_menu/controller.dart';
-import 'package:mirrorx/app/modules/main/widgets/side_menu_static_item/widget.dart';
+import 'package:mirrorx/app/modules/main/widgets/side_menu_desktop_item.dart';
+import 'package:mirrorx/app/modules/main/widgets/side_menu_system_item.dart';
 
 class SideMenu extends StatelessWidget {
   const SideMenu({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    Get.put(SideMenuController());
-
     if (Platform.isMacOS) {
       return Padding(
           padding: const EdgeInsets.only(top: 32), child: _buildList());
@@ -28,33 +27,33 @@ class SideMenu extends StatelessWidget {
         children: [
           Column(
             children: [
-              SideMenuStaticItem(
+              SideMenuSystemItem(
                   icon: Icons.screen_share,
                   title: "side_menu.connect_to_remote".tr,
                   pageTag: PageTags.connectRemote),
-              SideMenuStaticItem(
+              SideMenuSystemItem(
                   icon: Icons.lan,
                   title: "side_menu.lan_discovery".tr,
                   pageTag: PageTags.lanDiscovery),
-              SideMenuStaticItem(
+              SideMenuSystemItem(
                   icon: Icons.drive_file_move_rtl,
                   title: "side_menu.file_transfer".tr,
                   pageTag: PageTags.fileTransfer),
-              SideMenuStaticItem(
+              SideMenuSystemItem(
                   icon: Icons.history,
                   title: "side_menu.connection_history".tr,
                   pageTag: PageTags.connectionHistory),
-              SideMenuStaticItem(
+              SideMenuSystemItem(
                   icon: Icons.settings,
                   title: "side_menu.settings".tr,
                   pageTag: PageTags.settings),
             ],
           ),
           Expanded(
-            child: GetBuilder<SideMenuController>(
-              builder: (ctrl) {
+            child: GetBuilder<PageViewController>(
+              builder: (controller) {
                 return Column(
-                  children: _buildSideMenuRemoteDesktopItem(),
+                  children: _buildSideMenuRemoteDesktopItem(controller),
                 );
               },
             ),
@@ -64,8 +63,11 @@ class SideMenu extends StatelessWidget {
     );
   }
 
-  List<Widget> _buildSideMenuRemoteDesktopItem() {
-    return <Widget>[];
+  List<Widget> _buildSideMenuRemoteDesktopItem(PageViewController controller) {
+    return controller.remoteDesktopPages
+        .map((e) => SideMenuDesktopItem(
+            icon: Icons.abc, title: e.tag!, pageTag: e.tag!))
+        .toList();
   }
 }
 

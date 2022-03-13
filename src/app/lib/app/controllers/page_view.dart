@@ -21,6 +21,14 @@ class PageViewController extends GetxController {
   late List<GetView> _staticPages;
   late List<RemoteDesktopPage> _remoteDesktopPages;
 
+  PageController get pageController => _pageController;
+
+  int get totalPageViewCount => _totalPageViewCount;
+
+  String get selectedTag => _getSelectedTag();
+
+  List<RemoteDesktopPage> get remoteDesktopPages => _remoteDesktopPages;
+
   @override
   void onInit() {
     _selectedIndex = 0;
@@ -47,12 +55,6 @@ class PageViewController extends GetxController {
 
     super.onInit();
   }
-
-  PageController get pageController => _pageController;
-
-  int get totalPageViewCount => _totalPageViewCount;
-
-  String get selectedTag => _getSelectedTag();
 
   void addNewRemoteDesktopPage(String remoteID) {
     final exist = _remoteDesktopPages.any((element) => element.tag == remoteID);

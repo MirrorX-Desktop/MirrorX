@@ -12,8 +12,6 @@ class SDKController extends GetxController with StateMixin<MirrorXCore> {
   Future<void> initMirrorXSDK() async {
     change(null, status: RxStatus.loading());
 
-    await Future.delayed(const Duration(seconds: 2));
-
     final sdk = await initSDK();
     sdk == null
         ? change(null, status: RxStatus.error())
