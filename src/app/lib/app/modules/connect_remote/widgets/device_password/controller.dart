@@ -1,24 +1,21 @@
+import 'dart:developer';
+
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:mirrorx/app/controllers/sdk.dart';
+import 'package:mirrorx/app/core/utils/dialog.dart';
 
 class DevicePasswordController extends GetxController {
-  late bool _visable;
-  late bool _editing;
-  late String _password;
-  late SDKController _sdkController;
+  var _visable = false;
+  var _editing = false;
+  var _password = "";
+  final _sdkController = Get.find<SDKController>();
+  final _textController = TextEditingController();
 
   bool get passwordVisable => _visable;
   bool get isEditing => _editing;
   String get password => _password;
-
-  @override
-  void onInit() {
-    _visable = false;
-    _editing = false;
-    _password = "";
-    _sdkController = Get.find<SDKController>();
-    super.onInit();
-  }
+  TextEditingController get textController => _textController;
 
   @override
   void onReady() async {
@@ -27,19 +24,24 @@ class DevicePasswordController extends GetxController {
   }
 
   Future<void> fetchDevicePassword() async {
+    String password;
+
     try {
       final storedPassword = await _sdkController
           .getSDKInstance()
           .readConfig(key: "device_password");
 
       if (storedPassword == null || storedPassword == "") {
-        _password = await _generateAndSaveNewDevicePassword();
+        password = await _generateAndSaveNewDevicePassword();
       }
 
-      _password = storedPassword!;
+      password = storedPassword!;
     } catch (err) {
-      _password = await _generateAndSaveNewDevicePassword();
+      password = await _generateAndSaveNewDevicePassword();
     }
+
+    _password = password;
+    _textController.text = password;
     update();
   }
 
@@ -48,14 +50,55 @@ class DevicePasswordController extends GetxController {
     update();
   }
 
-  void editing() {
+  Future<void> editOrCommitPassword() async {
     if (_editing) {
-      // enter edit mode
-// todo: commit
-    } else {}
+      if (_textController.text.length >= 8 &&
+          _textController.text.length <= 16) {
+        try {
+          await _sdkController
+              .getSDKInstance()
+              .storeConfig(key: "device_password", value: _textController.text);
+          _password = _textController.text;
+        } catch (err) {
+          Get.defaultDialog(
+              title: "MirrorX",
+              content: Text("An error occurs when save password: $err"));
+        }
+      } else {
+        return;
+      }
+    }
+
     _visable = false;
     _editing = !_editing;
     update();
+  }
+
+  void cancelEditing() {
+    _visable = false;
+    _editing = false;
+    update();
+  }
+
+  void generateNewRandomPassword() async {
+    if (!_editing) {
+      /// popup a dialog to alert
+      popupAskDialog(
+          content: "device_password_field.dialog.confirm_regenerate".tr,
+          yesAction: () async {
+            try {
+              _password = await _generateAndSaveNewDevicePassword();
+              textController.text = _password;
+              update();
+            } catch (err) {
+              popupErrorDialog(content: "An error occurred.");
+            }
+          });
+    } else {
+      textController.text =
+          await _sdkController.getSDKInstance().generateDevicePassword();
+      update();
+    }
   }
 
   Future<String> _generateAndSaveNewDevicePassword() async {
@@ -65,5 +108,11 @@ class DevicePasswordController extends GetxController {
         .getSDKInstance()
         .storeConfig(key: "device_password", value: password);
     return password;
+  }
+
+  @override
+  void onClose() {
+    _textController.dispose();
+    super.onClose();
   }
 }

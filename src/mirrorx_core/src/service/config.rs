@@ -13,13 +13,7 @@ pub fn init_config(path: PathBuf) -> Result<(), Box<dyn Error>> {
     let config_db_path = CONFIG_DB_PATH.read()?;
     let db = Connection::open(config_db_path.to_path_buf())?;
 
-    db.execute(
-        "CREATE TABLE IF NOT EXISTS kv (
-            key TEXT PRIMARY KEY,
-            value TEXT NOT NULL
-        )",
-        [],
-    )?;
+    check_table(&db)?;
 
     load_config(&db)?;
 
@@ -37,6 +31,7 @@ pub fn save_config(key: &str, value: &str) -> Result<(), Box<dyn Error>> {
     let config_db_path = CONFIG_DB_PATH.read()?;
 
     let db = Connection::open(config_db_path.to_path_buf())?;
+    check_table(&db)?;
     let mut stmt = db.prepare("INSERT OR REPLACE INTO kv (key, value) VALUES (?1,?2)")?;
     stmt.execute(&[&key, &value])?;
 
@@ -50,6 +45,18 @@ fn update_config_db_path(path: PathBuf) -> Result<(), Box<dyn Error>> {
     db_path.clear();
     db_path.push(path);
     db_path.push("config.db");
+    Ok(())
+}
+
+fn check_table(db: &Connection) -> Result<(), Box<dyn Error>> {
+    db.execute(
+        "CREATE TABLE IF NOT EXISTS kv (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL
+        )",
+        [],
+    )?;
+
     Ok(())
 }
 

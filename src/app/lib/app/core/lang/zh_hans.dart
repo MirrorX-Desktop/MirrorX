@@ -16,6 +16,10 @@ const Map<String, String> zhHans = {
   "connect_to_remote.device_password_hide": "隐藏密码",
   "connect_to_remote.device_password_edit": "修改密码",
   "connect_to_remote.device_password_edit_confirm": "保存密码",
+  "connect_to_remote.device_password_edit_cancel": "取消修改密码",
   "connect_to_remote.device_password_random_generate": "重新生成随机密码",
-  "device_id_field.load_failed_tooltip": "获取设备ID失败，点击按钮重试！"
+  "device_id_field.load_failed_tooltip": "获取设备ID失败，点击按钮重试！",
+  "device_password_field.dialog.confirm_regenerate": "你想重新生成随机设备密码吗？",
+  "dialog.yes": "是",
+  "dialog.no": "否",
 };
