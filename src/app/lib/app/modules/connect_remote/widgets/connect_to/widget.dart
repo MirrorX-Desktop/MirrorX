@@ -5,13 +5,16 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:mirrorx/app/controllers/page_view.dart';
 import 'package:mirrorx/app/core/values/colors.dart';
-import 'package:mirrorx/app/modules/connect_remote/widgets/connect_to/controller.dart';
+import 'package:mirrorx/app/modules/connect_remote/widgets/connect_to/controllers/connect_to.dart';
+import 'package:mirrorx/app/modules/connect_remote/widgets/connect_to/controllers/digit_input.dart';
 
 class ConnectTo extends StatelessWidget {
   const ConnectTo({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    final controller = Get.put(ConnectToController());
+
     return SizedBox(
       height: 48,
       child: Row(
@@ -20,26 +23,29 @@ class ConnectTo extends StatelessWidget {
           SizedBox(
             height: 32,
             width: 32,
-            child: IconButton(
-                onPressed: _connectTo,
-                tooltip: "connect_to_remote.connect".tr,
-                splashRadius: 14,
-                splashColor: Colors.transparent,
-                padding: EdgeInsets.zero,
-                hoverColor: const Color.fromARGB(240, 220, 220, 220),
-                iconSize: 16,
-                icon: const Icon(Icons.login)),
+            child: controller.obx(
+                (_) => IconButton(
+                      onPressed: controller.connectTo,
+                      tooltip: "connect_to_remote.connect".tr,
+                      splashRadius: 14,
+                      splashColor: Colors.transparent,
+                      padding: EdgeInsets.zero,
+                      hoverColor: const Color.fromARGB(240, 220, 220, 220),
+                      iconSize: 16,
+                      icon: const Icon(Icons.login),
+                    ),
+                onLoading: const CircularProgressIndicator()),
           ),
         ],
       ),
     );
   }
 
-  void _connectTo() {
-    final id = 100000 + Random().nextInt(899999);
-    final controller = Get.find<PageViewController>();
-    controller.addNewRemoteDesktopPage(id.toString());
-  }
+  // void _connectTo() {
+  //   final id = 100000 + Random().nextInt(899999);
+  //   final controller = Get.find<PageViewController>();
+  //   controller.addNewRemoteDesktopPage(id.toString());
+  // }
 }
 
 class DigitsInputField extends StatelessWidget {
@@ -47,8 +53,6 @@ class DigitsInputField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Get.put(DigitInputController());
-
     return GetBuilder<DigitInputController>(
       builder: (controller) => FocusScope(
         node: controller.focusScopeNode,

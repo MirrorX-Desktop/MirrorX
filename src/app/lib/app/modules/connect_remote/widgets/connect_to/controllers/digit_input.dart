@@ -22,6 +22,7 @@ class DigitInputController extends GetxController {
   FocusScopeNode get focusScopeNode => _focusScopeNode;
   List<TextEditingController> get textEditingControllers =>
       _textEditingControllers;
+  String get inputText => _textEditingControllers.map((e) => e.text).join();
 
   @override
   void onInit() {

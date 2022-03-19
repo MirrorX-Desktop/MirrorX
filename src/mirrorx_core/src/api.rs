@@ -63,3 +63,7 @@ pub fn store_config(key: String, value: String) -> anyhow::Result<()> {
 pub fn generate_device_password() -> String {
     crate::service::base::generate_device_password()
 }
+
+pub fn desktop_connect_to(deviceID: String) -> anyhow::Result<()> {
+    Ok(())
+}

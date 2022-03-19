@@ -1,6 +1,5 @@
 import 'dart:developer' as dev;
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:mirrorx/app/core/values/page_tag.dart';
@@ -130,8 +129,8 @@ class PageViewController extends GetxController {
 
   void _antimateToPage(int selectIndex) {
     pageController.animateToPage(selectIndex,
-        duration: const Duration(milliseconds: 400),
-        curve: Curves.fastLinearToSlowEaseIn);
+        duration: const Duration(milliseconds: 600),
+        curve: Curves.fastOutSlowIn);
   }
 
   String _getSelectedTag() {

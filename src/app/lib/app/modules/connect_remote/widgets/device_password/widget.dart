@@ -94,7 +94,7 @@ class DevicePassword extends GetView<DevicePasswordController> {
         return Center(
           child: SelectableText(
             controller.password,
-            style: const TextStyle(fontFamily: "Fredoka", fontSize: 18),
+            style: const TextStyle(fontSize: 18),
           ),
         );
       } else {
@@ -142,7 +142,7 @@ class DevicePassword extends GetView<DevicePasswordController> {
         ],
         scrollPhysics: const NeverScrollableScrollPhysics(),
         textAlign: TextAlign.center,
-        style: const TextStyle(fontFamily: "Fredoka", fontSize: 18),
+        style: const TextStyle(fontSize: 18),
         onChanged: (_) {
           controller.update();
         },

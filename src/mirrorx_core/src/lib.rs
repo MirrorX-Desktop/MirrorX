@@ -3,6 +3,11 @@ mod bridge_generated; /* AUTO INJECTED BY flutter_rust_bridge. This line may not
 mod duplicator;
 mod ffi_log;
 mod frame;
+mod network;
 mod service;
+mod util;
 mod video_decoder;
 mod video_encoder;
+
+#[cfg(test)]
+mod test;

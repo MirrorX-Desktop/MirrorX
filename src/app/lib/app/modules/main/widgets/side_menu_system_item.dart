@@ -34,8 +34,8 @@ class SideMenuSystemItem extends StatelessWidget {
                   boxShadow: [
                     BoxShadow(
                         offset: const Offset(0, 1.5),
-                        color: Colors.grey.withOpacity(0.3),
-                        blurRadius: 3)
+                        color: Colors.grey.withAlpha(100),
+                        blurRadius: 3.5)
                   ],
                 ),
                 child: MouseRegion(

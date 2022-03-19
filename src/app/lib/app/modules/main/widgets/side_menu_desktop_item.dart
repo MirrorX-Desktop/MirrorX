@@ -32,22 +32,13 @@ class SideMenuDesktopItem extends StatelessWidget {
                     return DecoratedBox(
                       decoration: BoxDecoration(
                           color: controller.backgroundColorAnimation.value,
-                          // border: Border.all(
-                          //     width: 1,
-                          //     color: (controller
-                          //                     .pageViewController.selectedTag ==
-                          //                 pageTag
-                          //             ? controller
-                          //                 .backgroundColorAnimation.value
-                          //             : controller.titleColorAnimation.value) ??
-                          //         Colors.transparent),
                           borderRadius:
                               const BorderRadius.all(Radius.circular(10)),
                           boxShadow: [
                             BoxShadow(
-                                // offset: const Offset(0, 1.5),
-                                color: Colors.grey.withOpacity(0.3),
-                                blurRadius: 3)
+                                offset: const Offset(0, 1.5),
+                                color: Colors.grey.withAlpha(100),
+                                blurRadius: 3.5)
                           ]),
                       child: MouseRegion(
                         cursor: SystemMouseCursors.click,

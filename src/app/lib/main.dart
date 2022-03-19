@@ -10,7 +10,7 @@ void main() async {
 
   runApp(
     GetMaterialApp(
-      showPerformanceOverlay: true,
+      showPerformanceOverlay: false,
       translations: Translation(),
       locale: ui.window.locale,
       fallbackLocale: const Locale('en'),
