@@ -6,7 +6,7 @@ use crate::util::BytesWriter;
 
 impl_downcast!(ProtoMessage);
 
-pub trait ProtoMessage: Send + Downcast {
+pub trait ProtoMessage: Send + Sync + Downcast {
     fn opcode(&self) -> u16;
 
     fn default() -> Self

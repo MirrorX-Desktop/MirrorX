@@ -1,5 +1,5 @@
 use super::{
-    handler::MESSAGE_HANDLERS, proto::opcode::Opcode, transporter_future::TransporterFuture,
+    handler::process_handler, proto::opcode::Opcode, transporter_future::TransporterFuture,
 };
 use crate::{
     network::{
@@ -158,23 +158,7 @@ async fn handle_packet(
             let resp_tx_clone = resp_tx.clone();
 
             tokio::spawn(async move {
-                let opcode_enum = match Opcode::try_from(proto_message.opcode()) {
-                    Ok(res) => res,
-                    Err(_) => {
-                        error!("handle_packet: unknown opcode: {}", proto_message.opcode());
-                        return;
-                    }
-                };
-
-                if let Some(handler) = MESSAGE_HANDLERS.get(&opcode_enum) {
-                    let resp_message = match handler(proto_message).await {
-                        Ok(res) => res,
-                        Err(err) => {
-                            error!("handle_packet: message handler returns error: {:?}", err);
-                            return;
-                        }
-                    };
-
+                if let Some(resp_message) = process_handler(proto_message).await {
                     let mut buf = BytesMut::new();
 
                     encode_packet(&mut buf, seq_id, resp_message.as_ref());
