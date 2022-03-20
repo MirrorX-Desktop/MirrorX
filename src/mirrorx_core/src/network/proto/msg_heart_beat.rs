@@ -1,6 +1,5 @@
-use crate::util::{BytesReader, BytesWriter};
-
 use super::{opcode::Opcode, ProtoMessage};
+use crate::network::util::{BytesReader, BytesWriter};
 
 #[derive(Debug)]
 pub struct HeartBeatReq {

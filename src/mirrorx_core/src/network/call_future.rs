@@ -1,23 +1,24 @@
+use futures::{Future, TryFutureExt};
 use std::{
     pin::Pin,
     task::{Context, Poll},
 };
-
-use futures::{Future, TryFutureExt};
 use tokio::sync::oneshot::Receiver;
 
-pub struct TransporterFuture {
-    rx: Receiver<(u16, Vec<u8>)>,
+use super::proto::ProtoMessage;
+
+pub struct CallFuture {
+    rx: Receiver<Box<dyn ProtoMessage>>,
 }
 
-impl TransporterFuture {
-    pub fn new(rx: Receiver<(u16, Vec<u8>)>) -> TransporterFuture {
-        TransporterFuture { rx }
+impl CallFuture {
+    pub fn new(rx: Receiver<Box<dyn ProtoMessage>>) -> CallFuture {
+        CallFuture { rx }
     }
 }
 
-impl Future for TransporterFuture {
-    type Output = anyhow::Result<(u16, Vec<u8>)>;
+impl Future for CallFuture {
+    type Output = anyhow::Result<Box<dyn ProtoMessage>>;
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         if let Poll::Ready(res) = self.rx.try_poll_unpin(cx) {

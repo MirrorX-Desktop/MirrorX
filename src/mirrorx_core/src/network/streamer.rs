@@ -4,22 +4,16 @@ use bytes::{Bytes, BytesMut};
 use futures::stream::{SplitSink, SplitStream};
 use futures::{SinkExt, StreamExt};
 use log::{error, info};
-use tokio::net::{TcpStream, ToSocketAddrs};
+use tokio::net::TcpStream;
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
 use tokio::sync::oneshot::error::TryRecvError;
 use tokio::sync::oneshot::{channel, Receiver, Sender};
 use tokio::time::timeout;
 use tokio_util::codec::{Framed, LengthDelimitedCodec};
 
-pub async fn create_tcp_streamer<A>(
-    addr: A,
-) -> anyhow::Result<(UnboundedSender<Bytes>, UnboundedReceiver<BytesMut>)>
-where
-    A: ToSocketAddrs,
-{
-    let stream = timeout(Duration::from_secs(2), TcpStream::connect(addr)).await??;
-    stream.set_nodelay(true)?;
-
+pub async fn create_tcp_streamer(
+    stream: TcpStream,
+) -> anyhow::Result<(UnboundedSender<Bytes>, UnboundedReceiver<BytesMut>)> {
     let mut codec = LengthDelimitedCodec::new();
     codec.set_max_frame_length(16 * 1024 * 1024);
 

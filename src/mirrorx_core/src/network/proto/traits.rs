@@ -1,8 +1,6 @@
-use std::mem::MaybeUninit;
-
+use crate::network::util::BytesWriter;
 use downcast_rs::{impl_downcast, Downcast};
-
-use crate::util::BytesWriter;
+use std::mem::MaybeUninit;
 
 impl_downcast!(ProtoMessage);
 

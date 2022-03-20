@@ -1,5 +1,5 @@
 use super::{opcode::Opcode, ProtoMessage};
-use crate::util::{BytesReader, BytesWriter};
+use crate::network::util::{BytesReader, BytesWriter};
 
 #[derive(Debug)]
 pub struct DesktopConnectOfferReq {

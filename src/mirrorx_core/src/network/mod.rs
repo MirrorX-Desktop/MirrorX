@@ -1,7 +1,9 @@
+mod call_future;
+mod client;
 mod handler;
-pub mod proto;
 mod streamer;
-mod transporter;
-mod transporter_future;
+mod util;
 
-pub use transporter::Transporter;
+pub mod proto;
+
+pub use client::Client;

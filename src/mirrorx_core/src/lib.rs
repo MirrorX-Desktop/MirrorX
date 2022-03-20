@@ -5,7 +5,6 @@ mod ffi_log;
 mod frame;
 mod network;
 mod service;
-mod util;
 mod video_decoder;
 mod video_encoder;
 
