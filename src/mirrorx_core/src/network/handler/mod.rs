@@ -1,5 +1,5 @@
 mod desktop_connect_ask;
 mod heart_beat;
-mod processor;
+mod process_message;
 
-pub use processor::process_handler;
+pub use process_message::process_message;

@@ -1,9 +1,6 @@
-mod call_future;
 mod client;
 mod handler;
-mod streamer;
-mod util;
-
-pub mod proto;
+pub mod message;
+mod packet;
 
 pub use client::Client;

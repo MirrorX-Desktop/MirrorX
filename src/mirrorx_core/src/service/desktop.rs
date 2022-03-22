@@ -1,23 +1,41 @@
 use lazy_static::lazy_static;
-use std::{collections::HashMap, time::Duration};
-use tokio::sync::RwLock;
+use std::{sync::Arc, time::Duration};
+use tokio::net::TcpStream;
 
-use crate::network::{proto, Client};
+use crate::{network::Client, service::runtime::RUNTIME};
 
-lazy_static! {
-    static ref DESKTOP_CONNECTION_MAP: RwLock<HashMap<String, Client>> =
-        RwLock::new(HashMap::new());
-}
+// static mut INNER_CLIENT: Option<Arc<Client>> = None;
 
-pub async fn connect_to(device_id: String) -> anyhow::Result<()> {
-    // let transporter = Transporter::new().await?;
+// lazy_static! {
+//     static ref CLIENT: &'static Client = unsafe { INNER_CLIENT.as_ref().unwrap() };
+// }
 
-    // let desktop_connect_response: proto::DesktopConnectOfferResp = transporter
-    //     .call(
-    //         &proto::DesktopConnectOfferReq { device_id },
-    //         Duration::from_secs(10),
-    //     )
-    //     .await?;
+pub fn init_client() -> anyhow::Result<()> {
+    // let client = RUNTIME.block_on(async {
+    //     let stream = TcpStream::connect("127.0.0.1:45555").await?;
+    //     Client::new(stream).await
+    // })?;
+
+    // unsafe {
+    //     INNER_CLIENT = Some(client);
+    // }
 
     Ok(())
+}
+
+pub fn connect_to(device_id: String) -> anyhow::Result<bool> {
+    // RUNTIME.block_on(async move {
+    //     let resp: DesktopConnectOfferResp = CLIENT
+    //         .call(
+    //             &DesktopConnectOfferReq {
+    //                 device_id: String::from("523344551"),
+    //             },
+    //             Duration::from_secs(1),
+    //         )
+    //         .await?;
+
+    //     Ok(resp.allow)
+    // })
+
+    Ok(true)
 }

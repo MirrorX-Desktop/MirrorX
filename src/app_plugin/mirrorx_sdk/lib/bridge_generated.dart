@@ -22,6 +22,8 @@ abstract class MirrorXCore {
       {required String key, required String value, dynamic hint});
 
   Future<String> generateDevicePassword({dynamic hint});
+
+  Future<bool> desktopConnectTo({required String deviceId, dynamic hint});
 }
 
 class MirrorXCoreImpl extends FlutterRustBridgeBase<MirrorXCoreWire>
@@ -93,6 +95,19 @@ class MirrorXCoreImpl extends FlutterRustBridgeBase<MirrorXCoreWire>
           argNames: [],
         ),
         argValues: [],
+        hint: hint,
+      ));
+
+  Future<bool> desktopConnectTo({required String deviceId, dynamic hint}) =>
+      executeNormal(FlutterRustBridgeTask(
+        callFfi: (port_) =>
+            inner.wire_desktop_connect_to(port_, _api2wire_String(deviceId)),
+        parseSuccessData: _wire2api_bool,
+        constMeta: const FlutterRustBridgeTaskConstMeta(
+          debugName: "desktop_connect_to",
+          argNames: ["deviceId"],
+        ),
+        argValues: [deviceId],
         hint: hint,
       ));
 
@@ -250,6 +265,23 @@ class MirrorXCoreWire implements FlutterRustBridgeWireBase {
           'wire_generate_device_password');
   late final _wire_generate_device_password =
       _wire_generate_device_passwordPtr.asFunction<void Function(int)>();
+
+  void wire_desktop_connect_to(
+    int port_,
+    ffi.Pointer<wire_uint_8_list> device_id,
+  ) {
+    return _wire_desktop_connect_to(
+      port_,
+      device_id,
+    );
+  }
+
+  late final _wire_desktop_connect_toPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Void Function(ffi.Int64,
+              ffi.Pointer<wire_uint_8_list>)>>('wire_desktop_connect_to');
+  late final _wire_desktop_connect_to = _wire_desktop_connect_toPtr
+      .asFunction<void Function(int, ffi.Pointer<wire_uint_8_list>)>();
 
   ffi.Pointer<wire_uint_8_list> new_uint_8_list(
     int len,

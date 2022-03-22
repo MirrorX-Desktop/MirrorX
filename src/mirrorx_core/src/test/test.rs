@@ -1,40 +1,55 @@
 #[cfg(test)]
 mod run_tests {
-
-    use std::time::Duration;
-
     use log::info;
-    use tokio::{net::TcpStream, time::timeout};
-
-    use crate::test::prepare::init_log;
 
     #[tokio::test]
     async fn test_client_call() -> anyhow::Result<()> {
-        use crate::{network::proto, network::Client};
         use tokio::time::Duration;
 
-        init_log();
+        crate::test::prepare::init_log();
 
-        let stream = timeout(
+        let stream = tokio::time::timeout(
             Duration::from_secs(1),
-            TcpStream::connect("127.0.0.1:45555"),
+            tokio::net::TcpStream::connect("127.0.0.1:45555"),
         )
         .await??;
 
-        let cs = Client::new(stream).await?;
+        let client = crate::network::Client::new(stream).await?;
 
         for i in 0..5 {
-            let resp: proto::HeartBeatResp = cs
+            let resp_message = client
                 .call(
-                    &proto::HeartBeatReq {
-                        time_stamp: i as u32,
-                    },
-                    Duration::from_secs(5),
+                    crate::network::message::Message::HeartBeatReq(
+                        crate::network::message::HeartBeatReq {
+                            time_stamp: 1000 + i,
+                        },
+                    ),
+                    Duration::from_secs(1),
                 )
                 .await?;
 
-            info!("test_client_call: receive resp: {:?}", resp);
+            if let crate::network::message::Message::HeartBeatResp(message) = resp_message {
+                info!("test_client_call: receive resp: {:?}", message);
+            } else {
+                return Err(anyhow::anyhow!("test_client_call: mismatched message"));
+            }
         }
+
         Ok(())
     }
+
+    // #[test]
+    // fn device_id() -> anyhow::Result<()> {
+    //     use rand::rngs::OsRng;
+    //     use rand::RngCore;
+
+    //     let mut key = [0u8; 32];
+    //     OsRng.fill_bytes(&mut key);
+    //     println!("{:02X?}", &key);
+
+    //     let device_id = generate_device_id(&key)?;
+
+    //     println!("{:?}", device_id);
+    //     Ok(())
+    // }
 }

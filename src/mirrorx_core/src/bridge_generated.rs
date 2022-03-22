@@ -93,6 +93,21 @@ pub extern "C" fn wire_generate_device_password(port_: i64) {
     )
 }
 
+#[no_mangle]
+pub extern "C" fn wire_desktop_connect_to(port_: i64, device_id: *mut wire_uint_8_list) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap(
+        WrapInfo {
+            debug_name: "desktop_connect_to",
+            port: Some(port_),
+            mode: FfiCallMode::Normal,
+        },
+        move || {
+            let api_device_id = device_id.wire2api();
+            move |task_callback| desktop_connect_to(api_device_id)
+        },
+    )
+}
+
 // Section: wire structs
 
 #[repr(C)]

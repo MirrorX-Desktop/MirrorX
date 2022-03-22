@@ -26,10 +26,22 @@ pub fn init_sdk(config_db_path: String) -> bool {
 
             let init_fn = || -> anyhow::Result<()> {
                 let config_db_path = PathBuf::from(config_db_path);
-                crate::service::config::init_config(config_db_path).or_else(|err| {
+                if let Err(err) = crate::service::config::init_config(config_db_path) {
                     error!("init_sdk: init_config returns error: {:?}", &err);
                     return Err(anyhow::anyhow!(""));
-                })
+                };
+
+                if let Err(err) = crate::service::runtime::init_async_runtime() {
+                    error!("init_sdk: init_async_runtime returns error: {:?}", &err);
+                    return Err(anyhow::anyhow!(""));
+                }
+
+                if let Err(err) = crate::service::desktop::init_client() {
+                    error!("init_sdk: init_client returns error: {:?}", &err);
+                    return Err(anyhow::anyhow!(""));
+                }
+
+                Ok(())
             };
 
             INIT_ONCE_RESULT = init_fn().is_ok();
@@ -61,9 +73,12 @@ pub fn store_config(key: String, value: String) -> anyhow::Result<()> {
 }
 
 pub fn generate_device_password() -> String {
-    crate::service::base::generate_device_password()
+    crate::service::profile::generate_device_password()
 }
 
-pub fn desktop_connect_to(deviceID: String) -> anyhow::Result<()> {
-    Ok(())
+pub fn desktop_connect_to(device_id: String) -> anyhow::Result<bool> {
+    crate::service::desktop::connect_to(device_id).or_else(|err| {
+        error!("desktop_connect_to returns error: {:?}", &err);
+        Err(anyhow::anyhow!(""))
+    })
 }
