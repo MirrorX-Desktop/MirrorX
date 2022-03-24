@@ -1,5 +1,4 @@
 pub mod config;
-pub mod desktop;
-pub mod http;
-pub mod profile;
+pub mod network;
 pub mod runtime;
+pub mod utility;

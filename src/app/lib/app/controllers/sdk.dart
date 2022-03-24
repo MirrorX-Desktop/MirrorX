@@ -13,9 +13,17 @@ class SDKController extends GetxController with StateMixin<MirrorXCore> {
     change(null, status: RxStatus.loading());
 
     final sdk = await initSDK();
-    sdk == null
-        ? change(null, status: RxStatus.error())
-        : change(sdk, status: RxStatus.success());
+    if (sdk == null) {
+      change(null, status: RxStatus.error());
+      return;
+    }
+
+    try {
+      await sdk.deviceGoesOnline();
+      change(sdk, status: RxStatus.success());
+    } catch (e) {
+      change(null, status: RxStatus.error(e.toString()));
+    }
   }
 
   MirrorXCore getSDKInstance() {

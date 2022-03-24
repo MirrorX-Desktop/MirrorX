@@ -13,7 +13,10 @@ use lazy_static::lazy_static;
 use log::{error, info};
 use std::{
     collections::HashMap,
-    sync::{atomic, Arc},
+    sync::{
+        atomic::{self, AtomicU8},
+        Arc,
+    },
     time::Duration,
 };
 use tokio::{
@@ -34,8 +37,8 @@ lazy_static! {
 }
 
 pub struct Client {
-    callback_register: Arc<Mutex<HashMap<u8, Sender<Message>>>>,
-    call_id: atomic::AtomicU8,
+    caller_tx_register: Arc<Mutex<HashMap<u8, Sender<Message>>>>,
+    call_id: AtomicU8,
     sink_tx: Sender<Bytes>,
 }
 
@@ -51,22 +54,19 @@ impl Client {
 
         let (sink, stream) = framed_stream.split();
 
-        let callback_register = Arc::new(Mutex::new(HashMap::new()));
+        let caller_tx_register = Arc::new(Mutex::new(HashMap::new()));
 
         let (sink_tx, sink_rx) = channel(32);
 
+        let call_id = AtomicU8::new(0);
         let client = Arc::new(Client {
-            callback_register: callback_register.clone(),
-            call_id: atomic::AtomicU8::new(0),
+            caller_tx_register,
+            call_id,
             sink_tx,
         });
 
         tokio::spawn(Client::sink_loop(sink, sink_rx));
-        tokio::spawn(Client::stream_loop(
-            client.clone(),
-            stream,
-            callback_register,
-        ));
+        tokio::spawn(Client::stream_loop(client.clone(), stream));
 
         Ok(client)
     }
@@ -120,32 +120,29 @@ impl Client {
         call_id
     }
 
-    async fn register_call(&self, call_id: u8, future_tx: Sender<Message>) {
-        let mut register = self.callback_register.lock().await;
-        register.insert(call_id, future_tx);
+    async fn register_call(&self, call_id: u8, tx: Sender<Message>) {
+        let mut register = self.caller_tx_register.lock().await;
+        register.insert(call_id, tx);
     }
 
     async fn remove_call(&self, call_id: &u8) -> Option<Sender<Message>> {
-        let mut register = self.callback_register.lock().await;
+        let mut register = self.caller_tx_register.lock().await;
         register.remove(call_id)
     }
 
     async fn stream_loop<T>(
         client: Arc<Client>,
         mut stream: SplitStream<Framed<T, LengthDelimitedCodec>>,
-        callback_register: Arc<Mutex<HashMap<u8, Sender<Message>>>>,
     ) where
         T: AsyncRead + AsyncWrite + Send + 'static,
     {
         loop {
             let packet_bytes = match stream.next().await {
-                Some(packet) => match packet {
-                    Ok(packet) => packet,
-                    Err(err) => {
-                        error!("stream_loop: read packet error: {:?}", err);
-                        continue;
-                    }
-                },
+                Some(Ok(packet)) => packet,
+                Some(Err(err)) => {
+                    error!("stream_loop: read packet error: {:?}", err);
+                    continue;
+                }
                 None => break,
             };
 
@@ -157,33 +154,30 @@ impl Client {
                 }
             };
 
-            match callback_register.lock().await.remove(&packet.call_id) {
+            match client.remove_call(&packet.call_id).await {
                 Some(sender) => {
                     if let Err(err) = sender.send(packet.message).await {
                         error!("stream_loop: send packet to call receiver error: {:?}", err);
                     }
                 }
                 None => {
-                    let handler_client = client.clone();
+                    let client = client.clone();
 
                     tokio::spawn(async move {
-                        match process_message(handler_client.as_ref(), packet.message).await {
-                            Ok(resp_message) => {
-                                if let Some(message) = resp_message {
-                                    if let Err(err) =
-                                        handler_client.inner_send(packet.call_id, message).await
-                                    {
-                                        error!(
-                                            "stream_loop: send call response message error: {:?}",
-                                            err
-                                        );
-                                    }
+                        match process_message(client.as_ref(), packet.message).await {
+                            Ok(Some(message)) => {
+                                if let Err(err) = client.inner_send(packet.call_id, message).await {
+                                    error!(
+                                        "stream_loop: send call response message error: {:?}",
+                                        err
+                                    );
                                 }
                             }
+                            Ok(None) => {}
                             Err(_) => {
-                                // normally, we should send an error message to caller(remote machine),
-                                // but considering current stage of project, to simplify the process,
-                                // we just ignore it temporarily.
+                                // normally, we should send an error message to caller (remote
+                                // machine), but considering current stage of project, to simplify
+                                // the process, we just ignore it temporarily.
                             }
                         }
                     });

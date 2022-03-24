@@ -1,64 +1,70 @@
 use lazy_static::lazy_static;
-use rusqlite::Connection;
-use std::{collections::HashMap, error::Error, path::PathBuf, sync::RwLock};
+use rusqlite::{params, Connection, OptionalExtension};
+use std::{path::PathBuf, sync::RwLock};
 
 lazy_static! {
-    static ref CONFIG_DB_PATH: RwLock<PathBuf> = RwLock::new(PathBuf::new());
-    static ref CONFIG_KV_MAP: RwLock<HashMap<String, String>> = RwLock::new(HashMap::new());
+    static ref INNER_CONFIG_DB_PATH: RwLock<PathBuf> = RwLock::new(PathBuf::default());
+}
+
+enum ConfigKey {
+    DeviceID,
+    DeviceIDExpireAt,
+    DevicePassword,
+}
+
+impl ConfigKey {
+    fn as_str(self) -> &'static str {
+        match self {
+            ConfigKey::DeviceID => "device_id",
+            ConfigKey::DeviceIDExpireAt => "device_id_expire_at",
+            ConfigKey::DevicePassword => "device_password",
+        }
+    }
 }
 
 pub fn init_config(path: PathBuf) -> anyhow::Result<()> {
-    update_config_db_path(path)?;
-
-    let config_db_path = CONFIG_DB_PATH
-        .read()
-        .map_err(|err| anyhow::anyhow!("init_config: read config_db_path error, {}", err))?;
-
-    let db = Connection::open(config_db_path.to_path_buf())?;
-
-    check_table(&db)?;
-
-    load_config(&db)?;
-
-    Ok(())
-}
-
-pub fn read_config(key: &str) -> anyhow::Result<Option<String>> {
-    let kv = CONFIG_KV_MAP
-        .read()
-        .map_err(|err| anyhow::anyhow!("read_config: read config_kv_map error, {}", err))?;
-
-    let value = kv.get(key).map(|v| v.to_string());
-    Ok(value)
-}
-
-pub fn save_config(key: &str, value: &str) -> anyhow::Result<()> {
-    let config_db_path = CONFIG_DB_PATH
-        .read()
-        .map_err(|err| anyhow::anyhow!("save_config: read config_db_path error, {}", err))?;
-
-    let db = Connection::open(config_db_path.to_path_buf())?;
-    check_table(&db)?;
-    let mut stmt = db.prepare("INSERT OR REPLACE INTO kv (key, value) VALUES (?1,?2)")?;
-    stmt.execute(&[&key, &value])?;
-
-    let mut kv = CONFIG_KV_MAP
-        .write()
-        .map_err(|err| anyhow::anyhow!("save_config: write config_kv_map error, {}", err))?;
-    kv.insert(key.to_string(), value.to_string());
-
-    Ok(())
-}
-
-fn update_config_db_path(path: PathBuf) -> anyhow::Result<()> {
-    let mut db_path = CONFIG_DB_PATH.write().map_err(|err| {
-        anyhow::anyhow!("update_config_db_path: read config_db_path error, {}", err)
-    })?;
-
+    let mut db_path = INNER_CONFIG_DB_PATH.write().unwrap();
     db_path.clear();
     db_path.push(path);
     db_path.push("config.db");
+
+    let db = Connection::open(db_path.as_path())?;
+
+    check_table(&db)?;
+
     Ok(())
+}
+
+pub fn read_device_id() -> anyhow::Result<Option<String>> {
+    read_config(ConfigKey::DeviceID.as_str())
+}
+
+pub fn save_device_id(device_id: &str) -> anyhow::Result<()> {
+    save_config(ConfigKey::DeviceID.as_str(), device_id)
+}
+
+pub fn read_device_id_expire_at() -> anyhow::Result<Option<u32>> {
+    match read_config(ConfigKey::DeviceIDExpireAt.as_str())? {
+        Some(value) => u32::from_str_radix(&value, 10)
+            .map(|v| Some(v))
+            .map_err(|err| anyhow::anyhow!(err)),
+        None => Ok(None),
+    }
+}
+
+pub fn save_device_id_expire_at(time_stamp: &u32) -> anyhow::Result<()> {
+    save_config(
+        ConfigKey::DeviceIDExpireAt.as_str(),
+        &time_stamp.to_string(),
+    )
+}
+
+pub fn read_device_password() -> anyhow::Result<Option<String>> {
+    read_config(ConfigKey::DevicePassword.as_str())
+}
+
+pub fn save_device_password(device_password: &str) -> anyhow::Result<()> {
+    save_config(ConfigKey::DevicePassword.as_str(), device_password)
 }
 
 fn check_table(db: &Connection) -> anyhow::Result<()> {
@@ -73,19 +79,27 @@ fn check_table(db: &Connection) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn load_config(db: &Connection) -> anyhow::Result<()> {
-    let mut stmt = db.prepare("SELECT key, value FROM kv")?;
+fn read_config(key: &str) -> anyhow::Result<Option<String>> {
+    let db_path = INNER_CONFIG_DB_PATH.read().unwrap();
+    let db = Connection::open(db_path.as_path())?;
 
-    let mut config_kv_map = CONFIG_KV_MAP
-        .write()
-        .map_err(|err| anyhow::anyhow!("load_config: write config_kv_map error, {}", err))?;
+    db.query_row(
+        "SELECT value FROM kv WHERE key = ?1 LIMIT 1",
+        [key],
+        |row| row.get(0),
+    )
+    .optional()
+    .map_err(|err| anyhow::anyhow!(err))
+}
 
-    let mut rows = stmt.query([])?;
-    while let Some(row) = rows.next()? {
-        let key = row.get(0)?;
-        let value = row.get(1)?;
-        config_kv_map.insert(key, value);
-    }
+fn save_config(key: &str, value: &str) -> anyhow::Result<()> {
+    let db_path = INNER_CONFIG_DB_PATH.read().unwrap();
+    let db = Connection::open(db_path.as_path())?;
 
-    Ok(())
+    check_table(&db)?;
+
+    let mut stmt = db.prepare("INSERT OR REPLACE INTO kv (key, value) VALUES (?1,?2)")?;
+    stmt.execute(params![key, value])
+        .map(|_| ())
+        .map_err(|err| anyhow::anyhow!(err))
 }

@@ -4,7 +4,7 @@ use std::io::Write;
 
 pub fn init_log() {
     Builder::new()
-        .filter_level(LevelFilter::Info)
+        .filter_level(LevelFilter::Trace)
         .format(|buf, record| {
             writeln!(
                 buf,

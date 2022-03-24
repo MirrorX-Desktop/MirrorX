@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:mirrorx/app/controllers/device_profile.dart';
-import 'package:mirrorx/app/model/device_profile.dart';
+import 'package:mirrorx/app/modules/connect_remote/widgets/device_id/controller.dart';
 
-class DeviceID extends GetView<DeviceProfileController> {
+class DeviceID extends GetView<DeviceIDController> {
   const DeviceID({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.put(DeviceProfileController());
+    final controller = Get.put(DeviceIDController());
 
     return controller.obx(
       _buildDeviceIDField,
@@ -17,12 +16,12 @@ class DeviceID extends GetView<DeviceProfileController> {
     );
   }
 
-  Widget _buildDeviceIDField(DeviceProfileModel? model) {
+  Widget _buildDeviceIDField(String? deviceId) {
     return SizedBox(
       height: 48,
       child: Row(
         children: [
-          Expanded(child: DigitsBoard(model?.deviceID)),
+          Expanded(child: DigitsBoard(deviceId)),
           SizedBox(
             height: 32,
             width: 32,
@@ -57,7 +56,7 @@ class DeviceID extends GetView<DeviceProfileController> {
         children: [
           IconButton(
             padding: EdgeInsets.zero,
-            onPressed: controller.fetchDeviceProfile,
+            onPressed: controller.loadDeviceId,
             tooltip: "device_id_field.load_failed_tooltip".tr,
             color: Colors.red,
             splashRadius: 18,

@@ -4,7 +4,12 @@ import 'package:get/get.dart';
 void popupAskDialog({required String content, Function()? yesAction}) {
   Get.defaultDialog(
       title: "MirrorX",
-      content: Text(content),
+      titleStyle: const TextStyle(fontSize: 16),
+      content: Text(
+        content,
+        textAlign: TextAlign.center,
+      ),
+      contentPadding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
       barrierDismissible: false,
       radius: 12,
       actions: [
@@ -26,10 +31,20 @@ void popupAskDialog({required String content, Function()? yesAction}) {
 
 void popupErrorDialog({required String content}) {
   Get.defaultDialog(
-    title: "MirrorX Error",
-    content: Text(content),
-    barrierDismissible: false,
-    textCancel: "No",
-    textConfirm: "Yes",
-  );
+      title: "MirrorX Error",
+      titleStyle: const TextStyle(fontSize: 16),
+      content: Text(
+        content,
+        textAlign: TextAlign.center,
+      ),
+      contentPadding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      barrierDismissible: false,
+      radius: 12,
+      actions: [
+        TextButton(
+            onPressed: () {
+              Get.back(closeOverlays: true);
+            },
+            child: Text("dialog.ok".tr))
+      ]);
 }

@@ -8,13 +8,7 @@ mod run_tests {
 
         crate::test::prepare::init_log();
 
-        let stream = tokio::time::timeout(
-            Duration::from_secs(1),
-            tokio::net::TcpStream::connect("127.0.0.1:45555"),
-        )
-        .await??;
-
-        let client = crate::network::Client::new(stream).await?;
+        let client = crate::service::network::new_client(String::from("127.0.0.1:45555")).await?;
 
         for i in 0..5 {
             let resp_message = client

@@ -10,7 +10,7 @@ args = ["clean"]
 
 [tasks.test]
 command = "cargo"
-args = ["test","--lib", "--target", "x86_64-apple-darwin"]
+args = ["test", "--lib", "--target", "x86_64-apple-darwin"]
 
 # build process
 [tasks.build_debug]
@@ -31,15 +31,7 @@ command = "cargo"
 args = ["build", "--target", "x86_64-apple-darwin", "--release"]
 
 [tasks.make-debug]
-dependencies = [
-    "format",
-    "test",
-    "build_debug"
-]
+dependencies = ["format", "build_debug"]
 
 [tasks.make-release]
-dependencies = [
-    "format",
-    "test",
-    "build_release"
-]
+dependencies = ["format", "test", "build_release"]

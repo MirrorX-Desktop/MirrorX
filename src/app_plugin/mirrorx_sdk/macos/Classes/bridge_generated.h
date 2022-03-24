@@ -19,13 +19,15 @@ typedef bool (*DartPostCObjectFnType)(DartPort port_id, void *message);
 
 void wire_init_sdk(int64_t port_, struct wire_uint_8_list *config_db_path);
 
-void wire_create_or_update_token(int64_t port_, struct wire_uint_8_list *token);
+void wire_read_device_id(int64_t port_);
 
-void wire_read_config(int64_t port_, struct wire_uint_8_list *key);
+void wire_read_device_password(int64_t port_);
 
-void wire_store_config(int64_t port_, struct wire_uint_8_list *key, struct wire_uint_8_list *value);
+void wire_save_device_password(int64_t port_, struct wire_uint_8_list *device_password);
 
-void wire_generate_device_password(int64_t port_);
+void wire_generate_random_device_password(int64_t port_);
+
+void wire_device_goes_online(int64_t port_);
 
 void wire_desktop_connect_to(int64_t port_, struct wire_uint_8_list *device_id);
 
@@ -38,10 +40,11 @@ void store_dart_post_cobject(DartPostCObjectFnType ptr);
 static int64_t dummy_method_to_enforce_bundling(void) {
     int64_t dummy_var = 0;
     dummy_var ^= ((int64_t) (void*) wire_init_sdk);
-    dummy_var ^= ((int64_t) (void*) wire_create_or_update_token);
-    dummy_var ^= ((int64_t) (void*) wire_read_config);
-    dummy_var ^= ((int64_t) (void*) wire_store_config);
-    dummy_var ^= ((int64_t) (void*) wire_generate_device_password);
+    dummy_var ^= ((int64_t) (void*) wire_read_device_id);
+    dummy_var ^= ((int64_t) (void*) wire_read_device_password);
+    dummy_var ^= ((int64_t) (void*) wire_save_device_password);
+    dummy_var ^= ((int64_t) (void*) wire_generate_random_device_password);
+    dummy_var ^= ((int64_t) (void*) wire_device_goes_online);
     dummy_var ^= ((int64_t) (void*) wire_desktop_connect_to);
     dummy_var ^= ((int64_t) (void*) new_uint_8_list);
     dummy_var ^= ((int64_t) (void*) free_WireSyncReturnStruct);

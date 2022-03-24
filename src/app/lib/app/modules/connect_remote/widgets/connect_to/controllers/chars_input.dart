@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
+// without 0, I, L, O
 const _allowInputKey = [
-  LogicalKeyboardKey.numpad0,
   LogicalKeyboardKey.numpad1,
   LogicalKeyboardKey.numpad2,
   LogicalKeyboardKey.numpad3,
@@ -13,16 +13,40 @@ const _allowInputKey = [
   LogicalKeyboardKey.numpad7,
   LogicalKeyboardKey.numpad8,
   LogicalKeyboardKey.numpad9,
+  LogicalKeyboardKey.keyA,
+  LogicalKeyboardKey.keyB,
+  LogicalKeyboardKey.keyC,
+  LogicalKeyboardKey.keyD,
+  LogicalKeyboardKey.keyE,
+  LogicalKeyboardKey.keyF,
+  LogicalKeyboardKey.keyG,
+  LogicalKeyboardKey.keyH,
+  LogicalKeyboardKey.keyJ,
+  LogicalKeyboardKey.keyK,
+  LogicalKeyboardKey.keyL,
+  LogicalKeyboardKey.keyM,
+  LogicalKeyboardKey.keyN,
+  LogicalKeyboardKey.keyP,
+  LogicalKeyboardKey.keyQ,
+  LogicalKeyboardKey.keyR,
+  LogicalKeyboardKey.keyS,
+  LogicalKeyboardKey.keyT,
+  LogicalKeyboardKey.keyU,
+  LogicalKeyboardKey.keyV,
+  LogicalKeyboardKey.keyW,
+  LogicalKeyboardKey.keyX,
+  LogicalKeyboardKey.keyY,
+  LogicalKeyboardKey.keyZ,
 ];
 
-class DigitInputController extends GetxController {
+class CharacterInputController extends GetxController {
   late FocusScopeNode _focusScopeNode;
   late List<TextEditingController> _textEditingControllers;
 
   FocusScopeNode get focusScopeNode => _focusScopeNode;
   List<TextEditingController> get textEditingControllers =>
       _textEditingControllers;
-  String get inputText => _textEditingControllers.map((e) => e.text).join();
+  String? get inputText => _textEditingControllers.map((e) => e.text).join();
 
   @override
   void onInit() {

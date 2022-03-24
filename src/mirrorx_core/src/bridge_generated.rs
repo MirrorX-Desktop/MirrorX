@@ -32,64 +32,65 @@ pub extern "C" fn wire_init_sdk(port_: i64, config_db_path: *mut wire_uint_8_lis
 }
 
 #[no_mangle]
-pub extern "C" fn wire_create_or_update_token(port_: i64, token: *mut wire_uint_8_list) {
+pub extern "C" fn wire_read_device_id(port_: i64) {
     FLUTTER_RUST_BRIDGE_HANDLER.wrap(
         WrapInfo {
-            debug_name: "create_or_update_token",
+            debug_name: "read_device_id",
+            port: Some(port_),
+            mode: FfiCallMode::Normal,
+        },
+        move || move |task_callback| read_device_id(),
+    )
+}
+
+#[no_mangle]
+pub extern "C" fn wire_read_device_password(port_: i64) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap(
+        WrapInfo {
+            debug_name: "read_device_password",
+            port: Some(port_),
+            mode: FfiCallMode::Normal,
+        },
+        move || move |task_callback| read_device_password(),
+    )
+}
+
+#[no_mangle]
+pub extern "C" fn wire_save_device_password(port_: i64, device_password: *mut wire_uint_8_list) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap(
+        WrapInfo {
+            debug_name: "save_device_password",
             port: Some(port_),
             mode: FfiCallMode::Normal,
         },
         move || {
-            let api_token = token.wire2api();
-            move |task_callback| create_or_update_token(api_token)
+            let api_device_password = device_password.wire2api();
+            move |task_callback| save_device_password(api_device_password)
         },
     )
 }
 
 #[no_mangle]
-pub extern "C" fn wire_read_config(port_: i64, key: *mut wire_uint_8_list) {
+pub extern "C" fn wire_generate_random_device_password(port_: i64) {
     FLUTTER_RUST_BRIDGE_HANDLER.wrap(
         WrapInfo {
-            debug_name: "read_config",
+            debug_name: "generate_random_device_password",
             port: Some(port_),
             mode: FfiCallMode::Normal,
         },
-        move || {
-            let api_key = key.wire2api();
-            move |task_callback| read_config(api_key)
-        },
+        move || move |task_callback| generate_random_device_password(),
     )
 }
 
 #[no_mangle]
-pub extern "C" fn wire_store_config(
-    port_: i64,
-    key: *mut wire_uint_8_list,
-    value: *mut wire_uint_8_list,
-) {
+pub extern "C" fn wire_device_goes_online(port_: i64) {
     FLUTTER_RUST_BRIDGE_HANDLER.wrap(
         WrapInfo {
-            debug_name: "store_config",
+            debug_name: "device_goes_online",
             port: Some(port_),
             mode: FfiCallMode::Normal,
         },
-        move || {
-            let api_key = key.wire2api();
-            let api_value = value.wire2api();
-            move |task_callback| store_config(api_key, api_value)
-        },
-    )
-}
-
-#[no_mangle]
-pub extern "C" fn wire_generate_device_password(port_: i64) {
-    FLUTTER_RUST_BRIDGE_HANDLER.wrap(
-        WrapInfo {
-            debug_name: "generate_device_password",
-            port: Some(port_),
-            mode: FfiCallMode::Normal,
-        },
-        move || move |task_callback| Ok(generate_device_password()),
+        move || move |task_callback| device_goes_online(),
     )
 }
 

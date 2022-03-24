@@ -2,8 +2,8 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
 pub enum Message {
-    LoginReq(LoginReq),
-    LoginResp(LoginResp),
+    DeviceGoesOnlineReq(DeviceGoesOnlineReq),
+    DeviceGoesOnlineResp(DeviceGoesOnlineResp),
     HeartBeatReq(HeartBeatReq),
     HeartBeatResp(HeartBeatResp),
     DesktopConnectOfferReq(DesktopConnectOfferReq),
@@ -13,13 +13,14 @@ pub enum Message {
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
-pub struct LoginReq {
-    pub pub_key: [u8; 32],
+pub struct DeviceGoesOnlineReq {
+    pub device_id: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
-pub struct LoginResp {
+pub struct DeviceGoesOnlineResp {
     pub device_id: String,
+    pub device_id_expire_time_stamp: u32,
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]

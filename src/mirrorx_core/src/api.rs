@@ -1,5 +1,5 @@
 use env_logger::{Builder, Target};
-use log::{error, LevelFilter};
+use log::LevelFilter;
 use std::{io::Write, path::PathBuf, sync::Once};
 
 static INIT_ONCE: Once = Once::new();
@@ -26,20 +26,10 @@ pub fn init_sdk(config_db_path: String) -> bool {
 
             let init_fn = || -> anyhow::Result<()> {
                 let config_db_path = PathBuf::from(config_db_path);
-                if let Err(err) = crate::service::config::init_config(config_db_path) {
-                    error!("init_sdk: init_config returns error: {:?}", &err);
-                    return Err(anyhow::anyhow!(""));
-                };
 
-                if let Err(err) = crate::service::runtime::init_async_runtime() {
-                    error!("init_sdk: init_async_runtime returns error: {:?}", &err);
-                    return Err(anyhow::anyhow!(""));
-                }
-
-                if let Err(err) = crate::service::desktop::init_client() {
-                    error!("init_sdk: init_client returns error: {:?}", &err);
-                    return Err(anyhow::anyhow!(""));
-                }
+                crate::service::config::init_config(config_db_path)?;
+                crate::service::runtime::init_async_runtime()?;
+                crate::service::network::init_client()?;
 
                 Ok(())
             };
@@ -51,34 +41,27 @@ pub fn init_sdk(config_db_path: String) -> bool {
     }
 }
 
-pub fn create_or_update_token(token: Option<String>) -> anyhow::Result<String> {
-    crate::service::http::create_or_update_token(token).or_else(|err| {
-        error!("create_or_update_token returns error: {:?}", &err);
-        Err(anyhow::anyhow!(""))
-    })
+pub fn read_device_id() -> anyhow::Result<Option<String>> {
+    crate::service::config::read_device_id()
 }
 
-pub fn read_config(key: String) -> anyhow::Result<Option<String>> {
-    crate::service::config::read_config(&key).or_else(|err| {
-        error!("read_config returns error: {:?}", &err);
-        Err(anyhow::anyhow!(""))
-    })
+pub fn read_device_password() -> anyhow::Result<Option<String>> {
+    crate::service::config::read_device_password()
 }
 
-pub fn store_config(key: String, value: String) -> anyhow::Result<()> {
-    crate::service::config::save_config(&key, &value).or_else(|err| {
-        error!("store_config returns error: {:?}", &err);
-        Err(anyhow::anyhow!(""))
-    })
+pub fn save_device_password(device_password: String) -> anyhow::Result<()> {
+    crate::service::config::save_device_password(&device_password)
 }
 
-pub fn generate_device_password() -> String {
-    crate::service::profile::generate_device_password()
+pub fn generate_random_device_password() -> anyhow::Result<String> {
+    let password = crate::service::utility::generate_device_password();
+    crate::service::config::save_device_password(&password).map(|_| password)
+}
+
+pub fn device_goes_online() -> anyhow::Result<()> {
+    crate::service::network::device_goes_online()
 }
 
 pub fn desktop_connect_to(device_id: String) -> anyhow::Result<bool> {
-    crate::service::desktop::connect_to(device_id).or_else(|err| {
-        error!("desktop_connect_to returns error: {:?}", &err);
-        Err(anyhow::anyhow!(""))
-    })
+    crate::service::network::connect_to(device_id)
 }
