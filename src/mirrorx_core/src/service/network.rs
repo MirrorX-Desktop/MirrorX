@@ -149,12 +149,22 @@ pub fn device_goes_online() -> anyhow::Result<()> {
     })
 }
 
-pub fn connect_to(device_id: String) -> anyhow::Result<bool> {
+pub fn connect_to(ask_device_id: String) -> anyhow::Result<bool> {
     RUNTIME.block_on(async move {
+        let offer_device_id = match super::config::read_device_id()? {
+            Some(device_id) => device_id,
+            None => {
+                return Err(anyhow::anyhow!("connect_to: device_id not found"));
+            }
+        };
+
         let resp = CLIENT
             .call(
-                Message::DesktopConnectOfferReq(DesktopConnectOfferReq { device_id }),
-                Duration::from_secs(10),
+                Message::DesktopConnectOfferReq(DesktopConnectOfferReq {
+                    offer_device_id,
+                    ask_device_id,
+                }),
+                Duration::from_secs(15),
             )
             .await?;
 
@@ -167,6 +177,6 @@ pub fn connect_to(device_id: String) -> anyhow::Result<bool> {
             }
         };
 
-        Ok(message.allow)
+        Ok(message.agree)
     })
 }

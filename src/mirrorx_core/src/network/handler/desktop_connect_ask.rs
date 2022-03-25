@@ -1,13 +1,17 @@
-// use std::sync::Arc;
+use log::info;
 
-// use crate::network::{
-//     proto::{DesktopConnectAskReq, ProtoMessage},
-//     Client,
-// };
+use crate::network::{
+    message::{DesktopConnectAskReq, DesktopConnectAskResp, Message},
+    Client,
+};
 
-// pub async fn handle_desktop_connect_ask_req(
-//     client: &Client,
-//     req: &DesktopConnectAskReq,
-// ) -> anyhow::Result<Option<Box<dyn ProtoMessage>>> {
-//     Ok(None)
-// }
+pub async fn handle_desktop_connect_ask(
+    client: &Client,
+    req: &DesktopConnectAskReq,
+) -> anyhow::Result<Option<Message>> {
+    info!("handle desktop connect ask: {:?}", req);
+
+    Ok(Some(Message::DesktopConnectAskResp(
+        DesktopConnectAskResp { agree: true },
+    )))
+}

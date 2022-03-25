@@ -25,7 +25,7 @@ abstract class MirrorXCore {
 
   Future<void> deviceGoesOnline({dynamic hint});
 
-  Future<bool> desktopConnectTo({required String deviceId, dynamic hint});
+  Future<bool> desktopConnectTo({required String askDeviceId, dynamic hint});
 }
 
 class MirrorXCoreImpl extends FlutterRustBridgeBase<MirrorXCoreWire>
@@ -110,16 +110,16 @@ class MirrorXCoreImpl extends FlutterRustBridgeBase<MirrorXCoreWire>
         hint: hint,
       ));
 
-  Future<bool> desktopConnectTo({required String deviceId, dynamic hint}) =>
+  Future<bool> desktopConnectTo({required String askDeviceId, dynamic hint}) =>
       executeNormal(FlutterRustBridgeTask(
         callFfi: (port_) =>
-            inner.wire_desktop_connect_to(port_, _api2wire_String(deviceId)),
+            inner.wire_desktop_connect_to(port_, _api2wire_String(askDeviceId)),
         parseSuccessData: _wire2api_bool,
         constMeta: const FlutterRustBridgeTaskConstMeta(
           debugName: "desktop_connect_to",
-          argNames: ["deviceId"],
+          argNames: ["askDeviceId"],
         ),
-        argValues: [deviceId],
+        argValues: [askDeviceId],
         hint: hint,
       ));
 
@@ -281,11 +281,11 @@ class MirrorXCoreWire implements FlutterRustBridgeWireBase {
 
   void wire_desktop_connect_to(
     int port_,
-    ffi.Pointer<wire_uint_8_list> device_id,
+    ffi.Pointer<wire_uint_8_list> ask_device_id,
   ) {
     return _wire_desktop_connect_to(
       port_,
-      device_id,
+      ask_device_id,
     );
   }
 

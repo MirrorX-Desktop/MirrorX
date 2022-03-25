@@ -3,18 +3,18 @@ use cc::Build;
 fn main() {
     println!("cargo:rerun-if-changed=build.rs");
 
-    let mut builder = cc::Build::new();
-    // builder.cpp(true).define("__STDC_CONSTANT_MACROS", None);
-    builder.flag("-mmacosx-version-min=10.11");
+    // let mut builder = cc::Build::new();
+    // // builder.cpp(true).define("__STDC_CONSTANT_MACROS", None);
+    // builder.flag("-mmacosx-version-min=10.11");
 
-    build_ffi_log(&mut builder);
-    link_library(&mut builder);
-    build_codec(&mut builder);
-    build_duplicator(&mut builder);
+    // build_ffi_log(&mut builder);
+    // link_library(&mut builder);
+    // build_codec(&mut builder);
+    // build_duplicator(&mut builder);
 
-    builder.compile("native");
+    // builder.compile("native");
 
-    println!("cargo:rustc-link-lib=native");
+    // println!("cargo:rustc-link-lib=native");
 }
 
 fn link_library(builder: &mut Build) {

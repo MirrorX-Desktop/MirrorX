@@ -29,7 +29,7 @@ void wire_generate_random_device_password(int64_t port_);
 
 void wire_device_goes_online(int64_t port_);
 
-void wire_desktop_connect_to(int64_t port_, struct wire_uint_8_list *device_id);
+void wire_desktop_connect_to(int64_t port_, struct wire_uint_8_list *ask_device_id);
 
 struct wire_uint_8_list *new_uint_8_list(int32_t len);
 

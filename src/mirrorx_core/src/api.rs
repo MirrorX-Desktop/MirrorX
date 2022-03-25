@@ -62,6 +62,6 @@ pub fn device_goes_online() -> anyhow::Result<()> {
     crate::service::network::device_goes_online()
 }
 
-pub fn desktop_connect_to(device_id: String) -> anyhow::Result<bool> {
-    crate::service::network::connect_to(device_id)
+pub fn desktop_connect_to(ask_device_id: String) -> anyhow::Result<bool> {
+    crate::service::network::connect_to(ask_device_id)
 }

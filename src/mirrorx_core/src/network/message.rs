@@ -35,12 +35,13 @@ pub struct HeartBeatResp {
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
 pub struct DesktopConnectOfferReq {
-    pub device_id: String,
+    pub offer_device_id: String,
+    pub ask_device_id: String,
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
 pub struct DesktopConnectOfferResp {
-    pub allow: bool,
+    pub agree: bool,
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
