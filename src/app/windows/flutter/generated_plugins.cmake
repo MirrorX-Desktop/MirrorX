@@ -3,6 +3,7 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
+  mirrorx_sdk
 )
 
 set(PLUGIN_BUNDLED_LIBRARIES)

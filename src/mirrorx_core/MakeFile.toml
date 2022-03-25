@@ -15,6 +15,7 @@ args = ["test", "--lib", "--target", "x86_64-apple-darwin"]
 # build process
 [tasks.build_debug]
 mac_alias = "build_macos_debug"
+windows_alias = "build_windows_debug"
 
 [tasks.build_release]
 mac_alias = "build_macos_release"
@@ -24,6 +25,10 @@ dependencies = ["clean"]
 [tasks.build_macos_debug]
 command = "cargo"
 args = ["build", "--target", "x86_64-apple-darwin"]
+
+[tasks.build_windows_debug]
+command = "cargo"
+args = ["build", "--target", "x86_64-pc-windows-msvc"]
 
 ## release build
 [tasks.build_macos_release]

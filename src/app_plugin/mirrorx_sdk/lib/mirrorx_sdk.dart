@@ -34,6 +34,8 @@ Future<MirrorXCore?> initSDK() async {
 DynamicLibrary _openLibrary() {
   if (Platform.isMacOS || Platform.isIOS) {
     return DynamicLibrary.executable();
+  } else if (Platform.isWindows) {
+    return DynamicLibrary.open("mirrorx_core.dll");
   } else {
     throw UnsupportedError("Not supported platform yet");
   }
