@@ -17,7 +17,7 @@ lazy_static = "1.4.0"
 hex = "0.4.3"
 serde = { version = "1.0.136", features = ["derive"] }
 serde_json = "1.0.79"
-flutter_rust_bridge = "1.22.2"
+flutter_rust_bridge = "1.23.0"
 anyhow = "1.0.56"
 rusqlite = { version = "0.27.0", features = ["bundled"] }
 bytes = "1.1.0"
