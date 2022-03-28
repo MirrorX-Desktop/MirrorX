@@ -23,7 +23,6 @@ class ConnectRemotePage extends GetView<ConnectRemoteController> {
         Expanded(
           flex: 1,
           child: Column(
-            // crossAxisAlignment: CrossAxisAlignment.end,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Padding(

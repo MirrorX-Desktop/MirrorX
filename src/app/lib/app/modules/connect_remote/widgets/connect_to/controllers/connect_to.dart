@@ -1,9 +1,14 @@
+import 'dart:developer';
+
 import 'package:get/get.dart';
+import 'package:mirrorx/app/controllers/sdk.dart';
 import 'package:mirrorx/app/core/utils/dialog.dart';
 import 'package:mirrorx/app/modules/connect_remote/widgets/connect_to/controllers/chars_input.dart';
 
 class ConnectToController extends GetxController {
   late CharacterInputController _digitInputController;
+  late SDKController _sdk;
+
   bool _isLoading = false;
 
   bool get isLoading => _isLoading;
@@ -11,10 +16,11 @@ class ConnectToController extends GetxController {
   @override
   void onInit() {
     _digitInputController = Get.put(CharacterInputController());
+    _sdk = Get.find();
     super.onInit();
   }
 
-  void connectTo() {
+  Future<void> connectTo() async {
     final deviceID = _digitInputController.inputText;
     if (deviceID == null || deviceID.isEmpty) {
       popupErrorDialog(content: "connect_to_remote.dialog.empty_input".tr);
@@ -41,7 +47,19 @@ class ConnectToController extends GetxController {
       }
     }
 
-    _isLoading = true;
-    update();
+    try {
+      _isLoading = true;
+      update();
+
+      final res =
+          await _sdk.getSDKInstance().desktopConnectTo(askDeviceId: deviceID);
+
+      log(res.toString());
+    } catch (err) {
+      log(err.toString());
+    } finally {
+      _isLoading = false;
+      update();
+    }
   }
 }
