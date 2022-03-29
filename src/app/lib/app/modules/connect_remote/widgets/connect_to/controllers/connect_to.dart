@@ -59,9 +59,9 @@ class ConnectToController extends GetxController {
 
       if (allow) {
         _popupDesktopConnectInputPasswordDialog(deviceID);
+      } else {
+        popupErrorDialog(content: "connect_to_remote.dialog.disallow".tr);
       }
-
-      log(allow.toString());
     } catch (err) {
       log(err.toString());
     } finally {
@@ -69,42 +69,66 @@ class ConnectToController extends GetxController {
       update();
     }
   }
-}
 
-void _popupDesktopConnectInputPasswordDialog(String deviceID) {
-  Get.defaultDialog(
-      title: "MirrorX",
-      titleStyle: const TextStyle(fontSize: 16),
-      content: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8.0),
-            child: Text(
-              "请输入设备[$deviceID]的访问密码",
-              textAlign: TextAlign.center,
+  Future<void> authPassword(
+      TextEditingController controller, String deviceID) async {
+    if (controller.text.isEmpty) {
+      return;
+    }
+
+    log("input password: ${controller.text}");
+
+    try {
+      final passwordCorrect = await _sdk
+          .getSDKInstance()
+          .dekstopConnectOfferAuthPassword(
+              askDeviceId: deviceID, devicePassword: controller.text);
+      log("password: $passwordCorrect");
+    } catch (err) {
+      popupErrorDialog(content: "connect_to_remote.dialog.invalid_password".tr);
+    }
+  }
+
+  void _popupDesktopConnectInputPasswordDialog(String deviceID) {
+    final passwordTextController = TextEditingController();
+
+    Get.defaultDialog(
+        title: "MirrorX",
+        titleStyle: const TextStyle(fontSize: 18),
+        content: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8.0),
+              child: Text(
+                "请输入设备[$deviceID]的访问密码",
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 16),
+              ),
             ),
-          ),
-          const CupertinoTextField(
-            textAlign: TextAlign.center,
-            maxLength: 16,
-            maxLines: 1,
-          ),
-        ],
-      ),
-      contentPadding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-      barrierDismissible: false,
-      radius: 12,
-      actions: [
-        TextButton(
-            onPressed: () {
-              Get.back(closeOverlays: true);
-            },
-            child: Text("dialog.ok".tr)),
-        TextButton(
-            onPressed: () {
-              Get.back(closeOverlays: true);
-            },
-            child: Text("dialog.cancel".tr))
-      ]);
+            CupertinoTextField(
+              controller: passwordTextController,
+              textAlign: TextAlign.center,
+              maxLength: 16,
+              maxLines: 1,
+            ),
+          ],
+        ),
+        contentPadding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+        barrierDismissible: false,
+        radius: 12,
+        actions: [
+          TextButton(
+              onPressed: () async {
+                await authPassword(passwordTextController, deviceID);
+                Get.back(closeOverlays: true);
+              },
+              child: Text("dialog.ok".tr)),
+          TextButton(
+              onPressed: () {
+                Get.back(closeOverlays: true);
+              },
+              child: Text("dialog.cancel".tr))
+        ]);
+  }
 }

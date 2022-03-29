@@ -22,6 +22,7 @@ const Map<String, String> zhHans = {
   "connect_to_remote.dialog.invalid_length": "远程设备ID长度不正确",
   "connect_to_remote.dialog.invalid_char": "远程设备ID包含非法字符",
   "connect_to_remote.dialog.invalid_format.repeat_char": "远程设备ID格式错误\n（包含重复字符）",
+  "connect_to_remote.dialog.disallow": "远程设备拒绝了您的连接请求",
   "device_id_field.load_failed_tooltip": "获取设备ID失败，点击按钮重试！",
   "device_password_field.dialog.confirm_regenerate": "你确定想要重新生成随机设备密码吗？",
   "dialog.yes": "是",

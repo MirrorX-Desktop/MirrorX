@@ -28,6 +28,11 @@ abstract class MirrorXCore {
   Future<void> deviceGoesOnline({dynamic hint});
 
   Future<bool> desktopConnectOffer({required String askDeviceId, dynamic hint});
+
+  Future<bool> dekstopConnectOfferAuthPassword(
+      {required String askDeviceId,
+      required String devicePassword,
+      dynamic hint});
 }
 
 enum FlutterCommand {
@@ -139,6 +144,24 @@ class MirrorXCoreImpl extends FlutterRustBridgeBase<MirrorXCoreWire>
           argNames: ["askDeviceId"],
         ),
         argValues: [askDeviceId],
+        hint: hint,
+      ));
+
+  Future<bool> dekstopConnectOfferAuthPassword(
+          {required String askDeviceId,
+          required String devicePassword,
+          dynamic hint}) =>
+      executeNormal(FlutterRustBridgeTask(
+        callFfi: (port_) => inner.wire_dekstop_connect_offer_auth_password(
+            port_,
+            _api2wire_String(askDeviceId),
+            _api2wire_String(devicePassword)),
+        parseSuccessData: _wire2api_bool,
+        constMeta: const FlutterRustBridgeTaskConstMeta(
+          debugName: "dekstop_connect_offer_auth_password",
+          argNames: ["askDeviceId", "devicePassword"],
+        ),
+        argValues: [askDeviceId, devicePassword],
         hint: hint,
       ));
 
@@ -333,6 +356,28 @@ class MirrorXCoreWire implements FlutterRustBridgeWireBase {
               ffi.Pointer<wire_uint_8_list>)>>('wire_desktop_connect_offer');
   late final _wire_desktop_connect_offer = _wire_desktop_connect_offerPtr
       .asFunction<void Function(int, ffi.Pointer<wire_uint_8_list>)>();
+
+  void wire_dekstop_connect_offer_auth_password(
+    int port_,
+    ffi.Pointer<wire_uint_8_list> ask_device_id,
+    ffi.Pointer<wire_uint_8_list> device_password,
+  ) {
+    return _wire_dekstop_connect_offer_auth_password(
+      port_,
+      ask_device_id,
+      device_password,
+    );
+  }
+
+  late final _wire_dekstop_connect_offer_auth_passwordPtr = _lookup<
+          ffi.NativeFunction<
+              ffi.Void Function(ffi.Int64, ffi.Pointer<wire_uint_8_list>,
+                  ffi.Pointer<wire_uint_8_list>)>>(
+      'wire_dekstop_connect_offer_auth_password');
+  late final _wire_dekstop_connect_offer_auth_password =
+      _wire_dekstop_connect_offer_auth_passwordPtr.asFunction<
+          void Function(int, ffi.Pointer<wire_uint_8_list>,
+              ffi.Pointer<wire_uint_8_list>)>();
 
   ffi.Pointer<wire_uint_8_list> new_uint_8_list(
     int len,

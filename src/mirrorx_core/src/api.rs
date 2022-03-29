@@ -81,3 +81,11 @@ pub fn desktop_connect_offer(ask_device_id: String) -> anyhow::Result<bool> {
     crate::service::network::desktop_connect_offer(ask_device_id)
         .map_err(|err| anyhow::anyhow!(err))
 }
+
+pub fn dekstop_connect_offer_auth_password(
+    ask_device_id: String,
+    device_password: String,
+) -> anyhow::Result<bool> {
+    crate::service::network::dekstop_connect_offer_auth_password(ask_device_id, device_password)
+        .map_err(|err| anyhow::anyhow!(err))
+}

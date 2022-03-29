@@ -4,7 +4,10 @@ use log::error;
 use serde::{Deserialize, Serialize};
 
 use super::{
-    handler::desktop_connect_ask::{DesktopConnectAskReq, DesktopConnectAskResp},
+    handler::{
+        desktop_connect_ask::{DesktopConnectAskReq, DesktopConnectAskResp},
+        desktop_connect_ask_auth::{DesktopConnectAskAuthReq, DesktopConnectAskAuthResp},
+    },
     Client,
 };
 
@@ -20,6 +23,10 @@ pub enum Message {
     DesktopConnectOfferResp(DesktopConnectOfferResp),
     DesktopConnectAskReq(DesktopConnectAskReq),
     DesktopConnectAskResp(DesktopConnectAskResp),
+    DesktopConnectOfferAuthReq(DesktopConnectOfferAuthReq),
+    DesktopConnectOfferAuthResp(DesktopConnectOfferAuthResp),
+    DesktopConnectAskAuthReq(DesktopConnectAskAuthReq),
+    DesktopConnectAskAuthResp(DesktopConnectAskAuthResp),
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
@@ -35,6 +42,7 @@ impl Message {
     pub async fn handle(self, client: Arc<Client>) -> anyhow::Result<Message, MessageError> {
         match self {
             Message::DesktopConnectAskReq(message) => message.handle(client).await,
+            Message::DesktopConnectAskAuthReq(message) => message.handle(client).await,
             _ => {
                 error!("unknown message type");
                 Ok(Message::None)
@@ -73,4 +81,18 @@ pub struct DesktopConnectOfferReq {
 #[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
 pub struct DesktopConnectOfferResp {
     pub agree: bool,
+    pub password_auth_public_key_n: Vec<u8>,
+    pub password_auth_public_key_e: Vec<u8>,
+}
+
+#[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
+pub struct DesktopConnectOfferAuthReq {
+    pub offer_device_id: String,
+    pub ask_device_id: String,
+    pub secret_message: Vec<u8>,
+}
+
+#[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
+pub struct DesktopConnectOfferAuthResp {
+    pub password_correct: bool,
 }

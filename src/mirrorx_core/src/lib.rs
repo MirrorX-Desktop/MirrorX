@@ -8,6 +8,7 @@ mod service;
 // mod video_decoder;
 // mod video_encoder;
 mod api_error;
+mod instance;
 
 #[cfg(test)]
 mod test;

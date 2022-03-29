@@ -1,4 +1,4 @@
-use crate::network::message::MessageError;
+use crate::network::{message::MessageError, BIN_CODER};
 
 use super::{message::Message, packet::Packet};
 use bincode::{
@@ -29,13 +29,6 @@ use tokio::{
     time::timeout,
 };
 use tokio_util::codec::{Framed, LengthDelimitedCodec};
-
-lazy_static! {
-    static ref BIN_CODER: WithOtherIntEncoding<WithOtherEndian<DefaultOptions, LittleEndian>, VarintEncoding> =
-        DefaultOptions::new()
-            .with_little_endian()
-            .with_varint_encoding();
-}
 
 pub struct Client {
     caller_tx_register: Arc<Mutex<HashMap<u8, Sender<Message>>>>,
