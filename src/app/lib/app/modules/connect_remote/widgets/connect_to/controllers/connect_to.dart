@@ -53,8 +53,9 @@ class ConnectToController extends GetxController {
       _isLoading = true;
       update();
 
-      final allow =
-          await _sdk.getSDKInstance().desktopConnectTo(askDeviceId: deviceID);
+      final allow = await _sdk
+          .getSDKInstance()
+          .desktopConnectOffer(askDeviceId: deviceID);
 
       if (allow) {
         _popupDesktopConnectInputPasswordDialog(deviceID);

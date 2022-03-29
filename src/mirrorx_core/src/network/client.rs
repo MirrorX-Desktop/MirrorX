@@ -1,5 +1,6 @@
+use crate::network::message::MessageError;
+
 use super::{message::Message, packet::Packet};
-use crate::network::handler::process_message;
 use bincode::{
     config::{LittleEndian, VarintEncoding, WithOtherEndian, WithOtherIntEncoding},
     DefaultOptions, Options,
@@ -79,27 +80,35 @@ impl Client {
         &self,
         message: Message,
         time_out_duration: Duration,
-    ) -> anyhow::Result<Message> {
+    ) -> anyhow::Result<Message, MessageError> {
         if time_out_duration.is_zero() {
-            return Err(anyhow::anyhow!(
-                "call: every call must have a non-zero timeout"
-            ));
+            return Err(MessageError::InvalidArguments);
         }
 
         let (tx, mut rx) = channel(1);
 
-        let call_id = self.new_call_id();
+        let call_id = self.next_call_id();
 
         self.register_call(call_id, tx).await;
 
         if let Err(err) = self.inner_send(call_id, message).await {
             self.remove_call(&call_id).await;
-            return Err(anyhow::anyhow!(err));
+            error!("call failed: {:?}", err);
+            return Err(MessageError::InternalError);
         }
 
-        match timeout(time_out_duration, rx.recv()).await? {
-            Some(message) => Ok(message),
-            None => Err(anyhow::anyhow!("call: sender closed")),
+        match timeout(time_out_duration, rx.recv()).await {
+            Ok(res) => match res {
+                Some(message) => match message {
+                    Message::Error(err) => Err(err),
+                    resp_message => Ok(resp_message),
+                },
+                None => Err(MessageError::InternalError),
+            },
+            Err(_) => {
+                self.remove_call(&call_id).await;
+                Err(MessageError::Timeout)
+            }
         }
     }
 
@@ -110,7 +119,7 @@ impl Client {
         Ok(())
     }
 
-    fn new_call_id(&self) -> u8 {
+    fn next_call_id(&self) -> u8 {
         let mut call_id = self.call_id.fetch_add(1, atomic::Ordering::SeqCst);
 
         if call_id == 0 {
@@ -164,21 +173,21 @@ impl Client {
                     let client = client.clone();
 
                     tokio::spawn(async move {
-                        match process_message(client.as_ref(), packet.message).await {
-                            Ok(Some(message)) => {
-                                if let Err(err) = client.inner_send(packet.call_id, message).await {
-                                    error!(
-                                        "stream_loop: send call response message error: {:?}",
-                                        err
-                                    );
-                                }
-                            }
-                            Ok(None) => {}
-                            Err(_) => {
-                                // normally, we should send an error message to caller (remote
-                                // machine), but considering current stage of project, to simplify
-                                // the process, we just ignore it temporarily.
-                            }
+                        let resp_message = packet
+                            .message
+                            .handle(client.clone())
+                            .await
+                            .unwrap_or_else(|m| Message::Error(m));
+
+                        if resp_message == Message::None {
+                            return;
+                        }
+
+                        if let Err(err) = client.inner_send(packet.call_id, resp_message).await {
+                            error!(
+                                "client: stream_loop send call response message error: {:?}",
+                                err
+                            );
                         }
                     });
                 }

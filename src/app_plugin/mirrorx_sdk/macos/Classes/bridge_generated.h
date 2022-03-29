@@ -31,7 +31,7 @@ void wire_generate_random_device_password(int64_t port_);
 
 void wire_device_goes_online(int64_t port_);
 
-void wire_desktop_connect_to(int64_t port_, struct wire_uint_8_list *ask_device_id);
+void wire_desktop_connect_offer(int64_t port_, struct wire_uint_8_list *ask_device_id);
 
 struct wire_uint_8_list *new_uint_8_list(int32_t len);
 
@@ -48,7 +48,7 @@ static int64_t dummy_method_to_enforce_bundling(void) {
     dummy_var ^= ((int64_t) (void*) wire_save_device_password);
     dummy_var ^= ((int64_t) (void*) wire_generate_random_device_password);
     dummy_var ^= ((int64_t) (void*) wire_device_goes_online);
-    dummy_var ^= ((int64_t) (void*) wire_desktop_connect_to);
+    dummy_var ^= ((int64_t) (void*) wire_desktop_connect_offer);
     dummy_var ^= ((int64_t) (void*) new_uint_8_list);
     dummy_var ^= ((int64_t) (void*) free_WireSyncReturnStruct);
     dummy_var ^= ((int64_t) (void*) store_dart_post_cobject);

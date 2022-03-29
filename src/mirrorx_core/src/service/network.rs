@@ -2,15 +2,15 @@ use lazy_static::lazy_static;
 use log::{error, warn};
 use rustls::Certificate;
 use std::{sync::Arc, time::Duration};
-use tokio::{
-    net::TcpStream,
-    time::{error::Elapsed, interval},
-};
+use tokio::{net::TcpStream, time::interval};
 use tokio_rustls::{rustls::ClientConfig, TlsConnector};
 
 use crate::{
+    api_error::APIError,
     network::{
-        message::{DesktopConnectOfferReq, DeviceGoesOnlineReq, HeartBeatReq, Message},
+        message::{
+            DesktopConnectOfferReq, DeviceGoesOnlineReq, HeartBeatReq, Message, MessageError,
+        },
         Client,
     },
     service::runtime::RUNTIME,
@@ -35,9 +35,15 @@ lazy_static! {
     static ref CLIENT: &'static Client = unsafe { INNER_CLIENT.as_ref().unwrap() };
 }
 
-pub fn init_client() -> anyhow::Result<()> {
-    let client =
-        RUNTIME.block_on(async { new_client(String::from("192.168.0.101:45555")).await })?;
+pub fn init_client() -> anyhow::Result<(), APIError> {
+    let client = RUNTIME.block_on(async {
+        new_client(String::from("192.168.0.101:45555"))
+            .await
+            .map_err(|err| {
+                error!("init client error: {}", err);
+                APIError::InternalError
+            })
+    })?;
 
     unsafe {
         INNER_CLIENT = Some(client);
@@ -105,11 +111,10 @@ fn begin_heart_beat() {
                     continue;
                 }
                 Err(err) => {
-                    if err.is::<Elapsed>() {
-                        error!("heart_beat: call timeout");
-                    } else {
-                        error!("heart_beat: request failed: {:?}", err);
-                    }
+                    match err {
+                        MessageError::Timeout=> error!("heart_beat: call timeout"),
+                        _ => error!("heart_beat: request failed: {:?}", err),
+                    };
 
                     heart_beat_miss_counter += 1;
                     continue;
@@ -125,7 +130,7 @@ fn begin_heart_beat() {
     });
 }
 
-pub fn device_goes_online() -> anyhow::Result<()> {
+pub fn device_goes_online() -> anyhow::Result<(), APIError> {
     RUNTIME.block_on(async move {
         let device_id = super::config::read_device_id()?;
 
@@ -134,28 +139,26 @@ pub fn device_goes_online() -> anyhow::Result<()> {
                 Message::DeviceGoesOnlineReq(DeviceGoesOnlineReq { device_id }),
                 Duration::from_secs(10),
             )
-            .await?;
+            .await
+            .map_err(|err| map_message_error(err))?;
 
-        let message = match resp {
+        let resp_message = match resp {
             Message::DeviceGoesOnlineResp(message) => message,
-            _ => {
-                return Err(anyhow::anyhow!(
-                    "device_goes_online: mismatched response message type"
-                ));
-            }
+            _ => return Err(APIError::InternalError),
         };
 
-        super::config::save_device_id(&message.device_id)?;
-        super::config::save_device_id_expire_at(&message.device_id_expire_time_stamp)
+        super::config::save_device_id(&resp_message.device_id)?;
+        super::config::save_device_id_expire_at(&resp_message.device_id_expire_time_stamp)
     })
 }
 
-pub fn connect_to(ask_device_id: String) -> anyhow::Result<bool> {
+pub fn desktop_connect_offer(ask_device_id: String) -> anyhow::Result<bool, APIError> {
     RUNTIME.block_on(async move {
         let offer_device_id = match super::config::read_device_id()? {
             Some(device_id) => device_id,
             None => {
-                return Err(anyhow::anyhow!("connect_to: device_id not found"));
+                error!("device_id is None");
+                return Err(APIError::ConfigError);
             }
         };
 
@@ -167,17 +170,25 @@ pub fn connect_to(ask_device_id: String) -> anyhow::Result<bool> {
                 }),
                 Duration::from_secs(15),
             )
-            .await?;
+            .await
+            .map_err(|err| map_message_error(err))?;
 
-        let message = match resp {
+        let resp_message = match resp {
             Message::DesktopConnectOfferResp(message) => message,
-            _ => {
-                return Err(anyhow::anyhow!(
-                    "connect_to: mismatched response message type"
-                ));
-            }
+            _ => return Err(APIError::InternalError),
         };
 
-        Ok(message.agree)
+        Ok(resp_message.agree)
     })
+}
+
+fn map_message_error(message_error: MessageError) -> APIError {
+    match message_error {
+        MessageError::InternalError | MessageError::MismatchedResponseMessage => {
+            APIError::InternalError
+        }
+        MessageError::Timeout => APIError::Timeout,
+        MessageError::InvalidArguments => APIError::InvalidArguments,
+        MessageError::RemoteClientOfflineOrNotExist => APIError::RemoteClientOfflineOrNotExist,
+    }
 }

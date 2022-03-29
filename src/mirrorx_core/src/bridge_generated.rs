@@ -109,16 +109,16 @@ pub extern "C" fn wire_device_goes_online(port_: i64) {
 }
 
 #[no_mangle]
-pub extern "C" fn wire_desktop_connect_to(port_: i64, ask_device_id: *mut wire_uint_8_list) {
+pub extern "C" fn wire_desktop_connect_offer(port_: i64, ask_device_id: *mut wire_uint_8_list) {
     FLUTTER_RUST_BRIDGE_HANDLER.wrap(
         WrapInfo {
-            debug_name: "desktop_connect_to",
+            debug_name: "desktop_connect_offer",
             port: Some(port_),
             mode: FfiCallMode::Normal,
         },
         move || {
             let api_ask_device_id = ask_device_id.wire2api();
-            move |task_callback| desktop_connect_to(api_ask_device_id)
+            move |task_callback| desktop_connect_offer(api_ask_device_id)
         },
     )
 }

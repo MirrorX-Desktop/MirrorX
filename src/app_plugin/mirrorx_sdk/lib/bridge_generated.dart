@@ -27,7 +27,7 @@ abstract class MirrorXCore {
 
   Future<void> deviceGoesOnline({dynamic hint});
 
-  Future<bool> desktopConnectTo({required String askDeviceId, dynamic hint});
+  Future<bool> desktopConnectOffer({required String askDeviceId, dynamic hint});
 }
 
 enum FlutterCommand {
@@ -128,13 +128,14 @@ class MirrorXCoreImpl extends FlutterRustBridgeBase<MirrorXCoreWire>
         hint: hint,
       ));
 
-  Future<bool> desktopConnectTo({required String askDeviceId, dynamic hint}) =>
+  Future<bool> desktopConnectOffer(
+          {required String askDeviceId, dynamic hint}) =>
       executeNormal(FlutterRustBridgeTask(
-        callFfi: (port_) =>
-            inner.wire_desktop_connect_to(port_, _api2wire_String(askDeviceId)),
+        callFfi: (port_) => inner.wire_desktop_connect_offer(
+            port_, _api2wire_String(askDeviceId)),
         parseSuccessData: _wire2api_bool,
         constMeta: const FlutterRustBridgeTaskConstMeta(
-          debugName: "desktop_connect_to",
+          debugName: "desktop_connect_offer",
           argNames: ["askDeviceId"],
         ),
         argValues: [askDeviceId],
@@ -316,21 +317,21 @@ class MirrorXCoreWire implements FlutterRustBridgeWireBase {
   late final _wire_device_goes_online =
       _wire_device_goes_onlinePtr.asFunction<void Function(int)>();
 
-  void wire_desktop_connect_to(
+  void wire_desktop_connect_offer(
     int port_,
     ffi.Pointer<wire_uint_8_list> ask_device_id,
   ) {
-    return _wire_desktop_connect_to(
+    return _wire_desktop_connect_offer(
       port_,
       ask_device_id,
     );
   }
 
-  late final _wire_desktop_connect_toPtr = _lookup<
+  late final _wire_desktop_connect_offerPtr = _lookup<
       ffi.NativeFunction<
           ffi.Void Function(ffi.Int64,
-              ffi.Pointer<wire_uint_8_list>)>>('wire_desktop_connect_to');
-  late final _wire_desktop_connect_to = _wire_desktop_connect_toPtr
+              ffi.Pointer<wire_uint_8_list>)>>('wire_desktop_connect_offer');
+  late final _wire_desktop_connect_offer = _wire_desktop_connect_offerPtr
       .asFunction<void Function(int, ffi.Pointer<wire_uint_8_list>)>();
 
   ffi.Pointer<wire_uint_8_list> new_uint_8_list(

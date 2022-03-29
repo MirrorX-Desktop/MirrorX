@@ -7,6 +7,7 @@ mod network;
 mod service;
 // mod video_decoder;
 // mod video_encoder;
+mod api_error;
 
 #[cfg(test)]
 mod test;
