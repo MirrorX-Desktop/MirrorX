@@ -36,7 +36,8 @@ lazy_static! {
 }
 
 pub fn init_client() -> anyhow::Result<()> {
-    let client = RUNTIME.block_on(async { new_client(String::from("192.168.0.101:45555")).await })?;
+    let client =
+        RUNTIME.block_on(async { new_client(String::from("192.168.0.101:45555")).await })?;
 
     unsafe {
         INNER_CLIENT = Some(client);

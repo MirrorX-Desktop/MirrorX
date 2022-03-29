@@ -17,7 +17,9 @@ typedef int64_t DartPort;
 
 typedef bool (*DartPostCObjectFnType)(DartPort port_id, void *message);
 
-void wire_init_sdk(int64_t port_, struct wire_uint_8_list *config_db_path);
+void wire_init(int64_t port_, struct wire_uint_8_list *config_db_path);
+
+void wire_init_flutter_command_stream_sink(int64_t port_);
 
 void wire_read_device_id(int64_t port_);
 
@@ -39,7 +41,8 @@ void store_dart_post_cobject(DartPostCObjectFnType ptr);
 
 static int64_t dummy_method_to_enforce_bundling(void) {
     int64_t dummy_var = 0;
-    dummy_var ^= ((int64_t) (void*) wire_init_sdk);
+    dummy_var ^= ((int64_t) (void*) wire_init);
+    dummy_var ^= ((int64_t) (void*) wire_init_flutter_command_stream_sink);
     dummy_var ^= ((int64_t) (void*) wire_read_device_id);
     dummy_var ^= ((int64_t) (void*) wire_read_device_password);
     dummy_var ^= ((int64_t) (void*) wire_save_device_password);

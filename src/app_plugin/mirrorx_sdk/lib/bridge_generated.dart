@@ -12,7 +12,9 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge.dart';
 import 'dart:ffi' as ffi;
 
 abstract class MirrorXCore {
-  Future<bool> initSdk({required String configDbPath, dynamic hint});
+  Future<void> init({required String configDbPath, dynamic hint});
+
+  Stream<FlutterCommand> initFlutterCommandStreamSink({dynamic hint});
 
   Future<String?> readDeviceId({dynamic hint});
 
@@ -28,6 +30,10 @@ abstract class MirrorXCore {
   Future<bool> desktopConnectTo({required String askDeviceId, dynamic hint});
 }
 
+enum FlutterCommand {
+  PopupDesktopConnectInputPasswordDialog,
+}
+
 class MirrorXCoreImpl extends FlutterRustBridgeBase<MirrorXCoreWire>
     implements MirrorXCore {
   factory MirrorXCoreImpl(ffi.DynamicLibrary dylib) =>
@@ -35,16 +41,28 @@ class MirrorXCoreImpl extends FlutterRustBridgeBase<MirrorXCoreWire>
 
   MirrorXCoreImpl.raw(MirrorXCoreWire inner) : super(inner);
 
-  Future<bool> initSdk({required String configDbPath, dynamic hint}) =>
+  Future<void> init({required String configDbPath, dynamic hint}) =>
       executeNormal(FlutterRustBridgeTask(
         callFfi: (port_) =>
-            inner.wire_init_sdk(port_, _api2wire_String(configDbPath)),
-        parseSuccessData: _wire2api_bool,
+            inner.wire_init(port_, _api2wire_String(configDbPath)),
+        parseSuccessData: _wire2api_unit,
         constMeta: const FlutterRustBridgeTaskConstMeta(
-          debugName: "init_sdk",
+          debugName: "init",
           argNames: ["configDbPath"],
         ),
         argValues: [configDbPath],
+        hint: hint,
+      ));
+
+  Stream<FlutterCommand> initFlutterCommandStreamSink({dynamic hint}) =>
+      executeStream(FlutterRustBridgeTask(
+        callFfi: (port_) => inner.wire_init_flutter_command_stream_sink(port_),
+        parseSuccessData: _wire2api_flutter_command,
+        constMeta: const FlutterRustBridgeTaskConstMeta(
+          debugName: "init_flutter_command_stream_sink",
+          argNames: [],
+        ),
+        argValues: [],
         hint: hint,
       ));
 
@@ -151,6 +169,10 @@ bool _wire2api_bool(dynamic raw) {
   return raw as bool;
 }
 
+FlutterCommand _wire2api_flutter_command(dynamic raw) {
+  return FlutterCommand.values[raw];
+}
+
 String? _wire2api_opt_String(dynamic raw) {
   return raw == null ? null : _wire2api_String(raw);
 }
@@ -189,22 +211,37 @@ class MirrorXCoreWire implements FlutterRustBridgeWireBase {
           lookup)
       : _lookup = lookup;
 
-  void wire_init_sdk(
+  void wire_init(
     int port_,
     ffi.Pointer<wire_uint_8_list> config_db_path,
   ) {
-    return _wire_init_sdk(
+    return _wire_init(
       port_,
       config_db_path,
     );
   }
 
-  late final _wire_init_sdkPtr = _lookup<
+  late final _wire_initPtr = _lookup<
       ffi.NativeFunction<
           ffi.Void Function(
-              ffi.Int64, ffi.Pointer<wire_uint_8_list>)>>('wire_init_sdk');
-  late final _wire_init_sdk = _wire_init_sdkPtr
+              ffi.Int64, ffi.Pointer<wire_uint_8_list>)>>('wire_init');
+  late final _wire_init = _wire_initPtr
       .asFunction<void Function(int, ffi.Pointer<wire_uint_8_list>)>();
+
+  void wire_init_flutter_command_stream_sink(
+    int port_,
+  ) {
+    return _wire_init_flutter_command_stream_sink(
+      port_,
+    );
+  }
+
+  late final _wire_init_flutter_command_stream_sinkPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
+          'wire_init_flutter_command_stream_sink');
+  late final _wire_init_flutter_command_stream_sink =
+      _wire_init_flutter_command_stream_sinkPtr
+          .asFunction<void Function(int)>();
 
   void wire_read_device_id(
     int port_,

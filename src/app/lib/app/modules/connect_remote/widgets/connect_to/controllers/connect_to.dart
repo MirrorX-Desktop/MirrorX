@@ -1,5 +1,7 @@
 import 'dart:developer';
 
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:mirrorx/app/controllers/sdk.dart';
 import 'package:mirrorx/app/core/utils/dialog.dart';
@@ -51,10 +53,14 @@ class ConnectToController extends GetxController {
       _isLoading = true;
       update();
 
-      final res =
+      final allow =
           await _sdk.getSDKInstance().desktopConnectTo(askDeviceId: deviceID);
 
-      log(res.toString());
+      if (allow) {
+        _popupDesktopConnectInputPasswordDialog(deviceID);
+      }
+
+      log(allow.toString());
     } catch (err) {
       log(err.toString());
     } finally {
@@ -62,4 +68,42 @@ class ConnectToController extends GetxController {
       update();
     }
   }
+}
+
+void _popupDesktopConnectInputPasswordDialog(String deviceID) {
+  Get.defaultDialog(
+      title: "MirrorX",
+      titleStyle: const TextStyle(fontSize: 16),
+      content: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8.0),
+            child: Text(
+              "请输入设备[$deviceID]的访问密码",
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const CupertinoTextField(
+            textAlign: TextAlign.center,
+            maxLength: 16,
+            maxLines: 1,
+          ),
+        ],
+      ),
+      contentPadding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      barrierDismissible: false,
+      radius: 12,
+      actions: [
+        TextButton(
+            onPressed: () {
+              Get.back(closeOverlays: true);
+            },
+            child: Text("dialog.ok".tr)),
+        TextButton(
+            onPressed: () {
+              Get.back(closeOverlays: true);
+            },
+            child: Text("dialog.cancel".tr))
+      ]);
 }

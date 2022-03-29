@@ -35,6 +35,7 @@ const Map<String, String> en = {
   "dialog.yes": "YES",
   "dialog.no": "NO",
   "dialog.ok": "OK",
+  "dialog.cancel": "Cancel",
   "dialog.title.normal": "MirrorX",
   "dialog.title.error": "MirrorX Error",
 };

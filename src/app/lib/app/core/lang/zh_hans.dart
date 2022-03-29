@@ -27,6 +27,7 @@ const Map<String, String> zhHans = {
   "dialog.yes": "是",
   "dialog.no": "否",
   "dialog.ok": "确定",
+  "dialog.cancel": "取消",
   "dialog.title.normal": "MirrorX",
   "dialog.title.error": "MirrorX 错误",
 };

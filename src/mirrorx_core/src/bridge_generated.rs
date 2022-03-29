@@ -14,20 +14,34 @@ use flutter_rust_bridge::*;
 
 // Section: imports
 
+use crate::service::flutter_command::FlutterCommand;
+
 // Section: wire functions
 
 #[no_mangle]
-pub extern "C" fn wire_init_sdk(port_: i64, config_db_path: *mut wire_uint_8_list) {
+pub extern "C" fn wire_init(port_: i64, config_db_path: *mut wire_uint_8_list) {
     FLUTTER_RUST_BRIDGE_HANDLER.wrap(
         WrapInfo {
-            debug_name: "init_sdk",
+            debug_name: "init",
             port: Some(port_),
             mode: FfiCallMode::Normal,
         },
         move || {
             let api_config_db_path = config_db_path.wire2api();
-            move |task_callback| Ok(init_sdk(api_config_db_path))
+            move |task_callback| init(api_config_db_path)
         },
+    )
+}
+
+#[no_mangle]
+pub extern "C" fn wire_init_flutter_command_stream_sink(port_: i64) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap(
+        WrapInfo {
+            debug_name: "init_flutter_command_stream_sink",
+            port: Some(port_),
+            mode: FfiCallMode::Stream,
+        },
+        move || move |task_callback| init_flutter_command_stream_sink(task_callback.stream_sink()),
     )
 }
 
@@ -187,6 +201,15 @@ impl<T> NewWithNullPtr for *mut T {
 }
 
 // Section: impl IntoDart
+
+impl support::IntoDart for FlutterCommand {
+    fn into_dart(self) -> support::DartCObject {
+        match self {
+            Self::PopupDesktopConnectInputPasswordDialog => 0,
+        }
+        .into_dart()
+    }
+}
 
 // Section: executor
 
