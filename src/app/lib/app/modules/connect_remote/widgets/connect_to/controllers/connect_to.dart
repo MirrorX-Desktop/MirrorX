@@ -76,16 +76,22 @@ class ConnectToController extends GetxController {
       return;
     }
 
-    log("input password: ${controller.text}");
-
     try {
       final passwordCorrect = await _sdk
           .getSDKInstance()
           .dekstopConnectOfferAuthPassword(
               askDeviceId: deviceID, devicePassword: controller.text);
+
+      if (!passwordCorrect) {
+        popupErrorDialog(
+            content: "connect_to_remote.dialog.incorrect_password".tr);
+        return;
+      }
+
       log("password: $passwordCorrect");
     } catch (err) {
-      popupErrorDialog(content: "connect_to_remote.dialog.invalid_password".tr);
+      popupErrorDialog(
+          content: "connect_to_remote.dialog.incorrect_password".tr);
     }
   }
 
@@ -120,8 +126,8 @@ class ConnectToController extends GetxController {
         actions: [
           TextButton(
               onPressed: () async {
-                await authPassword(passwordTextController, deviceID);
                 Get.back(closeOverlays: true);
+                await authPassword(passwordTextController, deviceID);
               },
               child: Text("dialog.ok".tr)),
           TextButton(

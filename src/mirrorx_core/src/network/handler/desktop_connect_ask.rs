@@ -27,13 +27,11 @@ impl DesktopConnectAskReq {
         info!("handle desktop connect ask: {:?}", self);
 
         // generate rsa key pair for end-2-end device password authentication
-        let password_auth_private_key = match RsaPrivateKey::new(&mut rand::rngs::OsRng, 2048) {
-            Ok(key) => key,
-            Err(err) => {
-                error!("failed to generate private key: {}", err);
-                return Err(MessageError::InternalError);
-            }
-        };
+        let password_auth_private_key =
+            RsaPrivateKey::new(&mut rand::rngs::OsRng, 2048).map_err(|err| {
+                error!("failed to generate password auth private key: {}", err);
+                MessageError::InternalError
+            })?;
 
         let password_auth_public_key = RsaPublicKey::from(&password_auth_private_key);
         let n = password_auth_public_key.n().to_bytes_le();

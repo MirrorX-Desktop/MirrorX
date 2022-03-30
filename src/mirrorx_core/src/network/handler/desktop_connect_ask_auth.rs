@@ -7,14 +7,14 @@ use crate::{
     service::config::read_device_password,
 };
 use log::{error, info};
-use rsa::{pkcs1::der::Encodable, PaddingScheme};
+use rsa::PaddingScheme;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
 pub struct DesktopConnectAskAuthReq {
     pub offer_device_id: String,
-    pub secret_password: Vec<u8>,
+    pub secret_message: Vec<u8>,
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
@@ -41,7 +41,7 @@ impl DesktopConnectAskAuthReq {
         drop(local_password_auth_key_pair_map);
 
         let plain_password_bytes = private_key
-            .decrypt(PaddingScheme::PKCS1v15Encrypt, &self.secret_password)
+            .decrypt(PaddingScheme::PKCS1v15Encrypt, &self.secret_message)
             .map_err(|err| {
                 error!("failed to decrypt secret password: {}", err);
                 MessageError::InternalError
