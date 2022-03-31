@@ -3,12 +3,14 @@ from pathlib import Path
 import subprocess
 import platform
 from enum import Enum
+from tokenize import PlainToken
 
 
 class OSType(Enum):
     Windows = 1,
     macOS = 2,
-    Linux = 3
+    Linux = 3,
+    MSYS = 4
 
 
 def getCPUCores():
@@ -23,128 +25,170 @@ def getOSType():
         return OSType.Windows
     elif osType == "Darwin":
         return OSType.macOS
+    elif osType.__contains__("MSYS_NT"):
+        return OSType.MSYS
     else:
         return OSType.Linux
 
 
-def checkBasicBuildToolsAvailable(osType: OSType, toolName: str):
-    try:
-        print(f"   💡 Checking for [{toolName}]...")
-        output = ''
-        if osType == OSType.Windows:
-            output = subprocess.check_output(
-                f"where.exe {toolName}",  shell=True)
-        else:
-            output = subprocess.check_output(f"which {toolName}",  shell=True)
+def checkPackageManager(osType: OSType):
+    pm = ''
+    if osType == OSType.Windows:
+        print("❌ This script can't run in native Windows environment!")
+        exit()
+    elif osType == OSType.macOS:
+        pm = "brew"
+    elif osType == OSType.MSYS:
+        pm = "pacman"
+    elif osType == OSType.Linux:
+        pm = "apt-get"
 
-        path = bytes.decode(output).replace('\n', '')
-        print(f"   ✅ [{toolName}] is available at: {path}")
+    try:
+        pmPath = subprocess.check_output(["which", pm])
+        pmPath = bytes.decode(pmPath).replace("\n", "")
+        print(f"✔️ Package Manager [{pm}] found in: {pmPath}")
     except subprocess.CalledProcessError:
-        print(
-            f"   ❌ [{toolName}] cannot be found. Please install or add it's path to environment.")
+        print(f"❌ Package Manager [{pm}] not found")
         exit()
 
 
-def vcpkgIntegration():
-    subprocess.call(["vcpkg", "integrate", "install"])
+def buildPackageManagerInstallCommand(osType: OSType, toolName: str):
+    if osType == OSType.Windows:
+        print("❌ This script can't run in native Windows environment!")
+        exit()
+    elif osType == OSType.macOS:
+        return ["brew", "install", toolName]
+    elif osType == OSType.MSYS:
+        return ["pacman", "-S", toolName]
+    elif osType == OSType.Linux:
+        return ["apt-get", "install", toolName]
 
 
-def checkAndInstallBuildTools(osType: OSType, toolName: str):
+def installBuildTools(osType: OSType, toolName: str):
+    print(f"💡 Check [{toolName}] installation...")
     try:
-        print(f"   💡 Checking for [{toolName}]...")
-        output = ''
-        if osType == OSType.Windows:
-            output = subprocess.check_output(
-                f"where.exe {toolName}",  shell=True)
-        else:
-            output = subprocess.check_output(f"which {toolName}",  shell=True)
-
-        path = bytes.decode(output).replace('\n', '')
-        print(f"   ✅ [{toolName}] is available at: {path}")
+        output = subprocess.check_output(["which", toolName])
+        output = bytes.decode(output).replace('\n', '')
+        print(f"✔️ [{toolName}] is available at: {output}")
     except subprocess.CalledProcessError:
-        print(f"   ⚙️ installing [{toolName}]...")
+        print(f"⚙️  Installing [{toolName}]...")
         try:
-            if osType == OSType.macOS:
-                output = subprocess.call(
-                    f"brew install {toolName}", shell=True)
-            else:
-                output = subprocess.call(
-                    f"vcpkg install {toolName}", shell=True)
-                vcpkgIntegration()
+            args = buildPackageManagerInstallCommand(osType, toolName)
+            output = subprocess.check_output(args=args)
+            output = bytes.decode(output).replace('\n', '')
+            print(f"✔️ [{toolName}] is available at: {output}")
         except subprocess.CalledProcessError:
-            print(f"   ❌ [{toolName}] install failed.")
-            print(bytes.decode(output).replace('\n', ''))
+            print(f"❌ [{toolName}] install failed.")
+            exit()
 
 
 def cloneRepo(repoName: str, repoURL: str, branch: str, targetDir: str):
-    print(f"   💡 Checking if repo [{repoName}] exists...")
+    print(f"💡 Checking if repo [{repoName}] exists...")
 
     dir = Path(targetDir)
     if dir.exists() and os.listdir(dir.resolve()).__sizeof__() > 0:
-        print(f"   ✅ Repo [{repoName}] exists. Skipping clone.")
+        print(f"✔️ Repo [{repoName}] exists. Skipping clone.")
         return
 
-    print(f"   📥 Repo not exists. Cloning repo [{repoName}]...")
+    print(f"📥 Repo [{repoName}] not exists. Cloning...")
+
     try:
         subprocess.check_output(
-            f"git clone -b {branch} --depth=1 {repoURL} {targetDir}", shell=True)
-        print("   ✅ Repo cloned successfully.")
+            ["git", "clone", "-b", branch, "--depth=1", repoURL, targetDir])
+        print(f"✔️  Repo [{repoName}] cloned successfully.")
     except subprocess.CalledProcessError:
-        print(f"   ❌ git clone [{repoName}] failed")
+        print(f"❌ Clone [{repoName}] failed")
         exit()
 
+# def attachVisualStudioDeveloperTool(osType:OSType, args:list[str]):
+#     if osType != OSType.MSYS:
+#         return
 
-def buildX264(sourceDir: str, outputDir: str):
-    print("   💡 Building [x264]...")
+#     path = Path("C:/Program Files (x86)/Microsoft Visual Studio/Installer/vswhere.exe")
+
+#     if not path.exists():
+#         print("❌ Visual Studio version must grater than or equals Visual Studio 2017 version 15.2 and later")
+#         return
+
+#     vsInstallationPath=bytes.decode(subprocess.check_output([path,"-prerelease", "-latest", "-property", "installationPath"])).replace("\r\n","")
+#     vsDevCmdPath = Path(vsInstallationPath).joinpath("VC").joinpath("Auxiliary").joinpath("Build").joinpath("vcvarsall.bat")
+#     args.insert(0,"&&")
+#     args.insert(0,"x64")
+#     args.insert(0,vsDevCmdPath.__str__())
+#     return args
+
+
+def buildX264(osType: OSType, sourceDir: str, outputDir: str):
+    print("💡 Building [x264]...")
     inputPath = Path(sourceDir)
     if not inputPath.exists():
-        print("   ❌ [x264] source dir does not exist.")
+        print("❌ [x264] Source dir does not exist.")
         exit()
 
     outputPath = Path(outputDir)
-    print(f"   👉 [x264] output dir: {outputPath.resolve()}")
+    print(f"👉 [x264] Output dir: {outputPath.resolve()}")
     if outputPath.exists() and os.listdir(outputPath.resolve()).__sizeof__() > 0:
-        print(f"   ✅ [x264] compile product exists. Skipping build.")
+        print(f"✔️  [x264] Compile product exists. Skipping build.")
         return
 
-    subprocess.call(args=["./configure", f"--prefix={outputPath.resolve()}",
-                          "--enable-pic",
-                          "--enable-static",
-                          "--disable-cli"], cwd=sourceDir)
-    subprocess.call(args=["make", f"-j{getCPUCores()}"], cwd=sourceDir)
-    subprocess.call(args=["make", "install"], cwd=sourceDir)
-    subprocess.call(args=["make", "clean"], cwd=sourceDir)
+    args = ["./configure", f"--prefix={outputPath.resolve()}",
+            "--enable-pic",
+            "--enable-static",
+            "--disable-cli"]
 
-    print("   ✅ [x264] build completed.")
+    if osType == OSType.MSYS:
+        args.insert(0, "CC=cl")
+
+    command = ' '.join(str(i) for i in args)
+    print(f"CMD: {command}")
+
+    try:
+        subprocess.call(command, cwd=sourceDir, shell=True)
+        subprocess.call(args=["make", f"-j{getCPUCores()}"], cwd=sourceDir)
+        subprocess.call(args=["make", "install"], cwd=sourceDir)
+        subprocess.call(args=["make", "clean"], cwd=sourceDir)
+
+        print("✔️  [x264] build completed.")
+    except subprocess.CalledProcessError:
+        print("❌ [x264] build failed.")
+        exit()
 
 
-def buildX265(sourceDir: str, outputDir: str):
-    print("   💡 Building [x265]...")
+def buildX265(osType: OSType, sourceDir: str, outputDir: str):
+    print("💡 Building [x265]...")
     inputPath = Path(sourceDir)
     if not inputPath.exists():
-        print("   ❌ [x265] source dir does not exist.")
+        print("❌ [x265] source dir does not exist.")
         exit()
 
     outputPath = Path(outputDir)
-    print(f"   👉 [x265] output dir: {outputPath.resolve()}")
+    print(f"👉 [x265] output dir: {outputPath.resolve()}")
     if outputPath.exists() and os.listdir(outputPath.resolve()).__sizeof__() > 0:
-        print(f"   ✅ [x264] compile product exists. Skipping build.")
+        print(f"✔️ [x265] compile product exists. Skipping build.")
         return
 
-    subprocess.call(args=["cmake",
-                          "-G",
-                          "Unix Makefiles",
-                          f"-DCMAKE_INSTALL_PREFIX={outputPath.resolve()}",
-                          "-DENABLE_STATIC=ON",
-                          "-DENABLE_SHARED=OFF",
-                          "-DENABLE_SHARED_LIBS=OFF",
-                          "-DENABLE_CLI=OFF",
-                          "./source"], cwd=sourceDir)
-    subprocess.call(args=["make", f"-j{getCPUCores()}"], cwd=sourceDir)
-    subprocess.call(args=["make", "install"], cwd=sourceDir)
-    subprocess.call(args=["make", "clean"], cwd=sourceDir)
+    makeFilesType = "Unix Makefiles"
+    if osType == OSType.MSYS:
+        makeFilesType = "Visual Studio 17 2022"
 
-    print("   ✅ [x265] build completed.")
+    args = ["cmake",
+            "-G",
+            makeFilesType,
+            f"-DCMAKE_INSTALL_PREFIX={outputPath.resolve()}",
+            "-DENABLE_SHARED=OFF",
+            "-DENABLE_CLI=OFF",
+            "./source",
+            ]
+
+    try:
+        subprocess.call(args, cwd=sourceDir)
+        subprocess.call(["MSBuild.exe", "INSTALL.vcxproj", "/property:Configuration=Release",
+                        f"/maxCpuCount:{getCPUCores()}"], cwd=sourceDir)
+
+        print("✔️ [x265] build completed.")
+    except subprocess.CalledProcessError:
+        print("❌ [x265] build failed")
+        exit()
 
 
 def buildOpus(sourceDir: str, outputDir: str):
@@ -266,26 +310,20 @@ def buildFFmpeg(osType: OSType, sourceDir: str, outputDir: str):
 # Build Process
 # print platform
 osType = getOSType()
+
+if osType == OSType.Windows:
+    print("❌ This script can't run in native Windows environment, please install MSYS2 and re-run it in MSYS2 environment!")
+
 print("📦 Building for: " + osType.name)
 
+checkPackageManager(osType)
 
-# check build tool dependencies
-print("📋 Checking build tools...")
-
-if osType == OSType.macOS:
-    checkBasicBuildToolsAvailable(osType, "brew")
-
-checkBasicBuildToolsAvailable(osType, "git")
-checkBasicBuildToolsAvailable(osType, "vcpkg")
-
-checkAndInstallBuildTools(osType, "yasm")
-checkAndInstallBuildTools(osType, "autoconf")
-
-if osType == OSType.macOS:
-    checkBasicBuildToolsAvailable(osType, "pkg-config")
-else:
-    checkBasicBuildToolsAvailable(osType, "pkgconf")
-
+installBuildTools(osType, "git")
+installBuildTools(osType, "make")
+installBuildTools(osType, "cmake")
+installBuildTools(osType, "nasm")
+installBuildTools(osType, "autoconf")
+installBuildTools(osType, "pkg-config")
 
 # clone repo
 print("📁 Cloning repo...")
@@ -293,7 +331,7 @@ cloneRepo("x264", "https://code.videolan.org/videolan/x264.git",
           "stable", "./dependencies_repo/x264")
 
 cloneRepo("x265", "https://bitbucket.org/multicoreware/x265_git.git",
-          "stable", "./dependencies_repo/x265")
+          "3.5", "./dependencies_repo/x265")
 
 cloneRepo("opus", "https://gitlab.xiph.org/xiph/opus.git",
           "master", "./dependencies_repo/opus")
@@ -307,11 +345,12 @@ cloneRepo("ffmpeg", "https://git.ffmpeg.org/ffmpeg.git",
 # build dependencies
 print("📦 Building...")
 
-buildX264("./dependencies_repo/x264", "./dependencies_build/x264")
-buildX265("./dependencies_repo/x265", "./dependencies_build/x265")
-buildOpus("./dependencies_repo/opus", "./dependencies_build/opus")
-buildLibvpx("./dependencies_repo/libvpx", "./dependencies_build/libvpx")
-buildFFmpeg(osType, "./dependencies_repo/ffmpeg",
-            "./dependencies_build/ffmpeg")
+
+buildX264(osType, "./dependencies_repo/x264", "./dependencies_build/x264")
+buildX265(osType, "./dependencies_repo/x265", "./dependencies_build/x265")
+# buildOpus("./dependencies_repo/opus", "./dependencies_build/opus")
+# buildLibvpx("./dependencies_repo/libvpx", "./dependencies_build/libvpx")
+# buildFFmpeg(osType, "./dependencies_repo/ffmpeg",
+#             "./dependencies_build/ffmpeg")
 
 print("✅ All dependencies has build successfully.")
