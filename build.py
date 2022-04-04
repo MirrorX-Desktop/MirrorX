@@ -284,6 +284,29 @@ def buildLibvpx(osType: OSType, sourceDir: str, outputDir: str):
         exit()
 
 
+def buildNVHeaders(sourceDir: str):
+    print("💡 Building [nv-headers]...")
+    inputPath = Path(sourceDir)
+    if not inputPath.exists():
+        print("❌ [nv-headers] Source dir does not exist.")
+        exit()
+
+    # outputPath = Path(outputDir)
+    # print(f"👉 [nv-headers] Output dir: {outputPath.resolve()}")
+    # if outputPath.exists() and os.listdir(outputPath.resolve()).__sizeof__() > 0:
+    #     print(f"✔️  [nv-headers] Compile product exists. Skipping build.")
+    #     return
+
+    try:
+        subprocess.call(args=["make", f"-j{getCPUCores()}"], cwd=sourceDir)
+        subprocess.call(args=["make", "install"], cwd=sourceDir)
+
+        print("✔️  [nv-headers] build completed.")
+    except subprocess.CalledProcessError:
+        print("❌ [nv-headers] build failed.")
+        exit()
+
+
 def buildFFmpeg(osType: OSType, sourceDir: str, outputDir: str):
     print("💡 Building [ffmpeg]...")
     inputPath = Path(sourceDir)
@@ -348,25 +371,33 @@ def buildFFmpeg(osType: OSType, sourceDir: str, outputDir: str):
             "opus").joinpath("lib").joinpath("pkgconfig")
 
         oldEnv = env["PKG_CONFIG_PATH"]
-        env["PKG_CONFIG_PATH"] = f"{x264PCPath.resolve()}:{x265PCPath.resolve()}:{opusPCPath.resolve()}:{oldEnv}"
+        env["PKG_CONFIG_PATH"] = f"{x264PCPath.resolve()}:{x265PCPath.resolve()}:{opusPCPath.resolve()}:/usr/local/lib/pkgconfig:{oldEnv}"
 
+      
+        args.append("--enable-cuvid")
+        args.append("--enable-ffnvcodec")
+        args.append("--enable-ffnvcodec")
+        args.append("--enable-nvenc")
+        args.append("--enable-nvdec")
+        args.append("--enable-d3d11va")
+        
         args.append("--enable-encoder=h264_amf")
         args.append("--enable-encoder=h264_nvenc")
         # args.append("--enable-encoder=h264_vaapi")
-        args.append("--enable-encoder=h264_qsv")
+        # args.append("--enable-encoder=h264_qsv")
         args.append("--enable-encoder=hevc_amf")
         args.append("--enable-encoder=hevc_nvenc")
         # args.append("--enable-encoder=hevc_vaapi")
-        args.append("--enable-encoder=hevc_qsv")
+        # args.append("--enable-encoder=hevc_qsv")
         # args.append("--enable-encoder=vp9_vaapi")
-        args.append("--enable-encoder=vp9_qsv")
+        # args.append("--enable-encoder=vp9_qsv")
 
         args.append("--enable-decoder=h264_cuvid")
-        args.append("--enable-decoder=h264_qsv")
+        # args.append("--enable-decoder=h264_qsv")
         args.append("--enable-decoder=hevc_cuvid")
-        args.append("--enable-decoder=hevc_qsv")
+        # args.append("--enable-decoder=hevc_qsv")
         args.append("--enable-decoder=vp9_cuvid")
-        args.append("--enable-decoder=vp9_qsv")   
+        # args.append("--enable-decoder=vp9_qsv")
 
         args.append("--toolchain=msvc")
         args.append("--pkg-config-flags=--static")
@@ -375,8 +406,16 @@ def buildFFmpeg(osType: OSType, sourceDir: str, outputDir: str):
         args.append(
             "--extra-ldflags=-libpath:/f/MirrorX/dependencies_build/libvpx/lib/x64")
 
-    # command = ' '.join(str(i) for i in args)
-    # print(f"CMD: {command}")
+        # AMF support
+        args.append("--enable-amf")
+        # todo copy amf/public/include/* to /usr/local/include/AMF/*
+        # amfIncludePath = Path(sourceDir).parent.joinpath("include").joinpath("AMF")
+
+        # oldEnv = env["INCLUDE"]
+        # env["INCLUDE"]= f"{amfIncludePath}:{oldEnv}"
+
+        # args.append(f"--extra-cflags=-I{amfIncludePath.resolve()}")
+        args.append("--extra-cflags=-DAMF_CORE_STATIC")
 
     try:
         subprocess.call(args=args, cwd=sourceDir, env=env)
@@ -425,6 +464,12 @@ cloneRepo("opus", "https://gitlab.xiph.org/xiph/opus.git",
 cloneRepo("libvpx", "https://github.com/webmproject/libvpx.git",
           "main", "./dependencies_repo/libvpx")
 
+if osType == OSType.MSYS:
+    cloneRepo("amf", "https://github.com/GPUOpen-LibrariesAndSDKs/AMF.git",
+              "v1.4.24", "./dependencies_repo/amf")
+    cloneRepo("nv-codec-headers", "https://github.com/FFmpeg/nv-codec-headers.git",
+              "n11.1.5.1", "./dependencies_repo/nv_codec_headers")
+
 cloneRepo("ffmpeg", "https://git.ffmpeg.org/ffmpeg.git",
           "n5.0", "./dependencies_repo/ffmpeg")
 
@@ -436,6 +481,10 @@ buildX265(osType, "./dependencies_repo/x265", "./dependencies_build/x265")
 buildOpus(osType, "./dependencies_repo/opus", "./dependencies_build/opus")
 buildLibvpx(osType, "./dependencies_repo/libvpx",
             "./dependencies_build/libvpx")
+
+if osType == OSType.MSYS:
+    buildNVHeaders("./dependencies_repo/nv_codec_headers")
+
 buildFFmpeg(osType, "./dependencies_repo/ffmpeg",
             "./dependencies_build/ffmpeg")
 
