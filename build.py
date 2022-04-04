@@ -134,16 +134,17 @@ def buildX264(osType: OSType, sourceDir: str, outputDir: str):
     args = ["./configure", f"--prefix={outputPath.resolve()}",
             "--enable-pic",
             "--enable-static",
-            "--disable-cli"]
+            "--disable-cli",
+            "--extra-cflags=-DNO_PREFIX"
+            ]
 
+    env = os.environ.copy()
     if osType == OSType.MSYS:
-        args.insert(0, "CC=cl")
-
-    command = ' '.join(str(i) for i in args)
-    print(f"CMD: {command}")
+        oldEnv = env["CC"]
+        env["CC"] = f"cl:{oldEnv}"
 
     try:
-        subprocess.call(command, cwd=sourceDir, shell=True)
+        subprocess.call(args, cwd=sourceDir, env=env, shell=True)
         subprocess.call(args=["make", f"-j{getCPUCores()}"], cwd=sourceDir)
         subprocess.call(args=["make", "install"], cwd=sourceDir)
         subprocess.call(args=["make", "clean"], cwd=sourceDir)
@@ -164,26 +165,31 @@ def buildX265(osType: OSType, sourceDir: str, outputDir: str):
     outputPath = Path(outputDir)
     print(f"👉 [x265] output dir: {outputPath.resolve()}")
     if outputPath.exists() and os.listdir(outputPath.resolve()).__sizeof__() > 0:
-        print(f"✔️ [x265] compile product exists. Skipping build.")
+        print(f"✔️  [x265] compile product exists. Skipping build.")
         return
 
-    makeFilesType = "Unix Makefiles"
-    if osType == OSType.MSYS:
-        makeFilesType = "Visual Studio 17 2022"
-
     args = ["cmake",
-            "-G",
-            makeFilesType,
+            "./source",
             f"-DCMAKE_INSTALL_PREFIX={outputPath.resolve()}",
             "-DENABLE_SHARED=OFF",
             "-DENABLE_CLI=OFF",
-            "./source",
+            "-DENABLE_PIC=ON",
             ]
 
     try:
         subprocess.call(args, cwd=sourceDir)
-        subprocess.call(["MSBuild.exe", "INSTALL.vcxproj", "/property:Configuration=Release",
-                        f"/maxCpuCount:{getCPUCores()}"], cwd=sourceDir)
+
+        if osType == OSType.MSYS:
+            args.append("-DSTATIC_LINK_CRT=ON")
+
+            subprocess.call(
+                ["cmake", "--build", ".", "--config", "Release"], cwd=sourceDir)
+            subprocess.call(
+                ["cmake", "--build", ".", "--target", "install", "--config", "Release"], cwd=sourceDir)
+        else:
+            subprocess.call(args=["make", f"-j{getCPUCores()}"], cwd=sourceDir)
+            subprocess.call(args=["make", "install"], cwd=sourceDir)
+            subprocess.call(args=["make", "clean"], cwd=sourceDir)
 
         print("✔️ [x265] build completed.")
     except subprocess.CalledProcessError:
@@ -191,77 +197,110 @@ def buildX265(osType: OSType, sourceDir: str, outputDir: str):
         exit()
 
 
-def buildOpus(sourceDir: str, outputDir: str):
-    print("   💡 Building [opus]...")
+def buildOpus(osType: OSType, sourceDir: str, outputDir: str):
+    print("💡 Building [opus]...")
     inputPath = Path(sourceDir)
     if not inputPath.exists():
-        print("   ❌ [opus] source dir does not exist.")
+        print("❌ [opus] source dir does not exist.")
         exit()
 
     outputPath = Path(outputDir)
-    print(f"   👉 [opus] output dir: {outputPath.resolve()}")
+    print(f"👉 [opus] output dir: {outputPath.resolve()}")
     if outputPath.exists() and os.listdir(outputPath.resolve()).__sizeof__() > 0:
-        print(f"   ✅ [opus] compile product exists. Skipping build.")
+        print(f"✔️  [opus] compile product exists. Skipping build.")
         return
 
-    subprocess.call(args=["./autogen.sh"], cwd=sourceDir)
-    subprocess.call(args=["./configure", f"--prefix={outputPath.resolve()}",
-                          "--enable-static",
-                          "--disable-shared",
-                          "--disable-doc",
-                          "--disable-extra-programs"], cwd=sourceDir)
-    subprocess.call(args=["make", f"-j{getCPUCores()}"], cwd=sourceDir)
-    subprocess.call(args=["make", "install"], cwd=sourceDir)
-    subprocess.call(args=["make", "clean"], cwd=sourceDir)
+    try:
+        if osType == OSType.MSYS:
+            args = ["cmake",
+                    ".",
+                    f"-DCMAKE_INSTALL_PREFIX={outputPath.resolve()}",
+                    "-DOPUS_STACK_PROTECTOR=OFF",
+                    "-DCMAKE_BUILD_TYPE=Release",
+                    ]
 
-    print("   ✅ [opus] build completed.")
+            subprocess.call(args, cwd=sourceDir)
+            subprocess.call(
+                ["cmake", "--build", ".", "--config", "Release"], cwd=sourceDir)
+            subprocess.call(
+                ["cmake", "--build", ".", "--target", "install", "--config", "Release"], cwd=sourceDir)
+        else:
+            subprocess.call("./autogen.sh", cwd=sourceDir, shell=True)
+            subprocess.call(["./configure", f"--prefix={outputPath.resolve()}",
+                             "--enable-static",
+                             "--disable-shared",
+                             "--disable-doc",
+                             "--disable-extra-programs"], cwd=sourceDir, shell=True)
+            subprocess.call(args=["make", f"-j{getCPUCores()}"], cwd=sourceDir)
+            subprocess.call(args=["make", "install"], cwd=sourceDir)
+            subprocess.call(args=["make", "clean"], cwd=sourceDir)
+
+        print("✔️ [opus] build completed.")
+    except subprocess.CalledProcessError:
+        print("❌ [opus] build failed")
+        exit()
 
 
-def buildLibvpx(sourceDir: str, outputDir: str):
-    print("   💡 Building [libvpx]...")
+def buildLibvpx(osType: OSType, sourceDir: str, outputDir: str):
+    print("💡 Building [libvpx]...")
     inputPath = Path(sourceDir)
     if not inputPath.exists():
-        print("   ❌ [libvpx] source dir does not exist.")
+        print("❌ [libvpx] source dir does not exist.")
         exit()
 
     outputPath = Path(outputDir)
-    print(f"   👉 [libvpx] output dir: {outputPath.resolve()}")
+    print(f"👉 [libvpx] output dir: {outputPath.resolve()}")
     if outputPath.exists() and os.listdir(outputPath.resolve()).__sizeof__() > 0:
-        print(f"   ✅ [libvpx] compile product exists. Skipping build.")
+        print(f"✔️  [libvpx] compile product exists. Skipping build.")
         return
 
-    subprocess.call(args=["./configure", f"--prefix={outputPath.resolve()}",
-                          "--enable-vp9",
-                          "--enable-pic",
-                          "--enable-better-hw-compatibility",
-                          "--enable-realtime-only",
-                          "--disable-vp8",
-                          "--disable-examples",
-                          "--disable-tools",
-                          "--disable-docs"], cwd=sourceDir)
-    subprocess.call(args=["make", f"-j{getCPUCores()}"], cwd=sourceDir)
-    subprocess.call(args=["make", "install"], cwd=sourceDir)
-    subprocess.call(args=["make", "clean"], cwd=sourceDir)
+    args = ["./configure",
+            f"--prefix=\"{outputPath.resolve()}\"",
+            "--enable-vp9",
+            "--enable-pic",
+            "--enable-better-hw-compatibility",
+            "--enable-realtime-only",
+            "--disable-vp8",
+            "--disable-examples",
+            "--disable-docs",
+            "--disable-tools",
+            "--disable-unit-tests",
+            "--disable-webm-io",
+            "--disable-libyuv",
+            ]
 
-    print("   ✅ [libvpx] build completed.")
+    try:
+        if osType == OSType.MSYS:
+            args.append("--target=x86_64-win64-vs17")
+            args.append("--enable-static-msvcrt")
+
+        subprocess.call(args, cwd=sourceDir)
+        subprocess.call(args=["make", f"-j{getCPUCores()}"], cwd=sourceDir)
+        subprocess.call(args=["make", "install"], cwd=sourceDir)
+        subprocess.call(args=["make", "clean"], cwd=sourceDir)
+        print("✔️\t[libvpx] build completed.")
+    except subprocess.CalledProcessError:
+        print("❌\t[libvpx] build failed")
+        exit()
 
 
 def buildFFmpeg(osType: OSType, sourceDir: str, outputDir: str):
-    print("   💡 Building [ffmpeg]...")
+    print("💡 Building [ffmpeg]...")
     inputPath = Path(sourceDir)
     if not inputPath.exists():
-        print("   ❌ [ffmpeg] source dir does not exist.")
+        print("❌ [ffmpeg] source dir does not exist.")
         exit()
 
     outputPath = Path(outputDir)
-    print(f"   👉 [ffmpeg] output dir: {outputPath.resolve()}")
+    print(f"👉 [ffmpeg] output dir: {outputPath.resolve()}")
     if outputPath.exists() and os.listdir(outputPath.resolve()).__sizeof__() > 0:
-        print(f"   ✅ [ffmpeg] compile product exists. Skipping build.")
+        print(f"✔️ [ffmpeg] compile product exists. Skipping build.")
         return
 
     args = ["./configure", f"--prefix={outputPath.resolve()}",
             "--disable-all",
             "--disable-autodetect",
+            "--target-os=win64",
             "--arch=x86_64",
             "--enable-lto",
             "--enable-pic",
@@ -272,7 +311,6 @@ def buildFFmpeg(osType: OSType, sourceDir: str, outputDir: str):
             "--enable-avdevice",
             "--enable-avcodec",
             "--enable-avformat",
-            "--enable-pthreads",
             "--enable-libx264",
             "--enable-libx265",
             "--enable-libvpx",
@@ -292,19 +330,64 @@ def buildFFmpeg(osType: OSType, sourceDir: str, outputDir: str):
             "--disable-txtpages",
             ]
 
+    env = os.environ.copy()
+
     if osType == OSType.macOS:
         args.append("--enable-videotoolbox")
         args.append("--enable-audiotoolbox")
         args.append("--enable-hwaccel=h264_videotoolbox")
         args.append("--enable-hwaccel=hevc_videotoolbox")
         args.append("--enable-hwaccel=vp9_videotoolbox")
+    elif osType == OSType.MSYS:
+        buildRootPath = outputPath.parent
+        x264PCPath = buildRootPath.joinpath(
+            "x264").joinpath("lib").joinpath("pkgconfig")
+        x265PCPath = buildRootPath.joinpath(
+            "x265").joinpath("lib").joinpath("pkgconfig")
+        opusPCPath = buildRootPath.joinpath(
+            "opus").joinpath("lib").joinpath("pkgconfig")
 
-    subprocess.call(args=args, cwd=sourceDir)
-    subprocess.call(args=["make", f"-j{getCPUCores()}"], cwd=sourceDir)
-    subprocess.call(args=["make", "install"], cwd=sourceDir)
-    subprocess.call(args=["make", "clean"], cwd=sourceDir)
+        oldEnv = env["PKG_CONFIG_PATH"]
+        env["PKG_CONFIG_PATH"] = f"{x264PCPath.resolve()}:{x265PCPath.resolve()}:{opusPCPath.resolve()}:{oldEnv}"
 
-    print("   ✅ [ffmpeg] build completed.")
+        args.append("--enable-encoder=h264_amf")
+        args.append("--enable-encoder=h264_nvenc")
+        # args.append("--enable-encoder=h264_vaapi")
+        args.append("--enable-encoder=h264_qsv")
+        args.append("--enable-encoder=hevc_amf")
+        args.append("--enable-encoder=hevc_nvenc")
+        # args.append("--enable-encoder=hevc_vaapi")
+        args.append("--enable-encoder=hevc_qsv")
+        # args.append("--enable-encoder=vp9_vaapi")
+        args.append("--enable-encoder=vp9_qsv")
+
+        args.append("--enable-decoder=h264_cuvid")
+        args.append("--enable-decoder=h264_qsv")
+        args.append("--enable-decoder=hevc_cuvid")
+        args.append("--enable-decoder=hevc_qsv")
+        args.append("--enable-decoder=vp9_cuvid")
+        args.append("--enable-decoder=vp9_qsv")   
+
+        args.append("--toolchain=msvc")
+        args.append("--pkg-config-flags=--static")
+        args.append(
+            "--extra-cflags=-I/f/MirrorX/dependencies_build/libvpx/include")
+        args.append(
+            "--extra-ldflags=-libpath:/f/MirrorX/dependencies_build/libvpx/lib/x64")
+
+    # command = ' '.join(str(i) for i in args)
+    # print(f"CMD: {command}")
+
+    try:
+        subprocess.call(args=args, cwd=sourceDir, env=env)
+        # subprocess.call(args=["make", f"-j{getCPUCores()}"], cwd=sourceDir)
+        # subprocess.call(args=["make", "install"], cwd=sourceDir)
+        # subprocess.call(args=["make", "clean"], cwd=sourceDir)
+
+        print("✔️ [ffmpeg] build completed.")
+    except subprocess.CalledProcessError:
+        print("❌ [ffmpeg] build failed")
+        exit()
 
 
 # Build Process
@@ -313,6 +396,7 @@ osType = getOSType()
 
 if osType == OSType.Windows:
     print("❌ This script can't run in native Windows environment, please install MSYS2 and re-run it in MSYS2 environment!")
+    exit()
 
 print("📦 Building for: " + osType.name)
 
@@ -321,6 +405,8 @@ checkPackageManager(osType)
 installBuildTools(osType, "git")
 installBuildTools(osType, "make")
 installBuildTools(osType, "cmake")
+installBuildTools(osType, "automake")
+installBuildTools(osType, "libtool")
 installBuildTools(osType, "nasm")
 installBuildTools(osType, "autoconf")
 installBuildTools(osType, "pkg-config")
@@ -334,10 +420,10 @@ cloneRepo("x265", "https://bitbucket.org/multicoreware/x265_git.git",
           "3.5", "./dependencies_repo/x265")
 
 cloneRepo("opus", "https://gitlab.xiph.org/xiph/opus.git",
-          "master", "./dependencies_repo/opus")
+          "v1.3.1", "./dependencies_repo/opus")
 
-cloneRepo("libvpx", "https://chromium.googlesource.com/webm/libvpx",
-          "v1.11.0", "./dependencies_repo/libvpx")
+cloneRepo("libvpx", "https://github.com/webmproject/libvpx.git",
+          "main", "./dependencies_repo/libvpx")
 
 cloneRepo("ffmpeg", "https://git.ffmpeg.org/ffmpeg.git",
           "n5.0", "./dependencies_repo/ffmpeg")
@@ -345,12 +431,12 @@ cloneRepo("ffmpeg", "https://git.ffmpeg.org/ffmpeg.git",
 # build dependencies
 print("📦 Building...")
 
-
 buildX264(osType, "./dependencies_repo/x264", "./dependencies_build/x264")
 buildX265(osType, "./dependencies_repo/x265", "./dependencies_build/x265")
-# buildOpus("./dependencies_repo/opus", "./dependencies_build/opus")
-# buildLibvpx("./dependencies_repo/libvpx", "./dependencies_build/libvpx")
-# buildFFmpeg(osType, "./dependencies_repo/ffmpeg",
-#             "./dependencies_build/ffmpeg")
+buildOpus(osType, "./dependencies_repo/opus", "./dependencies_build/opus")
+buildLibvpx(osType, "./dependencies_repo/libvpx",
+            "./dependencies_build/libvpx")
+buildFFmpeg(osType, "./dependencies_repo/ffmpeg",
+            "./dependencies_build/ffmpeg")
 
 print("✅ All dependencies has build successfully.")
