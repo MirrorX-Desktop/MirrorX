@@ -307,6 +307,73 @@ def buildNVHeaders(sourceDir: str):
         exit()
 
 
+def buildAMF(sourceDir: str):
+    print("💡 Building [amf]...")
+    inputPath = Path(sourceDir)
+    if not inputPath.exists():
+        print("❌ [amf] Source dir does not exist.")
+        exit()
+
+    # outputPath = Path(outputDir)
+    # print(f"👉 [nv-headers] Output dir: {outputPath.resolve()}")
+    # if outputPath.exists() and os.listdir(outputPath.resolve()).__sizeof__() > 0:
+    #     print(f"✔️  [nv-headers] Compile product exists. Skipping build.")
+    #     return
+
+    try:
+        srcIncludePath = Path(sourceDir).joinpath("amf").joinpath(
+            "public").joinpath("include").joinpath("*")
+        dstIncludePath = Path("/usr/local/include/AMF")
+        subprocess.call(
+            f"cp -r {srcIncludePath.resolve()} {dstIncludePath.resolve()}", cwd=sourceDir, shell=True)
+
+        print("✔️  [amf] build completed.")
+    except subprocess.CalledProcessError:
+        print("❌ [amf] build failed.")
+        exit()
+
+
+def buildQSV(osType: OSType, sourceDir: str, outputDir: str):
+    print("💡 Building [qsv]...")
+    inputPath = Path(sourceDir)
+    if not inputPath.exists():
+        print("❌ [qsv] source dir does not exist.")
+        exit()
+
+    outputPath = Path(outputDir)
+    print(f"👉 [qsv] output dir: {outputPath.resolve()}")
+    if outputPath.exists() and os.listdir(outputPath.resolve()).__sizeof__() > 0:
+        print(f"✔️  [qsv] compile product exists. Skipping build.")
+        return
+
+    try:
+        if osType == OSType.MSYS:
+            dispatchPath = Path(sourceDir).joinpath("SMP")
+            projectPath = dispatchPath.joinpath("libmfx.sln")
+
+            subprocess.call(
+                f"devenv.exe {projectPath.resolve()} -upgrade", cwd=sourceDir, shell=True)
+
+            subprocess.call(
+                f"MSBuild.exe {projectPath.resolve()} -p:RuntimeLibrary=MultiThreaded -p:Platform=x64 -p:Configuration=Release -p:OutDir={outputPath.resolve()}/", cwd=sourceDir, shell=True)
+
+        # else:
+            # subprocess.call("./autogen.sh", cwd=sourceDir, shell=True)
+            # subprocess.call(["./configure", f"--prefix={outputPath.resolve()}",
+            #                  "--enable-static",
+            #                  "--disable-shared",
+            #                  "--disable-doc",
+            #                  "--disable-extra-programs"], cwd=sourceDir, shell=True)
+            # subprocess.call(args=["make", f"-j{getCPUCores()}"], cwd=sourceDir)
+            # subprocess.call(args=["make", "install"], cwd=sourceDir)
+            # subprocess.call(args=["make", "clean"], cwd=sourceDir)
+
+        print("✔️ [qsv] build completed.")
+    except subprocess.CalledProcessError:
+        print("❌ [qsv] build failed")
+        exit()
+
+
 def buildFFmpeg(osType: OSType, sourceDir: str, outputDir: str):
     print("💡 Building [ffmpeg]...")
     inputPath = Path(sourceDir)
@@ -325,7 +392,6 @@ def buildFFmpeg(osType: OSType, sourceDir: str, outputDir: str):
             "--disable-autodetect",
             "--target-os=win64",
             "--arch=x86_64",
-            "--enable-lto",
             "--enable-pic",
             "--enable-hardcoded-tables",
             "--enable-gpl",
@@ -369,35 +435,33 @@ def buildFFmpeg(osType: OSType, sourceDir: str, outputDir: str):
             "x265").joinpath("lib").joinpath("pkgconfig")
         opusPCPath = buildRootPath.joinpath(
             "opus").joinpath("lib").joinpath("pkgconfig")
+        qsvPCPath = buildRootPath.joinpath(
+            "mfx_dispatch").joinpath("lib").joinpath("pkgconfig")
 
-        oldEnv = env["PKG_CONFIG_PATH"]
-        env["PKG_CONFIG_PATH"] = f"{x264PCPath.resolve()}:{x265PCPath.resolve()}:{opusPCPath.resolve()}:/usr/local/lib/pkgconfig:{oldEnv}"
-
-      
         args.append("--enable-cuvid")
         args.append("--enable-ffnvcodec")
         args.append("--enable-ffnvcodec")
         args.append("--enable-nvenc")
         args.append("--enable-nvdec")
         args.append("--enable-d3d11va")
-        
+
         args.append("--enable-encoder=h264_amf")
         args.append("--enable-encoder=h264_nvenc")
         # args.append("--enable-encoder=h264_vaapi")
-        # args.append("--enable-encoder=h264_qsv")
+        args.append("--enable-encoder=h264_qsv")
         args.append("--enable-encoder=hevc_amf")
         args.append("--enable-encoder=hevc_nvenc")
         # args.append("--enable-encoder=hevc_vaapi")
-        # args.append("--enable-encoder=hevc_qsv")
+        args.append("--enable-encoder=hevc_qsv")
         # args.append("--enable-encoder=vp9_vaapi")
-        # args.append("--enable-encoder=vp9_qsv")
+        args.append("--enable-encoder=vp9_qsv")
 
         args.append("--enable-decoder=h264_cuvid")
-        # args.append("--enable-decoder=h264_qsv")
+        args.append("--enable-decoder=h264_qsv")
         args.append("--enable-decoder=hevc_cuvid")
-        # args.append("--enable-decoder=hevc_qsv")
+        args.append("--enable-decoder=hevc_qsv")
         args.append("--enable-decoder=vp9_cuvid")
-        # args.append("--enable-decoder=vp9_qsv")
+        args.append("--enable-decoder=vp9_qsv")
 
         args.append("--toolchain=msvc")
         args.append("--pkg-config-flags=--static")
@@ -409,19 +473,23 @@ def buildFFmpeg(osType: OSType, sourceDir: str, outputDir: str):
         # AMF support
         args.append("--enable-amf")
         # todo copy amf/public/include/* to /usr/local/include/AMF/*
-        # amfIncludePath = Path(sourceDir).parent.joinpath("include").joinpath("AMF")
-
-        # oldEnv = env["INCLUDE"]
-        # env["INCLUDE"]= f"{amfIncludePath}:{oldEnv}"
-
-        # args.append(f"--extra-cflags=-I{amfIncludePath.resolve()}")
         args.append("--extra-cflags=-DAMF_CORE_STATIC")
+
+        # QSV support
+        args.append("--enable-libmfx")
+        args.append(
+            "--extra-cflags=-I/f/MirrorX/dependencies_build/mfx_dispatch/include")
+        args.append(
+            "--extra-ldflags=-libpath:/f/MirrorX/dependencies_build/mfx_dispatch/lib/x64 ole32.lib")
+
+        oldEnv = env["PKG_CONFIG_PATH"]
+        env["PKG_CONFIG_PATH"] = f"{x264PCPath.resolve()}:{x265PCPath.resolve()}:{opusPCPath.resolve()}:/usr/local/lib/pkgconfig:{oldEnv}"
 
     try:
         subprocess.call(args=args, cwd=sourceDir, env=env)
-        # subprocess.call(args=["make", f"-j{getCPUCores()}"], cwd=sourceDir)
-        # subprocess.call(args=["make", "install"], cwd=sourceDir)
-        # subprocess.call(args=["make", "clean"], cwd=sourceDir)
+        subprocess.call(args=["make", f"-j{getCPUCores()}"], cwd=sourceDir)
+        subprocess.call(args=["make", "install"], cwd=sourceDir)
+        subprocess.call(args=["make", "clean"], cwd=sourceDir)
 
         print("✔️ [ffmpeg] build completed.")
     except subprocess.CalledProcessError:
@@ -465,8 +533,10 @@ cloneRepo("libvpx", "https://github.com/webmproject/libvpx.git",
           "main", "./dependencies_repo/libvpx")
 
 if osType == OSType.MSYS:
-    cloneRepo("amf", "https://github.com/GPUOpen-LibrariesAndSDKs/AMF.git",
-              "v1.4.24", "./dependencies_repo/amf")
+    cloneRepo("AMF", "https://github.com/GPUOpen-LibrariesAndSDKs/AMF.git",
+              "v1.4.24", "./dependencies_repo/AMF")
+    cloneRepo("mfx_dispatch", "https://github.com/ShiftMediaProject/mfx_dispatch.git",
+              "1.35.r89", "./dependencies_repo/mfx_dispatch")
     cloneRepo("nv-codec-headers", "https://github.com/FFmpeg/nv-codec-headers.git",
               "n11.1.5.1", "./dependencies_repo/nv_codec_headers")
 
@@ -484,6 +554,9 @@ buildLibvpx(osType, "./dependencies_repo/libvpx",
 
 if osType == OSType.MSYS:
     buildNVHeaders("./dependencies_repo/nv_codec_headers")
+    buildAMF("./dependencies_repo/AMF")
+    buildQSV(osType, "./dependencies_repo/mfx_dispatch",
+             "./dependencies_build/mfx_dispatch")
 
 buildFFmpeg(osType, "./dependencies_repo/ffmpeg",
             "./dependencies_build/ffmpeg")
