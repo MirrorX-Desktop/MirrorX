@@ -1,18 +1,15 @@
 #ifndef DUPLICATOR_H
 #define DUPLICATOR_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include "../ffi_log/ffi_log.h"
-#include "callback.h"
 
 #if _WIN32 || _WIN64 || _MSC_VER || __MINGW32__ || __MINGW64__ || _WINDOWS
 
+#include "callback.h"
 #include "windows/DuplicationManager.h"
 #include <atomic>
 #include <thread>
+
 
 typedef struct DuplicationContext {
   DuplicationManager *manager;
@@ -45,6 +42,10 @@ typedef struct DuplicationContext {
 } DuplicationContext;
 #elif __linux
 
+#endif
+
+#ifdef __cplusplus
+extern "C" {
 #endif
 
 const DuplicationContext *create_duplication_context(int display_index,

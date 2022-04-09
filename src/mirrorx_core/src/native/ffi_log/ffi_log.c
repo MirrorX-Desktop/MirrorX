@@ -16,7 +16,7 @@ void ffi_log(enum FFI_LOG_LEVEL level, const char *format, ...) {
   va_end(args_ptr);
 }
 
-void ffmpeg_log_callback(void *_, int level, const char *fmt, va_list vl) {
+void ffmpeg_log_callback(void *avcl, int level, const char *fmt, va_list vl) {
   if (level > av_log_get_level())
     return;
 

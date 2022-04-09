@@ -24,7 +24,7 @@ extern void log_to_rust(int level, const char *message);
 
 void ffi_log(enum FFI_LOG_LEVEL level, const char *format, ...);
 
-void ffmpeg_log_callback(void *, int level, const char *fmt, va_list vl);
+void ffmpeg_log_callback(void *avcl, int level, const char *fmt, va_list vl);
 
 #ifdef __cplusplus
 };

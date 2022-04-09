@@ -3,38 +3,44 @@ use cc::Build;
 fn main() {
     println!("cargo:rerun-if-changed=build.rs");
 
-    // let mut builder = cc::Build::new();
-    // // builder.cpp(true).define("__STDC_CONSTANT_MACROS", None);
-    // builder.flag("-mmacosx-version-min=10.11");
+    let mut builder = cc::Build::new();
 
-    // build_ffi_log(&mut builder);
-    // link_library(&mut builder);
-    // build_codec(&mut builder);
-    // build_duplicator(&mut builder);
+    #[cfg(target_os="windows")]
+    builder.cpp(true).define("__STDC_CONSTANT_MACROS", None);
+    
+    builder.include("../../dependencies_build/ffmpeg/include");
 
-    // builder.compile("native");
+    build_ffi_log(&mut builder);
+    link_library(&mut builder);
+    build_codec(&mut builder);
+    build_duplicator(&mut builder);
 
-    // println!("cargo:rustc-link-lib=native");
+    builder.compile("native");
+
+    println!("cargo:rustc-link-lib=native");
 }
 
 fn link_library(builder: &mut Build) {
-    builder.include("dependencies/ffmpeg_build/include");
+    builder.static_crt(true);
 
-    println!("cargo:rustc-link-search=dependencies/ffmpeg_build/lib");
-    println!("cargo:rustc-link-lib=avcodec");
-    println!("cargo:rustc-link-lib=avutil");
+    println!("cargo:rustc-link-search=../../dependencies_build/ffmpeg/lib");
+    println!("cargo:rustc-link-lib=static=avutil");
+    println!("cargo:rustc-link-lib=static=avcodec");
+   
+    println!("cargo:rustc-link-search=../../dependencies_build/x264/lib");
+    println!("cargo:rustc-link-lib=static=x264");
 
-    // println!("cargo:rustc-link-search=dependencies/x264_build/lib");
-    // println!("cargo:rustc-link-lib=static=x264");
+    println!("cargo:rustc-link-search=../../dependencies_build/x265/lib");
+    println!("cargo:rustc-link-lib=static=x265");
 
-    // println!("cargo:rustc-link-search=dependencies/x265_build/lib");
-    // println!("cargo:rustc-link-lib=static=x265");
+    println!("cargo:rustc-link-search=../../dependencies_build/opus/lib");
+    println!("cargo:rustc-link-lib=static=opus");
 
-    // println!("cargo:rustc-link-search=dependencies/opus_build/lib");
-    // println!("cargo:rustc-link-lib=static=opus");
+    println!("cargo:rustc-link-search=../../dependencies_build/libvpx/lib/x64");
+    println!("cargo:rustc-link-lib=static=vpx");
 
-    // println!("cargo:rustc-link-search=dependencies/libvpx_build/lib");
-    // println!("cargo:rustc-link-lib=static=vpx");
+    println!("cargo:rustc-link-search=../../dependencies_build/mfx_dispatch/lib/x64");
+    println!("cargo:rustc-link-lib=static=mfx");
 
     // if cfg!(target_os = "windows") {
     //     vcpkg_bundle.find_package("ffnvcodec").unwrap();
