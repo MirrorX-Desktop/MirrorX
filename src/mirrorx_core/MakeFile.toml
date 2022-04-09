@@ -9,8 +9,16 @@ command = "cargo"
 args = ["clean"]
 
 [tasks.test]
+mac_alias = "build_macos_debug"
+windows_alias = "build_windows_debug"
+
+[tasks.test_macos]
 command = "cargo"
 args = ["test", "--lib", "--target", "x86_64-apple-darwin"]
+
+[tasks.test_windows]
+command = "cargo"
+args = ["test", "--lib", "--target", "x86_64-pc-windows-msvc"]
 
 # build process
 [tasks.build_debug]
@@ -19,6 +27,7 @@ windows_alias = "build_windows_debug"
 
 [tasks.build_release]
 mac_alias = "build_macos_release"
+windows_alias = "build_windows_release"
 dependencies = ["clean"]
 
 ## debug build
@@ -34,6 +43,10 @@ args = ["build", "--target", "x86_64-pc-windows-msvc"]
 [tasks.build_macos_release]
 command = "cargo"
 args = ["build", "--target", "x86_64-apple-darwin", "--release"]
+
+[tasks.build_windows_release]
+command = "cargo"
+args = ["build", "--target", "x86_64-pc-windows-msvc", "--release"]
 
 [tasks.make-debug]
 dependencies = ["format", "build_debug"]
