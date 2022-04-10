@@ -7,6 +7,7 @@ use super::{
     handler::{
         desktop_connect_ask::{DesktopConnectAskReq, DesktopConnectAskResp},
         desktop_connect_ask_auth::{DesktopConnectAskAuthReq, DesktopConnectAskAuthResp},
+        desktop_connect_open_stream::{DesktopConnectOpenStreamReq, DesktopConnectOpenStreamResp},
     },
     Client,
 };
@@ -27,6 +28,8 @@ pub enum Message {
     DesktopConnectOfferAuthResp(DesktopConnectOfferAuthResp),
     DesktopConnectAskAuthReq(DesktopConnectAskAuthReq),
     DesktopConnectAskAuthResp(DesktopConnectAskAuthResp),
+    DesktopConnectOpenStreamReq(DesktopConnectOpenStreamReq),
+    DesktopConnectOpenStreamResp(DesktopConnectOpenStreamResp),
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
@@ -43,6 +46,7 @@ impl Message {
         match self {
             Message::DesktopConnectAskReq(message) => message.handle(client).await,
             Message::DesktopConnectAskAuthReq(message) => message.handle(client).await,
+            Message::DesktopConnectOpenStreamReq(message) => message.handle(client).await,
             _ => {
                 error!("unknown message type");
                 Ok(Message::None)

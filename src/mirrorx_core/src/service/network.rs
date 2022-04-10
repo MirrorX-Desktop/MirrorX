@@ -1,7 +1,5 @@
-use bincode::Options;
 use lazy_static::lazy_static;
 use log::{error, warn};
-use ring::agreement;
 use rsa::{BigUint, PaddingScheme, PublicKey, RsaPublicKey};
 use rustls::Certificate;
 use std::{sync::Arc, time::Duration};
@@ -10,13 +8,14 @@ use tokio_rustls::{rustls::ClientConfig, TlsConnector};
 
 use crate::{
     api_error::APIError,
-    instance::REMOTE_PASSWORD_AUTH_PUBLIC_KEY_MAP,
+    constant::REMOTE_PASSWORD_AUTH_PUBLIC_KEY_MAP,
     network::{
         message::{
             DesktopConnectOfferAuthReq, DesktopConnectOfferReq, DeviceGoesOnlineReq, HeartBeatReq,
+            
             Message, MessageError,
         },
-        Client, BIN_CODER,
+        Client, handler::desktop_connect_open_stream::DesktopConnectOpenStreamReq,
     },
     service::runtime::RUNTIME,
 };
@@ -201,7 +200,7 @@ pub fn desktop_connect_offer(ask_device_id: String) -> anyhow::Result<bool, APIE
     })
 }
 
-pub fn dekstop_connect_offer_auth_password(
+pub fn desktop_connect_offer_auth_password(
     ask_device_id: String,
     device_password: String,
 ) -> anyhow::Result<bool, APIError> {
@@ -212,7 +211,7 @@ pub fn dekstop_connect_offer_auth_password(
         };
 
         let mut remote_password_auth_public_key_map =
-            crate::instance::REMOTE_PASSWORD_AUTH_PUBLIC_KEY_MAP
+            crate::constant::REMOTE_PASSWORD_AUTH_PUBLIC_KEY_MAP
                 .lock()
                 .unwrap();
         let remote_password_auth_public_key =
@@ -254,6 +253,23 @@ pub fn dekstop_connect_offer_auth_password(
         };
 
         Ok(resp_message.password_correct)
+    })
+}
+
+pub fn desktop_connect_open_stream() -> anyhow::Result<(),APIError>{
+    RUNTIME.block_on(async move{
+        let offer_device_id = match super::config::read_device_id()? {
+            Some(id) => id,
+            None => return Err(APIError::ConfigError),
+        };
+
+        let resp = CLIENT.call(Message::DesktopConnectOpenStreamReq(DesktopConnectOpenStreamReq{
+            offer_device_id,
+        }), Duration::from_secs(10))
+        .await
+        .map_err(|err| map_message_error(err))?;
+
+        Ok(())
     })
 }
 

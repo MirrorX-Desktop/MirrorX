@@ -1,16 +1,12 @@
 use crate::network::{message::MessageError, BIN_CODER};
 
 use super::{message::Message, packet::Packet};
-use bincode::{
-    config::{LittleEndian, VarintEncoding, WithOtherEndian, WithOtherIntEncoding},
-    DefaultOptions, Options,
-};
+use bincode::Options;
 use bytes::Bytes;
 use futures::{
     stream::{SplitSink, SplitStream},
     SinkExt, StreamExt,
 };
-use lazy_static::lazy_static;
 use log::{error, info};
 use std::{
     collections::HashMap,

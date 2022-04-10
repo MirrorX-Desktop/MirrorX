@@ -124,14 +124,14 @@ pub extern "C" fn wire_desktop_connect_offer(port_: i64, ask_device_id: *mut wir
 }
 
 #[no_mangle]
-pub extern "C" fn wire_dekstop_connect_offer_auth_password(
+pub extern "C" fn wire_desktop_connect_offer_auth_password(
     port_: i64,
     ask_device_id: *mut wire_uint_8_list,
     device_password: *mut wire_uint_8_list,
 ) {
     FLUTTER_RUST_BRIDGE_HANDLER.wrap(
         WrapInfo {
-            debug_name: "dekstop_connect_offer_auth_password",
+            debug_name: "desktop_connect_offer_auth_password",
             port: Some(port_),
             mode: FfiCallMode::Normal,
         },
@@ -139,9 +139,21 @@ pub extern "C" fn wire_dekstop_connect_offer_auth_password(
             let api_ask_device_id = ask_device_id.wire2api();
             let api_device_password = device_password.wire2api();
             move |task_callback| {
-                dekstop_connect_offer_auth_password(api_ask_device_id, api_device_password)
+                desktop_connect_offer_auth_password(api_ask_device_id, api_device_password)
             }
         },
+    )
+}
+
+#[no_mangle]
+pub extern "C" fn wire_desktop_connect_open_stream(port_: i64) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap(
+        WrapInfo {
+            debug_name: "desktop_connect_open_stream",
+            port: Some(port_),
+            mode: FfiCallMode::Normal,
+        },
+        move || move |task_callback| desktop_connect_open_stream(),
     )
 }
 

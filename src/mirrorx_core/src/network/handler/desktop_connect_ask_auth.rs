@@ -1,5 +1,8 @@
 use crate::{
-    instance::LOCAL_PASSWORD_AUTH_KEY_PAIR_MAP,
+    constant::{
+        LOCAL_PASSWORD_AUTH_KEY_PAIR_MAP,
+        ALLOW_CONNECT_CLIENT,
+    },
     network::{
         message::{Message, MessageError},
         Client,
@@ -23,7 +26,7 @@ pub struct DesktopConnectAskAuthResp {
 }
 
 impl DesktopConnectAskAuthReq {
-    pub async fn handle(self, client: Arc<Client>) -> anyhow::Result<Message, MessageError> {
+    pub async fn handle(self, _: Arc<Client>) -> anyhow::Result<Message, MessageError> {
         info!("handle desktop connect ask auth: {:?}", self);
 
         let mut local_password_auth_key_pair_map = LOCAL_PASSWORD_AUTH_KEY_PAIR_MAP.lock().unwrap();
@@ -57,9 +60,14 @@ impl DesktopConnectAskAuthReq {
             MessageError::InternalError
         })?;
 
+        let password_correct= local_password.map_or(false, |v| v == plain_password);
+        if password_correct{
+            ALLOW_CONNECT_CLIENT.lock().unwrap().push(self.offer_device_id);
+        }
+
         Ok(Message::DesktopConnectAskAuthResp(
             DesktopConnectAskAuthResp {
-                password_correct: local_password.map_or(false, |v| v == plain_password),
+                password_correct,
             },
         ))
     }

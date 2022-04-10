@@ -1,5 +1,5 @@
 use crate::{
-    instance::LOCAL_PASSWORD_AUTH_KEY_PAIR_MAP,
+    constant::LOCAL_PASSWORD_AUTH_KEY_PAIR_MAP,
     network::{
         message::{Message, MessageError},
         Client,
@@ -23,7 +23,7 @@ pub struct DesktopConnectAskResp {
 }
 
 impl DesktopConnectAskReq {
-    pub async fn handle(self, client: Arc<Client>) -> anyhow::Result<Message, MessageError> {
+    pub async fn handle(self, _: Arc<Client>) -> anyhow::Result<Message, MessageError> {
         info!("handle desktop connect ask: {:?}", self);
 
         // generate rsa key pair for end-2-end device password authentication

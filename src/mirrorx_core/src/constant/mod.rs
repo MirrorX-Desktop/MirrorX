@@ -1,7 +1,6 @@
 use std::{collections::HashMap, sync::Mutex};
 
 use once_cell::sync::Lazy;
-use ring::agreement::{EphemeralPrivateKey, PublicKey, UnparsedPublicKey};
 use rsa::{RsaPrivateKey, RsaPublicKey};
 
 // pub static LOCAL_KEY_PAIR_MAP: Lazy<Mutex<HashMap<String, (PublicKey, EphemeralPrivateKey)>>> =
@@ -16,3 +15,5 @@ pub static LOCAL_PASSWORD_AUTH_KEY_PAIR_MAP: Lazy<
 
 pub static REMOTE_PASSWORD_AUTH_PUBLIC_KEY_MAP: Lazy<Mutex<HashMap<String, RsaPublicKey>>> =
     Lazy::new(|| Mutex::new(HashMap::new()));
+
+pub static ALLOW_CONNECT_CLIENT:Lazy<Mutex<Vec<String>>> = Lazy::new(||Mutex::new(Vec::new()));
