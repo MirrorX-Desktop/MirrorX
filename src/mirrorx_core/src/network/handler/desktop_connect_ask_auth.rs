@@ -1,8 +1,5 @@
 use crate::{
-    constant::{
-        LOCAL_PASSWORD_AUTH_KEY_PAIR_MAP,
-        ALLOW_CONNECT_CLIENT,
-    },
+    constant::{ALLOW_CONNECT_CLIENT, LOCAL_PASSWORD_AUTH_KEY_PAIR_MAP},
     network::{
         message::{Message, MessageError},
         Client,
@@ -60,15 +57,16 @@ impl DesktopConnectAskAuthReq {
             MessageError::InternalError
         })?;
 
-        let password_correct= local_password.map_or(false, |v| v == plain_password);
-        if password_correct{
-            ALLOW_CONNECT_CLIENT.lock().unwrap().push(self.offer_device_id);
+        let password_correct = local_password.map_or(false, |v| v == plain_password);
+        if password_correct {
+            ALLOW_CONNECT_CLIENT
+                .lock()
+                .unwrap()
+                .push(self.offer_device_id);
         }
 
         Ok(Message::DesktopConnectAskAuthResp(
-            DesktopConnectAskAuthResp {
-                password_correct,
-            },
+            DesktopConnectAskAuthResp { password_correct },
         ))
     }
 }

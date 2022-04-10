@@ -1,5 +1,3 @@
-use crate::duplicator::bindings;
-use crate::frame::frame::Frame;
 use log::error;
 use std::{
     ffi::c_void,
@@ -8,14 +6,17 @@ use std::{
     sync::mpsc::{channel, Receiver, Sender},
 };
 
+use crate::factory::frame::Frame;
+
+use super::bindings;
+
 pub struct Duplicator {
     inner_duplicator_context: *const c_void,
     tx_ptr: *const Sender<Frame>,
-    rx: Receiver<Frame>,
 }
 
 impl Duplicator {
-    pub fn new() -> Result<Self, String> {
+    pub fn new() -> anyhow::Result<(Self, Receiver<Frame>)> {
         let (tx, rx) = channel::<Frame>();
         let tx_box = Box::new(tx);
         let tx_ptr: *const Sender<Frame> = Box::leak(tx_box);
@@ -28,14 +29,16 @@ impl Duplicator {
             );
 
             if inner_duplicator_context.is_null() {
-                return Err("Failed to create duplicator".to_string());
+                return Err(anyhow::anyhow!("Failed to create duplicator"));
             }
 
-            Ok(Duplicator {
-                inner_duplicator_context,
-                tx_ptr,
+            Ok((
+                Duplicator {
+                    inner_duplicator_context,
+                    tx_ptr,
+                },
                 rx,
-            })
+            ))
         }
     }
 
@@ -48,16 +51,6 @@ impl Duplicator {
     pub fn stop_capture(&self) {
         unsafe {
             bindings::stop_capture(self.inner_duplicator_context);
-        }
-    }
-
-    pub fn get_frame(&self) -> Option<Frame> {
-        match self.rx.recv() {
-            Ok(frame) => Some(frame),
-            Err(e) => {
-                error!("{}", e);
-                None
-            }
         }
     }
 

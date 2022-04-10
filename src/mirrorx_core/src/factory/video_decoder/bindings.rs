@@ -1,7 +1,8 @@
-use crate::frame::frame::Frame;
 use std::ffi::c_void;
 use std::os::raw::{c_char, c_int};
 use std::sync::mpsc::Sender;
+
+use crate::factory::frame::Frame;
 
 #[allow(non_camel_case_types)]
 #[repr(C)]

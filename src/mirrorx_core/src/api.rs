@@ -90,6 +90,7 @@ pub fn desktop_connect_offer_auth_password(
         .map_err(|err| anyhow::anyhow!(err))
 }
 
-pub fn desktop_connect_open_stream() -> anyhow::Result<()>{
-    crate::service::network::desktop_connect_open_stream().map_err(|err| anyhow::anyhow!(err))
+pub fn desktop_connect_open_stream(ask_device_id: String) -> anyhow::Result<()> {
+    crate::service::network::desktop_connect_open_stream(ask_device_id)
+        .map_err(|err| anyhow::anyhow!(err))
 }

@@ -79,7 +79,7 @@ class ConnectToController extends GetxController {
     try {
       final passwordCorrect = await _sdk
           .getSDKInstance()
-          .dekstopConnectOfferAuthPassword(
+          .desktopConnectOfferAuthPassword(
               askDeviceId: deviceID, devicePassword: controller.text);
 
       if (!passwordCorrect) {

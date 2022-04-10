@@ -9,20 +9,28 @@ set(CPACK_PROJECT_VERSION ${PROJECT_VERSION})
 # include(CPack)
 
 # 3rd party libraries include directories
-include_directories("../../dependencies_build/ffmpeg/include")
-include_directories("../../dependencies_build/libvpx/include")
-include_directories("../../dependencies_build/MediaSDK/include")
-include_directories("../../dependencies_build/opus/include")
-include_directories("../../dependencies_build/x264/include")
-include_directories("../../dependencies_build/x265/include")
+include_directories("${CMAKE_SOURCE_DIR}/../../dependencies_build/ffmpeg/include")
+include_directories("${CMAKE_SOURCE_DIR}/../../dependencies_build/libvpx/include")
+include_directories("${CMAKE_SOURCE_DIR}/../../dependencies_build/opus/include")
+include_directories("${CMAKE_SOURCE_DIR}/../../dependencies_build/x264/include")
+include_directories("${CMAKE_SOURCE_DIR}/../../dependencies_build/x265/include")
+
+if (MSVC)
+  include_directories("${CMAKE_SOURCE_DIR}/../../dependencies_build/MediaSDK/include")
+endif()
 
 # 3rd party libraries binary file directories
-find_library(LIB_FFMPEG "../../dependencies_build/ffmpeg/lib")
-find_library(LIB_LIBVPX "../../dependencies_build/libvpx/lib/x64")
-find_library(LIB_MEDIA_SDK "../../dependencies_build/MediaSDK/lib")
-find_library(LIB_OPUS "../../dependencies_build/opus/lib")
-find_library(LIB_X264 "../../dependencies_build/x264/lib")
-find_library(LIB_X265 "../../dependencies_build/x265/lib")
+find_library(LIB_FFMPEG avcodec avdevice avformat avutil "${CMAKE_SOURCE_DIR}/../../dependencies_build/ffmpeg/lib")
+find_library(LIB_OPUS opus "${CMAKE_SOURCE_DIR}/../../dependencies_build/opus/lib")
+find_library(LIB_X264 x264 "${CMAKE_SOURCE_DIR}/../../dependencies_build/x264/lib")
+find_library(LIB_X265 x265 "${CMAKE_SOURCE_DIR}/../../dependencies_build/x265/lib")
+
+if (MSVC)
+  find_library(LIB_LIBVPX vpx "${CMAKE_SOURCE_DIR}/../../dependencies_build/libvpx/lib/x64")
+  find_library(LIB_MEDIA_SDK mfx "${CMAKE_SOURCE_DIR}/../../dependencies_build/MediaSDK/lib")
+elseif(APPLE)
+  find_library(LIB_LIBVPX vpx "${CMAKE_SOURCE_DIR}/../../dependencies_build/libvpx/lib")
+endif()
 
 # duplicator
 add_subdirectory(./duplicator)
@@ -38,7 +46,11 @@ aux_source_directory(video_decoder VIDEO_DECODER_SOURCE)
 
 add_library(mirrorx_native STATIC ${DUPLICATOR_SOURCE} ${FFI_LOG_SOURCE} ${VIDEO_ENCODER_SOURCE} ${VIDEO_DECODER_SOURCE})
 
+if (MSVC)
 target_link_libraries(mirrorx_native ${LIB_LIBVPX} ${LIB_MEDIA_SDK} ${LIB_OPUS} ${LIB_X264} ${LIB_X265} ${LIB_FFMPEG})
+elseif(APPLE)
+target_link_libraries(mirrorx_native ${LIB_LIBVPX} ${LIB_OPUS} ${LIB_X264} ${LIB_X265} ${LIB_FFMPEG})
+endif()
 
 if(MSVC)     
     # Use the static C library for all build types

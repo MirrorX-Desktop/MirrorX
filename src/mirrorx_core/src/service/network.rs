@@ -10,12 +10,12 @@ use crate::{
     api_error::APIError,
     constant::REMOTE_PASSWORD_AUTH_PUBLIC_KEY_MAP,
     network::{
+        handler::desktop_connect_open_stream::DesktopConnectOpenStreamReq,
         message::{
             DesktopConnectOfferAuthReq, DesktopConnectOfferReq, DeviceGoesOnlineReq, HeartBeatReq,
-            
             Message, MessageError,
         },
-        Client, handler::desktop_connect_open_stream::DesktopConnectOpenStreamReq,
+        Client,
     },
     service::runtime::RUNTIME,
 };
@@ -256,18 +256,23 @@ pub fn desktop_connect_offer_auth_password(
     })
 }
 
-pub fn desktop_connect_open_stream() -> anyhow::Result<(),APIError>{
-    RUNTIME.block_on(async move{
+pub fn desktop_connect_open_stream(ask_device_id: String) -> anyhow::Result<(), APIError> {
+    RUNTIME.block_on(async move {
         let offer_device_id = match super::config::read_device_id()? {
             Some(id) => id,
             None => return Err(APIError::ConfigError),
         };
 
-        let resp = CLIENT.call(Message::DesktopConnectOpenStreamReq(DesktopConnectOpenStreamReq{
-            offer_device_id,
-        }), Duration::from_secs(10))
-        .await
-        .map_err(|err| map_message_error(err))?;
+        let resp = CLIENT
+            .call(
+                Message::DesktopConnectOpenStreamReq(DesktopConnectOpenStreamReq {
+                    offer_device_id,
+                    ask_device_id,
+                }),
+                Duration::from_secs(10),
+            )
+            .await
+            .map_err(|err| map_message_error(err))?;
 
         Ok(())
     })

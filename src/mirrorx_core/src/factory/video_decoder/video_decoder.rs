@@ -1,6 +1,3 @@
-use crate::frame::frame::Frame;
-use crate::video_decoder::bindings;
-use crate::video_decoder::errors::VideoDecoderError;
 use log::{error, trace, warn};
 use std::{
     os::raw::{c_char, c_int, c_void},
@@ -10,6 +7,10 @@ use std::{
         Arc,
     },
 };
+
+use crate::factory::frame::Frame;
+
+use super::{bindings, errors::*};
 
 pub struct VideoDecoder {
     frame_rx: Receiver<Frame>,

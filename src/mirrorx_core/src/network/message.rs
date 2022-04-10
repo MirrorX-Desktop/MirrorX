@@ -100,3 +100,7 @@ pub struct DesktopConnectOfferAuthReq {
 pub struct DesktopConnectOfferAuthResp {
     pub password_correct: bool,
 }
+
+pub struct DesktopFrame {
+    pub frame: Vec<u8>,
+}
