@@ -1,25 +1,19 @@
-use log::error;
-use std::{
-    ffi::c_void,
-    os::raw::c_int,
-    ptr,
-    sync::mpsc::{channel, Receiver, Sender},
-};
-
-use crate::factory::frame::Frame;
-
 use super::bindings;
+use crate::factory::frame::Frame;
+use log::error;
+use std::{ffi::c_void, os::raw::c_int, ptr};
+use tokio::sync::mpsc;
 
 pub struct Duplicator {
     inner_duplicator_context: *const c_void,
-    tx_ptr: *const Sender<Frame>,
+    tx_ptr: *const mpsc::Sender<Frame>,
 }
 
 impl Duplicator {
-    pub fn new() -> anyhow::Result<(Self, Receiver<Frame>)> {
-        let (tx, rx) = channel::<Frame>();
+    pub fn new() -> anyhow::Result<(Self, mpsc::Receiver<Frame>)> {
+        let (tx, rx) = mpsc::channel::<Frame>(600);
         let tx_box = Box::new(tx);
-        let tx_ptr: *const Sender<Frame> = Box::leak(tx_box);
+        let tx_ptr: *const mpsc::Sender<Frame> = Box::leak(tx_box);
 
         unsafe {
             let inner_duplicator_context = bindings::create_duplication_context(
@@ -83,16 +77,15 @@ impl Duplicator {
             );
             uv_buffer.set_len(uv_length as usize);
 
-            let tx = &mut *(tx as *mut Sender<Frame>);
-            tx.send(Frame::new(
+            let tx = &mut *(tx as *mut mpsc::Sender<Frame>);
+            let _ = tx.blocking_send(Frame::new(
                 width,
                 height,
                 y_line_size,
                 y_buffer,
                 uv_line_size,
                 uv_buffer,
-            ))
-            .ok();
+            ));
         }
     }
 }
@@ -101,7 +94,7 @@ impl Drop for Duplicator {
     fn drop(&mut self) {
         self.stop_capture();
         unsafe {
-            Box::from_raw(self.tx_ptr as *mut Sender<Frame>);
+            Box::from_raw(self.tx_ptr as *mut mpsc::Sender<Frame>);
             bindings::release_duplication_context(self.inner_duplicator_context);
         }
     }

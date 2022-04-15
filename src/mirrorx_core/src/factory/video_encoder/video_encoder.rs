@@ -4,10 +4,11 @@ use std::{
     os::raw::{c_int, c_void},
     ptr,
     sync::{
-        mpsc::{channel, sync_channel, Receiver, Sender, SyncSender, TryRecvError},
+        mpsc::{Receiver, Sender, SyncSender, TryRecvError},
         Arc,
     },
 };
+use tokio::sync::mpsc;
 
 use crate::factory::frame::Frame;
 
@@ -18,7 +19,10 @@ pub struct VideoEncoder {
 }
 
 impl VideoEncoder {
-    pub fn new(encoder_name: String) -> anyhow::Result<Self> {
+    pub fn new(
+        encoder_name: String,
+        rx: mpsc::Receiver<Frame>,
+    ) -> anyhow::Result<(Self, mpsc::Sender<Frame>)> {
         let encoder_name_ptr = CString::new(encoder_name)?.as_ptr();
 
         unsafe {
@@ -36,31 +40,37 @@ impl VideoEncoder {
                 return Err(anyhow::anyhow!(VideoEncoderError::CreateEncoderFailed));
             }
 
-            Ok(VideoEncoder {
-                inner_video_encoder_ptr,
-            })
+            let (tx, rx) = mpsc::channel::<Frame>(600);
+
+            Ok((
+                VideoEncoder {
+                    inner_video_encoder_ptr,
+                },
+                tx,
+            ))
         }
     }
 
     pub fn send_frame(&self, frame: Frame) -> anyhow::Result<()> {
-        unsafe {
-            let result_code = bindings::video_encode(
-                self.inner_video_encoder_ptr,
-                &mut nalu_tx as *mut Sender<Vec<u8>>,
-                frame.width,
-                frame.height,
-                frame.y_line_size,
-                frame.y_buffer.as_ptr(),
-                frame.uv_line_size,
-                frame.uv_buffer.as_ptr(),
-            );
+        // unsafe {
+        //     let result_code = bindings::video_encode(
+        //         self.inner_video_encoder_ptr,
+        //         &mut nalu_tx as *mut Sender<Vec<u8>>,
+        //         frame.width,
+        //         frame.height,
+        //         frame.y_line_size,
+        //         frame.y_buffer.as_ptr(),
+        //         frame.uv_line_size,
+        //         frame.uv_buffer.as_ptr(),
+        //     );
 
-            if result_code != 0 {
-                return Err(anyhow::anyhow!("Error encoding frame: {}", result_code));
-            }
+        //     if result_code != 0 {
+        //         return Err(anyhow::anyhow!("Error encoding frame: {}", result_code));
+        //     }
 
-            Ok(())
-        }
+        //     Ok(())
+        // }
+        Ok(())
     }
 
     fn encode_loop(
@@ -137,11 +147,11 @@ impl VideoEncoder {
 
 impl Drop for VideoEncoder {
     fn drop(&mut self) {
-        unsafe {
-            if self.exit_signal_tx.send(()).is_ok() {
-                let _ = self.exit_finish_rx.recv();
-            }
-            bindings::free_video_encoder(Arc::into_raw(self.inner_video_encoder_ptr.clone()));
-        }
+        // unsafe {
+        //     if self.exit_signal_tx.send(()).is_ok() {
+        //         let _ = self.exit_finish_rx.recv();
+        //     }
+        //     bindings::free_video_encoder(Arc::into_raw(self.inner_video_encoder_ptr.clone()));
+        // }
     }
 }
