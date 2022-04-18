@@ -35,9 +35,9 @@ elif [ "$1" = "release" ]; then
 elif [ "$1" = "gen_bridge" ]; then
     echo "Generating Flutter and Rust bridge code"
     flutter_rust_bridge_codegen \
-        --rust-crate-dir mirrorx_core \
-        --dart-output app_plugin/mirrorx_sdk/lib/bridge_generated.dart \
-        --c-output app_plugin/mirrorx_sdk/macos/Classes/bridge_generated.h \
+        --dart-output app/lib/plugin/bridge_generated.dart \
+        --c-output app/macos/Runner/bridge_generated.h \
         --class-name MirrorXCore \
-        --rust-input mirrorx_core/src/api/api.rs
+        --rust-input mirrorx_core/src/api/api.rs \
+        --rust-output mirrorx_core/src/bridge.rs
 fi

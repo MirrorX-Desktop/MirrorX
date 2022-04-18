@@ -2,7 +2,9 @@ import Cocoa
 import FlutterMacOS
 
 class MainFlutterWindow: NSWindow {
-  override func awakeFromNib() {
+  override func awakeFromNib() {  
+    dummy_method_to_enforce_bundling()
+    
     let flutterViewController = FlutterViewController.init()
     let windowFrame = self.frame
     self.contentViewController = flutterViewController
@@ -14,7 +16,7 @@ class MainFlutterWindow: NSWindow {
     self.isMovableByWindowBackground = true
 
     RegisterGeneratedPlugins(registry: flutterViewController)
-
+      
     super.awakeFromNib()
   }
 }

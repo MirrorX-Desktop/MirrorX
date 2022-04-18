@@ -5,7 +5,7 @@ import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:mirrorx_sdk/bridge_generated.dart';
+import 'package:mirrorx/plugin/bridge_generated.dart';
 import 'package:path_provider/path_provider.dart';
 
 class SDKController extends GetxController with StateMixin<MirrorXCore> {
@@ -24,11 +24,11 @@ class SDKController extends GetxController with StateMixin<MirrorXCore> {
       final applicationSupportDir = await getApplicationSupportDirectory();
       log("application support dir: $applicationSupportDir");
 
-      await core.init(configDbPath: applicationSupportDir.path);
+      await core.init(configDir: applicationSupportDir.path);
 
-      listenStream(core.initFlutterCommandStreamSink());
+      // listenStream(core.initFlutterCommandStreamSink());
 
-      await core.deviceGoesOnline();
+      await core.serviceRegisterId();
 
       change(core, status: RxStatus.success());
     } catch (e) {
@@ -43,14 +43,14 @@ class SDKController extends GetxController with StateMixin<MirrorXCore> {
     return state!;
   }
 
-  Future<void> listenStream(Stream<FlutterCommand> stream) async {
-    stream.listen((event) {
-      switch (event) {
-        case FlutterCommand.PopupDesktopConnectInputPasswordDialog:
-          break;
-      }
-    });
-  }
+  // Future<void> listenStream(Stream<FlutterCommand> stream) async {
+  //   stream.listen((event) {
+  //     switch (event) {
+  //       case FlutterCommand.PopupDesktopConnectInputPasswordDialog:
+  //         break;
+  //     }
+  //   });
+  // }
 }
 
 DynamicLibrary _openLibrary() {

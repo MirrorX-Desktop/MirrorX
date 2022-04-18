@@ -26,7 +26,7 @@ class DevicePasswordController extends GetxController {
 
     try {
       final storedPassword =
-          await _sdkController.getSDKInstance().readDevicePassword();
+          await _sdkController.getSDKInstance().configReadDevicePassword();
 
       if (storedPassword == null || storedPassword == "") {
         password = await _generateAndSaveNewDevicePassword();
@@ -58,7 +58,7 @@ class DevicePasswordController extends GetxController {
         try {
           await _sdkController
               .getSDKInstance()
-              .saveDevicePassword(devicePassword: _textController.text);
+              .configSaveDevicePassword(devicePassword: _textController.text);
           _password = _textController.text;
         } catch (err) {
           Get.defaultDialog(
@@ -97,17 +97,17 @@ class DevicePasswordController extends GetxController {
           });
     } else {
       textController.text =
-          await _sdkController.getSDKInstance().generateRandomDevicePassword();
+          await _sdkController.getSDKInstance().utilityGenerateDevicePassword();
       update();
     }
   }
 
   Future<String> _generateAndSaveNewDevicePassword() async {
     final password =
-        await _sdkController.getSDKInstance().generateRandomDevicePassword();
+        await _sdkController.getSDKInstance().utilityGenerateDevicePassword();
     await _sdkController
         .getSDKInstance()
-        .saveDevicePassword(devicePassword: password);
+        .configSaveDevicePassword(devicePassword: password);
     return password;
   }
 

@@ -11,7 +11,7 @@ class DeviceIDController extends GetxController with StateMixin<String> {
   Future<void> loadDeviceId() async {
     try {
       final sdk = Get.find<SDKController>();
-      final deviceId = await sdk.getSDKInstance().readDeviceId();
+      final deviceId = await sdk.getSDKInstance().configReadDeviceId();
       change(deviceId, status: RxStatus.success());
     } catch (e) {
       change(null, status: RxStatus.error(e.toString()));

@@ -35,8 +35,7 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.2
 
-  mirrorx_sdk:
-    path: ../app_plugin/mirrorx_sdk
+  flutter_rust_bridge: ^1.22.2
   provider: ^6.0.2
   font_awesome_flutter: ^9.2.0
   get: ^4.6.1

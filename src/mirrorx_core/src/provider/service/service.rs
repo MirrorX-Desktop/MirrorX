@@ -221,6 +221,12 @@ async fn serve_stream(
                             .connect(client.clone(), message)
                             .await
                             .map(|msg| ReplyMessage::ConnectReply(msg)),
+                        RequestMessage::KeyExchangeAndVerifyPasswordRequest(message) => {
+                            inner_desktop_service
+                                .key_exchange_and_verify_password(client.clone(), message)
+                                .await
+                                .map(|msg| ReplyMessage::KeyExchangeAndVerifyPasswordReply(msg))
+                        }
                         _ => {
                             error!("unexpect message");
                             return;
@@ -230,6 +236,7 @@ async fn serve_stream(
                     let reply_packet = ReplyPacket {
                         call_id: request_packet.call_id,
                         payload: res,
+                        to_device_id: None,
                     };
 
                     if let Err(err) = client.reply_request(reply_packet).await {
@@ -252,6 +259,8 @@ async fn serve_stream(
                 Some(buf) => buf,
                 None => break,
             };
+
+            info!("client: send packet: {:?}", buf);
 
             if let Err(err) = sink.send(Bytes::from(buf)).await {
                 error!("send error: {:?}", err);

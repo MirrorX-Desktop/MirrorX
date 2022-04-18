@@ -1,14 +1,4 @@
-use std::str::FromStr;
-use std::time::Duration;
-
-use hex::ToHex;
-use log::{error, warn};
-use rand::thread_rng;
-use ring::rand::SecureRandom;
-use rsa::BigUint;
-use rsa::PublicKey;
-use rsa::RsaPublicKey;
-
+use super::api_error::APIError;
 use crate::provider::service::message::request::KeyExchangeAndVerifyPasswordRequest;
 use crate::provider::{
     runtime::RuntimeProvider,
@@ -17,8 +7,13 @@ use crate::provider::{
         service::ServiceProvider,
     },
 };
-
-use super::api_error::APIError;
+use log::{error, warn};
+use rand::thread_rng;
+use ring::rand::SecureRandom;
+use rsa::BigUint;
+use rsa::PublicKey;
+use rsa::RsaPublicKey;
+use std::time::Duration;
 
 pub fn init() -> anyhow::Result<()> {
     let provider = ServiceProvider::new("192.168.0.101:45555")?;
@@ -78,7 +73,7 @@ pub fn device_register_id() -> anyhow::Result<(), APIError> {
 }
 
 pub fn desktop_connect(ask_device_id: String) -> anyhow::Result<(), APIError> {
-    provider_do(|service, runtime| {
+    provider_do(move |service, runtime| {
         let offer_device_id = match super::config::read_device_id()? {
             Some(device_id) => device_id,
             None => return Err(APIError::ConfigDeviceIdNotFound),

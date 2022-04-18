@@ -53,17 +53,10 @@ class ConnectToController extends GetxController {
       _isLoading = true;
       update();
 
-      final allow = await _sdk
-          .getSDKInstance()
-          .desktopConnectOffer(askDeviceId: deviceID);
-
-      if (allow) {
-        _popupDesktopConnectInputPasswordDialog(deviceID);
-      } else {
-        popupErrorDialog(content: "connect_to_remote.dialog.disallow".tr);
-      }
+      await _sdk.getSDKInstance().serviceDesktopConnect(askDeviceId: deviceID);
+      _popupDesktopConnectInputPasswordDialog(deviceID);
     } catch (err) {
-      log(err.toString());
+      popupErrorDialog(content: "connect_to_remote.dialog.disallow".tr);
     } finally {
       _isLoading = false;
       update();
@@ -77,18 +70,10 @@ class ConnectToController extends GetxController {
     }
 
     try {
-      final passwordCorrect = await _sdk
-          .getSDKInstance()
-          .desktopConnectOfferAuthPassword(
-              askDeviceId: deviceID, devicePassword: controller.text);
+      await _sdk.getSDKInstance().serviceDesktopKeyExchangeAndPasswordVerify(
+          askDeviceId: deviceID, password: controller.text);
 
-      if (!passwordCorrect) {
-        popupErrorDialog(
-            content: "connect_to_remote.dialog.incorrect_password".tr);
-        return;
-      }
-
-      log("password: $passwordCorrect");
+      // log("password: $passwordCorrect");
     } catch (err) {
       popupErrorDialog(
           content: "connect_to_remote.dialog.incorrect_password".tr);

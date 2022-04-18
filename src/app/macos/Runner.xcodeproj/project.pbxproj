@@ -27,6 +27,7 @@
 		33CC10F32044A3C60003C045 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 33CC10F22044A3C60003C045 /* Assets.xcassets */; };
 		33CC10F62044A3C60003C045 /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = 33CC10F42044A3C60003C045 /* MainMenu.xib */; };
 		33CC11132044BFA00003C045 /* MainFlutterWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33CC11122044BFA00003C045 /* MainFlutterWindow.swift */; };
+		B2D4D92D280AF0A700246E04 /* mirrorx_core.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = B2D4D90F280ADB0B00246E04 /* mirrorx_core.dylib */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -36,6 +37,27 @@
 			proxyType = 1;
 			remoteGlobalIDString = 33CC111A2044C6BA0003C045;
 			remoteInfo = FLX;
+		};
+		B2D4D90E280ADB0B00246E04 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B2D4D909280ADB0B00246E04 /* mirrorx_core.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = CA60F9D5A18A8CEA73924C33;
+			remoteInfo = "mirrorx_core-cdylib";
+		};
+		B2D4D910280ADB0B00246E04 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B2D4D909280ADB0B00246E04 /* mirrorx_core.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = CA604147C28E396A830B7CF7;
+			remoteInfo = "mirrorx_core-staticlib";
+		};
+		B2D4D92B280AF0A300246E04 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B2D4D909280ADB0B00246E04 /* mirrorx_core.xcodeproj */;
+			proxyType = 1;
+			remoteGlobalIDString = CA60F9D5A18A4F1E44D2FD15;
+			remoteInfo = "mirrorx_core-cdylib";
 		};
 /* End PBXContainerItemProxy section */
 
@@ -73,6 +95,15 @@
 		52703E458B81851E11200A6C /* Pods-Runner.profile.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.profile.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.profile.xcconfig"; sourceTree = "<group>"; };
 		7AFA3C8E1D35360C0083082E /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Release.xcconfig; sourceTree = "<group>"; };
 		9740EEB21CF90195004384FC /* Debug.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
+		B2D4D909280ADB0B00246E04 /* mirrorx_core.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = mirrorx_core.xcodeproj; path = ../../mirrorx_core/mirrorx_core.xcodeproj; sourceTree = "<group>"; };
+		B2D4D918280AE93D00246E04 /* libavcodec.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libavcodec.a; path = ../../../dependencies_build/ffmpeg/lib/libavcodec.a; sourceTree = "<group>"; };
+		B2D4D91A280AE93D00246E04 /* libavdevice.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libavdevice.a; path = ../../../dependencies_build/ffmpeg/lib/libavdevice.a; sourceTree = "<group>"; };
+		B2D4D91B280AE93D00246E04 /* libavutil.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libavutil.a; path = ../../../dependencies_build/ffmpeg/lib/libavutil.a; sourceTree = "<group>"; };
+		B2D4D91C280AE93D00246E04 /* libavformat.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libavformat.a; path = ../../../dependencies_build/ffmpeg/lib/libavformat.a; sourceTree = "<group>"; };
+		B2D4D921280AE94E00246E04 /* libvpx.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libvpx.a; path = ../../../dependencies_build/libvpx/lib/libvpx.a; sourceTree = "<group>"; };
+		B2D4D923280AE95E00246E04 /* libopus.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libopus.a; path = ../../../dependencies_build/opus/lib/libopus.a; sourceTree = "<group>"; };
+		B2D4D925280AE96C00246E04 /* libx264.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libx264.a; path = ../../../dependencies_build/x264/lib/libx264.a; sourceTree = "<group>"; };
+		B2D4D927280AE97800246E04 /* libx265.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libx265.a; path = ../../../dependencies_build/x265/lib/libx265.a; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -80,6 +111,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B2D4D92D280AF0A700246E04 /* mirrorx_core.dylib in Frameworks */,
 				1AB87E22F7CCDC3A9AA0743F /* Pods_Runner.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -101,6 +133,7 @@
 		33CC10E42044A3C60003C045 = {
 			isa = PBXGroup;
 			children = (
+				B2D4D909280ADB0B00246E04 /* mirrorx_core.xcodeproj */,
 				33FAB671232836740065AC1E /* Runner */,
 				33CEB47122A05771004F2AC0 /* Flutter */,
 				33CC10EE2044A3C60003C045 /* Products */,
@@ -159,13 +192,29 @@
 				22D97D7C61AEBE25F63C2EB3 /* Pods-Runner.release.xcconfig */,
 				52703E458B81851E11200A6C /* Pods-Runner.profile.xcconfig */,
 			);
-			name = Pods;
 			path = Pods;
+			sourceTree = "<group>";
+		};
+		B2D4D90A280ADB0B00246E04 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				B2D4D90F280ADB0B00246E04 /* mirrorx_core.dylib */,
+				B2D4D911280ADB0B00246E04 /* libmirrorx_core_static.a */,
+			);
+			name = Products;
 			sourceTree = "<group>";
 		};
 		D73912EC22F37F3D000D13A0 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				B2D4D927280AE97800246E04 /* libx265.a */,
+				B2D4D925280AE96C00246E04 /* libx264.a */,
+				B2D4D923280AE95E00246E04 /* libopus.a */,
+				B2D4D921280AE94E00246E04 /* libvpx.a */,
+				B2D4D918280AE93D00246E04 /* libavcodec.a */,
+				B2D4D91A280AE93D00246E04 /* libavdevice.a */,
+				B2D4D91C280AE93D00246E04 /* libavformat.a */,
+				B2D4D91B280AE93D00246E04 /* libavutil.a */,
 				210ED1ADEB4622B1DE71C35E /* Pods_Runner.framework */,
 			);
 			name = Frameworks;
@@ -189,6 +238,7 @@
 			buildRules = (
 			);
 			dependencies = (
+				B2D4D92C280AF0A300246E04 /* PBXTargetDependency */,
 				33CC11202044C79F0003C045 /* PBXTargetDependency */,
 			);
 			name = Runner;
@@ -233,6 +283,12 @@
 			mainGroup = 33CC10E42044A3C60003C045;
 			productRefGroup = 33CC10EE2044A3C60003C045 /* Products */;
 			projectDirPath = "";
+			projectReferences = (
+				{
+					ProductGroup = B2D4D90A280ADB0B00246E04 /* Products */;
+					ProjectRef = B2D4D909280ADB0B00246E04 /* mirrorx_core.xcodeproj */;
+				},
+			);
 			projectRoot = "";
 			targets = (
 				33CC10EC2044A3C60003C045 /* Runner */,
@@ -240,6 +296,23 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXReferenceProxy section */
+		B2D4D90F280ADB0B00246E04 /* mirrorx_core.dylib */ = {
+			isa = PBXReferenceProxy;
+			fileType = "compiled.mach-o.dylib";
+			path = mirrorx_core.dylib;
+			remoteRef = B2D4D90E280ADB0B00246E04 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		B2D4D911280ADB0B00246E04 /* libmirrorx_core_static.a */ = {
+			isa = PBXReferenceProxy;
+			fileType = archive.ar;
+			path = libmirrorx_core_static.a;
+			remoteRef = B2D4D910280ADB0B00246E04 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+/* End PBXReferenceProxy section */
 
 /* Begin PBXResourcesBuildPhase section */
 		33CC10EB2044A3C60003C045 /* Resources */ = {
@@ -351,6 +424,11 @@
 			target = 33CC111A2044C6BA0003C045 /* Flutter Assemble */;
 			targetProxy = 33CC111F2044C79F0003C045 /* PBXContainerItemProxy */;
 		};
+		B2D4D92C280AF0A300246E04 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = "mirrorx_core-cdylib";
+			targetProxy = B2D4D92B280AF0A300246E04 /* PBXContainerItemProxy */;
+		};
 /* End PBXTargetDependency section */
 
 /* Begin PBXVariantGroup section */
@@ -427,6 +505,7 @@
 					"@executable_path/../Frameworks",
 				);
 				PROVISIONING_PROFILE_SPECIFIER = "";
+				SWIFT_OBJC_BRIDGING_HEADER = Runner/bridge_generated.h;
 				SWIFT_VERSION = 5.0;
 			};
 			name = Profile;
@@ -553,6 +632,7 @@
 					"@executable_path/../Frameworks",
 				);
 				PROVISIONING_PROFILE_SPECIFIER = "";
+				SWIFT_OBJC_BRIDGING_HEADER = Runner/bridge_generated.h;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 			};
@@ -573,6 +653,7 @@
 					"@executable_path/../Frameworks",
 				);
 				PROVISIONING_PROFILE_SPECIFIER = "";
+				SWIFT_OBJC_BRIDGING_HEADER = Runner/bridge_generated.h;
 				SWIFT_VERSION = 5.0;
 			};
 			name = Release;

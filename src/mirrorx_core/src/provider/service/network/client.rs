@@ -56,6 +56,7 @@ impl Client {
             request_packet: Some(RequestPacket {
                 call_id,
                 payload: request,
+                to_device_id: None,
             }),
             reply_packet: None,
         };
