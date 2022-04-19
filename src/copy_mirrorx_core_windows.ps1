@@ -37,5 +37,10 @@ elseif ($cmd -eq "release") {
 }
 elseif ($cmd -eq "gen_bridge") {
     Write-Output "Generating Flutter and Rust bridge code"
-    Invoke-Expression -Command $cmd_gen_bridge
+    Invoke-Expression -Command flutter_rust_bridge_codegen \
+    --dart-output app/lib/plugin/bridge_generated.dart \
+    --c-output app/macos/Runner/bridge_generated.h \
+    --class-name MirrorXCore \
+    --rust-input mirrorx_core/src/api/api.rs \
+    --rust-output mirrorx_core/src/bridge.rs
 }

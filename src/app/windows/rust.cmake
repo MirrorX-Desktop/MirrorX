@@ -14,12 +14,12 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(Corrosion)
 
-corrosion_import_crate(MANIFEST_PATH ../native/Cargo.toml)
+corrosion_import_crate(MANIFEST_PATH ../../mirrorx_core/Cargo.toml)
 
 # Flutter-specific
 
-set(CRATE_NAME "native")
+set(CRATE_NAME "mirrorx_core")
 
 target_link_libraries(${BINARY_NAME} PRIVATE ${CRATE_NAME})
 
-list(APPEND PLUGIN_BUNDLED_LIBRARIES $<TARGET_FILE:${CRATE_NAME}-shared>)
+list(APPEND PLUGIN_BUNDLED_LIBRARIES $<TARGET_FILE:${CRATE_NAME}-static>)

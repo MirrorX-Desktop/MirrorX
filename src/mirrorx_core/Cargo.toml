@@ -6,8 +6,8 @@ build = "build.rs"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [lib]
-crate-type = ["lib", "cdylib", "staticlib"]
-
+name = "mirrorx_core"
+crate-type = ["lib", "staticlib"]
 
 [dependencies]
 log = "0.4.14"
@@ -38,9 +38,6 @@ tonic = "0.7.1"
 prost = "0.10.0"
 tokio-stream = "0.1.8"
 dashmap = "5.2.0"
-
-[build-dependencies]
-tonic-build = "0.7.0"
 
 [profile.dev.package.num-bigint-dig]
 opt-level = 3
