@@ -74,6 +74,9 @@ build_x264() {
 
     make -j"$CPU_CORES" && make install && make clean
 
+    # modify name
+    cp "$absolute_dst_dir"/lib/libx264.lib "$absolute_dst_dir"/lib/x264.lib
+
     cd ..
     echo "Build x264 success"
 }

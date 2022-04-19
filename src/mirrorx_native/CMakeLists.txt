@@ -4,8 +4,6 @@ project(mirrorx_native VERSION 0.1.0)
 cmake_policy(SET CMP0069 NEW) 
 set(CMAKE_POLICY_DEFAULT_CMP0069 NEW)
 
-include(./bundle_static_library.cmake)
-
 # check_ipo_supported(RESULT result OUTPUT output)
 # if(result)
 #   set_property(TARGET foo PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
@@ -35,11 +33,18 @@ if (WIN32 OR MSVC)
 endif()
 
 # 3rd party libraries binary file directories
+
+if (WIN32 OR MSVC)
 find_library(LIB_VPX vpx HINTS "${CMAKE_SOURCE_DIR}/../../dependencies_build/libvpx/lib/x64")
-find_library(LIB_X264 libx264 HINTS "${CMAKE_SOURCE_DIR}/../../dependencies_build/x264/lib")
+else()
+find_library(LIB_VPX vpx HINTS "${CMAKE_SOURCE_DIR}/../../dependencies_build/libvpx/lib")
+endif()
+
+find_library(LIB_X264 x264 HINTS "${CMAKE_SOURCE_DIR}/../../dependencies_build/x264/lib")
 find_library(LIB_X265 x265 HINTS "${CMAKE_SOURCE_DIR}/../../dependencies_build/x265/lib")
 find_library(LIB_OPUS opus HINTS "${CMAKE_SOURCE_DIR}/../../dependencies_build/opus/lib")
 find_library(LIB_FFMPEG avcodec avdevice avformat avutil HINTS "${CMAKE_SOURCE_DIR}/../../dependencies_build/ffmpeg/lib")
+
 if (WIN32 OR MSVC)
   find_library(LIB_MFX mfx "${CMAKE_SOURCE_DIR}/../../dependencies_build/MediaSDK/lib")
 endif()
@@ -88,7 +93,7 @@ endif()
 
 if (APPLE)
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-    COMMAND libtool -static -o ${CMAKE_BINARY_DIR}/lib${PROJECT_NAME}.a ${LIB_VPX} ${LIB_X264} ${LIB_X265} ${LIB_OPUS} ${FFMPEG}
+    COMMAND libtool -static -o "${CMAKE_SOURCE_DIR}/build/lib/lib${PROJECT_NAME}.a" "${CMAKE_SOURCE_DIR}/build/lib/lib${PROJECT_NAME}.a" ${LIB_VPX} ${LIB_X264} ${LIB_X265} ${LIB_OPUS} ${FFMPEG}
     DEPENDS ${LIB_VPX} ${LIB_X264} ${LIB_X265} ${LIB_OPUS} ${FFMPEG})
 elseif (WIN32 OR MSVC)
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
