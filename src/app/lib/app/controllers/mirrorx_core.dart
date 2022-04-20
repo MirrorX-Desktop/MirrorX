@@ -8,14 +8,15 @@ import 'package:get/get.dart';
 import 'package:mirrorx/plugin/bridge_generated.dart';
 import 'package:path_provider/path_provider.dart';
 
-class SDKController extends GetxController with StateMixin<MirrorXCore> {
+class MirrorXCoreController extends GetxController
+    with StateMixin<MirrorXCore> {
   @override
   void onReady() async {
     super.onReady();
-    initMirrorXSDK();
+    init();
   }
 
-  Future<void> initMirrorXSDK() async {
+  Future<void> init() async {
     change(null, status: RxStatus.loading());
 
     try {
@@ -32,11 +33,12 @@ class SDKController extends GetxController with StateMixin<MirrorXCore> {
 
       change(core, status: RxStatus.success());
     } catch (e) {
+      log("init MirrorX Core error: $e");
       change(null, status: RxStatus.error(e.toString()));
     }
   }
 
-  MirrorXCore getSDKInstance() {
+  MirrorXCore getInstance() {
     if (state == null) {
       throw Exception("get sdk instance but it's null");
     }

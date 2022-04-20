@@ -3,13 +3,13 @@ import 'dart:developer';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:mirrorx/app/controllers/sdk.dart';
+import 'package:mirrorx/app/controllers/mirrorx_core.dart';
 import 'package:mirrorx/app/core/utils/dialog.dart';
 import 'package:mirrorx/app/modules/connect_remote/widgets/connect_to/controllers/chars_input.dart';
 
 class ConnectToController extends GetxController {
   late CharacterInputController _digitInputController;
-  late SDKController _sdk;
+  late MirrorXCoreController _sdk;
 
   bool _isLoading = false;
 
@@ -53,7 +53,7 @@ class ConnectToController extends GetxController {
       _isLoading = true;
       update();
 
-      await _sdk.getSDKInstance().serviceDesktopConnect(askDeviceId: deviceID);
+      await _sdk.getInstance().serviceDesktopConnect(askDeviceId: deviceID);
       _popupDesktopConnectInputPasswordDialog(deviceID);
     } catch (err) {
       popupErrorDialog(content: "connect_to_remote.dialog.disallow".tr);
@@ -70,7 +70,7 @@ class ConnectToController extends GetxController {
     }
 
     try {
-      await _sdk.getSDKInstance().serviceDesktopKeyExchangeAndPasswordVerify(
+      await _sdk.getInstance().serviceDesktopKeyExchangeAndPasswordVerify(
           askDeviceId: deviceID, password: controller.text);
 
       // log("password: $passwordCorrect");

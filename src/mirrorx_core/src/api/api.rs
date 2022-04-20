@@ -1,29 +1,32 @@
 use once_cell::sync::OnceCell;
-use std::io::Write;
+use std::{io::Write, sync::Once};
 
 static ALREADY_INITIALIZED: OnceCell<()> = OnceCell::new();
+static LOGGER_ONCE: Once = Once::new();
 
 pub fn init(config_dir: String) -> anyhow::Result<()> {
+    LOGGER_ONCE.call_once(|| {
+        env_logger::Builder::new()
+            .filter_level(log::LevelFilter::Info)
+            .format(|buf, record| {
+                writeln!(
+                    buf,
+                    "[{}] [{}({}#{})] {} {}",
+                    chrono::Local::now().format("%Y-%m-%d %H:%M:%S.%3f"),
+                    record.module_path().unwrap_or(""),
+                    record.file().unwrap_or(""),
+                    record.line().unwrap_or(0),
+                    record.level(),
+                    record.args(),
+                )
+            })
+            .target(env_logger::Target::Stdout)
+            .init();
+    });
+
     if ALREADY_INITIALIZED.get().is_some() {
         return Ok(());
     }
-
-    env_logger::Builder::new()
-        .filter_level(log::LevelFilter::Info)
-        .format(|buf, record| {
-            writeln!(
-                buf,
-                "[{}] [{}({}#{})] {} {}",
-                chrono::Local::now().format("%Y-%m-%d %H:%M:%S.%3f"),
-                record.module_path().unwrap_or(""),
-                record.file().unwrap_or(""),
-                record.line().unwrap_or(0),
-                record.level(),
-                record.args(),
-            )
-        })
-        .target(env_logger::Target::Stdout)
-        .init();
 
     super::runtime::init()?;
     super::config::init(config_dir)?;

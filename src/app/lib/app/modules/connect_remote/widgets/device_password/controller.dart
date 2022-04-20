@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:mirrorx/app/controllers/sdk.dart';
+import 'package:mirrorx/app/controllers/mirrorx_core.dart';
 import 'package:mirrorx/app/core/utils/dialog.dart';
 
 class DevicePasswordController extends GetxController {
   var _visable = false;
   var _editing = false;
   var _password = "";
-  final _sdkController = Get.find<SDKController>();
+  final _sdkController = Get.find<MirrorXCoreController>();
   final _textController = TextEditingController();
 
   bool get passwordVisable => _visable;
@@ -26,7 +26,7 @@ class DevicePasswordController extends GetxController {
 
     try {
       final storedPassword =
-          await _sdkController.getSDKInstance().configReadDevicePassword();
+          await _sdkController.getInstance().configReadDevicePassword();
 
       if (storedPassword == null || storedPassword == "") {
         password = await _generateAndSaveNewDevicePassword();
@@ -57,7 +57,7 @@ class DevicePasswordController extends GetxController {
 
         try {
           await _sdkController
-              .getSDKInstance()
+              .getInstance()
               .configSaveDevicePassword(devicePassword: _textController.text);
           _password = _textController.text;
         } catch (err) {
@@ -97,16 +97,16 @@ class DevicePasswordController extends GetxController {
           });
     } else {
       textController.text =
-          await _sdkController.getSDKInstance().utilityGenerateDevicePassword();
+          await _sdkController.getInstance().utilityGenerateDevicePassword();
       update();
     }
   }
 
   Future<String> _generateAndSaveNewDevicePassword() async {
     final password =
-        await _sdkController.getSDKInstance().utilityGenerateDevicePassword();
+        await _sdkController.getInstance().utilityGenerateDevicePassword();
     await _sdkController
-        .getSDKInstance()
+        .getInstance()
         .configSaveDevicePassword(devicePassword: password);
     return password;
   }

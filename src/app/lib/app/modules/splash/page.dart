@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:mirrorx/app/controllers/sdk.dart';
+import 'package:mirrorx/app/controllers/mirrorx_core.dart';
 import 'package:mirrorx/app/modules/error/page.dart';
 import 'package:mirrorx/app/modules/main/page.dart';
 
@@ -9,7 +9,7 @@ class SplashPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Get.find<SDKController>().obx(
+    return Get.find<MirrorXCoreController>().obx(
       (_) => const MainPage(),
       onLoading: const Center(child: CircularProgressIndicator()),
       onError: (_) => const ErrorPage(),
