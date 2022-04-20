@@ -1,6 +1,5 @@
-use std::{io::Write, sync::Once};
-
 use once_cell::sync::OnceCell;
+use std::io::Write;
 
 static ALREADY_INITIALIZED: OnceCell<()> = OnceCell::new();
 

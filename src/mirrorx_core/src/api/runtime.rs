@@ -1,6 +1,5 @@
-use log::warn;
-
 use crate::provider::runtime::RuntimeProvider;
+use log::warn;
 
 pub fn init() -> anyhow::Result<()> {
     let provider = RuntimeProvider::new()?;

@@ -1,18 +1,18 @@
-#include "../duplicator.h"
+#include "../include/duplicator.h"
 
 @implementation Duplicator {
-  AVCaptureSession *_capture_session;
-  AVCaptureScreenInput *_capture_screen_input;
-  AVCaptureVideoDataOutput *_capture_video_data_output;
+  AVCaptureSession* _capture_session;
+  AVCaptureScreenInput* _capture_screen_input;
+  AVCaptureVideoDataOutput* _capture_video_data_output;
   int _display_index;
   int _fps;
   capture_callback _callback;
-  const void *_tx;
+  const void* _tx;
 }
 
 - (id)init:(int)display_index
          fps:(int)fps
-          tx:(const void *)tx
+          tx:(const void*)tx
     callback:(capture_callback)callback {
   self = [super init];
   if (self) {
@@ -22,23 +22,23 @@
     _callback = callback;
   }
 
-  AVCaptureSession *capture_session = [[AVCaptureSession alloc] init];
+  AVCaptureSession* capture_session = [[AVCaptureSession alloc] init];
   [capture_session beginConfiguration];
   [capture_session setSessionPreset:AVCaptureSessionPresetHigh];
 
-  AVCaptureScreenInput *capture_screen_input =
+  AVCaptureScreenInput* capture_screen_input =
       [[AVCaptureScreenInput alloc] initWithDisplayID:(_display_index)];
   capture_screen_input.capturesCursor = YES;
   capture_screen_input.capturesMouseClicks = YES;
   capture_screen_input.minFrameDuration = CMTimeMake(1, _fps);
-//  capture_screen_input.scaleFactor = 0.25;
+  //  capture_screen_input.scaleFactor = 0.25;
   if ([capture_session canAddInput:capture_screen_input]) {
     [capture_session addInput:capture_screen_input];
   } else {
     return nil;
   }
 
-  AVCaptureVideoDataOutput *capture_video_data_output =
+  AVCaptureVideoDataOutput* capture_video_data_output =
       [[AVCaptureVideoDataOutput alloc] init];
 
   dispatch_queue_t delegate_queue = dispatch_queue_create("duplicator", NULL);
@@ -47,10 +47,10 @@
 
   capture_video_data_output.alwaysDiscardsLateVideoFrames = YES;
   capture_video_data_output.videoSettings = @{
-    (NSString *)kCVPixelBufferPixelFormatTypeKey :
+    (NSString*)kCVPixelBufferPixelFormatTypeKey :
         @(kCVPixelFormatType_420YpCbCr8BiPlanarFullRange),
-    (NSString *)kCVPixelBufferWidthKey : @(1920),
-    (NSString *)kCVPixelBufferHeightKey : @(1080)
+    (NSString*)kCVPixelBufferWidthKey : @(1920),
+    (NSString*)kCVPixelBufferHeightKey : @(1080)
   };
   if ([capture_session canAddOutput:(capture_video_data_output)]) {
     [capture_session addOutput:(capture_video_data_output)];
@@ -77,10 +77,9 @@
   [_capture_session stopRunning];
 }
 
-- (void)captureOutput:(AVCaptureOutput *)captureOutput
+- (void)captureOutput:(AVCaptureOutput*)captureOutput
     didOutputSampleBuffer:(CMSampleBufferRef)videoFrame
-           fromConnection:(AVCaptureConnection *)connection {
-
+           fromConnection:(AVCaptureConnection*)connection {
   if (!CMSampleBufferIsValid(videoFrame)) {
     return;
   }
@@ -101,9 +100,9 @@
   size_t width = CVPixelBufferGetWidth(image_buffer);
   size_t height = CVPixelBufferGetHeight(image_buffer);
   size_t y_line_size = CVPixelBufferGetBytesPerRowOfPlane(image_buffer, 0);
-  uint8_t *y_buffer = CVPixelBufferGetBaseAddressOfPlane(image_buffer, 0);
+  uint8_t* y_buffer = CVPixelBufferGetBaseAddressOfPlane(image_buffer, 0);
   size_t uv_line_size = CVPixelBufferGetBytesPerRowOfPlane(image_buffer, 1);
-  uint8_t *uv_buffer = CVPixelBufferGetBaseAddressOfPlane(image_buffer, 1);
+  uint8_t* uv_buffer = CVPixelBufferGetBaseAddressOfPlane(image_buffer, 1);
 
   _callback(_tx, width, height, y_line_size, y_buffer, uv_line_size, uv_buffer);
   CVPixelBufferUnlockBaseAddress(image_buffer, kCVPixelBufferLock_ReadOnly);
@@ -118,35 +117,36 @@
 }
 @end
 
-const DuplicationContext *
-create_duplication_context(int display_index, void *tx,
-                           capture_callback callback) {
-  Duplicator *duplicator = [[Duplicator alloc] init:display_index
+const DuplicationContext* create_duplication_context(
+    int display_index,
+    void* tx,
+    capture_callback callback) {
+  Duplicator* duplicator = [[Duplicator alloc] init:display_index
                                                 fps:60
                                                  tx:tx
                                            callback:callback];
 
-  DuplicationContext *context =
-      (DuplicationContext *)malloc(sizeof(DuplicationContext));
+  DuplicationContext* context =
+      (DuplicationContext*)malloc(sizeof(DuplicationContext));
 
   context->duplicator = duplicator;
 
   return context;
 }
 
-void release_duplication_context(DuplicationContext *context) {
+void release_duplication_context(DuplicationContext* context) {
   [context->duplicator stopCapture];
   [context->duplicator release];
   free(context);
 }
 
-void start_capture(DuplicationContext *context) {
+void start_capture(DuplicationContext* context) {
   if (context) {
     [context->duplicator startCapture];
   }
 }
 
-void stop_capture(DuplicationContext *context) {
+void stop_capture(DuplicationContext* context) {
   if (context) {
     [context->duplicator stopCapture];
   }

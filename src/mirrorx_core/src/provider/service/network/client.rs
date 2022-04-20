@@ -8,7 +8,6 @@ use crate::{
 use bincode::Options;
 use dashmap::DashMap;
 use log::error;
-use ring::agreement::EphemeralPrivateKey;
 use rsa::{RsaPrivateKey, RsaPublicKey};
 use std::{
     sync::atomic::{AtomicU8, Ordering},

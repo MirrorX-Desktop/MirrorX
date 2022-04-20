@@ -1,7 +1,7 @@
 use super::{
     desktop::DesktopService,
     message::{
-        reply::{ConnectReply, HeartBeatReply, KeyExchangeAndVerifyPasswordReply, RegisterIdReply},
+        reply::{ConnectReply, KeyExchangeAndVerifyPasswordReply, RegisterIdReply},
         reply_error::ReplyError,
         request::{
             ConnectRequest, HeartBeatRequest, KeyExchangeAndVerifyPasswordRequest,
@@ -21,7 +21,6 @@ use bincode::Options;
 use bytes::Bytes;
 use futures::{SinkExt, StreamExt};
 use log::{error, info, warn};
-use ring::agreement::EphemeralPrivateKey;
 use rsa::{RsaPrivateKey, RsaPublicKey};
 use std::{sync::Arc, time::Duration};
 use tokio::{net::TcpStream, sync::mpsc};

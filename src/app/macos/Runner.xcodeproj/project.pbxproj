@@ -27,7 +27,11 @@
 		33CC10F32044A3C60003C045 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 33CC10F22044A3C60003C045 /* Assets.xcassets */; };
 		33CC10F62044A3C60003C045 /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = 33CC10F42044A3C60003C045 /* MainMenu.xib */; };
 		33CC11132044BFA00003C045 /* MainFlutterWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33CC11122044BFA00003C045 /* MainFlutterWindow.swift */; };
-		B2D4D92D280AF0A700246E04 /* mirrorx_core.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = B2D4D90F280ADB0B00246E04 /* mirrorx_core.dylib */; };
+		B22A4F44280F558F00E51FCC /* libmirrorx_core_static.a in Frameworks */ = {isa = PBXBuildFile; fileRef = B2D4D911280ADB0B00246E04 /* libmirrorx_core_static.a */; };
+		B25394CF2810077700DD908A /* libresolv.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = B25394CE2810077700DD908A /* libresolv.tbd */; };
+		B2861050281008E4000EFA87 /* VideoToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B286104E281008E4000EFA87 /* VideoToolbox.framework */; };
+		B286105828102270000EFA87 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B286105628102270000EFA87 /* AVFoundation.framework */; };
+		B2CEA32128103EDA00544EB2 /* libc++abi.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = B2CEA32028103EDA00544EB2 /* libc++abi.tbd */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -37,6 +41,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = 33CC111A2044C6BA0003C045;
 			remoteInfo = FLX;
+		};
+		B22A4F42280F558800E51FCC /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B2D4D909280ADB0B00246E04 /* mirrorx_core.xcodeproj */;
+			proxyType = 1;
+			remoteGlobalIDString = CA604147C28E83A0F7C0E043;
+			remoteInfo = "mirrorx_core-staticlib";
 		};
 		B2D4D90E280ADB0B00246E04 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -51,13 +62,6 @@
 			proxyType = 2;
 			remoteGlobalIDString = CA604147C28E396A830B7CF7;
 			remoteInfo = "mirrorx_core-staticlib";
-		};
-		B2D4D92B280AF0A300246E04 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = B2D4D909280ADB0B00246E04 /* mirrorx_core.xcodeproj */;
-			proxyType = 1;
-			remoteGlobalIDString = CA60F9D5A18A4F1E44D2FD15;
-			remoteInfo = "mirrorx_core-cdylib";
 		};
 /* End PBXContainerItemProxy section */
 
@@ -95,15 +99,11 @@
 		52703E458B81851E11200A6C /* Pods-Runner.profile.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.profile.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.profile.xcconfig"; sourceTree = "<group>"; };
 		7AFA3C8E1D35360C0083082E /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Release.xcconfig; sourceTree = "<group>"; };
 		9740EEB21CF90195004384FC /* Debug.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
+		B25394CE2810077700DD908A /* libresolv.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libresolv.tbd; path = usr/lib/libresolv.tbd; sourceTree = SDKROOT; };
+		B286104E281008E4000EFA87 /* VideoToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = VideoToolbox.framework; path = System/Library/Frameworks/VideoToolbox.framework; sourceTree = SDKROOT; };
+		B286105628102270000EFA87 /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
+		B2CEA32028103EDA00544EB2 /* libc++abi.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = "libc++abi.tbd"; path = "usr/lib/libc++abi.tbd"; sourceTree = SDKROOT; };
 		B2D4D909280ADB0B00246E04 /* mirrorx_core.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = mirrorx_core.xcodeproj; path = ../../mirrorx_core/mirrorx_core.xcodeproj; sourceTree = "<group>"; };
-		B2D4D918280AE93D00246E04 /* libavcodec.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libavcodec.a; path = ../../../dependencies_build/ffmpeg/lib/libavcodec.a; sourceTree = "<group>"; };
-		B2D4D91A280AE93D00246E04 /* libavdevice.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libavdevice.a; path = ../../../dependencies_build/ffmpeg/lib/libavdevice.a; sourceTree = "<group>"; };
-		B2D4D91B280AE93D00246E04 /* libavutil.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libavutil.a; path = ../../../dependencies_build/ffmpeg/lib/libavutil.a; sourceTree = "<group>"; };
-		B2D4D91C280AE93D00246E04 /* libavformat.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libavformat.a; path = ../../../dependencies_build/ffmpeg/lib/libavformat.a; sourceTree = "<group>"; };
-		B2D4D921280AE94E00246E04 /* libvpx.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libvpx.a; path = ../../../dependencies_build/libvpx/lib/libvpx.a; sourceTree = "<group>"; };
-		B2D4D923280AE95E00246E04 /* libopus.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libopus.a; path = ../../../dependencies_build/opus/lib/libopus.a; sourceTree = "<group>"; };
-		B2D4D925280AE96C00246E04 /* libx264.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libx264.a; path = ../../../dependencies_build/x264/lib/libx264.a; sourceTree = "<group>"; };
-		B2D4D927280AE97800246E04 /* libx265.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libx265.a; path = ../../../dependencies_build/x265/lib/libx265.a; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -111,7 +111,11 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				B2D4D92D280AF0A700246E04 /* mirrorx_core.dylib in Frameworks */,
+				B2CEA32128103EDA00544EB2 /* libc++abi.tbd in Frameworks */,
+				B286105828102270000EFA87 /* AVFoundation.framework in Frameworks */,
+				B2861050281008E4000EFA87 /* VideoToolbox.framework in Frameworks */,
+				B25394CF2810077700DD908A /* libresolv.tbd in Frameworks */,
+				B22A4F44280F558F00E51FCC /* libmirrorx_core_static.a in Frameworks */,
 				1AB87E22F7CCDC3A9AA0743F /* Pods_Runner.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -207,14 +211,10 @@
 		D73912EC22F37F3D000D13A0 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				B2D4D927280AE97800246E04 /* libx265.a */,
-				B2D4D925280AE96C00246E04 /* libx264.a */,
-				B2D4D923280AE95E00246E04 /* libopus.a */,
-				B2D4D921280AE94E00246E04 /* libvpx.a */,
-				B2D4D918280AE93D00246E04 /* libavcodec.a */,
-				B2D4D91A280AE93D00246E04 /* libavdevice.a */,
-				B2D4D91C280AE93D00246E04 /* libavformat.a */,
-				B2D4D91B280AE93D00246E04 /* libavutil.a */,
+				B2CEA32028103EDA00544EB2 /* libc++abi.tbd */,
+				B286105628102270000EFA87 /* AVFoundation.framework */,
+				B286104E281008E4000EFA87 /* VideoToolbox.framework */,
+				B25394CE2810077700DD908A /* libresolv.tbd */,
 				210ED1ADEB4622B1DE71C35E /* Pods_Runner.framework */,
 			);
 			name = Frameworks;
@@ -238,7 +238,7 @@
 			buildRules = (
 			);
 			dependencies = (
-				B2D4D92C280AF0A300246E04 /* PBXTargetDependency */,
+				B22A4F43280F558800E51FCC /* PBXTargetDependency */,
 				33CC11202044C79F0003C045 /* PBXTargetDependency */,
 			);
 			name = Runner;
@@ -424,10 +424,10 @@
 			target = 33CC111A2044C6BA0003C045 /* Flutter Assemble */;
 			targetProxy = 33CC111F2044C79F0003C045 /* PBXContainerItemProxy */;
 		};
-		B2D4D92C280AF0A300246E04 /* PBXTargetDependency */ = {
+		B22A4F43280F558800E51FCC /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			name = "mirrorx_core-cdylib";
-			targetProxy = B2D4D92B280AF0A300246E04 /* PBXContainerItemProxy */;
+			name = "mirrorx_core-staticlib";
+			targetProxy = B22A4F42280F558800E51FCC /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -482,7 +482,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.11;
+				MACOSX_DEPLOYMENT_TARGET = 10.15;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				SDKROOT = macosx;
 				SWIFT_COMPILATION_MODE = wholemodule;
@@ -495,15 +495,18 @@
 			baseConfigurationReference = 33E5194F232828860026EE4D /* AppInfo.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = Runner/DebugProfile.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
+				GCC_C_LANGUAGE_STANDARD = "compiler-default";
 				INFOPLIST_FILE = Runner/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				LLVM_LTO = YES_THIN;
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_OBJC_BRIDGING_HEADER = Runner/bridge_generated.h;
 				SWIFT_VERSION = 5.0;
@@ -562,7 +565,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.11;
+				MACOSX_DEPLOYMENT_TARGET = 10.15;
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = macosx;
@@ -609,7 +612,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.11;
+				MACOSX_DEPLOYMENT_TARGET = 10.15;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				SDKROOT = macosx;
 				SWIFT_COMPILATION_MODE = wholemodule;
@@ -622,15 +625,18 @@
 			baseConfigurationReference = 33E5194F232828860026EE4D /* AppInfo.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = Runner/DebugProfile.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
+				GCC_C_LANGUAGE_STANDARD = "compiler-default";
 				INFOPLIST_FILE = Runner/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				LLVM_LTO = YES_THIN;
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_OBJC_BRIDGING_HEADER = Runner/bridge_generated.h;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
@@ -643,15 +649,18 @@
 			baseConfigurationReference = 33E5194F232828860026EE4D /* AppInfo.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = Runner/Release.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
+				GCC_C_LANGUAGE_STANDARD = "compiler-default";
 				INFOPLIST_FILE = Runner/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				LLVM_LTO = YES_THIN;
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_OBJC_BRIDGING_HEADER = Runner/bridge_generated.h;
 				SWIFT_VERSION = 5.0;

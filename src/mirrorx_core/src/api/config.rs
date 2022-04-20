@@ -1,8 +1,6 @@
-use std::path::Path;
-
-use log::{error, warn};
-
 use crate::{api::api_error::APIError, provider::config::ConfigProvider};
+use log::{error, warn};
+use std::path::Path;
 
 pub fn init(dir: String) -> anyhow::Result<()> {
     let provider = ConfigProvider::new(Path::new(&dir))?;
