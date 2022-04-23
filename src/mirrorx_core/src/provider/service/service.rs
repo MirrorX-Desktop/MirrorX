@@ -148,7 +148,7 @@ fn connect(addr: &str) -> anyhow::Result<Arc<Client>> {
         .ok_or_else(|| anyhow::anyhow!("runtime not initialized"))?;
 
     runtime.block_on(async move {
-        let stream = TcpStream::connect("192.168.0.101:45555").await?;
+        let stream = tokio::time::timeout(Duration::from_secs(10), TcpStream::connect(addr)).await??;
 
         let desktop_service = Arc::new(DesktopService::new());
 

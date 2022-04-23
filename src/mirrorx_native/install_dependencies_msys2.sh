@@ -1,6 +1,7 @@
 #!/bin/sh
 
 CPU_CORES=$(grep </proc/cpuinfo -c "processor")
+WORK_DIRECTORY=$(pwd)
 
 check_tool_installed() {
     printf "%-50s" "Check Tools: [$1]"
@@ -51,7 +52,9 @@ clone_source() {
 build_x264() {
     src_dir=$1
     dst_dir=$2
-    absolute_dst_dir=$(readlink -f "$dst_dir")
+    absolute_dst_dir="$WORK_DIRECTORY"/dependencies_build/x264
+    mkdir -p "$absolute_dst_dir"
+    absolute_dst_dir=$(cygpath -m "$absolute_dst_dir")
 
     check_already_built "x264" "$src_dir" "$dst_dir"
     already_built=$?
@@ -67,24 +70,27 @@ build_x264() {
         ./configure \
         --prefix="$absolute_dst_dir" \
         --enable-pic \
-        --enable-static \
+        --enable-shared \
         --enable-strip \
+        --enable-lto \
         --disable-cli \
         --disable-opencl
 
     make -j"$CPU_CORES" && make install && make clean
 
     # modify name
-    cp "$absolute_dst_dir"/lib/libx264.lib "$absolute_dst_dir"/lib/x264.lib
+    # cp "$absolute_dst_dir"/lib/libx264.lib "$absolute_dst_dir"/lib/x264.lib
 
-    cd ..
+    cd "$WORK_DIRECTORY" || exit
     echo "Build x264 success"
 }
 
 build_x265() {
     src_dir=$1
     dst_dir=$2
-    absolute_dst_dir=$(readlink -f "$dst_dir")
+    absolute_dst_dir="$WORK_DIRECTORY"/dependencies_build/x265
+    mkdir -p "$absolute_dst_dir"
+    absolute_dst_dir=$(cygpath -m "$absolute_dst_dir")
 
     check_already_built "x265" "$src_dir" "$dst_dir"
     already_built=$?
@@ -99,10 +105,9 @@ build_x265() {
     cmake \
         ./source \
         -DCMAKE_INSTALL_PREFIX="$absolute_dst_dir" \
-        -DENABLE_SHARED=OFF \
+        -DENABLE_SHARED=ON \
         -DENABLE_CLI=OFF \
-        -DENABLE_PIC=ON \
-        -DSTATIC_LINK_CRT=ON
+        -DENABLE_PIC=ON
 
     cmake --build . --config Release
     cmake --install .
@@ -110,14 +115,16 @@ build_x265() {
     # modify name
     cp "$absolute_dst_dir"/lib/x265-static.lib "$absolute_dst_dir"/lib/x265.lib
 
-    cd ..
+    cd "$WORK_DIRECTORY" || exit
     echo "Build x265 success"
 }
 
 build_opus() {
     src_dir=$1
     dst_dir=$2
-    absolute_dst_dir=$(readlink -f "$dst_dir")
+    absolute_dst_dir="$WORK_DIRECTORY"/dependencies_build/opus
+    mkdir -p "$absolute_dst_dir"
+    absolute_dst_dir=$(cygpath -m "$absolute_dst_dir")
 
     check_already_built "opus" "$src_dir" "$dst_dir"
     already_built=$?
@@ -131,8 +138,7 @@ build_opus() {
 
     cmake \
         . \
-        -DCMAKE_INSTALL_PREFIX="$absolute_dst_dir" \
-        -DOPUS_STACK_PROTECTOR=OFF
+        -DCMAKE_INSTALL_PREFIX="$absolute_dst_dir"
 
     MSBuild.exe \
         -t:ReBuild \
@@ -142,14 +148,16 @@ build_opus() {
 
     cmake --install .
 
-    cd ..
+    cd "$WORK_DIRECTORY" || exit
     echo "Build opus success"
 }
 
 build_libvpx() {
     src_dir=$1
     dst_dir=$2
-    absolute_dst_dir=$(readlink -f "$dst_dir")
+    absolute_dst_dir="$WORK_DIRECTORY"/dependencies_build/libvpx
+    mkdir -p "$absolute_dst_dir"
+    absolute_dst_dir=$(cygpath -m "$absolute_dst_dir")
 
     check_already_built "libvpx" "$src_dir" "$dst_dir"
     already_built=$?
@@ -164,8 +172,9 @@ build_libvpx() {
     ./configure \
         --prefix="$absolute_dst_dir" \
         --target=x86_64-win64-vs17 \
-        --enable-static-msvcrt \
         --enable-vp9 \
+        --enable-shared \
+        --disable-static \
         --enable-pic \
         --enable-better-hw-compatibility \
         --enable-realtime-only \
@@ -183,16 +192,18 @@ build_libvpx() {
     gen_libvpx_pc "$absolute_dst_dir"
 
     # modify name
-    cp "$absolute_dst_dir"/lib/x64/vpxmt.lib "$absolute_dst_dir"/lib/x64/vpx.lib
+    cp "$absolute_dst_dir"/lib/x64/vpxmd.lib "$absolute_dst_dir"/lib/x64/vpx.lib
 
-    cd ..
+    cd "$WORK_DIRECTORY" || exit
     echo "Build libvpx success"
 }
 
 build_amf() {
     src_dir=$1
     dst_dir=$2
-    absolute_dst_dir=$(readlink -f "$dst_dir")
+    absolute_dst_dir="$WORK_DIRECTORY"/dependencies_build/AMF
+    mkdir -p "$absolute_dst_dir"
+    absolute_dst_dir=$(cygpath -m "$absolute_dst_dir")
 
     check_already_built "amf" "$src_dir" "$dst_dir"
     already_built=$?
@@ -212,7 +223,9 @@ build_amf() {
 build_media_sdk() {
     src_dir=$1
     dst_dir=$2
-    absolute_dst_dir=$(readlink -f "$dst_dir")
+    absolute_dst_dir="$WORK_DIRECTORY"/dependencies_build/MediaSDK
+    mkdir -p "$absolute_dst_dir"
+    absolute_dst_dir=$(cygpath -m "$absolute_dst_dir")
 
     check_already_built "media_sdk" "$src_dir" "$dst_dir"
     already_built=$?
@@ -221,7 +234,7 @@ build_media_sdk() {
         return
     fi
 
-    echo "Build opus..."
+    echo "Build media_sdk(mfx)..."
     cd "$src_dir" || exit
 
     # upgrade project
@@ -233,26 +246,29 @@ build_media_sdk() {
         -p:Platform=x64 \
         -p:WindowsTargetPlatformVersion=10.0 \
         -p:OutDir="$absolute_dst_dir"/lib/ \
+        -p:RuntimeLibrary=Md \
         ./api/mfx_dispatch/windows/libmfx_vs2015.vcxproj
 
     # copy include files
     mkdir -p "$absolute_dst_dir"/include/mfx
     cp -rf ./api/include/* "$absolute_dst_dir"/include/mfx
 
-    # modify name
-    cp "$absolute_dst_dir"/lib/libmfx_vs2015.lib "$absolute_dst_dir"/lib/mfx.lib
-
     # gen pkg-config file
     gen_libmfx_pc "$absolute_dst_dir"
 
-    cd ..
+    # modify name
+    # cp "$absolute_dst_dir"/lib/libmfx_vs2015.lib "$absolute_dst_dir"/lib/mfx.lib
+
+    cd "$WORK_DIRECTORY" || exit
     echo "Build media_sdk success"
 }
 
 build_nv_codec_headers() {
     src_dir=$1
     dst_dir=$2
-    absolute_dst_dir=$(readlink -f "$dst_dir")
+    absolute_dst_dir="$WORK_DIRECTORY"/dependencies_build/nv_codec_headers
+    mkdir -p "$absolute_dst_dir"
+    absolute_dst_dir=$(cygpath -m "$absolute_dst_dir")
 
     check_already_built "nv_codec_headers" "$src_dir" "$dst_dir"
     already_built=$?
@@ -267,15 +283,17 @@ build_nv_codec_headers() {
     PREFIX="$absolute_dst_dir" make -j"$CPU_CORES" -e
     PREFIX="$absolute_dst_dir" make install -e
 
+    cd "$WORK_DIRECTORY" || exit
     echo "Build nv_codec_headers success"
 }
 
 build_ffmpeg() {
-    artificials_root_dir=$(readlink -f "$1")
-    src_dir=$2
-    dst_dir=$3
-    absolute_dst_dir=$(readlink -f "$dst_dir")
-
+    src_dir=$1
+    dst_dir=$2
+    absolute_dst_dir="$WORK_DIRECTORY"/dependencies_build/ffmpeg
+    mkdir -p "$absolute_dst_dir"
+    absolute_dst_dir=$(cygpath -m "$absolute_dst_dir")
+    
     check_already_built "ffmpeg" "$src_dir" "$dst_dir"
     already_built=$?
 
@@ -286,12 +304,12 @@ build_ffmpeg() {
     echo "Build ffmpeg..."
     cd "$src_dir" || exit
 
-    export PKG_CONFIG_PATH="$PKG_CONFIG_PATH":"$artificials_root_dir"/x264/lib/pkgconfig
-    export PKG_CONFIG_PATH="$PKG_CONFIG_PATH":"$artificials_root_dir"/x265/lib/pkgconfig
-    export PKG_CONFIG_PATH="$PKG_CONFIG_PATH":"$artificials_root_dir"/opus/lib/pkgconfig
-    export PKG_CONFIG_PATH="$PKG_CONFIG_PATH":"$artificials_root_dir"/libvpx/lib/pkgconfig
-    export PKG_CONFIG_PATH="$PKG_CONFIG_PATH":"$artificials_root_dir"/MediaSDK/lib/pkgconfig
-    export PKG_CONFIG_PATH="$PKG_CONFIG_PATH":"$artificials_root_dir"/nv_codec_headers/lib/pkgconfig
+    export PKG_CONFIG_PATH="$PKG_CONFIG_PATH":"$WORK_DIRECTORY"/dependencies_build/x264/lib/pkgconfig
+    export PKG_CONFIG_PATH="$PKG_CONFIG_PATH":"$WORK_DIRECTORY"/dependencies_build/x265/lib/pkgconfig
+    export PKG_CONFIG_PATH="$PKG_CONFIG_PATH":"$WORK_DIRECTORY"/dependencies_build/opus/lib/pkgconfig
+    export PKG_CONFIG_PATH="$PKG_CONFIG_PATH":"$WORK_DIRECTORY"/dependencies_build/libvpx/lib/pkgconfig
+    export PKG_CONFIG_PATH="$PKG_CONFIG_PATH":"$WORK_DIRECTORY"/dependencies_build/MediaSDK/lib/pkgconfig
+    export PKG_CONFIG_PATH="$PKG_CONFIG_PATH":"$WORK_DIRECTORY"/dependencies_build/nv_codec_headers/lib/pkgconfig
 
     echo "List pkg-config libs"
     pkg-config --list-all
@@ -303,12 +321,9 @@ build_ffmpeg() {
         --prefix="$absolute_dst_dir" \
         --disable-all \
         --disable-autodetect \
-        --arch=x86_64 \
-        --target-os=win64 \
         --toolchain=msvc \
-        --pkg-config-flags=--static \
-        --enable-stripping \
-        --extra-cflags="-MT" \
+        --enable-shared \
+        --disable-static \
         --disable-debug \
         --enable-d3d11va \
         --enable-w32threads \
@@ -319,6 +334,7 @@ build_ffmpeg() {
         --enable-avdevice \
         --enable-avcodec \
         --enable-avformat \
+        --enable-avutil \
         --enable-libx264 \
         --enable-libx265 \
         --enable-libvpx \
@@ -350,8 +366,6 @@ build_ffmpeg() {
         --enable-amf \
         --enable-encoder=h264_amf \
         --enable-encoder=hevc_amf \
-        --extra-cflags=-DAMF_CORE_STATIC \
-        --extra-cflags=-I"$absolute_dst_dir"/../AMF/include \
         --enable-libmfx \
         --enable-encoder=h264_qsv \
         --enable-encoder=hevc_qsv \
@@ -364,7 +378,7 @@ build_ffmpeg() {
 
     make -j"$CPU_CORES" && make install && make clean
 
-    cd ..
+    cd "$WORK_DIRECTORY" || exit
     echo "Build ffmpeg success"
 }
 
@@ -439,6 +453,6 @@ build_libvpx "./dependencies_repo/libvpx" "./dependencies_build/libvpx"
 build_amf "./dependencies_repo/AMF" "./dependencies_build/AMF"
 build_media_sdk "./dependencies_repo/MediaSDK" "./dependencies_build/MediaSDK"
 build_nv_codec_headers "./dependencies_repo/nv_codec_headers" "./dependencies_build/nv_codec_headers"
-build_ffmpeg "./dependencies_build" "./dependencies_repo/ffmpeg" "./dependencies_build/ffmpeg"
+build_ffmpeg "./dependencies_repo/ffmpeg" "./dependencies_build/ffmpeg"
 
 echo "All dependencies has built successfully!"

@@ -8,8 +8,7 @@
 
 #include <atomic>
 #include <thread>
-#include "callback.h"
-#include "windows/DuplicationManager.h"
+#include "../windows/DuplicationManager.h"
 
 typedef struct DuplicationContext {
   DuplicationManager* manager;

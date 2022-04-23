@@ -21,7 +21,7 @@ VideoDecoder *new_video_decoder(const char *decoder_name,
   ffi_log(FFI_LOG_TRACE, "video_decoder: new video decoder, name: %s",
           decoder_name);
 
-  const AVCodec *codec = avcodec_find_decoder(AV_CODEC_ID_H264);
+  const AVCodec *codec = avcodec_find_decoder_by_name(decoder_name);
   if (NULL == codec) {
     ffi_log(FFI_LOG_ERROR, "video_decoder: can't find an decoder named '%s'",
             decoder_name);
