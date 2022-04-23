@@ -6,7 +6,7 @@ build = "build.rs"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [lib]
-crate-type = ["lib", "staticlib", "cdylib"]
+crate-type = ["lib", "cdylib"]
 
 [dependencies]
 log = "0.4.14"
