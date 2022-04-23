@@ -29,7 +29,7 @@ endif()
 if (WIN32 OR MSVC)
 find_library(LIB_VPX libvpx PATHS "${CMAKE_SOURCE_DIR}/dependencies/windows/msvc/lib/x64" NO_CACHE REQUIRED NO_DEFAULT_PATH)
 else()
-find_library(LIB_VPX vpx PATHS "${CMAKE_SOURCE_DIR}/dependencies_build/x264/lib" NO_CACHE REQUIRED NO_DEFAULT_PATH)
+find_library(LIB_VPX vpx PATHS "${CMAKE_SOURCE_DIR}/dependencies_build/libvpx/lib" NO_CACHE REQUIRED NO_DEFAULT_PATH)
 endif()
 message("LIB_VPX: ${LIB_VPX}")
 
@@ -122,16 +122,12 @@ message("video_decoder source: ${VIDEO_DECODER_SOURCE}")
 
 add_library(mirrorx_native STATIC ${DUPLICATOR_SOURCE} ${FFI_LOG_SOURCE} ${VIDEO_ENCODER_SOURCE} ${VIDEO_DECODER_SOURCE})
 
-# if (APPLE)
-#     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-#     COMMAND xcrun -r libtool -static -a -o "${CMAKE_SOURCE_DIR}/build/lib/lib${PROJECT_NAME}.a" "${CMAKE_SOURCE_DIR}/build/lib/lib${PROJECT_NAME}.a" ${LIB_VPX} ${LIB_X264} ${LIB_X265} ${LIB_OPUS} ${LIB_AVFORMAT} ${LIB_AVDEVICE} ${LIB_AVUTIL} ${LIB_AVCODEC}
-#     DEPENDS ${LIB_VPX} ${LIB_X264} ${LIB_X265} ${LIB_OPUS} ${LIB_AVCODEC} ${LIB_AVFORMAT} ${LIB_AVDEVICE} ${LIB_AVUTIL})
-# elseif (WIN32 OR MSVC)
-#     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-#     COMMAND lib /nologo /out:"${CMAKE_SOURCE_DIR}/build/lib/Release/${PROJECT_NAME}.lib" "${CMAKE_SOURCE_DIR}/build/lib/Release/${PROJECT_NAME}.lib" ${LIB_VPX} ${LIB_X264} ${LIB_X265} ${LIB_OPUS} ${LIB_MFX} ${LIB_AVCODEC} ${LIB_AVFORMAT} ${LIB_AVDEVICE} ${LIB_AVUTIL}
-#     DEPENDS ${LIB_VPX} ${LIB_X264} ${LIB_X265} ${LIB_OPUS} ${LIB_MFX} ${LIB_AVCODEC} ${LIB_AVFORMAT} ${LIB_AVDEVICE} ${LIB_AVUTIL})
-# else ()
-#     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-#     COMMAND ar crsT ${CMAKE_BINARY_DIR}/lib${PROJECT_NAME}.a ${LIB_VPX} ${LIB_X264} ${LIB_X265} ${LIB_OPUS} ${LIB_FFMPEG}
-#     DEPENDS ${LIB_VPX} ${LIB_X264} ${LIB_X265} ${LIB_OPUS} ${LIB_FFMPEG})
-# endif()
+if (APPLE)
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND xcrun -r libtool -static -a -o "${CMAKE_SOURCE_DIR}/build/lib/lib${PROJECT_NAME}.a" "${CMAKE_SOURCE_DIR}/build/lib/lib${PROJECT_NAME}.a" ${LIB_VPX} ${LIB_X264} ${LIB_X265} ${LIB_OPUS} ${LIB_AVFORMAT} ${LIB_AVDEVICE} ${LIB_AVUTIL} ${LIB_AVCODEC}
+    DEPENDS ${LIB_VPX} ${LIB_X264} ${LIB_X265} ${LIB_OPUS} ${LIB_AVCODEC} ${LIB_AVFORMAT} ${LIB_AVDEVICE} ${LIB_AVUTIL})
+elseif (UNIX)
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ar crsT ${CMAKE_BINARY_DIR}/lib${PROJECT_NAME}.a ${LIB_VPX} ${LIB_X264} ${LIB_X265} ${LIB_OPUS} ${LIB_FFMPEG}
+    DEPENDS ${LIB_VPX} ${LIB_X264} ${LIB_X265} ${LIB_OPUS} ${LIB_FFMPEG})
+endif()

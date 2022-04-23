@@ -27,11 +27,7 @@
 		33CC10F32044A3C60003C045 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 33CC10F22044A3C60003C045 /* Assets.xcassets */; };
 		33CC10F62044A3C60003C045 /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = 33CC10F42044A3C60003C045 /* MainMenu.xib */; };
 		33CC11132044BFA00003C045 /* MainFlutterWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33CC11122044BFA00003C045 /* MainFlutterWindow.swift */; };
-		B22A4F44280F558F00E51FCC /* libmirrorx_core_static.a in Frameworks */ = {isa = PBXBuildFile; fileRef = B2D4D911280ADB0B00246E04 /* libmirrorx_core_static.a */; };
-		B25394CF2810077700DD908A /* libresolv.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = B25394CE2810077700DD908A /* libresolv.tbd */; };
-		B2861050281008E4000EFA87 /* VideoToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B286104E281008E4000EFA87 /* VideoToolbox.framework */; };
-		B286105828102270000EFA87 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B286105628102270000EFA87 /* AVFoundation.framework */; };
-		B2CEA32128103EDA00544EB2 /* libc++abi.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = B2CEA32028103EDA00544EB2 /* libc++abi.tbd */; };
+		B2E3F6B32814538500751346 /* mirrorx_core.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = B2D4D90F280ADB0B00246E04 /* mirrorx_core.dylib */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -41,13 +37,6 @@
 			proxyType = 1;
 			remoteGlobalIDString = 33CC111A2044C6BA0003C045;
 			remoteInfo = FLX;
-		};
-		B22A4F42280F558800E51FCC /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = B2D4D909280ADB0B00246E04 /* mirrorx_core.xcodeproj */;
-			proxyType = 1;
-			remoteGlobalIDString = CA604147C28E83A0F7C0E043;
-			remoteInfo = "mirrorx_core-staticlib";
 		};
 		B2D4D90E280ADB0B00246E04 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -62,6 +51,13 @@
 			proxyType = 2;
 			remoteGlobalIDString = CA604147C28E396A830B7CF7;
 			remoteInfo = "mirrorx_core-staticlib";
+		};
+		B2E3F6B12814537D00751346 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B2D4D909280ADB0B00246E04 /* mirrorx_core.xcodeproj */;
+			proxyType = 1;
+			remoteGlobalIDString = CA60F9D5A18A4F1E44D2FD15;
+			remoteInfo = "mirrorx_core-cdylib";
 		};
 /* End PBXContainerItemProxy section */
 
@@ -111,11 +107,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				B2CEA32128103EDA00544EB2 /* libc++abi.tbd in Frameworks */,
-				B286105828102270000EFA87 /* AVFoundation.framework in Frameworks */,
-				B2861050281008E4000EFA87 /* VideoToolbox.framework in Frameworks */,
-				B25394CF2810077700DD908A /* libresolv.tbd in Frameworks */,
-				B22A4F44280F558F00E51FCC /* libmirrorx_core_static.a in Frameworks */,
+				B2E3F6B32814538500751346 /* mirrorx_core.dylib in Frameworks */,
 				1AB87E22F7CCDC3A9AA0743F /* Pods_Runner.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -238,7 +230,7 @@
 			buildRules = (
 			);
 			dependencies = (
-				B22A4F43280F558800E51FCC /* PBXTargetDependency */,
+				B2E3F6B22814537D00751346 /* PBXTargetDependency */,
 				33CC11202044C79F0003C045 /* PBXTargetDependency */,
 			);
 			name = Runner;
@@ -424,10 +416,10 @@
 			target = 33CC111A2044C6BA0003C045 /* Flutter Assemble */;
 			targetProxy = 33CC111F2044C79F0003C045 /* PBXContainerItemProxy */;
 		};
-		B22A4F43280F558800E51FCC /* PBXTargetDependency */ = {
+		B2E3F6B22814537D00751346 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			name = "mirrorx_core-staticlib";
-			targetProxy = B22A4F42280F558800E51FCC /* PBXContainerItemProxy */;
+			name = "mirrorx_core-cdylib";
+			targetProxy = B2E3F6B12814537D00751346 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
