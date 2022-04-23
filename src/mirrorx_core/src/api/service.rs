@@ -7,7 +7,7 @@ use crate::provider::{
         service::ServiceProvider,
     },
 };
-use log::{error, warn};
+use log::{error, info, warn};
 use rand::thread_rng;
 use ring::rand::SecureRandom;
 use rsa::BigUint;
@@ -227,7 +227,11 @@ pub fn desktop_key_exchange_and_password_verify(
                 APIError::ServiceInternal
             })?;
 
-            Err(APIError::ServiceInternal)
+            info!("key exchange and password verify success");
+            info!("send key: {:?}", send_key);
+            info!("recv key: {:?}", recv_key);
+
+            Ok(())
         })
     })
 }
