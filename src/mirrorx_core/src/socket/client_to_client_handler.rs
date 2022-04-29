@@ -3,7 +3,6 @@ use super::{
     message::client_to_client::{
         ConnectReply, ConnectRequest, KeyExchangeAndVerifyPasswordRequest,
     },
-    streamer::Streamer,
 };
 use crate::socket::{
     endpoint::CacheKey, message::client_to_client::KeyExchangeAndVerifyPasswordReply,
@@ -12,7 +11,6 @@ use anyhow::anyhow;
 use log::info;
 use ring::rand::SecureRandom;
 use rsa::{PaddingScheme, PublicKeyParts, RsaPrivateKey, RsaPublicKey};
-use std::sync::Arc;
 
 pub async fn connect(endpoint: &EndPoint, req: ConnectRequest) -> anyhow::Result<ConnectReply> {
     info!("connect: {:?}", req);

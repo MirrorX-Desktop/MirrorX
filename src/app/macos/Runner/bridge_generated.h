@@ -31,8 +31,6 @@ void wire_config_read_device_password(int64_t port_);
 
 void wire_config_save_device_password(int64_t port_, struct wire_uint_8_list *device_password);
 
-void wire_http_device_register(int64_t port_, struct wire_uint_8_list *device_id);
-
 void wire_socket_desktop_connect(int64_t port_, struct wire_uint_8_list *remote_device_id);
 
 void wire_socket_desktop_key_exchange_and_password_verify(int64_t port_,
@@ -56,7 +54,6 @@ static int64_t dummy_method_to_enforce_bundling(void) {
     dummy_var ^= ((int64_t) (void*) wire_config_save_device_id_expiration);
     dummy_var ^= ((int64_t) (void*) wire_config_read_device_password);
     dummy_var ^= ((int64_t) (void*) wire_config_save_device_password);
-    dummy_var ^= ((int64_t) (void*) wire_http_device_register);
     dummy_var ^= ((int64_t) (void*) wire_socket_desktop_connect);
     dummy_var ^= ((int64_t) (void*) wire_socket_desktop_key_exchange_and_password_verify);
     dummy_var ^= ((int64_t) (void*) wire_utility_generate_device_password);

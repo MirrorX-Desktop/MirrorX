@@ -4,7 +4,7 @@ use super::message::client_to_client::{
 };
 use crate::instance::STREAMER_INSTANCE;
 use anyhow::bail;
-use dashmap::{DashMap, Map};
+use dashmap::DashMap;
 use std::{any::Any, time::Duration};
 
 pub struct EndPoint {

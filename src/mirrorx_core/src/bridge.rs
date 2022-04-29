@@ -14,8 +14,6 @@ use flutter_rust_bridge::*;
 
 // Section: imports
 
-use crate::provider::http::RegisterResp;
-
 // Section: wire functions
 
 #[no_mangle]
@@ -113,21 +111,6 @@ pub extern "C" fn wire_config_save_device_password(
         move || {
             let api_device_password = device_password.wire2api();
             move |task_callback| config_save_device_password(api_device_password)
-        },
-    )
-}
-
-#[no_mangle]
-pub extern "C" fn wire_http_device_register(port_: i64, device_id: *mut wire_uint_8_list) {
-    FLUTTER_RUST_BRIDGE_HANDLER.wrap(
-        WrapInfo {
-            debug_name: "http_device_register",
-            port: Some(port_),
-            mode: FfiCallMode::Normal,
-        },
-        move || {
-            let api_device_id = device_id.wire2api();
-            move |task_callback| http_device_register(api_device_id)
         },
     )
 }
@@ -265,13 +248,6 @@ impl<T> NewWithNullPtr for *mut T {
 }
 
 // Section: impl IntoDart
-
-impl support::IntoDart for RegisterResp {
-    fn into_dart(self) -> support::DartCObject {
-        vec![self.token.into_dart()].into_dart()
-    }
-}
-impl support::IntoDartExceptPrimitive for RegisterResp {}
 
 // Section: executor
 

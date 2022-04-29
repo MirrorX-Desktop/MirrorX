@@ -1,4 +1,4 @@
-use crate::{instance::RUNTIME_INSTANCE, provider::http::RegisterResp};
+use crate::{instance::RUNTIME_INSTANCE, utility::token::parse_register_token};
 use std::{io::Write, sync::Once};
 
 static LOGGER_INIT_ONCE: Once = Once::new();
@@ -24,6 +24,13 @@ pub fn init(config_dir: String) -> anyhow::Result<()> {
     });
 
     super::config::init(config_dir)?;
+
+    // ensure device id is valid
+    let device_id = super::config::read_device_id()?;
+    let resp = RUNTIME_INSTANCE.block_on(super::http::device_register(device_id))?;
+    let (device_id, expiration, _) = parse_register_token(resp.token)?;
+    super::config::save_device_id(&device_id)?;
+    super::config::save_device_id_expiration(expiration)?;
 
     Ok(())
 }
@@ -52,10 +59,6 @@ pub fn config_read_device_password() -> anyhow::Result<Option<String>> {
 
 pub fn config_save_device_password(device_password: String) -> anyhow::Result<()> {
     super::config::save_device_password(&device_password)
-}
-
-pub fn http_device_register(device_id: Option<String>) -> anyhow::Result<RegisterResp> {
-    RUNTIME_INSTANCE.block_on(super::http::device_register(device_id))
 }
 
 pub fn socket_desktop_connect(remote_device_id: String) -> anyhow::Result<()> {

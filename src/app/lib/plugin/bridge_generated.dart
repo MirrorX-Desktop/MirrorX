@@ -28,8 +28,6 @@ abstract class MirrorXCore {
   Future<void> configSaveDevicePassword(
       {required String devicePassword, dynamic hint});
 
-  Future<RegisterResp> httpDeviceRegister({String? deviceId, dynamic hint});
-
   Future<void> socketDesktopConnect(
       {required String remoteDeviceId, dynamic hint});
 
@@ -37,14 +35,6 @@ abstract class MirrorXCore {
       {required String askDeviceId, required String password, dynamic hint});
 
   Future<String> utilityGenerateDevicePassword({dynamic hint});
-}
-
-class RegisterResp {
-  final String token;
-
-  RegisterResp({
-    required this.token,
-  });
 }
 
 class MirrorXCoreImpl extends FlutterRustBridgeBase<MirrorXCoreWire>
@@ -143,19 +133,6 @@ class MirrorXCoreImpl extends FlutterRustBridgeBase<MirrorXCoreWire>
         hint: hint,
       ));
 
-  Future<RegisterResp> httpDeviceRegister({String? deviceId, dynamic hint}) =>
-      executeNormal(FlutterRustBridgeTask(
-        callFfi: (port_) => inner.wire_http_device_register(
-            port_, _api2wire_opt_String(deviceId)),
-        parseSuccessData: _wire2api_register_resp,
-        constMeta: const FlutterRustBridgeTaskConstMeta(
-          debugName: "http_device_register",
-          argNames: ["deviceId"],
-        ),
-        argValues: [deviceId],
-        hint: hint,
-      ));
-
   Future<void> socketDesktopConnect(
           {required String remoteDeviceId, dynamic hint}) =>
       executeNormal(FlutterRustBridgeTask(
@@ -204,10 +181,6 @@ class MirrorXCoreImpl extends FlutterRustBridgeBase<MirrorXCoreWire>
     return _api2wire_uint_8_list(utf8.encoder.convert(raw));
   }
 
-  ffi.Pointer<wire_uint_8_list> _api2wire_opt_String(String? raw) {
-    return raw == null ? ffi.nullptr : _api2wire_String(raw);
-  }
-
   int _api2wire_u32(int raw) {
     return raw;
   }
@@ -245,15 +218,6 @@ String? _wire2api_opt_String(dynamic raw) {
 
 int? _wire2api_opt_box_autoadd_u32(dynamic raw) {
   return raw == null ? null : _wire2api_box_autoadd_u32(raw);
-}
-
-RegisterResp _wire2api_register_resp(dynamic raw) {
-  final arr = raw as List<dynamic>;
-  if (arr.length != 1)
-    throw Exception('unexpected arr length: expect 1 but see ${arr.length}');
-  return RegisterResp(
-    token: _wire2api_String(arr[0]),
-  );
 }
 
 int _wire2api_u32(dynamic raw) {
@@ -405,23 +369,6 @@ class MirrorXCoreWire implements FlutterRustBridgeWireBase {
   late final _wire_config_save_device_password =
       _wire_config_save_device_passwordPtr
           .asFunction<void Function(int, ffi.Pointer<wire_uint_8_list>)>();
-
-  void wire_http_device_register(
-    int port_,
-    ffi.Pointer<wire_uint_8_list> device_id,
-  ) {
-    return _wire_http_device_register(
-      port_,
-      device_id,
-    );
-  }
-
-  late final _wire_http_device_registerPtr = _lookup<
-      ffi.NativeFunction<
-          ffi.Void Function(ffi.Int64,
-              ffi.Pointer<wire_uint_8_list>)>>('wire_http_device_register');
-  late final _wire_http_device_register = _wire_http_device_registerPtr
-      .asFunction<void Function(int, ffi.Pointer<wire_uint_8_list>)>();
 
   void wire_socket_desktop_connect(
     int port_,
