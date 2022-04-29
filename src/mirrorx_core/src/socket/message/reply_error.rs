@@ -5,8 +5,6 @@ pub enum ReplyError {
     Internal,
     Timeout,
     DeviceNotFound,
-    CastFailed,
-    RepeatedRequest,
-    NotSatisfied,
-    PasswordIncorrect,
+    Repeated,
+    Mismatched,
 }

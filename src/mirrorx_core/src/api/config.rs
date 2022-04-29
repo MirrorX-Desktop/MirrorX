@@ -1,4 +1,5 @@
-use crate::{api::api_error::APIError, provider::config::ConfigProvider};
+use crate::provider::config::ConfigProvider;
+use anyhow::anyhow;
 use log::{error, warn};
 use std::path::Path;
 
@@ -12,71 +13,40 @@ pub fn init(dir: String) -> anyhow::Result<()> {
     Ok(())
 }
 
-pub fn read_device_id() -> anyhow::Result<Option<String>, APIError> {
-    config_provider_do(|provider| {
-        provider.read_device_id().map_err(|err| {
-            error!("read device id failed: {:?}", err);
-            APIError::ConfigReadFailed
-        })
-    })
+pub fn read_device_id() -> anyhow::Result<Option<String>> {
+    config_provider_do(|provider| provider.read_device_id())
 }
 
-pub fn save_device_id(device_id: &str) -> anyhow::Result<(), APIError> {
-    config_provider_do(|provider| {
-        provider.save_device_id(device_id).map_err(|err| {
-            error!("save device id failed: {:?}", err);
-            APIError::ConfigSaveFailed
-        })
-    })
+pub fn save_device_id(device_id: &str) -> anyhow::Result<()> {
+    config_provider_do(|provider| provider.save_device_id(device_id))
 }
 
-pub fn read_device_id_expiration() -> anyhow::Result<Option<u32>, APIError> {
-    config_provider_do(|provider| {
-        provider.read_device_id_expiration().map_err(|err| {
-            error!("read device id expiration failed: {:?}", err);
-            APIError::ConfigReadFailed
-        })
-    })
+pub fn read_device_id_expiration() -> anyhow::Result<Option<u32>> {
+    config_provider_do(|provider| provider.read_device_id_expiration())
 }
 
-pub fn save_device_id_expiration(time_stamp: u32) -> anyhow::Result<(), APIError> {
-    config_provider_do(|provider| {
-        provider
-            .save_device_id_expiration(&time_stamp)
-            .map_err(|err| {
-                error!("save device id expiration failed: {:?}", err);
-                APIError::ConfigSaveFailed
-            })
-    })
+pub fn save_device_id_expiration(time_stamp: u32) -> anyhow::Result<()> {
+    config_provider_do(|provider| provider.save_device_id_expiration(&time_stamp))
 }
 
-pub fn read_device_password() -> anyhow::Result<Option<String>, APIError> {
-    config_provider_do(|provider| {
-        provider.read_device_password().map_err(|err| {
-            error!("read device password failed: {:?}", err);
-            APIError::ConfigReadFailed
-        })
-    })
+pub fn read_device_password() -> anyhow::Result<Option<String>> {
+    config_provider_do(|provider| provider.read_device_password())
 }
 
-pub fn save_device_password(device_password: &str) -> anyhow::Result<(), APIError> {
-    config_provider_do(|provider| {
-        provider
-            .save_device_password(device_password)
-            .map_err(|err| {
-                error!("save device password failed: {:?}", err);
-                APIError::ConfigSaveFailed
-            })
-    })
+pub fn save_device_password(device_password: &str) -> anyhow::Result<()> {
+    config_provider_do(|provider| provider.save_device_password(device_password))
 }
 
 #[inline]
-fn config_provider_do<T, R>(op: T) -> anyhow::Result<R, APIError>
+fn config_provider_do<T, R>(op: T) -> anyhow::Result<R>
 where
-    T: Fn(&ConfigProvider) -> anyhow::Result<R, APIError>,
+    T: Fn(&ConfigProvider) -> anyhow::Result<R>,
 {
-    crate::instance::CONFIG_PROVIDER_INSTANCE
+    let provider = crate::instance::CONFIG_PROVIDER_INSTANCE
         .get()
-        .ok_or_else(|| APIError::ConfigNotInitialized)
-        .and_then(op)
+        .ok_or(anyhow!(
+            "config_provider_do: config provider not initialized"
+        ))?;
+
+    op(provider)
 }

@@ -14,6 +14,8 @@ use flutter_rust_bridge::*;
 
 // Section: imports
 
+use crate::provider::http::RegisterResp;
+
 // Section: wire functions
 
 #[no_mangle]
@@ -116,41 +118,44 @@ pub extern "C" fn wire_config_save_device_password(
 }
 
 #[no_mangle]
-pub extern "C" fn wire_service_register_id(port_: i64) {
+pub extern "C" fn wire_http_device_register(port_: i64, device_id: *mut wire_uint_8_list) {
     FLUTTER_RUST_BRIDGE_HANDLER.wrap(
         WrapInfo {
-            debug_name: "service_register_id",
-            port: Some(port_),
-            mode: FfiCallMode::Normal,
-        },
-        move || move |task_callback| service_register_id(),
-    )
-}
-
-#[no_mangle]
-pub extern "C" fn wire_service_desktop_connect(port_: i64, ask_device_id: *mut wire_uint_8_list) {
-    FLUTTER_RUST_BRIDGE_HANDLER.wrap(
-        WrapInfo {
-            debug_name: "service_desktop_connect",
+            debug_name: "http_device_register",
             port: Some(port_),
             mode: FfiCallMode::Normal,
         },
         move || {
-            let api_ask_device_id = ask_device_id.wire2api();
-            move |task_callback| service_desktop_connect(api_ask_device_id)
+            let api_device_id = device_id.wire2api();
+            move |task_callback| http_device_register(api_device_id)
         },
     )
 }
 
 #[no_mangle]
-pub extern "C" fn wire_service_desktop_key_exchange_and_password_verify(
+pub extern "C" fn wire_socket_desktop_connect(port_: i64, remote_device_id: *mut wire_uint_8_list) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap(
+        WrapInfo {
+            debug_name: "socket_desktop_connect",
+            port: Some(port_),
+            mode: FfiCallMode::Normal,
+        },
+        move || {
+            let api_remote_device_id = remote_device_id.wire2api();
+            move |task_callback| socket_desktop_connect(api_remote_device_id)
+        },
+    )
+}
+
+#[no_mangle]
+pub extern "C" fn wire_socket_desktop_key_exchange_and_password_verify(
     port_: i64,
     ask_device_id: *mut wire_uint_8_list,
     password: *mut wire_uint_8_list,
 ) {
     FLUTTER_RUST_BRIDGE_HANDLER.wrap(
         WrapInfo {
-            debug_name: "service_desktop_key_exchange_and_password_verify",
+            debug_name: "socket_desktop_key_exchange_and_password_verify",
             port: Some(port_),
             mode: FfiCallMode::Normal,
         },
@@ -158,7 +163,7 @@ pub extern "C" fn wire_service_desktop_key_exchange_and_password_verify(
             let api_ask_device_id = ask_device_id.wire2api();
             let api_password = password.wire2api();
             move |task_callback| {
-                service_desktop_key_exchange_and_password_verify(api_ask_device_id, api_password)
+                socket_desktop_key_exchange_and_password_verify(api_ask_device_id, api_password)
             }
         },
     )
@@ -260,6 +265,13 @@ impl<T> NewWithNullPtr for *mut T {
 }
 
 // Section: impl IntoDart
+
+impl support::IntoDart for RegisterResp {
+    fn into_dart(self) -> support::DartCObject {
+        vec![self.token.into_dart()].into_dart()
+    }
+}
+impl support::IntoDartExceptPrimitive for RegisterResp {}
 
 // Section: executor
 

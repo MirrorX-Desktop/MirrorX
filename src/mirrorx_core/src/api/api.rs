@@ -1,11 +1,10 @@
-use once_cell::sync::OnceCell;
+use crate::{instance::RUNTIME_INSTANCE, provider::http::RegisterResp};
 use std::{io::Write, sync::Once};
 
-static ALREADY_INITIALIZED: OnceCell<()> = OnceCell::new();
-static LOGGER_ONCE: Once = Once::new();
+static LOGGER_INIT_ONCE: Once = Once::new();
 
 pub fn init(config_dir: String) -> anyhow::Result<()> {
-    LOGGER_ONCE.call_once(|| {
+    LOGGER_INIT_ONCE.call_once(|| {
         env_logger::Builder::new()
             .filter_level(log::LevelFilter::Info)
             .format(|buf, record| {
@@ -24,58 +23,53 @@ pub fn init(config_dir: String) -> anyhow::Result<()> {
             .init();
     });
 
-    if ALREADY_INITIALIZED.get().is_some() {
-        return Ok(());
-    }
-
-    super::runtime::init()?;
     super::config::init(config_dir)?;
-    super::service::init()?;
 
-    let _ = ALREADY_INITIALIZED.set(());
     Ok(())
 }
 
 // Config
 
 pub fn config_read_device_id() -> anyhow::Result<Option<String>> {
-    super::config::read_device_id().map_err(|err| anyhow::anyhow!(err))
+    super::config::read_device_id()
 }
 
 pub fn config_save_device_id(device_id: String) -> anyhow::Result<()> {
-    super::config::save_device_id(&device_id).map_err(|err| anyhow::anyhow!(err))
+    super::config::save_device_id(&device_id)
 }
 
 pub fn config_read_device_id_expiration() -> anyhow::Result<Option<u32>> {
-    super::config::read_device_id_expiration().map_err(|err| anyhow::anyhow!(err))
+    super::config::read_device_id_expiration()
 }
 
 pub fn config_save_device_id_expiration(time_stamp: u32) -> anyhow::Result<()> {
-    super::config::save_device_id_expiration(time_stamp).map_err(|err| anyhow::anyhow!(err))
+    super::config::save_device_id_expiration(time_stamp)
 }
 
 pub fn config_read_device_password() -> anyhow::Result<Option<String>> {
-    super::config::read_device_password().map_err(|err| anyhow::anyhow!(err))
+    super::config::read_device_password()
 }
 
 pub fn config_save_device_password(device_password: String) -> anyhow::Result<()> {
-    super::config::save_device_password(&device_password).map_err(|err| anyhow::anyhow!(err))
+    super::config::save_device_password(&device_password)
 }
 
-pub fn service_register_id() -> anyhow::Result<()> {
-    super::service::device_register_id().map_err(|err| anyhow::anyhow!(err))
+pub fn http_device_register(device_id: Option<String>) -> anyhow::Result<RegisterResp> {
+    RUNTIME_INSTANCE.block_on(super::http::device_register(device_id))
 }
 
-pub fn service_desktop_connect(ask_device_id: String) -> anyhow::Result<()> {
-    super::service::desktop_connect(ask_device_id).map_err(|err| anyhow::anyhow!(err))
+pub fn socket_desktop_connect(remote_device_id: String) -> anyhow::Result<()> {
+    RUNTIME_INSTANCE.block_on(super::socket::desktop_connect(remote_device_id))
 }
 
-pub fn service_desktop_key_exchange_and_password_verify(
+pub fn socket_desktop_key_exchange_and_password_verify(
     ask_device_id: String,
     password: String,
-) -> anyhow::Result<()> {
-    super::service::desktop_key_exchange_and_password_verify(ask_device_id, password)
-        .map_err(|err| anyhow::anyhow!(err))
+) -> anyhow::Result<bool> {
+    RUNTIME_INSTANCE.block_on(super::socket::desktop_key_exchange_and_password_verify(
+        ask_device_id,
+        password,
+    ))
 }
 
 pub fn utility_generate_device_password() -> String {

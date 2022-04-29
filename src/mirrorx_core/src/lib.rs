@@ -3,4 +3,5 @@ mod bridge; /* AUTO INJECTED BY flutter_rust_bridge. This line may not be accura
 mod factory;
 mod instance;
 mod provider;
+mod socket;
 mod utility;

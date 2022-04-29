@@ -1,34 +1,33 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, PartialEq, Clone, Debug)]
-pub enum RequestMessage {
-    HeartBeatRequest(HeartBeatRequest),
-    RegisterIdRequest(RegisterIdRequest),
+pub enum ClientToClientMessage {
+    Error,
     ConnectRequest(ConnectRequest),
+    ConnectReply(ConnectReply),
     KeyExchangeAndVerifyPasswordRequest(KeyExchangeAndVerifyPasswordRequest),
+    KeyExchangeAndVerifyPasswordReply(KeyExchangeAndVerifyPasswordReply),
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Clone, Debug)]
-pub struct HeartBeatRequest {
-    pub time_stamp: u32,
-}
+pub struct ConnectRequest {}
 
 #[derive(Serialize, Deserialize, PartialEq, Clone, Debug)]
-pub struct RegisterIdRequest {
-    pub device_id: Option<String>,
-}
-
-#[derive(Serialize, Deserialize, PartialEq, Clone, Debug)]
-pub struct ConnectRequest {
-    pub offer_device_id: String,
-    pub ask_device_id: String,
+pub struct ConnectReply {
+    pub pub_key_n: Vec<u8>,
+    pub pub_key_e: Vec<u8>,
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Clone, Debug)]
 pub struct KeyExchangeAndVerifyPasswordRequest {
-    pub offer_device_id: String,
-    pub ask_device_id: String,
     pub password_secret: Vec<u8>,
+    pub exchange_pub_key: Vec<u8>,
+    pub exchange_salt: Vec<u8>,
+}
+
+#[derive(Serialize, Deserialize, PartialEq, Default, Clone, Debug)]
+pub struct KeyExchangeAndVerifyPasswordReply {
+    pub success: bool,
     pub exchange_pub_key: Vec<u8>,
     pub exchange_salt: Vec<u8>,
 }

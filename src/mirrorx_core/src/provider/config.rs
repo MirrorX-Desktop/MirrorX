@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use rusqlite::{params, Connection, OptionalExtension};
 
 pub struct ConfigProvider {
-    pub db_file_path: PathBuf,
+    db_file_path: PathBuf,
 }
 
 impl ConfigProvider {

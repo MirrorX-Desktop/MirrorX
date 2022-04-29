@@ -28,15 +28,23 @@ abstract class MirrorXCore {
   Future<void> configSaveDevicePassword(
       {required String devicePassword, dynamic hint});
 
-  Future<void> serviceRegisterId({dynamic hint});
+  Future<RegisterResp> httpDeviceRegister({String? deviceId, dynamic hint});
 
-  Future<void> serviceDesktopConnect(
-      {required String askDeviceId, dynamic hint});
+  Future<void> socketDesktopConnect(
+      {required String remoteDeviceId, dynamic hint});
 
-  Future<void> serviceDesktopKeyExchangeAndPasswordVerify(
+  Future<bool> socketDesktopKeyExchangeAndPasswordVerify(
       {required String askDeviceId, required String password, dynamic hint});
 
   Future<String> utilityGenerateDevicePassword({dynamic hint});
+}
+
+class RegisterResp {
+  final String token;
+
+  RegisterResp({
+    required this.token,
+  });
 }
 
 class MirrorXCoreImpl extends FlutterRustBridgeBase<MirrorXCoreWire>
@@ -135,43 +143,44 @@ class MirrorXCoreImpl extends FlutterRustBridgeBase<MirrorXCoreWire>
         hint: hint,
       ));
 
-  Future<void> serviceRegisterId({dynamic hint}) =>
+  Future<RegisterResp> httpDeviceRegister({String? deviceId, dynamic hint}) =>
       executeNormal(FlutterRustBridgeTask(
-        callFfi: (port_) => inner.wire_service_register_id(port_),
-        parseSuccessData: _wire2api_unit,
+        callFfi: (port_) => inner.wire_http_device_register(
+            port_, _api2wire_opt_String(deviceId)),
+        parseSuccessData: _wire2api_register_resp,
         constMeta: const FlutterRustBridgeTaskConstMeta(
-          debugName: "service_register_id",
-          argNames: [],
+          debugName: "http_device_register",
+          argNames: ["deviceId"],
         ),
-        argValues: [],
+        argValues: [deviceId],
         hint: hint,
       ));
 
-  Future<void> serviceDesktopConnect(
-          {required String askDeviceId, dynamic hint}) =>
+  Future<void> socketDesktopConnect(
+          {required String remoteDeviceId, dynamic hint}) =>
       executeNormal(FlutterRustBridgeTask(
-        callFfi: (port_) => inner.wire_service_desktop_connect(
-            port_, _api2wire_String(askDeviceId)),
+        callFfi: (port_) => inner.wire_socket_desktop_connect(
+            port_, _api2wire_String(remoteDeviceId)),
         parseSuccessData: _wire2api_unit,
         constMeta: const FlutterRustBridgeTaskConstMeta(
-          debugName: "service_desktop_connect",
-          argNames: ["askDeviceId"],
+          debugName: "socket_desktop_connect",
+          argNames: ["remoteDeviceId"],
         ),
-        argValues: [askDeviceId],
+        argValues: [remoteDeviceId],
         hint: hint,
       ));
 
-  Future<void> serviceDesktopKeyExchangeAndPasswordVerify(
+  Future<bool> socketDesktopKeyExchangeAndPasswordVerify(
           {required String askDeviceId,
           required String password,
           dynamic hint}) =>
       executeNormal(FlutterRustBridgeTask(
         callFfi: (port_) =>
-            inner.wire_service_desktop_key_exchange_and_password_verify(port_,
+            inner.wire_socket_desktop_key_exchange_and_password_verify(port_,
                 _api2wire_String(askDeviceId), _api2wire_String(password)),
-        parseSuccessData: _wire2api_unit,
+        parseSuccessData: _wire2api_bool,
         constMeta: const FlutterRustBridgeTaskConstMeta(
-          debugName: "service_desktop_key_exchange_and_password_verify",
+          debugName: "socket_desktop_key_exchange_and_password_verify",
           argNames: ["askDeviceId", "password"],
         ),
         argValues: [askDeviceId, password],
@@ -193,6 +202,10 @@ class MirrorXCoreImpl extends FlutterRustBridgeBase<MirrorXCoreWire>
   // Section: api2wire
   ffi.Pointer<wire_uint_8_list> _api2wire_String(String raw) {
     return _api2wire_uint_8_list(utf8.encoder.convert(raw));
+  }
+
+  ffi.Pointer<wire_uint_8_list> _api2wire_opt_String(String? raw) {
+    return raw == null ? ffi.nullptr : _api2wire_String(raw);
   }
 
   int _api2wire_u32(int raw) {
@@ -218,6 +231,10 @@ String _wire2api_String(dynamic raw) {
   return raw as String;
 }
 
+bool _wire2api_bool(dynamic raw) {
+  return raw as bool;
+}
+
 int _wire2api_box_autoadd_u32(dynamic raw) {
   return raw as int;
 }
@@ -228,6 +245,15 @@ String? _wire2api_opt_String(dynamic raw) {
 
 int? _wire2api_opt_box_autoadd_u32(dynamic raw) {
   return raw == null ? null : _wire2api_box_autoadd_u32(raw);
+}
+
+RegisterResp _wire2api_register_resp(dynamic raw) {
+  final arr = raw as List<dynamic>;
+  if (arr.length != 1)
+    throw Exception('unexpected arr length: expect 1 but see ${arr.length}');
+  return RegisterResp(
+    token: _wire2api_String(arr[0]),
+  );
 }
 
 int _wire2api_u32(dynamic raw) {
@@ -380,57 +406,59 @@ class MirrorXCoreWire implements FlutterRustBridgeWireBase {
       _wire_config_save_device_passwordPtr
           .asFunction<void Function(int, ffi.Pointer<wire_uint_8_list>)>();
 
-  void wire_service_register_id(
+  void wire_http_device_register(
     int port_,
+    ffi.Pointer<wire_uint_8_list> device_id,
   ) {
-    return _wire_service_register_id(
+    return _wire_http_device_register(
       port_,
+      device_id,
     );
   }
 
-  late final _wire_service_register_idPtr =
-      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
-          'wire_service_register_id');
-  late final _wire_service_register_id =
-      _wire_service_register_idPtr.asFunction<void Function(int)>();
-
-  void wire_service_desktop_connect(
-    int port_,
-    ffi.Pointer<wire_uint_8_list> ask_device_id,
-  ) {
-    return _wire_service_desktop_connect(
-      port_,
-      ask_device_id,
-    );
-  }
-
-  late final _wire_service_desktop_connectPtr = _lookup<
+  late final _wire_http_device_registerPtr = _lookup<
       ffi.NativeFunction<
           ffi.Void Function(ffi.Int64,
-              ffi.Pointer<wire_uint_8_list>)>>('wire_service_desktop_connect');
-  late final _wire_service_desktop_connect = _wire_service_desktop_connectPtr
+              ffi.Pointer<wire_uint_8_list>)>>('wire_http_device_register');
+  late final _wire_http_device_register = _wire_http_device_registerPtr
       .asFunction<void Function(int, ffi.Pointer<wire_uint_8_list>)>();
 
-  void wire_service_desktop_key_exchange_and_password_verify(
+  void wire_socket_desktop_connect(
+    int port_,
+    ffi.Pointer<wire_uint_8_list> remote_device_id,
+  ) {
+    return _wire_socket_desktop_connect(
+      port_,
+      remote_device_id,
+    );
+  }
+
+  late final _wire_socket_desktop_connectPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Void Function(ffi.Int64,
+              ffi.Pointer<wire_uint_8_list>)>>('wire_socket_desktop_connect');
+  late final _wire_socket_desktop_connect = _wire_socket_desktop_connectPtr
+      .asFunction<void Function(int, ffi.Pointer<wire_uint_8_list>)>();
+
+  void wire_socket_desktop_key_exchange_and_password_verify(
     int port_,
     ffi.Pointer<wire_uint_8_list> ask_device_id,
     ffi.Pointer<wire_uint_8_list> password,
   ) {
-    return _wire_service_desktop_key_exchange_and_password_verify(
+    return _wire_socket_desktop_key_exchange_and_password_verify(
       port_,
       ask_device_id,
       password,
     );
   }
 
-  late final _wire_service_desktop_key_exchange_and_password_verifyPtr =
-      _lookup<
-              ffi.NativeFunction<
-                  ffi.Void Function(ffi.Int64, ffi.Pointer<wire_uint_8_list>,
-                      ffi.Pointer<wire_uint_8_list>)>>(
-          'wire_service_desktop_key_exchange_and_password_verify');
-  late final _wire_service_desktop_key_exchange_and_password_verify =
-      _wire_service_desktop_key_exchange_and_password_verifyPtr.asFunction<
+  late final _wire_socket_desktop_key_exchange_and_password_verifyPtr = _lookup<
+          ffi.NativeFunction<
+              ffi.Void Function(ffi.Int64, ffi.Pointer<wire_uint_8_list>,
+                  ffi.Pointer<wire_uint_8_list>)>>(
+      'wire_socket_desktop_key_exchange_and_password_verify');
+  late final _wire_socket_desktop_key_exchange_and_password_verify =
+      _wire_socket_desktop_key_exchange_and_password_verifyPtr.asFunction<
           void Function(int, ffi.Pointer<wire_uint_8_list>,
               ffi.Pointer<wire_uint_8_list>)>();
 
