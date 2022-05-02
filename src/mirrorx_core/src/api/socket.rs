@@ -17,9 +17,9 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::Mutex;
 
-static CONNECT_MUTEX: Lazy<Mutex<()>> = Lazy::new(|| Mutex::new(()));
-
 pub async fn desktop_connect(remote_device_id: String) -> anyhow::Result<()> {
+    static CONNECT_MUTEX: Lazy<Mutex<()>> = Lazy::new(|| Mutex::new(()));
+
     CONNECT_MUTEX.lock().await;
 
     let endpoint = match EndPointProvider::current()?.get(&remote_device_id) {
@@ -128,7 +128,6 @@ pub async fn desktop_key_exchange_and_password_verify(
         .await?;
 
     if !resp.success {
-        CONNECT_MUTEX.lock().await;
         EndPointProvider::current()?.remove(&remote_device_id);
         return Ok(false);
     }
