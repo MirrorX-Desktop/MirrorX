@@ -108,7 +108,8 @@ pub async fn desktop_key_exchange_and_password_verify(
 
     let exchange_pub_key = local_public_key.as_ref().to_vec();
 
-    let mut exchange_salt = Vec::<u8>::with_capacity(32);
+    let mut exchange_salt = Vec::<u8>::new();
+    exchange_salt.resize(32, 0);
     ephemeral_rng.fill(&mut exchange_salt).map_err(|err| {
         anyhow!(
             "desktop_key_exchange_and_password_verify: generate exchange salt failed: {}",
@@ -144,16 +145,20 @@ pub async fn desktop_key_exchange_and_password_verify(
                 .extract(key_material)
                 .expand(&["".as_bytes()], &ring::aead::CHACHA20_POLY1305)
                 .and_then(|orm| {
-                    let mut key = Vec::<u8>::with_capacity(32);
-                    orm.fill(&mut key)
+                    let mut key = Vec::<u8>::new();
+                    key.resize(ring::aead::CHACHA20_POLY1305.key_len(), 0);
+                    orm.fill(&mut key)?;
+                    Ok(key)
                 })?;
 
             let recv_key = ring::hkdf::Salt::new(ring::hkdf::HKDF_SHA512, &resp.exchange_salt)
                 .extract(key_material)
                 .expand(&["".as_bytes()], &ring::aead::CHACHA20_POLY1305)
                 .and_then(|orm| {
-                    let mut key = Vec::<u8>::with_capacity(32);
-                    orm.fill(&mut key)
+                    let mut key = Vec::<u8>::new();
+                    key.resize(ring::aead::CHACHA20_POLY1305.key_len(), 0);
+                    orm.fill(&mut key)?;
+                    Ok(key)
                 })?;
 
             Ok((send_key, recv_key))
@@ -167,8 +172,8 @@ pub async fn desktop_key_exchange_and_password_verify(
     })?;
 
     info!("key exchange and password verify success");
-    info!("send key: {:?}", send_key);
-    info!("recv key: {:?}", recv_key);
+    info!("send key: {:X?}", send_key);
+    info!("recv key: {:X?}", recv_key);
 
     Ok(true)
 }
