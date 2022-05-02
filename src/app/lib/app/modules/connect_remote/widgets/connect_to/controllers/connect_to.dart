@@ -71,14 +71,21 @@ class ConnectToController extends GetxController {
     }
 
     try {
-      await _sdk.getInstance().socketDesktopKeyExchangeAndPasswordVerify(
-          remoteDeviceId: deviceID, password: controller.text);
+      final passwordCorrect = await _sdk
+          .getInstance()
+          .socketDesktopKeyExchangeAndPasswordVerify(
+              remoteDeviceId: deviceID, password: controller.text);
+
+      if (!passwordCorrect) {
+        popupErrorDialog(
+            content: "connect_to_remote.dialog.incorrect_password".tr);
+        return;
+      }
 
       // log("password: $passwordCorrect");
     } catch (err) {
       log("desktop connect failed", error: err);
-      popupErrorDialog(
-          content: "connect_to_remote.dialog.incorrect_password".tr);
+      popupErrorDialog(content: "connect_to_remote.dialog.another_error".tr);
     }
   }
 

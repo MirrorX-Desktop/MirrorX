@@ -65,7 +65,7 @@ pub async fn key_exchange_and_verify_password(
         password
     );
 
-    if !password.to_vec()?.eq(&req_password) {
+    if String::from_utf8(req_password)? != password {
         return Ok(KeyExchangeAndVerifyPasswordReply {
             success: false,
             ..KeyExchangeAndVerifyPasswordReply::default()

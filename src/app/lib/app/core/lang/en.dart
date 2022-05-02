@@ -30,6 +30,7 @@ const Map<String, String> en = {
       "Connect Device ID format is invalid\n(include repeat character)",
   "connect_to_remote.dialog.disallow": "Remote device rejected your request",
   "connect_to_remote.dialog.incorrect_password": "Incorrect password",
+  "connect_to_remote.dialog.another_error": "An error occurred, please retry",
   "device_id_field.load_failed_tooltip":
       "Fetch device ID failed, press button to retry!",
   "device_password_field.dialog.confirm_regenerate":
