@@ -29,7 +29,7 @@ use tokio::{
     sync::mpsc,
     time::timeout,
 };
-use tokio_util::codec::{Framed, LengthDelimitedCodec};
+use tokio_util::codec::LengthDelimitedCodec;
 
 static BINCODE_SERIALIZER: Lazy<
     WithOtherIntEncoding<WithOtherEndian<DefaultOptions, LittleEndian>, VarintEncoding>,
@@ -96,7 +96,7 @@ impl SocketProvider {
             .ok_or_else(|| anyhow::anyhow!("SocketProvider: uninitialized"))
     }
 
-    pub fn make_current<A>(addr: A, local_device_id: String, token: String) -> anyhow::Result<()>
+    pub fn make_current<A>(addr: A, token: &str) -> anyhow::Result<()>
     where
         A: ToSocketAddrs,
     {
@@ -114,12 +114,14 @@ impl SocketProvider {
                 });
 
                 serve_stream(stream, rx)?;
-                handshake(client.clone(), local_device_id, token).await?;
-                serve_heart_beat(client.clone())?;
                 Ok(client)
             })
         }) {
-            Ok(_) => Ok(()),
+            Ok(provider) => {
+                handshake(provider.clone(), token)?;
+                serve_heart_beat(provider.clone())?;
+                Ok(())
+            }
             Err(err) => bail!("SocketProvider: make current failed: {}", err),
         }
     }
@@ -243,7 +245,7 @@ impl SocketProvider {
     }
 }
 
-fn serve_stream(stream: TcpStream, mut client_rx: mpsc::Receiver<Vec<u8>>) -> anyhow::Result<()> {
+fn serve_stream(stream: TcpStream, mut rx: mpsc::Receiver<Vec<u8>>) -> anyhow::Result<()> {
     let framed_stream = LengthDelimitedCodec::builder()
         .little_endian()
         .max_frame_length(16 * 1024 * 1024)
@@ -266,7 +268,7 @@ fn serve_stream(stream: TcpStream, mut client_rx: mpsc::Receiver<Vec<u8>>) -> an
                             break;
                         }
                         _ => {
-                            error!("serve_stream: stream_loop read packet error: {:?}", err);
+                            error!("serve_stream: read packet error: {:?}", err);
                             continue;
                         }
                     },
@@ -277,10 +279,7 @@ fn serve_stream(stream: TcpStream, mut client_rx: mpsc::Receiver<Vec<u8>>) -> an
             let packet = match BINCODE_SERIALIZER.deserialize::<Packet>(&packet_bytes) {
                 Ok(packet) => packet,
                 Err(err) => {
-                    error!(
-                        "serve_stream: stream_loop deserialize packet error: {:?}",
-                        err
-                    );
+                    error!("serve_stream: deserialize packet error: {:?}", err);
                     continue;
                 }
             };
@@ -337,7 +336,7 @@ fn serve_stream(stream: TcpStream, mut client_rx: mpsc::Receiver<Vec<u8>>) -> an
 
     RuntimeProvider::current()?.spawn(async move {
         loop {
-            let buf = match client_rx.recv().await {
+            let buf = match rx.recv().await {
                 Some(buf) => buf,
                 None => break,
             };
@@ -353,26 +352,26 @@ fn serve_stream(stream: TcpStream, mut client_rx: mpsc::Receiver<Vec<u8>>) -> an
     Ok(())
 }
 
-async fn handshake(
-    provider: Arc<SocketProvider>,
-    device_id: String,
-    token: String,
-) -> anyhow::Result<()> {
-    let reply = provider
-        .call_server(
-            ClientToServerMessage::HandshakeRequest(HandshakeRequest { device_id, token }),
-            Duration::from_secs(5),
-        )
-        .await?;
+fn handshake(provider: Arc<SocketProvider>, token: &str) -> anyhow::Result<()> {
+    RuntimeProvider::current()?.block_on(async move {
+        let reply = provider
+            .call_server(
+                ClientToServerMessage::HandshakeRequest(HandshakeRequest {
+                    token: token.to_owned(),
+                }),
+                Duration::from_secs(5),
+            )
+            .await?;
 
-    if let ServerToClientMessage::HandshakeReply(message) = reply {
-        match message.status {
-            HandshakeStatus::Accepted => Ok(()),
-            HandshakeStatus::Repeated => bail!("handshake: repeated"),
+        if let ServerToClientMessage::HandshakeReply(message) = reply {
+            match message.status {
+                HandshakeStatus::Accepted => Ok(()),
+                HandshakeStatus::Repeated => bail!("handshake: repeated"),
+            }
+        } else {
+            bail!("handshake: mismatched reply message");
         }
-    } else {
-        bail!("handshake: mismatched reply message");
-    }
+    })
 }
 
 fn serve_heart_beat(provider: Arc<SocketProvider>) -> anyhow::Result<()> {

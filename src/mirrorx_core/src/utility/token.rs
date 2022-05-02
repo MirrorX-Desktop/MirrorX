@@ -1,6 +1,6 @@
 use anyhow::bail;
 
-pub fn parse_register_token(token: String) -> anyhow::Result<(String, u32, String)> {
+pub fn parse_register_token(token: &str) -> anyhow::Result<(String, u32, String)> {
     let splited: Vec<&str> = token.split(".").collect();
     if splited.len() != 3 {
         bail!("parse_register_token: token format is invalid");

@@ -32,7 +32,7 @@ abstract class MirrorXCore {
       {required String remoteDeviceId, dynamic hint});
 
   Future<bool> socketDesktopKeyExchangeAndPasswordVerify(
-      {required String askDeviceId, required String password, dynamic hint});
+      {required String remoteDeviceId, required String password, dynamic hint});
 
   Future<String> utilityGenerateDevicePassword({dynamic hint});
 }
@@ -148,19 +148,19 @@ class MirrorXCoreImpl extends FlutterRustBridgeBase<MirrorXCoreWire>
       ));
 
   Future<bool> socketDesktopKeyExchangeAndPasswordVerify(
-          {required String askDeviceId,
+          {required String remoteDeviceId,
           required String password,
           dynamic hint}) =>
       executeNormal(FlutterRustBridgeTask(
         callFfi: (port_) =>
             inner.wire_socket_desktop_key_exchange_and_password_verify(port_,
-                _api2wire_String(askDeviceId), _api2wire_String(password)),
+                _api2wire_String(remoteDeviceId), _api2wire_String(password)),
         parseSuccessData: _wire2api_bool,
         constMeta: const FlutterRustBridgeTaskConstMeta(
           debugName: "socket_desktop_key_exchange_and_password_verify",
-          argNames: ["askDeviceId", "password"],
+          argNames: ["remoteDeviceId", "password"],
         ),
-        argValues: [askDeviceId, password],
+        argValues: [remoteDeviceId, password],
         hint: hint,
       ));
 
@@ -389,12 +389,12 @@ class MirrorXCoreWire implements FlutterRustBridgeWireBase {
 
   void wire_socket_desktop_key_exchange_and_password_verify(
     int port_,
-    ffi.Pointer<wire_uint_8_list> ask_device_id,
+    ffi.Pointer<wire_uint_8_list> remote_device_id,
     ffi.Pointer<wire_uint_8_list> password,
   ) {
     return _wire_socket_desktop_key_exchange_and_password_verify(
       port_,
-      ask_device_id,
+      remote_device_id,
       password,
     );
   }

@@ -34,7 +34,7 @@ void wire_config_save_device_password(int64_t port_, struct wire_uint_8_list *de
 void wire_socket_desktop_connect(int64_t port_, struct wire_uint_8_list *remote_device_id);
 
 void wire_socket_desktop_key_exchange_and_password_verify(int64_t port_,
-                                                          struct wire_uint_8_list *ask_device_id,
+                                                          struct wire_uint_8_list *remote_device_id,
                                                           struct wire_uint_8_list *password);
 
 void wire_utility_generate_device_password(int64_t port_);

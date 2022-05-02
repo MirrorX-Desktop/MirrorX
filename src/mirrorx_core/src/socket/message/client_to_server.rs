@@ -15,6 +15,5 @@ pub struct HeartBeatRequest {
 
 #[derive(Serialize, Deserialize, PartialEq, Clone, Debug)]
 pub struct HandshakeRequest {
-    pub device_id: String,
     pub token: String,
 }

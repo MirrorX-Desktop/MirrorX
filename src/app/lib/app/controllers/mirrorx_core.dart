@@ -29,8 +29,6 @@ class MirrorXCoreController extends GetxController
 
       // listenStream(core.initFlutterCommandStreamSink());
 
-      await core.serviceRegisterId();
-
       change(core, status: RxStatus.success());
     } catch (e) {
       log("init MirrorX Core error: $e");

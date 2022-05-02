@@ -1,3 +1,5 @@
+use log::info;
+
 use super::http::device_register;
 use crate::{
     provider::{
@@ -38,10 +40,17 @@ pub fn init(config_dir: String) -> anyhow::Result<()> {
     // ensure device id is valid
     let device_id = ConfigProvider::current()?.read_device_id()?;
     let resp = RuntimeProvider::current()?.block_on(device_register(device_id))?;
-    let (device_id, expiration, token) = parse_register_token(resp.token)?;
+    let (device_id, expiration, _) = parse_register_token(&resp.token)?;
+    info!(
+        "init: register success, device_id: {}, expiration: {}",
+        device_id, expiration
+    );
+
     ConfigProvider::current()?.save_device_id(&device_id)?;
     ConfigProvider::current()?.save_device_id_expiration(&expiration)?;
-    SocketProvider::make_current("192.168.0.101:40001", device_id, token)?;
+
+    // handshake to server
+    SocketProvider::make_current("192.168.0.101:40001", &resp.token)?;
 
     Ok(())
 }
@@ -77,11 +86,11 @@ pub fn socket_desktop_connect(remote_device_id: String) -> anyhow::Result<()> {
 }
 
 pub fn socket_desktop_key_exchange_and_password_verify(
-    ask_device_id: String,
+    remote_device_id: String,
     password: String,
 ) -> anyhow::Result<bool> {
     RuntimeProvider::current()?.block_on(super::socket::desktop_key_exchange_and_password_verify(
-        ask_device_id,
+        remote_device_id,
         password,
     ))
 }

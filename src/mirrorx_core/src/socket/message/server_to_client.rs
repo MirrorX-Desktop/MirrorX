@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 pub enum ServerToClientMessage {
     HeartBeatReply(HeartBeatReply),
     HandshakeReply(HandshakeReply),
+    Error,
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Clone, Debug)]

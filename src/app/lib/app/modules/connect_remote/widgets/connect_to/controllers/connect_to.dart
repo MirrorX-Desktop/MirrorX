@@ -53,7 +53,7 @@ class ConnectToController extends GetxController {
       _isLoading = true;
       update();
 
-      await _sdk.getInstance().serviceDesktopConnect(askDeviceId: deviceID);
+      await _sdk.getInstance().socketDesktopConnect(remoteDeviceId: deviceID);
       _popupDesktopConnectInputPasswordDialog(deviceID);
     } catch (err) {
       popupErrorDialog(content: "connect_to_remote.dialog.disallow".tr);
@@ -70,8 +70,8 @@ class ConnectToController extends GetxController {
     }
 
     try {
-      await _sdk.getInstance().serviceDesktopKeyExchangeAndPasswordVerify(
-          askDeviceId: deviceID, password: controller.text);
+      await _sdk.getInstance().socketDesktopKeyExchangeAndPasswordVerify(
+          remoteDeviceId: deviceID, password: controller.text);
 
       // log("password: $passwordCorrect");
     } catch (err) {

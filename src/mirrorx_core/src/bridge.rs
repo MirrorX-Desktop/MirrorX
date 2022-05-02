@@ -133,7 +133,7 @@ pub extern "C" fn wire_socket_desktop_connect(port_: i64, remote_device_id: *mut
 #[no_mangle]
 pub extern "C" fn wire_socket_desktop_key_exchange_and_password_verify(
     port_: i64,
-    ask_device_id: *mut wire_uint_8_list,
+    remote_device_id: *mut wire_uint_8_list,
     password: *mut wire_uint_8_list,
 ) {
     FLUTTER_RUST_BRIDGE_HANDLER.wrap(
@@ -143,10 +143,10 @@ pub extern "C" fn wire_socket_desktop_key_exchange_and_password_verify(
             mode: FfiCallMode::Normal,
         },
         move || {
-            let api_ask_device_id = ask_device_id.wire2api();
+            let api_remote_device_id = remote_device_id.wire2api();
             let api_password = password.wire2api();
             move |task_callback| {
-                socket_desktop_key_exchange_and_password_verify(api_ask_device_id, api_password)
+                socket_desktop_key_exchange_and_password_verify(api_remote_device_id, api_password)
             }
         },
     )
