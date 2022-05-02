@@ -123,7 +123,7 @@ pub async fn key_exchange_and_verify_password(
         &remote_public_key,
         ring::error::Unspecified,
         |key_material| {
-            let send_key = ring::hkdf::Salt::new(ring::hkdf::HKDF_SHA512, &req.exchange_salt)
+            let send_key = ring::hkdf::Salt::new(ring::hkdf::HKDF_SHA512, &exchange_salt)
                 .extract(key_material)
                 .expand(&["".as_bytes()], &ring::aead::CHACHA20_POLY1305)
                 .and_then(|orm| {
@@ -133,7 +133,7 @@ pub async fn key_exchange_and_verify_password(
                     Ok(key)
                 })?;
 
-            let recv_key = ring::hkdf::Salt::new(ring::hkdf::HKDF_SHA512, &exchange_salt)
+            let recv_key = ring::hkdf::Salt::new(ring::hkdf::HKDF_SHA512, &req.exchange_salt)
                 .extract(key_material)
                 .expand(&["".as_bytes()], &ring::aead::CHACHA20_POLY1305)
                 .and_then(|orm| {
