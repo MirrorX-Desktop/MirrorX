@@ -1,8 +1,9 @@
+use crate::provider::socket::SocketProvider;
+
 use super::message::client_to_client::{
     ClientToClientMessage, ConnectReply, ConnectRequest, KeyExchangeAndVerifyPasswordReply,
     KeyExchangeAndVerifyPasswordRequest,
 };
-use crate::instance::STREAMER_INSTANCE;
 use anyhow::bail;
 use dashmap::DashMap;
 use std::{any::Any, time::Duration};
@@ -42,7 +43,7 @@ impl EndPoint {
         req: ConnectRequest,
         timeout: Duration,
     ) -> anyhow::Result<ConnectReply> {
-        STREAMER_INSTANCE
+        SocketProvider::current()?
             .call_client(
                 self.local_device_id.to_owned(),
                 self.remote_device_id.to_owned(),
@@ -61,7 +62,7 @@ impl EndPoint {
         req: KeyExchangeAndVerifyPasswordRequest,
         timeout: Duration,
     ) -> anyhow::Result<KeyExchangeAndVerifyPasswordReply> {
-        STREAMER_INSTANCE
+        SocketProvider::current()?
             .call_client(
                 self.local_device_id.to_owned(),
                 self.remote_device_id.to_owned(),

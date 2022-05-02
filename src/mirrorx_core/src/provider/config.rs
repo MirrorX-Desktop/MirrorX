@@ -1,31 +1,48 @@
+use anyhow::bail;
+use once_cell::sync::OnceCell;
+use rusqlite::{params, Connection, OptionalExtension};
 use std::path::{Path, PathBuf};
 
-use rusqlite::{params, Connection, OptionalExtension};
+static CURRENT_CONFIG_PROVIDER: OnceCell<ConfigProvider> = OnceCell::new();
 
 pub struct ConfigProvider {
     db_file_path: PathBuf,
 }
 
 impl ConfigProvider {
-    pub fn new(db_path: &Path) -> anyhow::Result<Self> {
-        let config_provider = ConfigProvider {
-            db_file_path: db_path.join("config.db"),
-        };
-
-        let conn = config_provider.open_connection()?;
-        config_provider.ensure_db_exist(&conn)?;
-
-        Ok(config_provider)
+    pub fn current() -> anyhow::Result<&'static ConfigProvider> {
+        CURRENT_CONFIG_PROVIDER
+            .get()
+            .ok_or_else(|| anyhow::anyhow!("ConfigProvider: uninitialized"))
     }
 
+    pub fn make_current(db_dir: &Path) -> anyhow::Result<()> {
+        match CURRENT_CONFIG_PROVIDER.get_or_try_init(|| -> anyhow::Result<ConfigProvider> {
+            let config_provider = ConfigProvider {
+                db_file_path: db_dir.join("config.db"),
+            };
+
+            let conn = config_provider.open_connection()?;
+            config_provider.ensure_db_exist(&conn)?;
+
+            Ok(config_provider)
+        }) {
+            Ok(_) => Ok(()),
+            Err(err) => bail!("ConfigProvider: make current failed: {}", err),
+        }
+    }
+
+    #[inline(always)]
     pub fn read_device_id(&self) -> anyhow::Result<Option<String>> {
         self.read_item("device_id")
     }
 
+    #[inline(always)]
     pub fn save_device_id(&self, device_id: &str) -> anyhow::Result<()> {
         self.save_item("device_id", device_id)
     }
 
+    #[inline(always)]
     pub fn read_device_id_expiration(&self) -> anyhow::Result<Option<u32>> {
         match self.read_item("device_id_expiration")? {
             Some(value) => match u32::from_str_radix(&value, 10) {
@@ -36,14 +53,17 @@ impl ConfigProvider {
         }
     }
 
+    #[inline(always)]
     pub fn save_device_id_expiration(&self, time_stamp: &u32) -> anyhow::Result<()> {
         self.save_item("device_id_expiration", &time_stamp.to_string())
     }
 
+    #[inline(always)]
     pub fn read_device_password(&self) -> anyhow::Result<Option<String>> {
         self.read_item("device_password")
     }
 
+    #[inline(always)]
     pub fn save_device_password(&self, device_password: &str) -> anyhow::Result<()> {
         self.save_item("device_password", device_password)
     }

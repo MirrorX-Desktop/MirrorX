@@ -1,5 +1,5 @@
-use crate::instance::CONFIG_PROVIDER_INSTANCE;
-use crate::instance::SOCKET_ENDPOINT_MAP;
+use crate::provider::config::ConfigProvider;
+use crate::provider::endpoint::EndPointProvider;
 use crate::socket::endpoint::CacheKey;
 use crate::socket::endpoint::EndPoint;
 use crate::socket::message::client_to_client::ConnectRequest;
@@ -13,6 +13,7 @@ use ring::rand::SecureRandom;
 use rsa::BigUint;
 use rsa::PublicKey;
 use rsa::RsaPublicKey;
+use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::Mutex;
 
@@ -21,20 +22,16 @@ static CONNECT_MUTEX: Lazy<Mutex<()>> = Lazy::new(|| Mutex::new(()));
 pub async fn desktop_connect(remote_device_id: String) -> anyhow::Result<()> {
     CONNECT_MUTEX.lock().await;
 
-    if SOCKET_ENDPOINT_MAP.contains_key(&remote_device_id) {
+    if EndPointProvider::current()?.contains(&remote_device_id) {
         bail!(
             "desktop_connect: remote_device_id {} already connected",
             &remote_device_id
         );
     }
 
-    let config_provider = CONFIG_PROVIDER_INSTANCE
-        .get()
-        .ok_or(anyhow::anyhow!("config provider not initialized"))?;
-
-    let local_device_id = config_provider
+    let local_device_id = ConfigProvider::current()?
         .read_device_id()?
-        .ok_or(anyhow::anyhow!("local device id not set"))?;
+        .ok_or(anyhow::anyhow!("desktop_connect: local device id not set"))?;
 
     let endpoint = EndPoint::new(local_device_id, remote_device_id.clone());
 
@@ -57,7 +54,7 @@ pub async fn desktop_connect(remote_device_id: String) -> anyhow::Result<()> {
         .cache()
         .set(CacheKey::PasswordVerifyPublicKey, public_key);
 
-    SOCKET_ENDPOINT_MAP.insert(remote_device_id, endpoint);
+    EndPointProvider::current()?.insert(remote_device_id, Arc::new(endpoint));
 
     Ok(())
 }
@@ -66,10 +63,12 @@ pub async fn desktop_key_exchange_and_password_verify(
     remote_device_id: String,
     password: String,
 ) -> anyhow::Result<bool> {
-    let endpoint = SOCKET_ENDPOINT_MAP.get(&remote_device_id).ok_or(anyhow!(
-        "desktop_connect: remote_device_id {} already connected",
-        &remote_device_id
-    ))?;
+    let endpoint = EndPointProvider::current()?
+        .get(&remote_device_id)
+        .ok_or(anyhow!(
+            "desktop_key_exchange_and_password_verify: remote device '{}' already connected",
+            &remote_device_id
+        ))?;
 
     let ask_device_pub_key = endpoint
         .cache()

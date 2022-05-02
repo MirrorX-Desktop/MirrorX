@@ -1,4 +1,3 @@
-mod config;
 mod http;
 mod socket;
 

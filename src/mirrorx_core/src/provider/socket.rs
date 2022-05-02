@@ -1,33 +1,50 @@
-use super::{
-    call_id_generator::CallIdGenerator,
-    message::{
-        client_to_client::ClientToClientMessage,
-        client_to_server::{ClientToServerMessage, HeartBeatRequest},
-        server_to_client::ServerToClientMessage,
-    },
-    packet::Packet,
-};
+use super::runtime::RuntimeProvider;
 use crate::{
-    instance::{BINCODE_INSTANCE, RUNTIME_INSTANCE, SOCKET_ENDPOINT_MAP, STREAMER_INSTANCE},
-    socket::{client_to_client_handler, endpoint::EndPoint},
+    provider::endpoint::EndPointProvider,
+    socket::{
+        client_to_client_handler,
+        endpoint::EndPoint,
+        message::{
+            client_to_client::ClientToClientMessage,
+            client_to_server::{ClientToServerMessage, HandshakeRequest, HeartBeatRequest},
+            server_to_client::{HandshakeStatus, ServerToClientMessage},
+        },
+        packet::Packet,
+    },
+    utility::call_id_generator::CallIdGenerator,
 };
 use anyhow::bail;
-use bincode::Options;
+use bincode::{
+    config::{LittleEndian, VarintEncoding, WithOtherEndian, WithOtherIntEncoding},
+    DefaultOptions, Options,
+};
 use bytes::Bytes;
 use dashmap::DashMap;
 use futures::{SinkExt, StreamExt};
 use log::{error, info, warn};
+use once_cell::sync::{Lazy, OnceCell};
 use std::{sync::Arc, time::Duration};
 use tokio::{
     net::{TcpStream, ToSocketAddrs},
     sync::mpsc,
+    time::timeout,
 };
-use tokio_util::codec::LengthDelimitedCodec;
+use tokio_util::codec::{Framed, LengthDelimitedCodec};
+
+static BINCODE_SERIALIZER: Lazy<
+    WithOtherIntEncoding<WithOtherEndian<DefaultOptions, LittleEndian>, VarintEncoding>,
+> = Lazy::new(|| {
+    bincode::DefaultOptions::new()
+        .with_little_endian()
+        .with_varint_encoding()
+});
+
+static CURRENT_SOCKET_PROVIDER: OnceCell<Arc<SocketProvider>> = OnceCell::new();
 
 macro_rules! handle_client_to_client_message {
     ($endpoint:expr, $call_id:ident, $handler:path, $req:ident, $reply_type:path) => {
-        RUNTIME_INSTANCE.spawn(async move {
-            let res = $handler($endpoint, $req)
+        RuntimeProvider::current()?.spawn(async move {
+            let res = $handler($endpoint.clone(), $req)
                 .await
                 .map(|reply| $reply_type(reply));
 
@@ -42,49 +59,69 @@ macro_rules! handle_client_to_client_message {
                 }
             };
 
-            if let Err(err) = STREAMER_INSTANCE
-                .reply(
-                    $call_id,
-                    $endpoint.local_device_id().to_string(),
-                    $endpoint.remote_device_id().to_string(),
-                    message,
-                )
-                .await
-            {
-                error!("handle_client_to_client_message: reply error: {:?}", err);
+            match SocketProvider::current() {
+                Ok(provider) => {
+                    if let Err(err) = provider
+                        .reply(
+                            $call_id,
+                            $endpoint.local_device_id().to_string(),
+                            $endpoint.remote_device_id().to_string(),
+                            message,
+                        )
+                        .await
+                    {
+                        error!("handle_client_to_client_message: reply error: {:?}", err);
+                    }
+                }
+                Err(_) => {
+                    error!("handle_client_to_client_message: socket provider uninitialized");
+                }
             }
         });
     };
 }
 
-pub struct Streamer {
+pub struct SocketProvider {
     tx: mpsc::Sender<Vec<u8>>,
     call_server_tx_map: DashMap<u16, mpsc::Sender<ServerToClientMessage>>,
     call_client_tx_map: DashMap<u16, mpsc::Sender<ClientToClientMessage>>,
     call_id_generator: CallIdGenerator,
 }
 
-impl Streamer {
-    pub async fn connect<A>(addr: A) -> anyhow::Result<Arc<Self>>
+impl SocketProvider {
+    pub fn current() -> anyhow::Result<Arc<SocketProvider>> {
+        CURRENT_SOCKET_PROVIDER
+            .get()
+            .map(|v| v.clone())
+            .ok_or_else(|| anyhow::anyhow!("SocketProvider: uninitialized"))
+    }
+
+    pub fn make_current<A>(addr: A, local_device_id: String, token: String) -> anyhow::Result<()>
     where
         A: ToSocketAddrs,
     {
-        let stream =
-            tokio::time::timeout(Duration::from_secs(10), TcpStream::connect(addr)).await??;
+        match CURRENT_SOCKET_PROVIDER.get_or_try_init(|| -> anyhow::Result<Arc<SocketProvider>> {
+            RuntimeProvider::current()?.block_on(async move {
+                let stream = timeout(Duration::from_secs(10), TcpStream::connect(addr)).await??;
 
-        let (tx, rx) = mpsc::channel(16);
+                let (tx, rx) = mpsc::channel(16);
 
-        let client = Arc::new(Streamer {
-            tx,
-            call_server_tx_map: DashMap::new(),
-            call_client_tx_map: DashMap::new(),
-            call_id_generator: CallIdGenerator::new(),
-        });
+                let client = Arc::new(SocketProvider {
+                    tx,
+                    call_server_tx_map: DashMap::new(),
+                    call_client_tx_map: DashMap::new(),
+                    call_id_generator: CallIdGenerator::new(),
+                });
 
-        serve_stream(stream, rx);
-        serve_heart_beat(client.clone());
-
-        Ok(client)
+                serve_stream(stream, rx)?;
+                handshake(client.clone(), local_device_id, token).await?;
+                serve_heart_beat(client.clone())?;
+                Ok(client)
+            })
+        }) {
+            Ok(_) => Ok(()),
+            Err(err) => bail!("SocketProvider: make current failed: {}", err),
+        }
     }
 
     pub async fn call_client(
@@ -96,7 +133,7 @@ impl Streamer {
     ) -> anyhow::Result<ClientToClientMessage> {
         let call_id = self.call_id_generator.next();
 
-        let buf = BINCODE_INSTANCE.serialize(&message)?;
+        let buf = BINCODE_SERIALIZER.serialize(&message)?;
 
         let packet = Packet::ClientToClient(call_id, from_device_id, to_device_id, buf);
 
@@ -154,13 +191,13 @@ impl Streamer {
         to_device_id: String,
         message: ClientToClientMessage,
     ) -> anyhow::Result<()> {
-        let buf = BINCODE_INSTANCE.serialize(&message)?;
+        let buf = BINCODE_SERIALIZER.serialize(&message)?;
         let packet = Packet::ClientToClient(call_id, from_device_id, to_device_id, buf);
         self.send(packet).await
     }
 
     async fn send(&self, packet: Packet) -> anyhow::Result<()> {
-        let buf = BINCODE_INSTANCE.serialize(&packet)?;
+        let buf = BINCODE_SERIALIZER.serialize(&packet)?;
         self.tx.send(buf).await?;
         Ok(())
     }
@@ -206,7 +243,7 @@ impl Streamer {
     }
 }
 
-fn serve_stream(stream: TcpStream, mut client_rx: mpsc::Receiver<Vec<u8>>) {
+fn serve_stream(stream: TcpStream, mut client_rx: mpsc::Receiver<Vec<u8>>) -> anyhow::Result<()> {
     let framed_stream = LengthDelimitedCodec::builder()
         .little_endian()
         .max_frame_length(16 * 1024 * 1024)
@@ -214,7 +251,7 @@ fn serve_stream(stream: TcpStream, mut client_rx: mpsc::Receiver<Vec<u8>>) {
 
     let (mut sink, mut stream) = framed_stream.split();
 
-    RUNTIME_INSTANCE.spawn(async move {
+    RuntimeProvider::current()?.spawn(async move {
         loop {
             let packet_bytes = match stream.next().await {
                 Some(res) => match res {
@@ -237,7 +274,7 @@ fn serve_stream(stream: TcpStream, mut client_rx: mpsc::Receiver<Vec<u8>>) {
                 None => break,
             };
 
-            let packet = match BINCODE_INSTANCE.deserialize::<Packet>(&packet_bytes) {
+            let packet = match BINCODE_SERIALIZER.deserialize::<Packet>(&packet_bytes) {
                 Ok(packet) => packet,
                 Err(err) => {
                     error!(
@@ -260,58 +297,37 @@ fn serve_stream(stream: TcpStream, mut client_rx: mpsc::Receiver<Vec<u8>>) {
                         // todo
                     }
 
-                    STREAMER_INSTANCE.set_server_call_reply(call_id, message);
+                    if let Ok(socket_provider) = SocketProvider::current() {
+                        socket_provider.set_server_call_reply(call_id, message);
+                    } else {
+                        error!("serve_stream: socket provider uninitialized");
+                    }
                 }
                 Packet::ClientToClient(call_id, from_device_id, to_device_id, message_bytes) => {
-                    if !SOCKET_ENDPOINT_MAP.contains_key(&from_device_id) {
-                        let ep = EndPoint::new(to_device_id.clone(), from_device_id.clone());
-                        SOCKET_ENDPOINT_MAP.insert(from_device_id.clone(), ep);
-                    }
-
-                    let endpoint = match SOCKET_ENDPOINT_MAP.get(&from_device_id) {
-                        Some(ep) => ep,
-                        None => {
-                            error!(
-                                "serve_stream: get endpoint failed, from: {}",
-                                &from_device_id
-                            );
+                    let endpoint = match select_endpoint(to_device_id, from_device_id) {
+                        Ok(ep) => ep,
+                        Err(err) => {
+                            error!("{}", err);
                             continue;
                         }
                     };
 
-                    let message = match BINCODE_INSTANCE
+                    let message = match BINCODE_SERIALIZER
                         .deserialize::<ClientToClientMessage>(&message_bytes)
                     {
                         Ok(message) => message,
                         Err(err) => {
-                            error!("client: stream_loop deserialize message error: {:?}", err);
+                            error!(
+                                "serve_stream: deserialize client to client message failed: {}",
+                                err
+                            );
                             continue;
                         }
                     };
 
-                    match message {
-                        ClientToClientMessage::ConnectRequest(req) => {
-                            handle_client_to_client_message!(
-                                endpoint.value(),
-                                call_id,
-                                client_to_client_handler::connect,
-                                req,
-                                ClientToClientMessage::ConnectReply
-                            );
-                        }
-                        ClientToClientMessage::KeyExchangeAndVerifyPasswordRequest(req) => {
-                            handle_client_to_client_message!(
-                                endpoint.value(),
-                                call_id,
-                                client_to_client_handler::key_exchange_and_verify_password,
-                                req,
-                                ClientToClientMessage::KeyExchangeAndVerifyPasswordReply
-                            );
-                        }
-                        _ => {
-                            STREAMER_INSTANCE.set_client_call_reply(call_id, message);
-                        }
-                    };
+                    if let Err(err) = handle_client_to_client_message(endpoint, call_id, message) {
+                        error!("{}", err);
+                    }
                 }
             };
         }
@@ -319,7 +335,7 @@ fn serve_stream(stream: TcpStream, mut client_rx: mpsc::Receiver<Vec<u8>>) {
         info!("client: stream_loop exit");
     });
 
-    RUNTIME_INSTANCE.spawn(async move {
+    RuntimeProvider::current()?.spawn(async move {
         loop {
             let buf = match client_rx.recv().await {
                 Some(buf) => buf,
@@ -333,17 +349,41 @@ fn serve_stream(stream: TcpStream, mut client_rx: mpsc::Receiver<Vec<u8>>) {
             }
         }
     });
+
+    Ok(())
 }
 
-fn serve_heart_beat(client: Arc<Streamer>) {
-    RUNTIME_INSTANCE.spawn(async move {
+async fn handshake(
+    provider: Arc<SocketProvider>,
+    device_id: String,
+    token: String,
+) -> anyhow::Result<()> {
+    let reply = provider
+        .call_server(
+            ClientToServerMessage::HandshakeRequest(HandshakeRequest { device_id, token }),
+            Duration::from_secs(5),
+        )
+        .await?;
+
+    if let ServerToClientMessage::HandshakeReply(message) = reply {
+        match message.status {
+            HandshakeStatus::Accepted => Ok(()),
+            HandshakeStatus::Repeated => bail!("handshake: repeated"),
+        }
+    } else {
+        bail!("handshake: mismatched reply message");
+    }
+}
+
+fn serve_heart_beat(provider: Arc<SocketProvider>) -> anyhow::Result<()> {
+    RuntimeProvider::current()?.spawn(async move {
         let mut ticker = tokio::time::interval(Duration::from_secs(60));
         let mut timeout_counter = 0;
 
         loop {
             ticker.tick().await;
 
-            if let Err(err) = client
+            if let Err(err) = provider
                 .call_server(
                     ClientToServerMessage::HeartBeatRequest(HeartBeatRequest {
                         time_stamp: chrono::Utc::now().timestamp() as u32,
@@ -361,4 +401,52 @@ fn serve_heart_beat(client: Arc<Streamer>) {
             }
         }
     });
+
+    Ok(())
+}
+
+fn select_endpoint(
+    local_device_id: String,
+    remote_device_id: String,
+) -> anyhow::Result<Arc<EndPoint>> {
+    if !EndPointProvider::current()?.contains(&remote_device_id) {
+        let ep = Arc::new(EndPoint::new(local_device_id, remote_device_id.to_owned()));
+        EndPointProvider::current()?.insert(remote_device_id.to_owned(), ep);
+    }
+
+    EndPointProvider::current()?
+        .get(&remote_device_id)
+        .ok_or_else(|| anyhow::anyhow!("select_endpoint: endpoint not found"))
+}
+
+fn handle_client_to_client_message(
+    endpoint: Arc<EndPoint>,
+    call_id: u16,
+    message: ClientToClientMessage,
+) -> anyhow::Result<()> {
+    match message {
+        ClientToClientMessage::ConnectRequest(req) => {
+            handle_client_to_client_message!(
+                endpoint,
+                call_id,
+                client_to_client_handler::connect,
+                req,
+                ClientToClientMessage::ConnectReply
+            );
+        }
+        ClientToClientMessage::KeyExchangeAndVerifyPasswordRequest(req) => {
+            handle_client_to_client_message!(
+                endpoint,
+                call_id,
+                client_to_client_handler::key_exchange_and_verify_password,
+                req,
+                ClientToClientMessage::KeyExchangeAndVerifyPasswordReply
+            );
+        }
+        _ => {
+            SocketProvider::current()?.set_client_call_reply(call_id, message);
+        }
+    };
+
+    Ok(())
 }

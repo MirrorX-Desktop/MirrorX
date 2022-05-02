@@ -1,5 +1,12 @@
-use crate::{instance::RUNTIME_INSTANCE, utility::token::parse_register_token};
-use std::{io::Write, sync::Once};
+use super::http::device_register;
+use crate::{
+    provider::{
+        config::ConfigProvider, endpoint::EndPointProvider, http::HTTPProvider,
+        runtime::RuntimeProvider, socket::SocketProvider,
+    },
+    utility::token::parse_register_token,
+};
+use std::{io::Write, path::Path, sync::Once};
 
 static LOGGER_INIT_ONCE: Once = Once::new();
 
@@ -23,14 +30,18 @@ pub fn init(config_dir: String) -> anyhow::Result<()> {
             .init();
     });
 
-    super::config::init(config_dir)?;
+    ConfigProvider::make_current(Path::new(&config_dir))?;
+    RuntimeProvider::make_current()?;
+    HTTPProvider::make_current()?;
+    EndPointProvider::make_current()?;
 
     // ensure device id is valid
-    let device_id = super::config::read_device_id()?;
-    let resp = RUNTIME_INSTANCE.block_on(super::http::device_register(device_id))?;
-    let (device_id, expiration, _) = parse_register_token(resp.token)?;
-    super::config::save_device_id(&device_id)?;
-    super::config::save_device_id_expiration(expiration)?;
+    let device_id = ConfigProvider::current()?.read_device_id()?;
+    let resp = RuntimeProvider::current()?.block_on(device_register(device_id))?;
+    let (device_id, expiration, token) = parse_register_token(resp.token)?;
+    ConfigProvider::current()?.save_device_id(&device_id)?;
+    ConfigProvider::current()?.save_device_id_expiration(&expiration)?;
+    SocketProvider::make_current("192.168.0.101:40001", device_id, token)?;
 
     Ok(())
 }
@@ -38,38 +49,38 @@ pub fn init(config_dir: String) -> anyhow::Result<()> {
 // Config
 
 pub fn config_read_device_id() -> anyhow::Result<Option<String>> {
-    super::config::read_device_id()
+    ConfigProvider::current()?.read_device_id()
 }
 
 pub fn config_save_device_id(device_id: String) -> anyhow::Result<()> {
-    super::config::save_device_id(&device_id)
+    ConfigProvider::current()?.save_device_id(&device_id)
 }
 
 pub fn config_read_device_id_expiration() -> anyhow::Result<Option<u32>> {
-    super::config::read_device_id_expiration()
+    ConfigProvider::current()?.read_device_id_expiration()
 }
 
 pub fn config_save_device_id_expiration(time_stamp: u32) -> anyhow::Result<()> {
-    super::config::save_device_id_expiration(time_stamp)
+    ConfigProvider::current()?.save_device_id_expiration(&time_stamp)
 }
 
 pub fn config_read_device_password() -> anyhow::Result<Option<String>> {
-    super::config::read_device_password()
+    ConfigProvider::current()?.read_device_password()
 }
 
 pub fn config_save_device_password(device_password: String) -> anyhow::Result<()> {
-    super::config::save_device_password(&device_password)
+    ConfigProvider::current()?.save_device_password(&device_password)
 }
 
 pub fn socket_desktop_connect(remote_device_id: String) -> anyhow::Result<()> {
-    RUNTIME_INSTANCE.block_on(super::socket::desktop_connect(remote_device_id))
+    RuntimeProvider::current()?.block_on(super::socket::desktop_connect(remote_device_id))
 }
 
 pub fn socket_desktop_key_exchange_and_password_verify(
     ask_device_id: String,
     password: String,
 ) -> anyhow::Result<bool> {
-    RUNTIME_INSTANCE.block_on(super::socket::desktop_key_exchange_and_password_verify(
+    RuntimeProvider::current()?.block_on(super::socket::desktop_key_exchange_and_password_verify(
         ask_device_id,
         password,
     ))

@@ -1,7 +1,10 @@
-use std::{str::FromStr, time::Duration};
-
+use anyhow::bail;
+use once_cell::sync::OnceCell;
 use reqwest::{Client, ClientBuilder, Url};
 use serde::{Deserialize, Serialize};
+use std::{str::FromStr, time::Duration};
+
+static CURRENT_HTTP_PROVIDER: OnceCell<HTTPProvider> = OnceCell::new();
 
 pub struct HTTPProvider {
     base_url: Url,
@@ -9,15 +12,28 @@ pub struct HTTPProvider {
 }
 
 impl HTTPProvider {
-    pub fn new() -> anyhow::Result<Self> {
-        let client = ClientBuilder::new()
-            .timeout(Duration::from_secs(5))
-            .build()?;
+    pub fn current() -> anyhow::Result<&'static HTTPProvider> {
+        CURRENT_HTTP_PROVIDER
+            .get()
+            .ok_or_else(|| anyhow::anyhow!("HTTPProvider: uninitialized"))
+    }
 
-        Ok(HTTPProvider {
-            base_url: Url::from_str("http://localhost:40000")?,
-            client,
-        })
+    pub fn make_current() -> anyhow::Result<()> {
+        match CURRENT_HTTP_PROVIDER.get_or_try_init(|| -> anyhow::Result<HTTPProvider> {
+            let client = ClientBuilder::new()
+                .timeout(Duration::from_secs(5))
+                .build()?;
+
+            let http_provider = HTTPProvider {
+                base_url: Url::from_str("http://localhost:40000")?,
+                client,
+            };
+
+            Ok(http_provider)
+        }) {
+            Ok(_) => Ok(()),
+            Err(err) => bail!("HTTPProvider: make current failed: {}", err),
+        }
     }
 
     pub async fn device_register(&self, req: RegisterReq) -> anyhow::Result<RegisterResp> {

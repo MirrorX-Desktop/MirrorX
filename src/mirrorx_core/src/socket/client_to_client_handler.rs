@@ -4,15 +4,17 @@ use super::{
         ConnectReply, ConnectRequest, KeyExchangeAndVerifyPasswordRequest,
     },
 };
-use crate::socket::{
-    endpoint::CacheKey, message::client_to_client::KeyExchangeAndVerifyPasswordReply,
+use crate::{
+    provider::config::ConfigProvider,
+    socket::{endpoint::CacheKey, message::client_to_client::KeyExchangeAndVerifyPasswordReply},
 };
 use anyhow::anyhow;
 use log::info;
 use ring::rand::SecureRandom;
 use rsa::{PaddingScheme, PublicKeyParts, RsaPrivateKey, RsaPublicKey};
+use std::sync::Arc;
 
-pub async fn connect(endpoint: &EndPoint, req: ConnectRequest) -> anyhow::Result<ConnectReply> {
+pub async fn connect(endpoint: Arc<EndPoint>, req: ConnectRequest) -> anyhow::Result<ConnectReply> {
     info!("connect: {:?}", req);
 
     let mut rng = rand::thread_rng();
@@ -32,22 +34,18 @@ pub async fn connect(endpoint: &EndPoint, req: ConnectRequest) -> anyhow::Result
 }
 
 pub async fn key_exchange_and_verify_password(
-    endpoint: &EndPoint,
+    endpoint: Arc<EndPoint>,
     req: KeyExchangeAndVerifyPasswordRequest,
 ) -> anyhow::Result<KeyExchangeAndVerifyPasswordReply> {
     info!("key_exchange_and_verify_password: {:?}", req);
 
     // todo: check white list
 
-    let config_provider = crate::instance::CONFIG_PROVIDER_INSTANCE
-        .get()
+    let password = ConfigProvider::current()?
+        .read_device_password()?
         .ok_or(anyhow!(
-            "key_exchange_and_verify_password: config provider not initialized"
+            "key_exchange_and_verify_password: local password not set, refuse request"
         ))?;
-
-    let password = config_provider.read_device_password()?.ok_or(anyhow!(
-        "key_exchange_and_verify_password: local password not set, refuse request"
-    ))?;
 
     let priv_key = endpoint
         .cache()
