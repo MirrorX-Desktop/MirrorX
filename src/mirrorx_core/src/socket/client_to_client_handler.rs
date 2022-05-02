@@ -55,17 +55,23 @@ pub async fn key_exchange_and_verify_password(
         ))?;
 
     let req_password = priv_key.decrypt(PaddingScheme::PKCS1v15Encrypt, &req.password_secret)?;
+    let local_password = String::from_utf8(req_password).map_err(|err| {
+        anyhow!(
+            "key_exchange_and_verify_password: parse local password bytes to utf8 failed: {}",
+            err
+        )
+    })?;
 
     info!(
         "key_exchange_and_verify_password: req password: {:?}",
-        String::from_utf8(req_password.to_owned())?
+        local_password
     );
     info!(
         "key_exchange_and_verify_password: local password: {:?}",
         password
     );
 
-    if String::from_utf8(req_password)? != password {
+    if local_password != password {
         return Ok(KeyExchangeAndVerifyPasswordReply {
             success: false,
             ..KeyExchangeAndVerifyPasswordReply::default()
