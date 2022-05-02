@@ -11,7 +11,7 @@ use crate::{
 use anyhow::anyhow;
 use log::info;
 use ring::rand::SecureRandom;
-use rsa::{PaddingScheme, PublicKeyParts, RsaPrivateKey, RsaPublicKey};
+use rsa::{pkcs8::der::Encodable, PaddingScheme, PublicKeyParts, RsaPrivateKey, RsaPublicKey};
 use std::sync::Arc;
 
 pub async fn connect(endpoint: Arc<EndPoint>, req: ConnectRequest) -> anyhow::Result<ConnectReply> {
@@ -56,7 +56,16 @@ pub async fn key_exchange_and_verify_password(
 
     let req_password = priv_key.decrypt(PaddingScheme::PKCS1v15Encrypt, &req.password_secret)?;
 
-    if req_password != Vec::from(password) {
+    info!(
+        "key_exchange_and_verify_password: req password: {:?}",
+        String::from_utf8(req_password.to_owned())?
+    );
+    info!(
+        "key_exchange_and_verify_password: local password: {:?}",
+        password
+    );
+
+    if !password.to_vec()?.eq(&req_password) {
         return Ok(KeyExchangeAndVerifyPasswordReply {
             success: false,
             ..KeyExchangeAndVerifyPasswordReply::default()
