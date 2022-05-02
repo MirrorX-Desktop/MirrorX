@@ -68,7 +68,7 @@ pub async fn desktop_key_exchange_and_password_verify(
             &remote_device_id
         ))?;
 
-    let ask_device_pub_key = endpoint
+    let remote_device_pub_key = endpoint
         .cache()
         .take::<RsaPublicKey>(CacheKey::PasswordVerifyPublicKey)
         .ok_or(anyhow!(
@@ -76,7 +76,7 @@ pub async fn desktop_key_exchange_and_password_verify(
         ))?;
 
     let mut rng = thread_rng();
-    let password_secret = ask_device_pub_key
+    let password_secret = remote_device_pub_key
         .encrypt(
             &mut rng,
             rsa::PaddingScheme::PKCS1v15Encrypt,

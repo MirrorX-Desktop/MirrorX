@@ -41,7 +41,7 @@ pub async fn key_exchange_and_verify_password(
 
     // todo: check white list
 
-    let password = ConfigProvider::current()?
+    let local_password = ConfigProvider::current()?
         .read_device_password()?
         .ok_or(anyhow!(
             "key_exchange_and_verify_password: local password not set, refuse request"
@@ -54,8 +54,16 @@ pub async fn key_exchange_and_verify_password(
             "key_exchange_and_verify_password: no private key found"
         ))?;
 
-    let req_password = priv_key.decrypt(PaddingScheme::PKCS1v15Encrypt, &req.password_secret)?;
-    let local_password = String::from_utf8(req_password).map_err(|err| {
+    let req_password = priv_key
+        .decrypt(PaddingScheme::PKCS1v15Encrypt, &req.password_secret)
+        .map_err(|err| {
+            anyhow!(
+                "key_exchange_and_verify_password: decrypt password secret failed: {}",
+                err
+            )
+        })?;
+
+    let req_password = String::from_utf8(req_password).map_err(|err| {
         anyhow!(
             "key_exchange_and_verify_password: parse local password bytes to utf8 failed: {}",
             err
@@ -64,14 +72,14 @@ pub async fn key_exchange_and_verify_password(
 
     info!(
         "key_exchange_and_verify_password: req password: {:?}",
-        local_password
+        req_password
     );
     info!(
         "key_exchange_and_verify_password: local password: {:?}",
-        password
+        local_password
     );
 
-    if local_password != password {
+    if req_password != local_password {
         return Ok(KeyExchangeAndVerifyPasswordReply {
             success: false,
             ..KeyExchangeAndVerifyPasswordReply::default()
