@@ -25,7 +25,7 @@ impl HTTPProvider {
                 .build()?;
 
             let http_provider = HTTPProvider {
-                base_url: Url::from_str("http://localhost:40000")?,
+                base_url: Url::from_str("http://192.168.0.101:40000")?,
                 client,
             };
 
