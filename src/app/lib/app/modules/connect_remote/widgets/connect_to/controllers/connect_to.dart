@@ -76,6 +76,7 @@ class ConnectToController extends GetxController {
 
       // log("password: $passwordCorrect");
     } catch (err) {
+      log("desktop connect failed", error: err);
       popupErrorDialog(
           content: "connect_to_remote.dialog.incorrect_password".tr);
     }

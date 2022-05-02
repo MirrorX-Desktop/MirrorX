@@ -67,18 +67,29 @@ pub async fn key_exchange_and_verify_password(
     let ephemeral_rng = ring::rand::SystemRandom::new();
     let local_private_key =
         ring::agreement::EphemeralPrivateKey::generate(&ring::agreement::X25519, &ephemeral_rng)
-            .map_err(|err| anyhow!(err))?;
+            .map_err(|err| {
+                anyhow!(
+                    "key_exchange_and_verify_password: generate ephemeral private key failed: {}",
+                    err
+                )
+            })?;
 
-    let local_public_key = local_private_key
-        .compute_public_key()
-        .map_err(|err| anyhow::anyhow!(err))?;
+    let local_public_key = local_private_key.compute_public_key().map_err(|err| {
+        anyhow::anyhow!(
+            "key_exchange_and_verify_password: compute public key failed: {}",
+            err
+        )
+    })?;
 
     let exchange_pub_key = local_public_key.as_ref().to_vec();
 
     let mut exchange_salt = Vec::<u8>::with_capacity(32);
-    ephemeral_rng
-        .fill(&mut exchange_salt)
-        .map_err(|err| anyhow::anyhow!(err))?;
+    ephemeral_rng.fill(&mut exchange_salt).map_err(|err| {
+        anyhow::anyhow!(
+            "key_exchange_and_verify_password: generate exchange salt failed: {}",
+            err
+        )
+    })?;
 
     let remote_public_key =
         ring::agreement::UnparsedPublicKey::new(&ring::agreement::X25519, &req.exchange_pub_key);
@@ -109,7 +120,12 @@ pub async fn key_exchange_and_verify_password(
             Ok((send_key, recv_key))
         },
     )
-    .map_err(|err| anyhow::anyhow!(err))?;
+    .map_err(|err| {
+        anyhow!(
+            "key_exchange_and_verify_password: agree ephemeral key failed: {:?}",
+            err
+        )
+    })?;
 
     Ok(KeyExchangeAndVerifyPasswordReply {
         success: true,
