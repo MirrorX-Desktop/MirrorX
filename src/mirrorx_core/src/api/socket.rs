@@ -22,18 +22,18 @@ static CONNECT_MUTEX: Lazy<Mutex<()>> = Lazy::new(|| Mutex::new(()));
 pub async fn desktop_connect(remote_device_id: String) -> anyhow::Result<()> {
     CONNECT_MUTEX.lock().await;
 
-    if EndPointProvider::current()?.contains(&remote_device_id) {
-        bail!(
-            "desktop_connect: remote_device_id {} already connected",
-            &remote_device_id
-        );
-    }
+    let endpoint = match EndPointProvider::current()?.get(&remote_device_id) {
+        Some(endpoint) => endpoint,
+        None => {
+            let local_device_id = ConfigProvider::current()?
+                .read_device_id()?
+                .ok_or(anyhow::anyhow!("desktop_connect: local device id not set"))?;
 
-    let local_device_id = ConfigProvider::current()?
-        .read_device_id()?
-        .ok_or(anyhow::anyhow!("desktop_connect: local device id not set"))?;
-
-    let endpoint = EndPoint::new(local_device_id, remote_device_id.clone());
+            let endpoint = Arc::new(EndPoint::new(local_device_id, remote_device_id.clone()));
+            EndPointProvider::current()?.insert(remote_device_id, endpoint.clone());
+            endpoint
+        }
+    };
 
     let resp = endpoint
         .desktop_connect(
@@ -53,8 +53,6 @@ pub async fn desktop_connect(remote_device_id: String) -> anyhow::Result<()> {
     endpoint
         .cache()
         .set(CacheKey::PasswordVerifyPublicKey, public_key);
-
-    EndPointProvider::current()?.insert(remote_device_id, Arc::new(endpoint));
 
     Ok(())
 }
@@ -130,6 +128,8 @@ pub async fn desktop_key_exchange_and_password_verify(
         .await?;
 
     if !resp.success {
+        CONNECT_MUTEX.lock().await;
+        EndPointProvider::current()?.remove(&remote_device_id);
         return Ok(false);
     }
 

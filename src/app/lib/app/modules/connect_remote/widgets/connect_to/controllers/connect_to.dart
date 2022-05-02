@@ -56,6 +56,7 @@ class ConnectToController extends GetxController {
       await _sdk.getInstance().socketDesktopConnect(remoteDeviceId: deviceID);
       _popupDesktopConnectInputPasswordDialog(deviceID);
     } catch (err) {
+      log("desktop connect failed", error: err);
       popupErrorDialog(content: "connect_to_remote.dialog.disallow".tr);
     } finally {
       _isLoading = false;
