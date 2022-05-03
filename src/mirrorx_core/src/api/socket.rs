@@ -175,6 +175,42 @@ pub async fn desktop_key_exchange_and_password_verify(
     info!("send key: {:X?}", send_key);
     info!("recv key: {:X?}", recv_key);
 
+    // initial endpoint opening(recv) key
+    let unbound_opening_key =
+        ring::aead::UnboundKey::new(&ring::aead::CHACHA20_POLY1305, &recv_key).map_err(|err| {
+            anyhow::anyhow!(
+                "key_exchange_and_verify_password: create unbounded key for opening failed: {}",
+                err
+            )
+        })?;
+
+    let opening_initial_nonce =
+        unsafe { u64::from_le_bytes(*(exchange_salt[..8].as_ptr() as *const [u8; 8])) };
+
+    info!("opening initial nonce: {}", opening_initial_nonce);
+
+    endpoint
+        .set_opening_key(unbound_opening_key, opening_initial_nonce)
+        .await;
+
+    // initial endpoint sealing(send) key
+    let unbound_sealing_key =
+        ring::aead::UnboundKey::new(&ring::aead::CHACHA20_POLY1305, &send_key).map_err(|err| {
+            anyhow::anyhow!(
+                "key_exchange_and_verify_password: create unbounded key for sealing failed: {}",
+                err
+            )
+        })?;
+
+    let sealing_initial_nonce =
+        unsafe { u64::from_le_bytes(*(resp.exchange_salt[..8].as_ptr() as *const [u8; 8])) };
+
+    info!("sealing initial_nonce nonce: {}", sealing_initial_nonce);
+
+    endpoint
+        .set_sealing_key(unbound_sealing_key, sealing_initial_nonce)
+        .await;
+
     Ok(true)
 }
 

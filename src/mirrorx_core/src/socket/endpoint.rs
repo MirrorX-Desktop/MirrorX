@@ -6,11 +6,15 @@ use super::message::client_to_client::{
 };
 use anyhow::bail;
 use dashmap::DashMap;
+use ring::aead::{BoundKey, Nonce, NonceSequence, OpeningKey, SealingKey, UnboundKey};
 use std::{any::Any, time::Duration};
+use tokio::sync::RwLock;
 
 pub struct EndPoint {
     local_device_id: String,
     remote_device_id: String,
+    opening_key: RwLock<Option<OpeningKey<NonceValue>>>,
+    sealing_key: RwLock<Option<SealingKey<NonceValue>>>,
     cache: MemoryCache,
 }
 
@@ -19,6 +23,8 @@ impl EndPoint {
         Self {
             local_device_id,
             remote_device_id,
+            opening_key: RwLock::new(None),
+            sealing_key: RwLock::new(None),
             cache: MemoryCache::new(),
         }
     }
@@ -36,6 +42,20 @@ impl EndPoint {
     #[must_use]
     pub fn cache(&self) -> &MemoryCache {
         &self.cache
+    }
+
+    pub async fn set_opening_key(&self, key: UnboundKey, initial_nonce: u64) {
+        let opening_key =
+            ring::aead::OpeningKey::<NonceValue>::new(key, NonceValue::new(initial_nonce));
+        let mut key = self.opening_key.write().await;
+        *key = Some(opening_key);
+    }
+
+    pub async fn set_sealing_key(&self, key: UnboundKey, initial_nonce: u64) {
+        let sealing_key =
+            ring::aead::SealingKey::<NonceValue>::new(key, NonceValue::new(initial_nonce));
+        let mut key = self.sealing_key.write().await;
+        *key = Some(sealing_key);
     }
 
     pub async fn desktop_connect(
@@ -119,5 +139,23 @@ impl MemoryCache {
             },
             None => None,
         }
+    }
+}
+
+struct NonceValue {
+    n: u128,
+}
+
+impl NonceValue {
+    fn new(n: u64) -> Self {
+        Self { n: n as u128 }
+    }
+}
+
+impl NonceSequence for NonceValue {
+    fn advance(&mut self) -> Result<ring::aead::Nonce, ring::error::Unspecified> {
+        self.n += 1;
+        let m = self.n & 0xFFFFFFFFFFFF;
+        Nonce::try_assume_unique_for_key(&m.to_le_bytes()[..12])
     }
 }

@@ -11,7 +11,7 @@ use crate::{
 use anyhow::anyhow;
 use log::info;
 use ring::rand::SecureRandom;
-use rsa::{pkcs8::der::Encodable, PaddingScheme, PublicKeyParts, RsaPrivateKey, RsaPublicKey};
+use rsa::{PaddingScheme, PublicKeyParts, RsaPrivateKey, RsaPublicKey};
 use std::sync::Arc;
 
 pub async fn connect(endpoint: Arc<EndPoint>, req: ConnectRequest) -> anyhow::Result<ConnectReply> {
@@ -69,15 +69,6 @@ pub async fn key_exchange_and_verify_password(
             err
         )
     })?;
-
-    info!(
-        "key_exchange_and_verify_password: req password: {:?}",
-        req_password
-    );
-    info!(
-        "key_exchange_and_verify_password: local password: {:?}",
-        local_password
-    );
 
     if req_password != local_password {
         return Ok(KeyExchangeAndVerifyPasswordReply {
@@ -157,6 +148,42 @@ pub async fn key_exchange_and_verify_password(
     info!("key exchange and password verify success");
     info!("send key: {:02X?}", send_key);
     info!("recv key: {:02X?}", recv_key);
+
+    // initial endpoint opening(recv) key
+    let unbound_opening_key =
+        ring::aead::UnboundKey::new(&ring::aead::CHACHA20_POLY1305, &recv_key).map_err(|err| {
+            anyhow::anyhow!(
+                "key_exchange_and_verify_password: create unbounded key for opening failed: {}",
+                err
+            )
+        })?;
+
+    let opening_initial_nonce =
+        unsafe { u64::from_le_bytes(*(exchange_salt[..8].as_ptr() as *const [u8; 8])) };
+
+    info!("opening initial nonce: {}", opening_initial_nonce);
+
+    endpoint
+        .set_opening_key(unbound_opening_key, opening_initial_nonce)
+        .await;
+
+    // initial endpoint sealing(send) key
+    let unbound_sealing_key =
+        ring::aead::UnboundKey::new(&ring::aead::CHACHA20_POLY1305, &send_key).map_err(|err| {
+            anyhow::anyhow!(
+                "key_exchange_and_verify_password: create unbounded key for sealing failed: {}",
+                err
+            )
+        })?;
+
+    let sealing_initial_nonce =
+        unsafe { u64::from_le_bytes(*(req.exchange_salt[..8].as_ptr() as *const [u8; 8])) };
+
+    info!("sealing initial nonce nonce: {}", sealing_initial_nonce);
+
+    endpoint
+        .set_sealing_key(unbound_sealing_key, sealing_initial_nonce)
+        .await;
 
     Ok(KeyExchangeAndVerifyPasswordReply {
         password_correct: true,
