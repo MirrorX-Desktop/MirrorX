@@ -15,7 +15,7 @@ static LOGGER_INIT_ONCE: Once = Once::new();
 pub fn init(config_dir: String) -> anyhow::Result<()> {
     LOGGER_INIT_ONCE.call_once(|| {
         env_logger::Builder::new()
-            .filter_level(log::LevelFilter::Info)
+            .filter_level(log::LevelFilter::Trace)
             .format(|buf, record| {
                 writeln!(
                     buf,

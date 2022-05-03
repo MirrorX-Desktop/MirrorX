@@ -21,7 +21,7 @@ use bincode::{
 use bytes::Bytes;
 use dashmap::DashMap;
 use futures::{SinkExt, StreamExt};
-use log::{error, info, warn};
+use log::{error, info, trace, warn};
 use once_cell::sync::{Lazy, OnceCell};
 use std::{sync::Arc, time::Duration};
 use tokio::{
@@ -287,7 +287,7 @@ fn serve_stream(stream: TcpStream, mut rx: mpsc::Receiver<Vec<u8>>) -> anyhow::R
             match packet {
                 Packet::ClientToServer(_, message) => {
                     warn!(
-                        "serve_stream: received unexpected client to server packet: {:?}",
+                        "serve_stream: received unexpected client to server packet: {}",
                         message
                     );
                 }
@@ -331,7 +331,7 @@ fn serve_stream(stream: TcpStream, mut rx: mpsc::Receiver<Vec<u8>>) -> anyhow::R
             };
         }
 
-        info!("client: stream_loop exit");
+        info!("serve_stream: stream_loop exit");
     });
 
     RuntimeProvider::current()?.spawn(async move {
@@ -341,12 +341,14 @@ fn serve_stream(stream: TcpStream, mut rx: mpsc::Receiver<Vec<u8>>) -> anyhow::R
                 None => break,
             };
 
-            info!("client: send packet: {:?}", buf);
+            trace!("serve_stream: send packet: {:02X?}", buf);
 
             if let Err(err) = sink.send(Bytes::from(buf)).await {
-                error!("send error: {:?}", err);
+                error!("serve_stream: send failed: {}", err);
             }
         }
+
+        info!("serve_stream: sink_loop exit");
     });
 
     Ok(())

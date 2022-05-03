@@ -4,7 +4,7 @@ use super::message::{
     client_to_server::ClientToServerMessage, server_to_client::ServerToClientMessage,
 };
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize)]
 pub enum Packet {
     /// (call_id, message)
     ClientToServer(u16, ClientToServerMessage),

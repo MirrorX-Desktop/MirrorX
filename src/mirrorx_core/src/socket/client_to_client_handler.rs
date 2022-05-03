@@ -15,7 +15,7 @@ use rsa::{pkcs8::der::Encodable, PaddingScheme, PublicKeyParts, RsaPrivateKey, R
 use std::sync::Arc;
 
 pub async fn connect(endpoint: Arc<EndPoint>, req: ConnectRequest) -> anyhow::Result<ConnectReply> {
-    info!("connect: {:?}", req);
+    info!("connect: {}", req);
 
     let mut rng = rand::thread_rng();
     let priv_key = RsaPrivateKey::new(&mut rng, 4096)?;
@@ -37,7 +37,7 @@ pub async fn key_exchange_and_verify_password(
     endpoint: Arc<EndPoint>,
     req: KeyExchangeAndVerifyPasswordRequest,
 ) -> anyhow::Result<KeyExchangeAndVerifyPasswordReply> {
-    info!("key_exchange_and_verify_password: {:?}", req);
+    info!("key_exchange_and_verify_password: {}", req);
 
     // todo: check white list
 
@@ -81,8 +81,9 @@ pub async fn key_exchange_and_verify_password(
 
     if req_password != local_password {
         return Ok(KeyExchangeAndVerifyPasswordReply {
-            success: false,
-            ..KeyExchangeAndVerifyPasswordReply::default()
+            password_correct: false,
+            exchange_pub_key: Vec::default(),
+            exchange_salt: Vec::default(),
         });
     }
 
@@ -154,11 +155,11 @@ pub async fn key_exchange_and_verify_password(
     })?;
 
     info!("key exchange and password verify success");
-    info!("send key: {:X?}", send_key);
-    info!("recv key: {:X?}", recv_key);
+    info!("send key: {:02X?}", send_key);
+    info!("recv key: {:02X?}", recv_key);
 
     Ok(KeyExchangeAndVerifyPasswordReply {
-        success: true,
+        password_correct: true,
         exchange_pub_key,
         exchange_salt,
     })

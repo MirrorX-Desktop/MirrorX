@@ -128,7 +128,7 @@ pub async fn desktop_key_exchange_and_password_verify(
         )
         .await?;
 
-    if !resp.success {
+    if !resp.password_correct {
         EndPointProvider::current()?.remove(&remote_device_id);
         return Ok(false);
     }

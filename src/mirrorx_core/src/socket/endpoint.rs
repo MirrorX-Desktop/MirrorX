@@ -52,8 +52,9 @@ impl EndPoint {
             )
             .await
             .and_then(|resp| match resp {
+                ClientToClientMessage::Error => bail!("desktop_connect: remote error"),
                 ClientToClientMessage::ConnectReply(message) => Ok(message),
-                _ => bail!("desktop_connect: mismatched reply type, got {:?}", resp),
+                _ => bail!("desktop_connect: mismatched reply type, got {}", resp),
             })
     }
 
@@ -71,9 +72,12 @@ impl EndPoint {
             )
             .await
             .and_then(|resp| match resp {
+                ClientToClientMessage::Error => {
+                    bail!("desktop_key_exchange_and_verify_password: remote error")
+                }
                 ClientToClientMessage::KeyExchangeAndVerifyPasswordReply(message) => Ok(message),
                 _ => bail!(
-                    "desktop_key_exchange_and_verify_password: mismatched reply type, got {:?}",
+                    "desktop_key_exchange_and_verify_password: mismatched reply type, got {}",
                     resp
                 ),
             })
