@@ -4,6 +4,8 @@ use crate::socket::endpoint::CacheKey;
 use crate::socket::endpoint::EndPoint;
 use crate::socket::message::client_to_client::ConnectRequest;
 use crate::socket::message::client_to_client::KeyExchangeAndVerifyPasswordRequest;
+use crate::socket::message::client_to_client::StartMediaTransmissionReply;
+use crate::socket::message::client_to_client::StartMediaTransmissionRequest;
 use anyhow::anyhow;
 use anyhow::bail;
 use log::info;
@@ -37,13 +39,7 @@ pub async fn desktop_connect(remote_device_id: String) -> anyhow::Result<()> {
     };
 
     let resp = endpoint
-        .desktop_connect(
-            ConnectRequest {
-                    // offer_device_id,
-                    // ask_device_id,
-                },
-            Duration::from_secs(20),
-        )
+        .desktop_connect(ConnectRequest {}, Duration::from_secs(20))
         .await?;
 
     let n = BigUint::from_bytes_le(&resp.pub_key_n);
@@ -219,135 +215,19 @@ pub async fn desktop_key_exchange_and_password_verify(
     Ok(true)
 }
 
-// pub fn desktop_connect_offer(ask_device_id: String) -> anyhow::Result<bool, APIError> {
-//     RUNTIME.block_on(async move {
-//         let offer_device_id = match super::config::read_device_id()? {
-//             Some(id) => id,
-//             None => return Err(APIError::ConfigError),
-//         };
+pub async fn desktop_start_media_transmission(
+    remote_device_id: String,
+) -> anyhow::Result<StartMediaTransmissionReply> {
+    let endpoint = EndPointProvider::current()?
+        .get(&remote_device_id)
+        .ok_or(anyhow!(
+            "desktop_start_media_transmission: remote device '{}' already connected",
+            &remote_device_id
+        ))?;
 
-//         // ask remote device
-//         let resp = CLIENT
-//             .call(
-//                 Message::DesktopConnectOfferReq(DesktopConnectOfferReq {
-//                     offer_device_id,
-//                     ask_device_id: ask_device_id.to_owned(),
-//                 }),
-//                 Duration::from_secs(15),
-//             )
-//             .await
-//             .map_err(|err| map_message_error(err))?;
+    let resp = endpoint
+        .desktop_start_media_transmission(StartMediaTransmissionRequest {}, Duration::from_secs(10))
+        .await?;
 
-//         let resp_message = match resp {
-//             Message::DesktopConnectOfferResp(message) => message,
-//             _ => return Err(APIError::InternalError),
-//         };
-
-//         // store remote password auth public key
-//         if resp_message.agree {
-//             let n = BigUint::from_bytes_le(resp_message.password_auth_public_key_n.as_ref());
-//             let e = BigUint::from_bytes_le(resp_message.password_auth_public_key_e.as_ref());
-//             let remote_password_auth_public_key = RsaPublicKey::new(n, e).map_err(|err| {
-//                 error!("failed to create public key: {:?}", err);
-//                 APIError::InternalError
-//             })?;
-
-//             let mut remote_password_auth_public_key_map =
-//                 REMOTE_PASSWORD_AUTH_PUBLIC_KEY_MAP.lock().unwrap();
-//             remote_password_auth_public_key_map
-//                 .insert(ask_device_id.to_owned(), remote_password_auth_public_key);
-//             drop(remote_password_auth_public_key_map);
-//         }
-
-//         Ok(resp_message.agree)
-//     })
-// }
-
-// pub fn desktop_connect_offer_auth_password(
-//     ask_device_id: String,
-//     device_password: String,
-// ) -> anyhow::Result<bool, APIError> {
-//     RUNTIME.block_on(async move {
-//         let offer_device_id = match super::config::read_device_id()? {
-//             Some(id) => id,
-//             None => return Err(APIError::ConfigError),
-//         };
-
-//         let mut remote_password_auth_public_key_map =
-//             crate::constant::REMOTE_PASSWORD_AUTH_PUBLIC_KEY_MAP
-//                 .lock()
-//                 .unwrap();
-//         let remote_password_auth_public_key =
-//             match remote_password_auth_public_key_map.remove(&ask_device_id) {
-//                 Some(key) => key,
-//                 None => {
-//                     error!("remote_password_auth_public_key is None");
-//                     return Err(APIError::InternalError);
-//                 }
-//             };
-//         drop(remote_password_auth_public_key_map);
-
-//         let secret_message = remote_password_auth_public_key
-//             .encrypt(
-//                 &mut rand::rngs::OsRng,
-//                 PaddingScheme::PKCS1v15Encrypt,
-//                 &device_password.as_bytes(),
-//             )
-//             .map_err(|err| {
-//                 error!("failed to encrypt device password: {:?}", err);
-//                 APIError::InternalError
-//             })?;
-
-//         let resp = CLIENT
-//             .call(
-//                 Message::DesktopConnectOfferAuthReq(DesktopConnectOfferAuthReq {
-//                     offer_device_id,
-//                     ask_device_id,
-//                     secret_message,
-//                 }),
-//                 Duration::from_secs(10),
-//             )
-//             .await
-//             .map_err(|err| map_message_error(err))?;
-
-//         let resp_message = match resp {
-//             Message::DesktopConnectOfferAuthResp(message) => message,
-//             _ => return Err(APIError::InternalError),
-//         };
-
-//         Ok(resp_message.password_correct)
-//     })
-// }
-
-// pub fn desktop_connect_open_stream(ask_device_id: String) -> anyhow::Result<(), APIError> {
-//     RUNTIME.block_on(async move {
-//         let offer_device_id = match super::config::read_device_id()? {
-//             Some(id) => id,
-//             None => return Err(APIError::ConfigError),
-//         };
-
-//         let resp = CLIENT
-//             .call(
-//                 Message::DesktopConnectOpenStreamReq(DesktopConnectOpenStreamReq {
-//                     offer_device_id,
-//                     ask_device_id,
-//                 }),
-//                 Duration::from_secs(10),
-//             )
-//             .await
-//             .map_err(|err| map_message_error(err))?;
-
-//         Ok(())
-//     })
-// }
-
-// fn map_message_error(message_error: MessageError) -> APIError {
-//     match message_error {
-//         MessageError::InternalError | MessageError::MismatchedResponseMessage => {
-//             APIError::InternalError
-//         }
-//         MessageError::Timeout => APIError::Timeout,
-//         MessageError::InvalidArguments => APIError::InvalidArguments,
-//         MessageError::RemoteClientOfflineOrNotExist => APIError::RemoteClientOfflineOrNotExist,
-//     }
-// }
+    Ok(resp)
+}

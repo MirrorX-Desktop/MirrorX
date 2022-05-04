@@ -14,10 +14,17 @@ use flutter_rust_bridge::*;
 
 // Section: imports
 
+use crate::socket::message::client_to_client::StartMediaTransmissionReply;
+
 // Section: wire functions
 
 #[no_mangle]
-pub extern "C" fn wire_init(port_: i64, config_dir: *mut wire_uint_8_list) {
+pub extern "C" fn wire_init(
+    port_: i64,
+    os_name: *mut wire_uint_8_list,
+    os_version: *mut wire_uint_8_list,
+    config_dir: *mut wire_uint_8_list,
+) {
     FLUTTER_RUST_BRIDGE_HANDLER.wrap(
         WrapInfo {
             debug_name: "init",
@@ -25,8 +32,10 @@ pub extern "C" fn wire_init(port_: i64, config_dir: *mut wire_uint_8_list) {
             mode: FfiCallMode::Normal,
         },
         move || {
+            let api_os_name = os_name.wire2api();
+            let api_os_version = os_version.wire2api();
             let api_config_dir = config_dir.wire2api();
-            move |task_callback| init(api_config_dir)
+            move |task_callback| init(api_os_name, api_os_version, api_config_dir)
         },
     )
 }
@@ -153,6 +162,24 @@ pub extern "C" fn wire_socket_desktop_key_exchange_and_password_verify(
 }
 
 #[no_mangle]
+pub extern "C" fn wire_socket_desktop_start_media_transmission(
+    port_: i64,
+    remote_device_id: *mut wire_uint_8_list,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap(
+        WrapInfo {
+            debug_name: "socket_desktop_start_media_transmission",
+            port: Some(port_),
+            mode: FfiCallMode::Normal,
+        },
+        move || {
+            let api_remote_device_id = remote_device_id.wire2api();
+            move |task_callback| socket_desktop_start_media_transmission(api_remote_device_id)
+        },
+    )
+}
+
+#[no_mangle]
 pub extern "C" fn wire_utility_generate_device_password(port_: i64) {
     FLUTTER_RUST_BRIDGE_HANDLER.wrap(
         WrapInfo {
@@ -248,6 +275,19 @@ impl<T> NewWithNullPtr for *mut T {
 }
 
 // Section: impl IntoDart
+
+impl support::IntoDart for StartMediaTransmissionReply {
+    fn into_dart(self) -> support::DartCObject {
+        vec![
+            self.os_name.into_dart(),
+            self.os_version.into_dart(),
+            self.video_type.into_dart(),
+            self.audio_type.into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl support::IntoDartExceptPrimitive for StartMediaTransmissionReply {}
 
 // Section: executor
 

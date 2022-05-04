@@ -89,26 +89,10 @@ impl Display for StartMediaTransmissionRequest {
     }
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Clone, Debug)]
-pub enum HostType {
-    Unknown,
-    Windows,
-    #[allow(non_camel_case_types)]
-    macOS,
-    #[allow(non_camel_case_types)]
-    iOS,
-    Android,
-    Ubuntu,
-    Debian,
-    Arch,
-    Manjaro,
-    Deepin,
-}
-
 #[derive(Serialize, Deserialize, PartialEq, Clone)]
 pub struct StartMediaTransmissionReply {
-    pub host_type: HostType,
-    pub host_major_version: String,
+    pub os_name: String,
+    pub os_version: String,
     pub video_type: String,
     pub audio_type: String,
 }
@@ -117,8 +101,8 @@ impl Display for StartMediaTransmissionReply {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "StartMediaTransmissionReply {{ host_type: {:#?}, host_major_version: {}, video_type: {}, audio_type: {} }}",
-            self.host_type, self.host_major_version, self.video_type, self.audio_type
+            "StartMediaTransmissionReply {{ os_name: {}, os_version: {}, video_type: {}, audio_type: {} }}",
+            self.os_name, self.os_version, self.video_type, self.audio_type
         )
     }
 }

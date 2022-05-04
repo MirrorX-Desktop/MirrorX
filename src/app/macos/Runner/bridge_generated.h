@@ -17,7 +17,10 @@ typedef int64_t DartPort;
 
 typedef bool (*DartPostCObjectFnType)(DartPort port_id, void *message);
 
-void wire_init(int64_t port_, struct wire_uint_8_list *config_dir);
+void wire_init(int64_t port_,
+               struct wire_uint_8_list *os_name,
+               struct wire_uint_8_list *os_version,
+               struct wire_uint_8_list *config_dir);
 
 void wire_config_read_device_id(int64_t port_);
 
@@ -36,6 +39,9 @@ void wire_socket_desktop_connect(int64_t port_, struct wire_uint_8_list *remote_
 void wire_socket_desktop_key_exchange_and_password_verify(int64_t port_,
                                                           struct wire_uint_8_list *remote_device_id,
                                                           struct wire_uint_8_list *password);
+
+void wire_socket_desktop_start_media_transmission(int64_t port_,
+                                                  struct wire_uint_8_list *remote_device_id);
 
 void wire_utility_generate_device_password(int64_t port_);
 
@@ -56,6 +62,7 @@ static int64_t dummy_method_to_enforce_bundling(void) {
     dummy_var ^= ((int64_t) (void*) wire_config_save_device_password);
     dummy_var ^= ((int64_t) (void*) wire_socket_desktop_connect);
     dummy_var ^= ((int64_t) (void*) wire_socket_desktop_key_exchange_and_password_verify);
+    dummy_var ^= ((int64_t) (void*) wire_socket_desktop_start_media_transmission);
     dummy_var ^= ((int64_t) (void*) wire_utility_generate_device_password);
     dummy_var ^= ((int64_t) (void*) new_uint_8_list);
     dummy_var ^= ((int64_t) (void*) free_WireSyncReturnStruct);

@@ -26,7 +26,10 @@ class MirrorXCoreController extends GetxController
       final applicationSupportDir = await getApplicationSupportDirectory();
       log("application support dir: $applicationSupportDir");
 
-      await core.init(configDir: applicationSupportDir.path);
+      await core.init(
+          osName: Platform.operatingSystem,
+          osVersion: Platform.operatingSystemVersion,
+          configDir: applicationSupportDir.path);
 
       // listenStream(core.initFlutterCommandStreamSink());
 

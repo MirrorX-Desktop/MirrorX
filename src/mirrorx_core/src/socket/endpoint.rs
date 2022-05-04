@@ -3,7 +3,8 @@ use crate::{provider::socket::SocketProvider, utility::serializer::BINCODE_SERIA
 use super::{
     message::client_to_client::{
         ClientToClientMessage, ConnectReply, ConnectRequest, KeyExchangeAndVerifyPasswordReply,
-        KeyExchangeAndVerifyPasswordRequest,
+        KeyExchangeAndVerifyPasswordRequest, StartMediaTransmissionReply,
+        StartMediaTransmissionRequest,
     },
     packet::Packet,
 };
@@ -12,7 +13,7 @@ use bincode::Options;
 use dashmap::DashMap;
 use ring::aead::{BoundKey, Nonce, NonceSequence, OpeningKey, SealingKey, UnboundKey};
 use std::{any::Any, time::Duration};
-use tokio::sync::{Mutex, RwLock};
+use tokio::sync::Mutex;
 
 pub struct EndPoint {
     local_device_id: String,
@@ -144,6 +145,31 @@ impl EndPoint {
                 ClientToClientMessage::KeyExchangeAndVerifyPasswordReply(message) => Ok(message),
                 _ => bail!(
                     "desktop_key_exchange_and_verify_password: mismatched reply type, got {}",
+                    resp
+                ),
+            })
+    }
+
+    pub async fn desktop_start_media_transmission(
+        &self,
+        req: StartMediaTransmissionRequest,
+        timeout: Duration,
+    ) -> anyhow::Result<StartMediaTransmissionReply> {
+        SocketProvider::current()?
+            .call_client(
+                self.local_device_id.to_owned(),
+                self.remote_device_id.to_owned(),
+                ClientToClientMessage::StartMediaTransmissionRequest(req),
+                timeout,
+            )
+            .await
+            .and_then(|resp| match resp {
+                ClientToClientMessage::Error => {
+                    bail!("desktop_start_media_transmission: remote error")
+                }
+                ClientToClientMessage::StartMediaTransmissionReply(message) => Ok(message),
+                _ => bail!(
+                    "desktop_start_media_transmission: mismatched reply type, got {}",
                     resp
                 ),
             })

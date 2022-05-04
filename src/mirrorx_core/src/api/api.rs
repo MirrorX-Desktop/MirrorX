@@ -6,13 +6,14 @@ use crate::{
         config::ConfigProvider, endpoint::EndPointProvider, http::HTTPProvider,
         runtime::RuntimeProvider, socket::SocketProvider,
     },
+    socket::message::client_to_client::StartMediaTransmissionReply,
     utility::token::parse_register_token,
 };
 use std::{io::Write, path::Path, sync::Once};
 
 static LOGGER_INIT_ONCE: Once = Once::new();
 
-pub fn init(config_dir: String) -> anyhow::Result<()> {
+pub fn init(os_name: String, os_version: String, config_dir: String) -> anyhow::Result<()> {
     LOGGER_INIT_ONCE.call_once(|| {
         env_logger::Builder::new()
             .filter_level(log::LevelFilter::Trace)
@@ -32,6 +33,14 @@ pub fn init(config_dir: String) -> anyhow::Result<()> {
             .init();
     });
 
+    info!(
+        "init: os_name={}, os_version={}, config_dir={}",
+        os_name, os_version, config_dir
+    );
+
+    crate::constants::OS_NAME.get_or_init(|| os_name);
+    crate::constants::OS_VERSION.get_or_init(|| os_version);
+
     ConfigProvider::make_current(Path::new(&config_dir))?;
     RuntimeProvider::make_current()?;
     HTTPProvider::make_current()?;
@@ -41,6 +50,7 @@ pub fn init(config_dir: String) -> anyhow::Result<()> {
     let device_id = ConfigProvider::current()?.read_device_id()?;
     let resp = RuntimeProvider::current()?.block_on(device_register(device_id))?;
     let (device_id, expiration, _) = parse_register_token(&resp.token)?;
+
     info!(
         "init: register success, device_id: {}, expiration: {}",
         device_id, expiration
@@ -92,6 +102,14 @@ pub fn socket_desktop_key_exchange_and_password_verify(
     RuntimeProvider::current()?.block_on(super::socket::desktop_key_exchange_and_password_verify(
         remote_device_id,
         password,
+    ))
+}
+
+pub fn socket_desktop_start_media_transmission(
+    remote_device_id: String,
+) -> anyhow::Result<StartMediaTransmissionReply> {
+    RuntimeProvider::current()?.block_on(super::socket::desktop_start_media_transmission(
+        remote_device_id,
     ))
 }
 

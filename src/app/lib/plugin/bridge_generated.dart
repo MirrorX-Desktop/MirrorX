@@ -12,7 +12,11 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge.dart';
 import 'dart:ffi' as ffi;
 
 abstract class MirrorXCore {
-  Future<void> init({required String configDir, dynamic hint});
+  Future<void> init(
+      {required String osName,
+      required String osVersion,
+      required String configDir,
+      dynamic hint});
 
   Future<String?> configReadDeviceId({dynamic hint});
 
@@ -34,7 +38,24 @@ abstract class MirrorXCore {
   Future<bool> socketDesktopKeyExchangeAndPasswordVerify(
       {required String remoteDeviceId, required String password, dynamic hint});
 
+  Future<StartMediaTransmissionReply> socketDesktopStartMediaTransmission(
+      {required String remoteDeviceId, dynamic hint});
+
   Future<String> utilityGenerateDevicePassword({dynamic hint});
+}
+
+class StartMediaTransmissionReply {
+  final String osName;
+  final String osVersion;
+  final String videoType;
+  final String audioType;
+
+  StartMediaTransmissionReply({
+    required this.osName,
+    required this.osVersion,
+    required this.videoType,
+    required this.audioType,
+  });
 }
 
 class MirrorXCoreImpl extends FlutterRustBridgeBase<MirrorXCoreWire>
@@ -44,15 +65,20 @@ class MirrorXCoreImpl extends FlutterRustBridgeBase<MirrorXCoreWire>
 
   MirrorXCoreImpl.raw(MirrorXCoreWire inner) : super(inner);
 
-  Future<void> init({required String configDir, dynamic hint}) =>
+  Future<void> init(
+          {required String osName,
+          required String osVersion,
+          required String configDir,
+          dynamic hint}) =>
       executeNormal(FlutterRustBridgeTask(
-        callFfi: (port_) => inner.wire_init(port_, _api2wire_String(configDir)),
+        callFfi: (port_) => inner.wire_init(port_, _api2wire_String(osName),
+            _api2wire_String(osVersion), _api2wire_String(configDir)),
         parseSuccessData: _wire2api_unit,
         constMeta: const FlutterRustBridgeTaskConstMeta(
           debugName: "init",
-          argNames: ["configDir"],
+          argNames: ["osName", "osVersion", "configDir"],
         ),
-        argValues: [configDir],
+        argValues: [osName, osVersion, configDir],
         hint: hint,
       ));
 
@@ -164,6 +190,20 @@ class MirrorXCoreImpl extends FlutterRustBridgeBase<MirrorXCoreWire>
         hint: hint,
       ));
 
+  Future<StartMediaTransmissionReply> socketDesktopStartMediaTransmission(
+          {required String remoteDeviceId, dynamic hint}) =>
+      executeNormal(FlutterRustBridgeTask(
+        callFfi: (port_) => inner.wire_socket_desktop_start_media_transmission(
+            port_, _api2wire_String(remoteDeviceId)),
+        parseSuccessData: _wire2api_start_media_transmission_reply,
+        constMeta: const FlutterRustBridgeTaskConstMeta(
+          debugName: "socket_desktop_start_media_transmission",
+          argNames: ["remoteDeviceId"],
+        ),
+        argValues: [remoteDeviceId],
+        hint: hint,
+      ));
+
   Future<String> utilityGenerateDevicePassword({dynamic hint}) =>
       executeNormal(FlutterRustBridgeTask(
         callFfi: (port_) => inner.wire_utility_generate_device_password(port_),
@@ -220,6 +260,19 @@ int? _wire2api_opt_box_autoadd_u32(dynamic raw) {
   return raw == null ? null : _wire2api_box_autoadd_u32(raw);
 }
 
+StartMediaTransmissionReply _wire2api_start_media_transmission_reply(
+    dynamic raw) {
+  final arr = raw as List<dynamic>;
+  if (arr.length != 4)
+    throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+  return StartMediaTransmissionReply(
+    osName: _wire2api_String(arr[0]),
+    osVersion: _wire2api_String(arr[1]),
+    videoType: _wire2api_String(arr[2]),
+    audioType: _wire2api_String(arr[3]),
+  );
+}
+
 int _wire2api_u32(dynamic raw) {
   return raw as int;
 }
@@ -260,10 +313,14 @@ class MirrorXCoreWire implements FlutterRustBridgeWireBase {
 
   void wire_init(
     int port_,
+    ffi.Pointer<wire_uint_8_list> os_name,
+    ffi.Pointer<wire_uint_8_list> os_version,
     ffi.Pointer<wire_uint_8_list> config_dir,
   ) {
     return _wire_init(
       port_,
+      os_name,
+      os_version,
       config_dir,
     );
   }
@@ -271,9 +328,13 @@ class MirrorXCoreWire implements FlutterRustBridgeWireBase {
   late final _wire_initPtr = _lookup<
       ffi.NativeFunction<
           ffi.Void Function(
-              ffi.Int64, ffi.Pointer<wire_uint_8_list>)>>('wire_init');
-  late final _wire_init = _wire_initPtr
-      .asFunction<void Function(int, ffi.Pointer<wire_uint_8_list>)>();
+              ffi.Int64,
+              ffi.Pointer<wire_uint_8_list>,
+              ffi.Pointer<wire_uint_8_list>,
+              ffi.Pointer<wire_uint_8_list>)>>('wire_init');
+  late final _wire_init = _wire_initPtr.asFunction<
+      void Function(int, ffi.Pointer<wire_uint_8_list>,
+          ffi.Pointer<wire_uint_8_list>, ffi.Pointer<wire_uint_8_list>)>();
 
   void wire_config_read_device_id(
     int port_,
@@ -408,6 +469,24 @@ class MirrorXCoreWire implements FlutterRustBridgeWireBase {
       _wire_socket_desktop_key_exchange_and_password_verifyPtr.asFunction<
           void Function(int, ffi.Pointer<wire_uint_8_list>,
               ffi.Pointer<wire_uint_8_list>)>();
+
+  void wire_socket_desktop_start_media_transmission(
+    int port_,
+    ffi.Pointer<wire_uint_8_list> remote_device_id,
+  ) {
+    return _wire_socket_desktop_start_media_transmission(
+      port_,
+      remote_device_id,
+    );
+  }
+
+  late final _wire_socket_desktop_start_media_transmissionPtr = _lookup<
+          ffi.NativeFunction<
+              ffi.Void Function(ffi.Int64, ffi.Pointer<wire_uint_8_list>)>>(
+      'wire_socket_desktop_start_media_transmission');
+  late final _wire_socket_desktop_start_media_transmission =
+      _wire_socket_desktop_start_media_transmissionPtr
+          .asFunction<void Function(int, ffi.Pointer<wire_uint_8_list>)>();
 
   void wire_utility_generate_device_password(
     int port_,

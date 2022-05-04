@@ -1,17 +1,12 @@
 use super::{
     endpoint::EndPoint,
     message::client_to_client::{
-        ConnectReply, ConnectRequest, KeyExchangeAndVerifyPasswordRequest,
-        StartMediaTransmissionReply, StartMediaTransmissionRequest,
+        ConnectReply, ConnectRequest, KeyExchangeAndVerifyPasswordReply,
+        KeyExchangeAndVerifyPasswordRequest, StartMediaTransmissionReply,
+        StartMediaTransmissionRequest,
     },
 };
-use crate::{
-    provider::config::ConfigProvider,
-    socket::{
-        endpoint::CacheKey,
-        message::client_to_client::{HostType, KeyExchangeAndVerifyPasswordReply},
-    },
-};
+use crate::{provider::config::ConfigProvider, socket::endpoint::CacheKey};
 use anyhow::anyhow;
 use log::{info, trace};
 use ring::rand::SecureRandom;
@@ -206,17 +201,16 @@ pub async fn start_media_transmission(
 ) -> anyhow::Result<StartMediaTransmissionReply> {
     info!("start_media_transmission: {}", req);
 
-    // todo:
-
-    let mut host_type = HostType::Unknown;
-    let info = os_info::get();
-    let os_type = info.os_type();
-    let version = info.version();
-
     Ok(StartMediaTransmissionReply {
-        host_type,
-        host_major_version: todo!(),
-        video_type: todo!(),
-        audio_type: todo!(),
+        os_name: crate::constants::OS_NAME
+            .get()
+            .map(|v| v.clone())
+            .unwrap_or(String::from("Unknown")),
+        os_version: crate::constants::OS_VERSION
+            .get()
+            .map(|v| v.clone())
+            .unwrap_or(String::from("Unknown")),
+        video_type: String::from("todo"),
+        audio_type: String::from("todo"),
     })
 }
