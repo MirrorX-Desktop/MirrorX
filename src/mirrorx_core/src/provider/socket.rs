@@ -11,18 +11,15 @@ use crate::{
         },
         packet::Packet,
     },
-    utility::call_id_generator::CallIdGenerator,
+    utility::{call_id_generator::CallIdGenerator, serializer::BINCODE_SERIALIZER},
 };
 use anyhow::bail;
-use bincode::{
-    config::{LittleEndian, VarintEncoding, WithOtherEndian, WithOtherIntEncoding},
-    DefaultOptions, Options,
-};
+use bincode::Options;
 use bytes::Bytes;
 use dashmap::DashMap;
 use futures::{SinkExt, StreamExt};
 use log::{error, info, trace, warn};
-use once_cell::sync::{Lazy, OnceCell};
+use once_cell::sync::OnceCell;
 use std::{sync::Arc, time::Duration};
 use tokio::{
     net::{TcpStream, ToSocketAddrs},
@@ -30,14 +27,6 @@ use tokio::{
     time::timeout,
 };
 use tokio_util::codec::LengthDelimitedCodec;
-
-static BINCODE_SERIALIZER: Lazy<
-    WithOtherIntEncoding<WithOtherEndian<DefaultOptions, LittleEndian>, VarintEncoding>,
-> = Lazy::new(|| {
-    bincode::DefaultOptions::new()
-        .with_little_endian()
-        .with_varint_encoding()
-});
 
 static CURRENT_SOCKET_PROVIDER: OnceCell<Arc<SocketProvider>> = OnceCell::new();
 
@@ -137,7 +126,7 @@ impl SocketProvider {
 
         let buf = BINCODE_SERIALIZER.serialize(&message)?;
 
-        let packet = Packet::ClientToClient(call_id, from_device_id, to_device_id, buf);
+        let packet = Packet::ClientToClient(call_id, from_device_id, to_device_id, false, buf);
 
         let mut rx = self.register_client_call(call_id);
 
@@ -194,11 +183,11 @@ impl SocketProvider {
         message: ClientToClientMessage,
     ) -> anyhow::Result<()> {
         let buf = BINCODE_SERIALIZER.serialize(&message)?;
-        let packet = Packet::ClientToClient(call_id, from_device_id, to_device_id, buf);
+        let packet = Packet::ClientToClient(call_id, from_device_id, to_device_id, false, buf);
         self.send(packet).await
     }
 
-    async fn send(&self, packet: Packet) -> anyhow::Result<()> {
+    pub async fn send(&self, packet: Packet) -> anyhow::Result<()> {
         let buf = BINCODE_SERIALIZER.serialize(&packet)?;
         self.tx.send(buf).await?;
         Ok(())
@@ -302,7 +291,13 @@ fn serve_stream(stream: TcpStream, mut rx: mpsc::Receiver<Vec<u8>>) -> anyhow::R
                         error!("serve_stream: socket provider uninitialized");
                     }
                 }
-                Packet::ClientToClient(call_id, from_device_id, to_device_id, message_bytes) => {
+                Packet::ClientToClient(
+                    call_id,
+                    from_device_id,
+                    to_device_id,
+                    is_secure,
+                    mut message_bytes,
+                ) => {
                     let endpoint = match select_endpoint(to_device_id, from_device_id) {
                         Ok(ep) => ep,
                         Err(err) => {
@@ -310,6 +305,13 @@ fn serve_stream(stream: TcpStream, mut rx: mpsc::Receiver<Vec<u8>>) -> anyhow::R
                             continue;
                         }
                     };
+
+                    if is_secure {
+                        if let Err(err) = endpoint.secure_open(&mut message_bytes).await {
+                            error!("{}", err);
+                            continue;
+                        }
+                    }
 
                     let message = match BINCODE_SERIALIZER
                         .deserialize::<ClientToClientMessage>(&message_bytes)
@@ -442,6 +444,15 @@ fn handle_client_to_client_message(
                 client_to_client_handler::key_exchange_and_verify_password,
                 req,
                 ClientToClientMessage::KeyExchangeAndVerifyPasswordReply
+            );
+        }
+        ClientToClientMessage::StartMediaTransmissionRequest(req) => {
+            handle_client_to_client_message!(
+                endpoint,
+                call_id,
+                client_to_client_handler::start_media_transmission,
+                req,
+                ClientToClientMessage::StartMediaTransmissionReply
             );
         }
         _ => {

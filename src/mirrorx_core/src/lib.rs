@@ -4,3 +4,6 @@ mod factory;
 mod provider;
 mod socket;
 mod utility;
+
+#[cfg(test)]
+mod test;

@@ -41,6 +41,7 @@ dependencies:
   get: ^4.6.1
   path_provider: ^2.0.9
   ffi: ^1.1.2
+  device_info_plus: ^3.2.3
 
 dev_dependencies:
   flutter_test:

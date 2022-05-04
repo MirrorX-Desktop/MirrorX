@@ -2,14 +2,18 @@ use super::{
     endpoint::EndPoint,
     message::client_to_client::{
         ConnectReply, ConnectRequest, KeyExchangeAndVerifyPasswordRequest,
+        StartMediaTransmissionReply, StartMediaTransmissionRequest,
     },
 };
 use crate::{
     provider::config::ConfigProvider,
-    socket::{endpoint::CacheKey, message::client_to_client::KeyExchangeAndVerifyPasswordReply},
+    socket::{
+        endpoint::CacheKey,
+        message::client_to_client::{HostType, KeyExchangeAndVerifyPasswordReply},
+    },
 };
 use anyhow::anyhow;
-use log::info;
+use log::{info, trace};
 use ring::rand::SecureRandom;
 use rsa::{PaddingScheme, PublicKeyParts, RsaPrivateKey, RsaPublicKey};
 use std::sync::Arc;
@@ -110,7 +114,7 @@ pub async fn key_exchange_and_verify_password(
     let remote_public_key =
         ring::agreement::UnparsedPublicKey::new(&ring::agreement::X25519, &req.exchange_pub_key);
 
-    let (send_key, recv_key) = ring::agreement::agree_ephemeral(
+    let (sealing_key, opening_key) = ring::agreement::agree_ephemeral(
         local_private_key,
         &remote_public_key,
         ring::error::Unspecified,
@@ -145,23 +149,19 @@ pub async fn key_exchange_and_verify_password(
         )
     })?;
 
-    info!("key exchange and password verify success");
-    info!("send key: {:02X?}", send_key);
-    info!("recv key: {:02X?}", recv_key);
-
     // initial endpoint opening(recv) key
     let unbound_opening_key =
-        ring::aead::UnboundKey::new(&ring::aead::CHACHA20_POLY1305, &recv_key).map_err(|err| {
-            anyhow::anyhow!(
-                "key_exchange_and_verify_password: create unbounded key for opening failed: {}",
-                err
-            )
-        })?;
+        ring::aead::UnboundKey::new(&ring::aead::CHACHA20_POLY1305, &opening_key).map_err(
+            |err| {
+                anyhow::anyhow!(
+                    "key_exchange_and_verify_password: create unbounded key for opening failed: {}",
+                    err
+                )
+            },
+        )?;
 
     let opening_initial_nonce =
         unsafe { u64::from_le_bytes(*(exchange_salt[..8].as_ptr() as *const [u8; 8])) };
-
-    info!("opening initial nonce: {}", opening_initial_nonce);
 
     endpoint
         .set_opening_key(unbound_opening_key, opening_initial_nonce)
@@ -169,25 +169,54 @@ pub async fn key_exchange_and_verify_password(
 
     // initial endpoint sealing(send) key
     let unbound_sealing_key =
-        ring::aead::UnboundKey::new(&ring::aead::CHACHA20_POLY1305, &send_key).map_err(|err| {
-            anyhow::anyhow!(
-                "key_exchange_and_verify_password: create unbounded key for sealing failed: {}",
-                err
-            )
-        })?;
+        ring::aead::UnboundKey::new(&ring::aead::CHACHA20_POLY1305, &sealing_key).map_err(
+            |err| {
+                anyhow::anyhow!(
+                    "key_exchange_and_verify_password: create unbounded key for sealing failed: {}",
+                    err
+                )
+            },
+        )?;
 
     let sealing_initial_nonce =
         unsafe { u64::from_le_bytes(*(req.exchange_salt[..8].as_ptr() as *const [u8; 8])) };
-
-    info!("sealing initial nonce nonce: {}", sealing_initial_nonce);
 
     endpoint
         .set_sealing_key(unbound_sealing_key, sealing_initial_nonce)
         .await;
 
+    trace!("key exchange and password verify success");
+
+    trace!("sealing key: {:X?}", sealing_key);
+    trace!("opening key: {:X?}", opening_key);
+
+    trace!("opening initial nonce: {}", opening_initial_nonce);
+    trace!("sealing initial nonce: {}", sealing_initial_nonce);
+
     Ok(KeyExchangeAndVerifyPasswordReply {
         password_correct: true,
         exchange_pub_key,
         exchange_salt,
+    })
+}
+
+pub async fn start_media_transmission(
+    endpoint: Arc<EndPoint>,
+    req: StartMediaTransmissionRequest,
+) -> anyhow::Result<StartMediaTransmissionReply> {
+    info!("start_media_transmission: {}", req);
+
+    // todo:
+
+    let mut host_type = HostType::Unknown;
+    let info = os_info::get();
+    let os_type = info.os_type();
+    let version = info.version();
+
+    Ok(StartMediaTransmissionReply {
+        host_type,
+        host_major_version: todo!(),
+        video_type: todo!(),
+        audio_type: todo!(),
     })
 }

@@ -12,6 +12,6 @@ pub enum Packet {
     /// (call_id, message)
     ServerToClient(u16, ServerToClientMessage),
 
-    /// (call_id, from_device_id, to_device_id, message_bytes)
-    ClientToClient(u16, String, String, Vec<u8>),
+    /// (call_id, from_device_id, to_device_id, is_secure, message_bytes)
+    ClientToClient(u16, String, String, bool, Vec<u8>),
 }

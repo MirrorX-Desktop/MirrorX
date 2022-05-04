@@ -28,6 +28,7 @@ rsa = "0.6.1"
 dashmap = "5.3.3"
 reqwest = { version = "0.11.10", features = ["json"] }
 rustc-hash = "1.1.0"
+os_info = { version = "3.3.0", default-features = false }
 
 [profile.dev.package.num-bigint-dig]
 opt-level = 3
