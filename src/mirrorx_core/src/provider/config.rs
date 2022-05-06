@@ -18,14 +18,14 @@ impl ConfigProvider {
 
     pub fn make_current(db_dir: &Path) -> anyhow::Result<()> {
         match CURRENT_CONFIG_PROVIDER.get_or_try_init(|| -> anyhow::Result<ConfigProvider> {
-            let config_provider = ConfigProvider {
+            let provider = ConfigProvider {
                 db_file_path: db_dir.join("config.db"),
             };
 
-            let conn = config_provider.open_connection()?;
-            config_provider.ensure_db_exist(&conn)?;
+            let conn = provider.open_connection()?;
+            provider.ensure_db_exist(&conn)?;
 
-            Ok(config_provider)
+            Ok(provider)
         }) {
             Ok(_) => Ok(()),
             Err(err) => bail!("ConfigProvider: make current failed: {}", err),

@@ -23,14 +23,14 @@ impl EndPointProvider {
 
     pub fn make_current() -> anyhow::Result<()> {
         match CURRENT_ENDPOINT_PROVIDER.get_or_try_init(|| -> anyhow::Result<EndPointProvider> {
-            let endpoint_provider = EndPointProvider {
+            let provider = EndPointProvider {
                 endpoints: RwLock::new(HashMap::with_capacity_and_hasher(
                     8,
                     BuildHasherDefault::<FxHasher>::default(),
                 )),
             };
 
-            Ok(endpoint_provider)
+            Ok(provider)
         }) {
             Ok(_) => Ok(()),
             Err(err) => bail!("EndPointProvider: make current failed: {}", err),

@@ -42,11 +42,15 @@ dependencies:
   path_provider: ^2.0.9
   ffi: ^1.1.2
   device_info_plus: ^3.2.3
+  just_the_tooltip: ^0.0.11+2
+
+  video_texture:
+    path: ../app_plugin/video_texture
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-
+  
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
   # activated in the `analysis_options.yaml` file located at the root of your

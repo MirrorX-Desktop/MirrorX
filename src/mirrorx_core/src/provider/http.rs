@@ -24,12 +24,12 @@ impl HTTPProvider {
                 .timeout(Duration::from_secs(5))
                 .build()?;
 
-            let http_provider = HTTPProvider {
+            let provider = HTTPProvider {
                 base_url: Url::from_str("http://192.168.0.101:40000")?,
                 client,
             };
 
-            Ok(http_provider)
+            Ok(provider)
         }) {
             Ok(_) => Ok(()),
             Err(err) => bail!("HTTPProvider: make current failed: {}", err),

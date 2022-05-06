@@ -26,9 +26,9 @@ impl RuntimeProvider {
                 .enable_all()
                 .build()?;
 
-            let runtime_provider = RuntimeProvider { runtime };
+            let provider = RuntimeProvider { runtime };
 
-            Ok(runtime_provider)
+            Ok(provider)
         }) {
             Ok(_) => Ok(()),
             Err(err) => bail!("RuntimeProvider: make current failed: {}", err),

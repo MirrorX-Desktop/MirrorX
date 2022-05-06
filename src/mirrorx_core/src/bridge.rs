@@ -125,29 +125,29 @@ pub extern "C" fn wire_config_save_device_password(
 }
 
 #[no_mangle]
-pub extern "C" fn wire_socket_desktop_connect(port_: i64, remote_device_id: *mut wire_uint_8_list) {
+pub extern "C" fn wire_desktop_connect(port_: i64, remote_device_id: *mut wire_uint_8_list) {
     FLUTTER_RUST_BRIDGE_HANDLER.wrap(
         WrapInfo {
-            debug_name: "socket_desktop_connect",
+            debug_name: "desktop_connect",
             port: Some(port_),
             mode: FfiCallMode::Normal,
         },
         move || {
             let api_remote_device_id = remote_device_id.wire2api();
-            move |task_callback| socket_desktop_connect(api_remote_device_id)
+            move |task_callback| desktop_connect(api_remote_device_id)
         },
     )
 }
 
 #[no_mangle]
-pub extern "C" fn wire_socket_desktop_key_exchange_and_password_verify(
+pub extern "C" fn wire_desktop_key_exchange_and_password_verify(
     port_: i64,
     remote_device_id: *mut wire_uint_8_list,
     password: *mut wire_uint_8_list,
 ) {
     FLUTTER_RUST_BRIDGE_HANDLER.wrap(
         WrapInfo {
-            debug_name: "socket_desktop_key_exchange_and_password_verify",
+            debug_name: "desktop_key_exchange_and_password_verify",
             port: Some(port_),
             mode: FfiCallMode::Normal,
         },
@@ -155,26 +155,46 @@ pub extern "C" fn wire_socket_desktop_key_exchange_and_password_verify(
             let api_remote_device_id = remote_device_id.wire2api();
             let api_password = password.wire2api();
             move |task_callback| {
-                socket_desktop_key_exchange_and_password_verify(api_remote_device_id, api_password)
+                desktop_key_exchange_and_password_verify(api_remote_device_id, api_password)
             }
         },
     )
 }
 
 #[no_mangle]
-pub extern "C" fn wire_socket_desktop_start_media_transmission(
+pub extern "C" fn wire_desktop_start_media_transmission(
     port_: i64,
     remote_device_id: *mut wire_uint_8_list,
 ) {
     FLUTTER_RUST_BRIDGE_HANDLER.wrap(
         WrapInfo {
-            debug_name: "socket_desktop_start_media_transmission",
+            debug_name: "desktop_start_media_transmission",
             port: Some(port_),
             mode: FfiCallMode::Normal,
         },
         move || {
             let api_remote_device_id = remote_device_id.wire2api();
-            move |task_callback| socket_desktop_start_media_transmission(api_remote_device_id)
+            move |task_callback| desktop_start_media_transmission(api_remote_device_id)
+        },
+    )
+}
+
+#[no_mangle]
+pub extern "C" fn wire_desktop_register_frame_stream(
+    port_: i64,
+    remote_device_id: *mut wire_uint_8_list,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap(
+        WrapInfo {
+            debug_name: "desktop_register_frame_stream",
+            port: Some(port_),
+            mode: FfiCallMode::Stream,
+        },
+        move || {
+            let api_remote_device_id = remote_device_id.wire2api();
+            move |task_callback| {
+                desktop_register_frame_stream(task_callback.stream_sink(), api_remote_device_id)
+            }
         },
     )
 }

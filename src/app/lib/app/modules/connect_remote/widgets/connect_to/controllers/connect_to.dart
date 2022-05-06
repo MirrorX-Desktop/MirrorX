@@ -4,12 +4,14 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:mirrorx/app/controllers/mirrorx_core.dart';
+import 'package:mirrorx/app/controllers/page_view.dart';
 import 'package:mirrorx/app/core/utils/dialog.dart';
 import 'package:mirrorx/app/modules/connect_remote/widgets/connect_to/controllers/chars_input.dart';
 
 class ConnectToController extends GetxController {
   late CharacterInputController _digitInputController;
   late MirrorXCoreController _sdk;
+  late PageViewController _pageViewController;
 
   bool _isLoading = false;
 
@@ -19,6 +21,7 @@ class ConnectToController extends GetxController {
   void onInit() {
     _digitInputController = Get.put(CharacterInputController());
     _sdk = Get.find();
+    _pageViewController = Get.find();
     super.onInit();
   }
 
@@ -53,7 +56,7 @@ class ConnectToController extends GetxController {
       _isLoading = true;
       update();
 
-      await _sdk.getInstance().socketDesktopConnect(remoteDeviceId: deviceID);
+      await _sdk.getInstance().desktopConnect(remoteDeviceId: deviceID);
       _popupDesktopConnectInputPasswordDialog(deviceID);
     } catch (err) {
       log("desktop connect failed", error: err);
@@ -73,7 +76,7 @@ class ConnectToController extends GetxController {
     try {
       final passwordCorrect = await _sdk
           .getInstance()
-          .socketDesktopKeyExchangeAndPasswordVerify(
+          .desktopKeyExchangeAndPasswordVerify(
               remoteDeviceId: deviceID, password: controller.text);
 
       if (!passwordCorrect) {
@@ -84,9 +87,12 @@ class ConnectToController extends GetxController {
 
       final reply = await _sdk
           .getInstance()
-          .socketDesktopStartMediaTransmission(remoteDeviceId: deviceID);
+          .desktopStartMediaTransmission(remoteDeviceId: deviceID);
 
       log("start media transmission: os_name=${reply.osName}, os_version=${reply.osVersion}, video_=${reply.videoType}, audio_=${reply.audioType}");
+
+      _pageViewController.addRemoteDesktopPage(
+          deviceID, reply.osName, reply.osVersion);
     } catch (err) {
       log("desktop connect failed", error: err);
       popupErrorDialog(content: "connect_to_remote.dialog.another_error".tr);

@@ -31,3 +31,7 @@ rustc-hash = "1.1.0"
 
 [profile.dev.package.num-bigint-dig]
 opt-level = 3
+
+[profile.release]
+lto = true
+incremental = true

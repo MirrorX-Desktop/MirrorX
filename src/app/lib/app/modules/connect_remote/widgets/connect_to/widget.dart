@@ -27,7 +27,12 @@ class ConnectTo extends StatelessWidget {
               builder: (controller) => Visibility(
                 visible: !controller.isLoading,
                 child: IconButton(
-                  onPressed: controller.connectTo,
+                  onPressed: () {
+                    Get.find<PageViewController>().addRemoteDesktopPage(
+                        "deviceID",
+                        "windows",
+                        "'Windows 10 Pro' 10 Build 16299");
+                  }, //controller.connectTo,
                   tooltip: "connect_to_remote.connect".tr,
                   splashRadius: 14,
                   splashColor: Colors.transparent,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:just_the_tooltip/just_the_tooltip.dart';
 import 'package:mirrorx/app/controllers/page_view.dart';
 import 'package:mirrorx/app/core/values/colors.dart';
 
@@ -20,7 +21,10 @@ class SideMenuItemController extends GetxController
 
   late PageViewController _pageViewController;
 
+  late JustTheController _tooltipController;
+
   PageViewController get pageViewController => _pageViewController;
+  JustTheController get tooltipController => _tooltipController;
 
   @override
   void onInit() {
@@ -34,6 +38,7 @@ class SideMenuItemController extends GetxController
     _currentBackgroundColor = Colors.white;
 
     _pageViewController = Get.find<PageViewController>();
+    _tooltipController = JustTheController();
 
     _selected = false;
 
@@ -55,6 +60,7 @@ class SideMenuItemController extends GetxController
   }
 
   void hoverEnter() {
+    _tooltipController.showTooltip();
     if (!_selected) {
       _updateTextColorAnimation(ColorValues.primaryColor, Colors.white);
     }
@@ -65,6 +71,7 @@ class SideMenuItemController extends GetxController
   }
 
   void hoverLeave() {
+    _tooltipController.hideTooltip();
     if (!_selected) {
       _updateTextColorAnimation(Colors.black, Colors.white);
     }

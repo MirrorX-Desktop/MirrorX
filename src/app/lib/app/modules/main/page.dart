@@ -13,7 +13,7 @@ class MainPage extends StatelessWidget {
       child: Row(
         children: [
           const SizedBox(
-            width: 160,
+            width: 68,
             height: double.infinity,
             child: SideMenu(),
           ),

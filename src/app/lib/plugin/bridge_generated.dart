@@ -32,13 +32,15 @@ abstract class MirrorXCore {
   Future<void> configSaveDevicePassword(
       {required String devicePassword, dynamic hint});
 
-  Future<void> socketDesktopConnect(
-      {required String remoteDeviceId, dynamic hint});
+  Future<void> desktopConnect({required String remoteDeviceId, dynamic hint});
 
-  Future<bool> socketDesktopKeyExchangeAndPasswordVerify(
+  Future<bool> desktopKeyExchangeAndPasswordVerify(
       {required String remoteDeviceId, required String password, dynamic hint});
 
-  Future<StartMediaTransmissionReply> socketDesktopStartMediaTransmission(
+  Future<StartMediaTransmissionReply> desktopStartMediaTransmission(
+      {required String remoteDeviceId, dynamic hint});
+
+  Stream<Uint8List> desktopRegisterFrameStream(
       {required String remoteDeviceId, dynamic hint});
 
   Future<String> utilityGenerateDevicePassword({dynamic hint});
@@ -159,45 +161,59 @@ class MirrorXCoreImpl extends FlutterRustBridgeBase<MirrorXCoreWire>
         hint: hint,
       ));
 
-  Future<void> socketDesktopConnect(
-          {required String remoteDeviceId, dynamic hint}) =>
+  Future<void> desktopConnect({required String remoteDeviceId, dynamic hint}) =>
       executeNormal(FlutterRustBridgeTask(
-        callFfi: (port_) => inner.wire_socket_desktop_connect(
-            port_, _api2wire_String(remoteDeviceId)),
+        callFfi: (port_) =>
+            inner.wire_desktop_connect(port_, _api2wire_String(remoteDeviceId)),
         parseSuccessData: _wire2api_unit,
         constMeta: const FlutterRustBridgeTaskConstMeta(
-          debugName: "socket_desktop_connect",
+          debugName: "desktop_connect",
           argNames: ["remoteDeviceId"],
         ),
         argValues: [remoteDeviceId],
         hint: hint,
       ));
 
-  Future<bool> socketDesktopKeyExchangeAndPasswordVerify(
+  Future<bool> desktopKeyExchangeAndPasswordVerify(
           {required String remoteDeviceId,
           required String password,
           dynamic hint}) =>
       executeNormal(FlutterRustBridgeTask(
-        callFfi: (port_) =>
-            inner.wire_socket_desktop_key_exchange_and_password_verify(port_,
-                _api2wire_String(remoteDeviceId), _api2wire_String(password)),
+        callFfi: (port_) => inner.wire_desktop_key_exchange_and_password_verify(
+            port_,
+            _api2wire_String(remoteDeviceId),
+            _api2wire_String(password)),
         parseSuccessData: _wire2api_bool,
         constMeta: const FlutterRustBridgeTaskConstMeta(
-          debugName: "socket_desktop_key_exchange_and_password_verify",
+          debugName: "desktop_key_exchange_and_password_verify",
           argNames: ["remoteDeviceId", "password"],
         ),
         argValues: [remoteDeviceId, password],
         hint: hint,
       ));
 
-  Future<StartMediaTransmissionReply> socketDesktopStartMediaTransmission(
+  Future<StartMediaTransmissionReply> desktopStartMediaTransmission(
           {required String remoteDeviceId, dynamic hint}) =>
       executeNormal(FlutterRustBridgeTask(
-        callFfi: (port_) => inner.wire_socket_desktop_start_media_transmission(
+        callFfi: (port_) => inner.wire_desktop_start_media_transmission(
             port_, _api2wire_String(remoteDeviceId)),
         parseSuccessData: _wire2api_start_media_transmission_reply,
         constMeta: const FlutterRustBridgeTaskConstMeta(
-          debugName: "socket_desktop_start_media_transmission",
+          debugName: "desktop_start_media_transmission",
+          argNames: ["remoteDeviceId"],
+        ),
+        argValues: [remoteDeviceId],
+        hint: hint,
+      ));
+
+  Stream<Uint8List> desktopRegisterFrameStream(
+          {required String remoteDeviceId, dynamic hint}) =>
+      executeStream(FlutterRustBridgeTask(
+        callFfi: (port_) => inner.wire_desktop_register_frame_stream(
+            port_, _api2wire_String(remoteDeviceId)),
+        parseSuccessData: _wire2api_ZeroCopyBuffer_Uint8List,
+        constMeta: const FlutterRustBridgeTaskConstMeta(
+          debugName: "desktop_register_frame_stream",
           argNames: ["remoteDeviceId"],
         ),
         argValues: [remoteDeviceId],
@@ -242,6 +258,10 @@ class MirrorXCoreImpl extends FlutterRustBridgeBase<MirrorXCoreWire>
 // Section: wire2api
 String _wire2api_String(dynamic raw) {
   return raw as String;
+}
+
+Uint8List _wire2api_ZeroCopyBuffer_Uint8List(dynamic raw) {
+  return raw as Uint8List;
 }
 
 bool _wire2api_bool(dynamic raw) {
@@ -431,61 +451,79 @@ class MirrorXCoreWire implements FlutterRustBridgeWireBase {
       _wire_config_save_device_passwordPtr
           .asFunction<void Function(int, ffi.Pointer<wire_uint_8_list>)>();
 
-  void wire_socket_desktop_connect(
+  void wire_desktop_connect(
     int port_,
     ffi.Pointer<wire_uint_8_list> remote_device_id,
   ) {
-    return _wire_socket_desktop_connect(
+    return _wire_desktop_connect(
       port_,
       remote_device_id,
     );
   }
 
-  late final _wire_socket_desktop_connectPtr = _lookup<
+  late final _wire_desktop_connectPtr = _lookup<
       ffi.NativeFunction<
           ffi.Void Function(ffi.Int64,
-              ffi.Pointer<wire_uint_8_list>)>>('wire_socket_desktop_connect');
-  late final _wire_socket_desktop_connect = _wire_socket_desktop_connectPtr
+              ffi.Pointer<wire_uint_8_list>)>>('wire_desktop_connect');
+  late final _wire_desktop_connect = _wire_desktop_connectPtr
       .asFunction<void Function(int, ffi.Pointer<wire_uint_8_list>)>();
 
-  void wire_socket_desktop_key_exchange_and_password_verify(
+  void wire_desktop_key_exchange_and_password_verify(
     int port_,
     ffi.Pointer<wire_uint_8_list> remote_device_id,
     ffi.Pointer<wire_uint_8_list> password,
   ) {
-    return _wire_socket_desktop_key_exchange_and_password_verify(
+    return _wire_desktop_key_exchange_and_password_verify(
       port_,
       remote_device_id,
       password,
     );
   }
 
-  late final _wire_socket_desktop_key_exchange_and_password_verifyPtr = _lookup<
+  late final _wire_desktop_key_exchange_and_password_verifyPtr = _lookup<
           ffi.NativeFunction<
               ffi.Void Function(ffi.Int64, ffi.Pointer<wire_uint_8_list>,
                   ffi.Pointer<wire_uint_8_list>)>>(
-      'wire_socket_desktop_key_exchange_and_password_verify');
-  late final _wire_socket_desktop_key_exchange_and_password_verify =
-      _wire_socket_desktop_key_exchange_and_password_verifyPtr.asFunction<
+      'wire_desktop_key_exchange_and_password_verify');
+  late final _wire_desktop_key_exchange_and_password_verify =
+      _wire_desktop_key_exchange_and_password_verifyPtr.asFunction<
           void Function(int, ffi.Pointer<wire_uint_8_list>,
               ffi.Pointer<wire_uint_8_list>)>();
 
-  void wire_socket_desktop_start_media_transmission(
+  void wire_desktop_start_media_transmission(
     int port_,
     ffi.Pointer<wire_uint_8_list> remote_device_id,
   ) {
-    return _wire_socket_desktop_start_media_transmission(
+    return _wire_desktop_start_media_transmission(
       port_,
       remote_device_id,
     );
   }
 
-  late final _wire_socket_desktop_start_media_transmissionPtr = _lookup<
+  late final _wire_desktop_start_media_transmissionPtr = _lookup<
           ffi.NativeFunction<
               ffi.Void Function(ffi.Int64, ffi.Pointer<wire_uint_8_list>)>>(
-      'wire_socket_desktop_start_media_transmission');
-  late final _wire_socket_desktop_start_media_transmission =
-      _wire_socket_desktop_start_media_transmissionPtr
+      'wire_desktop_start_media_transmission');
+  late final _wire_desktop_start_media_transmission =
+      _wire_desktop_start_media_transmissionPtr
+          .asFunction<void Function(int, ffi.Pointer<wire_uint_8_list>)>();
+
+  void wire_desktop_register_frame_stream(
+    int port_,
+    ffi.Pointer<wire_uint_8_list> remote_device_id,
+  ) {
+    return _wire_desktop_register_frame_stream(
+      port_,
+      remote_device_id,
+    );
+  }
+
+  late final _wire_desktop_register_frame_streamPtr = _lookup<
+          ffi.NativeFunction<
+              ffi.Void Function(ffi.Int64, ffi.Pointer<wire_uint_8_list>)>>(
+      'wire_desktop_register_frame_stream');
+  late final _wire_desktop_register_frame_stream =
+      _wire_desktop_register_frame_streamPtr
           .asFunction<void Function(int, ffi.Pointer<wire_uint_8_list>)>();
 
   void wire_utility_generate_device_password(

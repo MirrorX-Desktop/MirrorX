@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:just_the_tooltip/just_the_tooltip.dart';
 
 import 'controllers/side_menu_item.dart';
 
@@ -19,60 +20,56 @@ class SideMenuSystemItem extends StatelessWidget {
   Widget build(BuildContext context) {
     Get.lazyPut(() => SideMenuItemController(pageTag), tag: pageTag);
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: GetBuilder<SideMenuItemController>(
+    return GetBuilder<SideMenuItemController>(
         tag: pageTag,
         builder: (controller) {
-          return AnimatedBuilder(
-            animation: controller.animationController,
-            builder: (context, child) {
-              return DecoratedBox(
-                decoration: BoxDecoration(
-                  color: controller.backgroundColorAnimation.value,
-                  borderRadius: const BorderRadius.all(Radius.circular(10)),
-                  boxShadow: [
-                    BoxShadow(
-                        offset: const Offset(0, 1.5),
-                        color: Colors.grey.withAlpha(100),
-                        blurRadius: 3.5)
-                  ],
-                ),
-                child: MouseRegion(
-                  cursor: SystemMouseCursors.click,
-                  onEnter: (_) => controller.hoverEnter(),
-                  onExit: (_) => controller.hoverLeave(),
-                  child: GestureDetector(
-                    onTap: () =>
-                        controller.pageViewController.jumpToPage(pageTag),
-                    behavior: HitTestBehavior.opaque,
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Row(
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.only(right: 8.0),
-                            child: Icon(icon,
-                                size: 24,
-                                color: controller.titleColorAnimation.value),
+          return JustTheTooltip(
+              controller: controller.tooltipController,
+              preferredDirection: AxisDirection.right,
+              content: Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: Text(
+                    title,
+                    style: const TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.bold),
+                  )),
+              tailBaseWidth: 6,
+              tailLength: 4,
+              offset: 8,
+              margin: EdgeInsets.zero,
+              elevation: 2,
+              borderRadius: const BorderRadius.all(Radius.circular(6)),
+              child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: AnimatedBuilder(
+                    animation: controller.animationController,
+                    builder: (context, child) {
+                      return DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: controller.backgroundColorAnimation.value,
+                            borderRadius:
+                                const BorderRadius.all(Radius.circular(7)),
                           ),
-                          Text(
-                            title,
-                            style: TextStyle(
-                                color: controller.titleColorAnimation.value,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            },
-          );
-        },
-      ),
-    );
+                          child: MouseRegion(
+                              cursor: SystemMouseCursors.click,
+                              onEnter: (_) => controller.hoverEnter(),
+                              onExit: (_) => controller.hoverLeave(),
+                              child: GestureDetector(
+                                  onTap: () => controller.pageViewController
+                                      .jumpToPage(pageTag),
+                                  behavior: HitTestBehavior.opaque,
+                                  child: SizedBox(
+                                    width: 42,
+                                    height: 42,
+                                    child: Center(
+                                      child: Icon(icon,
+                                          size: 26,
+                                          color: controller
+                                              .titleColorAnimation.value),
+                                    ),
+                                  ))));
+                    },
+                  )));
+        });
   }
 }

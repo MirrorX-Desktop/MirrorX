@@ -56,14 +56,15 @@ class PageViewController extends GetxController {
     super.onInit();
   }
 
-  void addNewRemoteDesktopPage(String remoteID) {
+  void addRemoteDesktopPage(String remoteID, String osName, String osVersion) {
     final exist = _remoteDesktopPages.any((element) => element.tag == remoteID);
     if (exist) {
       dev.log("addNewRemoteDesktopPage: duplicate remoteID: $remoteID");
       return;
     }
 
-    final newRemoteDesktopPage = RemoteDesktopPage(remoteID: remoteID);
+    final newRemoteDesktopPage = RemoteDesktopPage(
+        remoteID: remoteID, osName: osName, osVersion: osVersion);
     _remoteDesktopPages.add(newRemoteDesktopPage);
     _totalPageViewCount = _staticPages.length + _remoteDesktopPages.length;
     // default select to the new added page
@@ -72,7 +73,7 @@ class PageViewController extends GetxController {
     update();
   }
 
-  void remoteRemoteDesktopPage(String remoteID) {
+  void removeRemoteDesktopPage(String remoteID) {
     final wantRemovePageIndex =
         _remoteDesktopPages.indexWhere((element) => element.tag == remoteID);
     if (wantRemovePageIndex < 0) {
@@ -128,9 +129,10 @@ class PageViewController extends GetxController {
   }
 
   void _antimateToPage(int selectIndex) {
-    pageController.animateToPage(selectIndex,
-        duration: const Duration(milliseconds: 600),
-        curve: Curves.fastOutSlowIn);
+    pageController.jumpToPage(selectIndex);
+    // ,
+    //     duration: const Duration(milliseconds: 600),
+    //     curve: Curves.fastOutSlowIn);
   }
 
   String _getSelectedTag() {

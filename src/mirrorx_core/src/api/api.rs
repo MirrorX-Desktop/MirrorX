@@ -1,17 +1,27 @@
+use flutter_rust_bridge::{StreamSink, ZeroCopyBuffer};
 use log::info;
 
 use super::http::device_register;
 use crate::{
     provider::{
-        config::ConfigProvider, endpoint::EndPointProvider, http::HTTPProvider,
-        runtime::RuntimeProvider, socket::SocketProvider,
+        config::ConfigProvider,
+        endpoint::EndPointProvider,
+        frame_stream::{self, FrameStreamProvider},
+        http::HTTPProvider,
+        runtime::RuntimeProvider,
+        socket::SocketProvider,
     },
     socket::message::client_to_client::StartMediaTransmissionReply,
     utility::token::parse_register_token,
 };
-use std::{io::Write, path::Path, sync::Once};
+use std::{
+    io::Write,
+    path::Path,
+    sync::{atomic::AtomicBool, Once},
+};
 
 static LOGGER_INIT_ONCE: Once = Once::new();
+static INIT_SUCCESS: AtomicBool = AtomicBool::new(false);
 
 pub fn init(os_name: String, os_version: String, config_dir: String) -> anyhow::Result<()> {
     LOGGER_INIT_ONCE.call_once(|| {
@@ -38,6 +48,10 @@ pub fn init(os_name: String, os_version: String, config_dir: String) -> anyhow::
         os_name, os_version, config_dir
     );
 
+    if INIT_SUCCESS.load(std::sync::atomic::Ordering::SeqCst) {
+        return Ok(());
+    }
+
     crate::constants::OS_NAME.get_or_init(|| os_name);
     crate::constants::OS_VERSION.get_or_init(|| os_version);
 
@@ -45,6 +59,7 @@ pub fn init(os_name: String, os_version: String, config_dir: String) -> anyhow::
     RuntimeProvider::make_current()?;
     HTTPProvider::make_current()?;
     EndPointProvider::make_current()?;
+    FrameStreamProvider::make_current()?;
 
     // ensure device id is valid
     let device_id = ConfigProvider::current()?.read_device_id()?;
@@ -61,6 +76,8 @@ pub fn init(os_name: String, os_version: String, config_dir: String) -> anyhow::
 
     // handshake to server
     SocketProvider::make_current("192.168.0.101:40001", &resp.token)?;
+
+    INIT_SUCCESS.store(true, std::sync::atomic::Ordering::SeqCst);
 
     Ok(())
 }
@@ -91,11 +108,11 @@ pub fn config_save_device_password(device_password: String) -> anyhow::Result<()
     ConfigProvider::current()?.save_device_password(&device_password)
 }
 
-pub fn socket_desktop_connect(remote_device_id: String) -> anyhow::Result<()> {
+pub fn desktop_connect(remote_device_id: String) -> anyhow::Result<()> {
     RuntimeProvider::current()?.block_on(super::socket::desktop_connect(remote_device_id))
 }
 
-pub fn socket_desktop_key_exchange_and_password_verify(
+pub fn desktop_key_exchange_and_password_verify(
     remote_device_id: String,
     password: String,
 ) -> anyhow::Result<bool> {
@@ -105,12 +122,20 @@ pub fn socket_desktop_key_exchange_and_password_verify(
     ))
 }
 
-pub fn socket_desktop_start_media_transmission(
+pub fn desktop_start_media_transmission(
     remote_device_id: String,
 ) -> anyhow::Result<StartMediaTransmissionReply> {
     RuntimeProvider::current()?.block_on(super::socket::desktop_start_media_transmission(
         remote_device_id,
     ))
+}
+
+pub fn desktop_register_frame_stream(
+    stream_sink: StreamSink<ZeroCopyBuffer<Vec<u8>>>,
+    remote_device_id: String,
+) -> anyhow::Result<()> {
+    FrameStreamProvider::current()?.add(remote_device_id, stream_sink);
+    Ok(())
 }
 
 pub fn utility_generate_device_password() -> String {

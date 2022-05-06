@@ -22,46 +22,44 @@ class SideMenu extends StatelessWidget {
 
   Widget _buildList() {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.only(bottom: 8),
       child: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: Column(
-              children: [
-                SideMenuSystemItem(
-                    icon: Icons.screen_share,
-                    title: "side_menu.connect_to_remote".tr,
-                    pageTag: PageTags.connectRemote),
-                SideMenuSystemItem(
-                    icon: Icons.lan,
-                    title: "side_menu.lan_discovery".tr,
-                    pageTag: PageTags.lanDiscovery),
-                SideMenuSystemItem(
-                    icon: Icons.drive_file_move_rtl,
-                    title: "side_menu.file_transfer".tr,
-                    pageTag: PageTags.fileTransfer),
-                SideMenuSystemItem(
-                    icon: Icons.history,
-                    title: "side_menu.connection_history".tr,
-                    pageTag: PageTags.connectionHistory),
-                SideMenuSystemItem(
-                    icon: Icons.settings,
-                    title: "side_menu.settings".tr,
-                    pageTag: PageTags.settings),
-              ],
-            ),
+          Column(
+            children: [
+              SideMenuSystemItem(
+                  icon: Icons.screen_share,
+                  title: "side_menu.connect_to_remote".tr,
+                  pageTag: PageTags.connectRemote),
+              SideMenuSystemItem(
+                  icon: Icons.lan,
+                  title: "side_menu.lan_discovery".tr,
+                  pageTag: PageTags.lanDiscovery),
+              SideMenuSystemItem(
+                  icon: Icons.drive_file_move_rtl,
+                  title: "side_menu.file_transfer".tr,
+                  pageTag: PageTags.fileTransfer),
+              SideMenuSystemItem(
+                  icon: Icons.history,
+                  title: "side_menu.connection_history".tr,
+                  pageTag: PageTags.connectionHistory),
+              SideMenuSystemItem(
+                  icon: Icons.settings,
+                  title: "side_menu.settings".tr,
+                  pageTag: PageTags.settings),
+            ],
           ),
           const Divider(indent: 8, endIndent: 8),
           Expanded(
             child: GetBuilder<PageViewController>(
               builder: (controller) {
-                return ListView(
-                  primary: true,
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  physics: const BouncingScrollPhysics(),
-                  children: _buildSideMenuRemoteDesktopItem(controller),
-                );
+                return SizedBox(
+                    width: 42,
+                    child: ListView(
+                      primary: true,
+                      physics: const BouncingScrollPhysics(),
+                      children: _buildSideMenuRemoteDesktopItem(controller),
+                    ));
               },
             ),
           ),
@@ -72,8 +70,12 @@ class SideMenu extends StatelessWidget {
 
   List<Widget> _buildSideMenuRemoteDesktopItem(PageViewController controller) {
     return controller.remoteDesktopPages
-        .map((e) => SideMenuDesktopItem(
-            icon: Icons.abc, title: e.tag!, pageTag: e.tag!))
+        .map((element) => SideMenuDesktopItem(
+              pageTag: element.tag!,
+              title: element.tag!,
+              osName: element.osName,
+              osVersion: element.osVersion,
+            ))
         .toList();
   }
 }
