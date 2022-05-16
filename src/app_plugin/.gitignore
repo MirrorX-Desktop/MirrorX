@@ -27,3 +27,5 @@
 .dart_tool/
 .packages
 build/
+
+macos/libmirrorx_core.a
