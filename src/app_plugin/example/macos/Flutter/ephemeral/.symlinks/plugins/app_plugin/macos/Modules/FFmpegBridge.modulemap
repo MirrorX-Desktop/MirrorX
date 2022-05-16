@@ -1,0 +1,7 @@
+module FFMpegBridge {
+    header "Classes/include/ffmpeg_bridge.h"
+    export *
+    module * {
+        export *
+    }
+}

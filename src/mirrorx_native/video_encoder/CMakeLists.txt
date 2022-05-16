@@ -1,0 +1,2 @@
+list(APPEND SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/video_decoder.h)
+list(APPEND SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/video_decoder.c)
