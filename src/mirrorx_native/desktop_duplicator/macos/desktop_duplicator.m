@@ -1,71 +1,52 @@
-#include "../capture_session.h"
-#include "capture_session_context.h"
+#include "desktop_duplicator_context.h"
+#include "../desktop_duplicator.h"
 
-CaptureSession* capture_session_create(int display_index,
-                                       int fps,
-                                       void* tx,
-                                       capture_session_callback callback) {
-  CaptureSessionContext* ctx =
-      [[CaptureSessionContext alloc] init:display_index
-                                      fps:fps
-                                 callback:^(uint16_t width,
-                                            uint16_t height,
-                                            bool is_full_color_range,
-                                            uint8_t* y_plane_buffer_address,
-                                            uint32_t y_plane_stride,
-                                            uint8_t* uv_plane_buffer_address,
-                                            uint32_t uv_plane_stride,
-                                            int64_t dts,
-                                            int32_t dts_scale,
-                                            int64_t pts,
-                                            int32_t pts_scale) {
-                                   callback(tx,
-                                            width,
-                                            height,
-                                            is_full_color_range,
-                                            y_plane_buffer_address,
-                                            y_plane_stride,
-                                            uv_plane_buffer_address,
-                                            uv_plane_stride,
-                                            dts,
-                                            pts);
-                                 }];
+DesktopDuplicator *desktop_duplicator_create(
+        int display_index,
+        int fps,
+        void *tx,
+        capture_session_callback callback) {
 
-  if (NULL == ctx) {
-    return NULL;
-  }
+    DesktopDuplicator *desktop_duplicator =
+            (DesktopDuplicator *) malloc(sizeof(DesktopDuplicator));
+    memset(desktop_duplicator, 0, sizeof(DesktopDuplicator));
+    desktop_duplicator->ctx = [DesktopDuplicatorContext alloc];
 
-  CaptureSession* session = (CaptureSession*)malloc(sizeof(CaptureSession));
-  memset(session, 0, sizeof(CaptureSession));
-  session->ctx = ctx;
-  return session;
+    BOOL success = [desktop_duplicator->ctx init:display_index fps:fps tx:tx callback:callback];
+
+    if (!success) {
+        desktop_duplicator_destroy(desktop_duplicator);
+        return NULL;
+    }
+
+    return desktop_duplicator;
 }
 
-void capture_session_destroy(CaptureSession* capture_session) {
-  if (NULL == capture_session) {
-    return;
-  }
+void desktop_duplicator_destroy(DesktopDuplicator *desktop_duplicator) {
+    if (NULL == desktop_duplicator) {
+        return;
+    }
 
-  if (NULL != capture_session->ctx) {
-    [capture_session->ctx release];
-    capture_session->ctx = NULL;
-  }
+    if (NULL != desktop_duplicator->ctx) {
+        [desktop_duplicator->ctx release];
+        desktop_duplicator->ctx = NULL;
+    }
 
-  free(capture_session);
+    free(desktop_duplicator);
 }
 
-void capture_session_start(CaptureSession* capture_session) {
-  if (NULL == capture_session || NULL == capture_session->ctx) {
-    return;
-  }
+void desktop_duplicator_start(DesktopDuplicator *desktop_duplicator) {
+    if (NULL == desktop_duplicator || NULL == desktop_duplicator->ctx) {
+        return;
+    }
 
-  [capture_session->ctx startCapture];
+    [desktop_duplicator->ctx startCapture];
 }
 
-void capture_session_stop(CaptureSession* capture_session) {
-  if (NULL == capture_session || NULL == capture_session->ctx) {
-    return;
-  }
+void desktop_duplicator_stop(DesktopDuplicator *desktop_duplicator) {
+    if (NULL == desktop_duplicator || NULL == desktop_duplicator->ctx) {
+        return;
+    }
 
-  [capture_session->ctx stopCapture];
+    [desktop_duplicator->ctx stopCapture];
 }

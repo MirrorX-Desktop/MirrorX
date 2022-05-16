@@ -1,0 +1,115 @@
+{
+	"configurations" : 
+	[
+		{
+			"directories" : 
+			[
+				{
+					"build" : ".",
+					"childIndexes" : 
+					[
+						1,
+						2,
+						3,
+						4
+					],
+					"jsonFile" : "directory-.-Debug-f5ebdc15457944623624.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.22.0"
+					},
+					"projectIndex" : 0,
+					"source" : ".",
+					"targetIndexes" : 
+					[
+						0
+					]
+				},
+				{
+					"build" : "desktop_duplicator",
+					"jsonFile" : "directory-desktop_duplicator-Debug-29bfb35cce8f4c95ff07.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.22.0"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 0,
+					"source" : "desktop_duplicator"
+				},
+				{
+					"build" : "rust_log",
+					"jsonFile" : "directory-rust_log-Debug-5c057d168aa7e09525f2.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.22.0"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 0,
+					"source" : "rust_log"
+				},
+				{
+					"build" : "video_encoder",
+					"jsonFile" : "directory-video_encoder-Debug-374e169b16d9f1cf53f8.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.22.0"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 0,
+					"source" : "video_encoder"
+				},
+				{
+					"build" : "video_decoder",
+					"jsonFile" : "directory-video_decoder-Debug-dff281953cab8a58418b.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.22.0"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 0,
+					"source" : "video_decoder"
+				}
+			],
+			"name" : "Debug",
+			"projects" : 
+			[
+				{
+					"directoryIndexes" : 
+					[
+						0,
+						1,
+						2,
+						3,
+						4
+					],
+					"name" : "mirrorx_native",
+					"targetIndexes" : 
+					[
+						0
+					]
+				}
+			],
+			"targets" : 
+			[
+				{
+					"directoryIndex" : 0,
+					"id" : "mirrorx_native::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-mirrorx_native-Debug-47185ef274f24ef5049d.json",
+					"name" : "mirrorx_native",
+					"projectIndex" : 0
+				}
+			]
+		}
+	],
+	"kind" : "codemodel",
+	"paths" : 
+	{
+		"build" : "/Users/chenbaiyu/workspace/mirrorx/src/mirrorx_native/cmake-build-debug",
+		"source" : "/Users/chenbaiyu/workspace/mirrorx/src/mirrorx_native"
+	},
+	"version" : 
+	{
+		"major" : 2,
+		"minor" : 3
+	}
+}

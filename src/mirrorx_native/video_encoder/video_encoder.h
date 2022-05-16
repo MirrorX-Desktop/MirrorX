@@ -5,38 +5,53 @@
 extern "C" {
 #endif
 
-#include "../ffi_log/ffi_log.h"
 #include <libavcodec/avcodec.h>
+#include <libavcodec/videotoolbox.h>
 #include <libavutil/imgutils.h>
 #include <libavutil/opt.h>
 #include <libavutil/pixfmt.h>
 #include <libavutil/rational.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include "../rust_log/rust_log.h"
 
-typedef void (*VideoEncoderCallback)(const void *tx, const uint8_t *packet_data,
-                                     int packet_size);
+typedef void (*EncodeCallback)(void* tx,
+                               uint8_t* packet_data,
+                               int packet_size,
+                               int64_t dts,
+                               int64_t pts);
 
 typedef struct VideoEncoder {
-  AVCodecContext *codec_ctx;
-  AVFrame *frame;
-  AVPacket *packet;
-  VideoEncoderCallback encode_callback;
+  AVCodecContext* codec_ctx;
+  AVFrame* frame;
+  AVPacket* packet;
+  EncodeCallback callback;
 } VideoEncoder;
 
-VideoEncoder *new_video_encoder(const char *encoder_name, int fps,
-                                int src_width, int src_height, int dst_width,
-                                int dst_height,
-                                VideoEncoderCallback encode_callback);
+VideoEncoder* video_encoder_create(const char* encoder_name,
+                                   int screen_width,
+                                   int screen_height,
+                                   int fps,
+                                   EncodeCallback callback);
 
-int video_encode(const VideoEncoder *video_encoder, const void *tx, int width,
-                 int height, int y_line_size, uint8_t *y_buffer,
-                 int uv_line_size, uint8_t *uv_buffer);
+bool video_encoder_encode(VideoEncoder* video_encoder,
+                          void* tx,
+                          uint16_t width,
+                          uint16_t height,
+                          bool is_full_color_range,
+                          uint8_t* y_plane_buffer_address,
+                          uint32_t y_plane_stride,
+                          uint8_t* uv_plane_buffer_address,
+                          uint32_t uv_plane_stride,
+                          int64_t dts,
+                          int32_t dts_scale,
+                          int64_t pts,
+                          int32_t pts_scale);
 
-void free_video_encoder(VideoEncoder *video_encoder);
+void video_encoder_destroy(VideoEncoder* video_encoder);
 
 #ifdef __cplusplus
 };
 #endif
 
-#endif // VIDEO_ENCODER_H
+#endif  // VIDEO_ENCODER_H

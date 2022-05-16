@@ -11,7 +11,7 @@ extern "C" {
 
 #define MAX_LOG_STR_SIZE 512
 
-enum FFI_LOG_LEVEL {
+enum RUST_LOGGER_LEVEL {
   TRACE = 1,
   DEBUG = 2,
   INFO = 3,
@@ -22,7 +22,7 @@ enum FFI_LOG_LEVEL {
 // log function from Rust
 extern void log_to_rust(int level, const char* message);
 
-void ffi_log(enum FFI_LOG_LEVEL level, const char* format, ...);
+void rust_log(enum RUST_LOGGER_LEVEL level, const char* format, ...);
 
 void ffmpeg_log_callback(void* avcl, int level, const char* fmt, va_list vl);
 

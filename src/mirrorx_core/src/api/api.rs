@@ -1,8 +1,11 @@
+use dashmap::DashMap;
 use flutter_rust_bridge::{StreamSink, ZeroCopyBuffer};
-use log::info;
+use log::{error, info};
+use once_cell::sync::{Lazy, OnceCell};
 
 use super::http::device_register;
 use crate::{
+    media::{self, video_frame::VideoFrame},
     provider::{
         config::ConfigProvider,
         endpoint::EndPointProvider,
@@ -15,18 +18,22 @@ use crate::{
     utility::token::parse_register_token,
 };
 use std::{
+    ffi::c_void,
     io::Write,
+    os::raw::{c_int, c_long, c_longlong, c_ulong},
     path::Path,
     sync::{atomic::AtomicBool, Once},
+    time::Duration,
 };
 
 static LOGGER_INIT_ONCE: Once = Once::new();
 static INIT_SUCCESS: AtomicBool = AtomicBool::new(false);
+static FrameMap: Lazy<dashmap::DashMap<u64, VideoFrame>> = Lazy::new(|| DashMap::new());
 
 pub fn init(os_name: String, os_version: String, config_dir: String) -> anyhow::Result<()> {
     LOGGER_INIT_ONCE.call_once(|| {
         env_logger::Builder::new()
-            .filter_level(log::LevelFilter::Trace)
+            .filter_level(log::LevelFilter::Info)
             .format(|buf, record| {
                 writeln!(
                     buf,
@@ -141,3 +148,96 @@ pub fn desktop_register_frame_stream(
 pub fn utility_generate_device_password() -> String {
     crate::utility::rng::generate_device_password()
 }
+
+pub fn begin_video(texture_id: i64) -> anyhow::Result<()> {
+    let (duplicator, duplicator_frame_rx) = media::desktop_duplicator::DesktopDuplicator::new(60)?;
+    let (mut encoder, packet_rx) =
+        media::video_encoder::VideoEncoder::new("libx264", 60, 1920, 1080)?;
+    let (mut decoder, frame_rx) = media::video_decoder::VideoDecoder::new("h264")?;
+
+    std::thread::spawn(move || loop {
+        match duplicator_frame_rx.recv() {
+            Ok(frame) => {
+                info!("duplicator frame len: {}", duplicator_frame_rx.len());
+                if let Err(err) = encoder.encode(&frame) {
+                    // error!("encode failed: {}", err);
+                    break;
+                }
+            }
+            Err(err) => {
+                info!("duplicator_frame_rx closeda a ");
+                break;
+            }
+        }
+    });
+
+    std::thread::spawn(move || loop {
+        match packet_rx.recv() {
+            Ok(packet) => {
+                info!("packet len: {}", packet_rx.len());
+                decoder.decode(&packet);
+            }
+            Err(err) => {
+                info!("packet_rx closed");
+                break;
+            }
+        };
+    });
+
+    std::thread::spawn(move || loop {
+        match frame_rx.recv() {
+            Ok(frame) => unsafe {
+                dispatch_frame(
+                    texture_id,
+                    0,
+                    frame.width,
+                    frame.height,
+                    frame.is_full_color_range,
+                    frame.y_plane_buffer.as_ptr(),
+                    frame.y_plane_stride,
+                    frame.uv_plane_buffer.as_ptr(),
+                    frame.uv_plane_stride,
+                    frame.dts,
+                    frame.pts,
+                );
+            },
+            Err(err) => {
+                info!("frame_rx closed");
+                break;
+            }
+        };
+    });
+
+    RuntimeProvider::current()?.spawn(async move {
+        info!("start capture");
+        duplicator.start_capture();
+        tokio::time::sleep(Duration::from_secs(3600)).await;
+        duplicator.stop_capture();
+        info!("stop capture");
+    });
+
+    Ok(())
+}
+
+/// cbindgen:ignore
+extern "C" {
+    pub fn dispatch_frame(
+        flutter_texture_id: c_long,
+        frame_id: c_ulong,
+        width: u16,
+        height: u16,
+        is_full_color_range: bool,
+        y_plane_buffer_address: *const u8,
+        y_plane_stride: u32,
+        uv_plane_buffer_address: *const u8,
+        uv_plane_stride: u32,
+        dts: i64,
+        pts: i64,
+    ) -> bool;
+}
+
+// #[no_mangle]
+// pub extern "C" fn notify_release(frame_id: c_ulong) {
+//     info!("release frame");
+//     FrameMap.remove(&(frame_id as u64));
+// }

@@ -6,7 +6,7 @@ build = "build.rs"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [lib]
-crate-type = ["lib", "cdylib"]
+crate-type = ["lib", "staticlib"]
 
 [dependencies]
 log = "0.4.16"
@@ -28,6 +28,7 @@ rsa = "0.6.1"
 dashmap = "5.3.3"
 reqwest = { version = "0.11.10", features = ["json"] }
 rustc-hash = "1.1.0"
+crossbeam-channel = "0.5.4"
 
 [profile.dev.package.num-bigint-dig]
 opt-level = 3

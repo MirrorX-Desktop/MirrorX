@@ -197,9 +197,9 @@ build_ffmpeg() {
     cd "$src_dir" || exit
 
     export PKG_CONFIG_PATH="$PKG_CONFIG_PATH":"$artificials_root_dir"/x264/lib/pkgconfig
-    export PKG_CONFIG_PATH="$PKG_CONFIG_PATH":"$artificials_root_dir"/x265/lib/pkgconfig
-    export PKG_CONFIG_PATH="$PKG_CONFIG_PATH":"$artificials_root_dir"/opus/lib/pkgconfig
-    export PKG_CONFIG_PATH="$PKG_CONFIG_PATH":"$artificials_root_dir"/libvpx/lib/pkgconfig
+    # export PKG_CONFIG_PATH="$PKG_CONFIG_PATH":"$artificials_root_dir"/x265/lib/pkgconfig
+    # export PKG_CONFIG_PATH="$PKG_CONFIG_PATH":"$artificials_root_dir"/opus/lib/pkgconfig
+    # export PKG_CONFIG_PATH="$PKG_CONFIG_PATH":"$artificials_root_dir"/libvpx/lib/pkgconfig
 
     echo "List pkg-config libs"
     pkg-config --list-all
@@ -222,30 +222,35 @@ build_ffmpeg() {
         --enable-avdevice \
         --enable-avcodec \
         --enable-avformat \
-        --enable-libx264 \
-        --enable-libx265 \
-        --enable-libvpx \
-        --enable-libopus \
-        --enable-encoder=libx264 \
-        --enable-decoder=h264 \
-        --enable-encoder=libx265 \
-        --enable-decoder=hevc \
-        --enable-encoder=libvpx_vp9 \
-        --enable-decoder=libvpx_vp9 \
-        --enable-encoder=libopus \
-        --enable-decoder=libopus \
         --disable-doc \
         --disable-htmlpages \
         --disable-manpages \
         --disable-podpages \
         --disable-txtpages \
         --disable-network \
+        --enable-libx264 \
         --enable-videotoolbox \
         --enable-audiotoolbox \
+        --enable-encoder=libx264 \
+        --enable-decoder=h264 \
+        --enable-encoder=h264_videotoolbox \
+        --enable-encoder=hevc_videotoolbox \
         --enable-hwaccel=h264_videotoolbox \
         --enable-hwaccel=hevc_videotoolbox \
         --enable-hwaccel=vp9_videotoolbox
     set +x
+
+    # --enable-libx265 \
+    # --enable-libvpx \
+    # --enable-libopus \
+    # --enable-encoder=libx264 \
+    # --enable-decoder=h264 \
+    # --enable-encoder=libx265 \
+    # --enable-decoder=hevc \
+    # --enable-encoder=libvpx_vp9 \
+    # --enable-decoder=libvpx_vp9 \
+    # --enable-encoder=libopus \
+    # --enable-decoder=libopus \
 
     make -j"$CPU_CORES" && make install && make clean
 
@@ -309,15 +314,15 @@ check_tool_installed "autoconf"
 check_tool_installed "pkg-config"
 
 clone_source "x264" "https://code.videolan.org/videolan/x264.git" "stable" "./dependencies_repo/x264"
-clone_source "x265" "https://bitbucket.org/multicoreware/x265_git.git" "3.5" "./dependencies_repo/x265"
-clone_source "opus" "https://gitlab.xiph.org/xiph/opus.git" "v1.3.1" "./dependencies_repo/opus"
-clone_source "libvpx" "https://github.com/webmproject/libvpx.git" "main" "./dependencies_repo/libvpx"
-clone_source "ffmpeg" "https://git.ffmpeg.org/ffmpeg.git" "n5.0" "./dependencies_repo/ffmpeg"
+# clone_source "x265" "https://bitbucket.org/multicoreware/x265_git.git" "3.5" "./dependencies_repo/x265"
+# clone_source "opus" "https://gitlab.xiph.org/xiph/opus.git" "v1.3.1" "./dependencies_repo/opus"
+# clone_source "libvpx" "https://github.com/webmproject/libvpx.git" "main" "./dependencies_repo/libvpx"
+clone_source "ffmpeg" "https://git.ffmpeg.org/ffmpeg.git" "release/5.0" "./dependencies_repo/ffmpeg"
 
 build_x264 "./dependencies_repo/x264" "./dependencies_build/x264"
-build_x265 "./dependencies_repo/x265" "./dependencies_build/x265"
-build_opus "./dependencies_repo/opus" "./dependencies_build/opus"
-build_libvpx "./dependencies_repo/libvpx" "./dependencies_build/libvpx"
+# build_x265 "./dependencies_repo/x265" "./dependencies_build/x265"
+# build_opus "./dependencies_repo/opus" "./dependencies_build/opus"
+# build_libvpx "./dependencies_repo/libvpx" "./dependencies_build/libvpx"
 build_ffmpeg "./dependencies_build" "./dependencies_repo/ffmpeg" "./dependencies_build/ffmpeg"
 
 echo "All dependencies has built successfully!"

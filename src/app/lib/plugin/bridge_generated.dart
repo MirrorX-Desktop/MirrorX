@@ -44,6 +44,8 @@ abstract class MirrorXCore {
       {required String remoteDeviceId, dynamic hint});
 
   Future<String> utilityGenerateDevicePassword({dynamic hint});
+
+  Future<void> beginVideo({required int textureId, dynamic hint});
 }
 
 class StartMediaTransmissionReply {
@@ -232,9 +234,26 @@ class MirrorXCoreImpl extends FlutterRustBridgeBase<MirrorXCoreWire>
         hint: hint,
       ));
 
+  Future<void> beginVideo({required int textureId, dynamic hint}) =>
+      executeNormal(FlutterRustBridgeTask(
+        callFfi: (port_) =>
+            inner.wire_begin_video(port_, _api2wire_i64(textureId)),
+        parseSuccessData: _wire2api_unit,
+        constMeta: const FlutterRustBridgeTaskConstMeta(
+          debugName: "begin_video",
+          argNames: ["textureId"],
+        ),
+        argValues: [textureId],
+        hint: hint,
+      ));
+
   // Section: api2wire
   ffi.Pointer<wire_uint_8_list> _api2wire_String(String raw) {
     return _api2wire_uint_8_list(utf8.encoder.convert(raw));
+  }
+
+  int _api2wire_i64(int raw) {
+    return raw;
   }
 
   int _api2wire_u32(int raw) {
@@ -540,6 +559,22 @@ class MirrorXCoreWire implements FlutterRustBridgeWireBase {
   late final _wire_utility_generate_device_password =
       _wire_utility_generate_device_passwordPtr
           .asFunction<void Function(int)>();
+
+  void wire_begin_video(
+    int port_,
+    int textureID,
+  ) {
+    return _wire_begin_video(
+      port_,
+      textureID,
+    );
+  }
+
+  late final _wire_begin_videoPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64, ffi.Int64)>>(
+          'wire_begin_video');
+  late final _wire_begin_video =
+      _wire_begin_videoPtr.asFunction<void Function(int, int)>();
 
   ffi.Pointer<wire_uint_8_list> new_uint_8_list(
     int len,

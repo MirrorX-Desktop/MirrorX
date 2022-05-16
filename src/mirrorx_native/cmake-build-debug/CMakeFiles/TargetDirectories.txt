@@ -1,0 +1,11 @@
+/Users/chenbaiyu/workspace/mirrorx/src/mirrorx_native/cmake-build-debug/CMakeFiles/mirrorx_native.dir
+/Users/chenbaiyu/workspace/mirrorx/src/mirrorx_native/cmake-build-debug/CMakeFiles/edit_cache.dir
+/Users/chenbaiyu/workspace/mirrorx/src/mirrorx_native/cmake-build-debug/CMakeFiles/rebuild_cache.dir
+/Users/chenbaiyu/workspace/mirrorx/src/mirrorx_native/cmake-build-debug/desktop_duplicator/CMakeFiles/edit_cache.dir
+/Users/chenbaiyu/workspace/mirrorx/src/mirrorx_native/cmake-build-debug/desktop_duplicator/CMakeFiles/rebuild_cache.dir
+/Users/chenbaiyu/workspace/mirrorx/src/mirrorx_native/cmake-build-debug/rust_log/CMakeFiles/edit_cache.dir
+/Users/chenbaiyu/workspace/mirrorx/src/mirrorx_native/cmake-build-debug/rust_log/CMakeFiles/rebuild_cache.dir
+/Users/chenbaiyu/workspace/mirrorx/src/mirrorx_native/cmake-build-debug/video_encoder/CMakeFiles/edit_cache.dir
+/Users/chenbaiyu/workspace/mirrorx/src/mirrorx_native/cmake-build-debug/video_encoder/CMakeFiles/rebuild_cache.dir
+/Users/chenbaiyu/workspace/mirrorx/src/mirrorx_native/cmake-build-debug/video_decoder/CMakeFiles/edit_cache.dir
+/Users/chenbaiyu/workspace/mirrorx/src/mirrorx_native/cmake-build-debug/video_decoder/CMakeFiles/rebuild_cache.dir

@@ -1,19 +1,18 @@
 fn main() {
-    println!("cargo:rerun-if-changed=build.rs");
+    // println!("cargo:rerun-if-changed=build.rs");
+    // build_native();
 
-    build_native();
-}
+    println!("enter test");
 
-fn build_native() {
     #[cfg(target_os = "macos")]
-    link_native_external_macos();
+    link_native_macos();
 
     #[cfg(target_os = "windows")]
-    link_native_external_windows();
+    link_native_windows();
 }
 
 #[allow(dead_code)]
-fn link_native_external_windows() {
+fn link_native_windows() {
     println!("cargo:rustc-link-search=../mirrorx_native/build/lib/Release");
     println!("cargo:rustc-link-search=../mirrorx_native/dependencies/windows/msvc/lib/x64");
 
@@ -26,7 +25,7 @@ fn link_native_external_windows() {
 }
 
 #[allow(dead_code)]
-fn link_native_external_macos() {
+fn link_native_macos() {
     println!("cargo:rustc-link-search=../mirrorx_native/build/lib");
     println!("cargo:rustc-link-lib=mirrorx_native");
     println!("cargo:rustc-link-lib=c++abi");

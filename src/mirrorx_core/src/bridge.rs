@@ -211,6 +211,21 @@ pub extern "C" fn wire_utility_generate_device_password(port_: i64) {
     )
 }
 
+#[no_mangle]
+pub extern "C" fn wire_begin_video(port_: i64, texture_id: i64) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap(
+        WrapInfo {
+            debug_name: "begin_video",
+            port: Some(port_),
+            mode: FfiCallMode::Normal,
+        },
+        move || {
+            let api_texture_id = texture_id.wire2api();
+            move |task_callback| begin_video(api_texture_id)
+        },
+    )
+}
+
 // Section: wire structs
 
 #[repr(C)]
@@ -258,6 +273,12 @@ impl Wire2Api<String> for *mut wire_uint_8_list {
     fn wire2api(self) -> String {
         let vec: Vec<u8> = self.wire2api();
         String::from_utf8_lossy(&vec).into_owned()
+    }
+}
+
+impl Wire2Api<i64> for i64 {
+    fn wire2api(self) -> i64 {
+        self
     }
 }
 

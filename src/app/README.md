@@ -1,4 +1,4 @@
-# mirrorx
+# app
 
 A new Flutter project.
 

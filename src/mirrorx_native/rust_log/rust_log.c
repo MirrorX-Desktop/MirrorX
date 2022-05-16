@@ -1,6 +1,6 @@
-#include "ffi_log.h"
+#include "rust_log.h"
 
-void ffi_log(enum FFI_LOG_LEVEL level, const char* format, ...) {
+void rust_log(enum RUST_LOGGER_LEVEL level, const char* format, ...) {
   char message_buffer[MAX_LOG_STR_SIZE] = {0};
 
   va_list args_ptr;
@@ -29,7 +29,9 @@ void ffmpeg_log_callback(void* avcl, int level, const char* fmt, va_list vl) {
 #if defined(__APPLE__)
   vsprintf(&message_buffer[prefix_len], fmt, vl);
 #else
-  vsprintf_s(message_buffer[prefix_len], MAX_LOG_STR_SIZE - prefix_len, fmt,
+  vsprintf_s(message_buffer[prefix_len],
+             MAX_LOG_STR_SIZE - prefix_len,
+             fmt,
              vl);
 #endif
 

@@ -7,8 +7,6 @@ use crate::socket::message::client_to_client::KeyExchangeAndVerifyPasswordReques
 use crate::socket::message::client_to_client::StartMediaTransmissionReply;
 use crate::socket::message::client_to_client::StartMediaTransmissionRequest;
 use anyhow::anyhow;
-use anyhow::bail;
-use log::info;
 use log::trace;
 use once_cell::sync::Lazy;
 use rand::thread_rng;

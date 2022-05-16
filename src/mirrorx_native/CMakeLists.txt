@@ -18,28 +18,28 @@ include_directories("${CMAKE_SOURCE_DIR}/dependencies/windows/msvc/include")
 else()
 # 3rd party libraries include directories
 include_directories("${CMAKE_SOURCE_DIR}/dependencies_build/ffmpeg/include")
-include_directories("${CMAKE_SOURCE_DIR}/dependencies_build/libvpx/include")
-include_directories("${CMAKE_SOURCE_DIR}/dependencies_build/opus/include")
+# include_directories("${CMAKE_SOURCE_DIR}/dependencies_build/libvpx/include")
+# include_directories("${CMAKE_SOURCE_DIR}/dependencies_build/opus/include")
 include_directories("${CMAKE_SOURCE_DIR}/dependencies_build/x264/include")
-include_directories("${CMAKE_SOURCE_DIR}/dependencies_build/x265/include")
-include_directories("${CMAKE_SOURCE_DIR}/dependencies_build/MediaSDK/include")
+# include_directories("${CMAKE_SOURCE_DIR}/dependencies_build/x265/include")
+# include_directories("${CMAKE_SOURCE_DIR}/dependencies_build/MediaSDK/include")
 endif()
 
-# libvpx
-if (WIN32 OR MSVC)
-find_library(LIB_VPX libvpx PATHS "${CMAKE_SOURCE_DIR}/dependencies/windows/msvc/lib/x64" NO_CACHE REQUIRED NO_DEFAULT_PATH)
-else()
-find_library(LIB_VPX vpx PATHS "${CMAKE_SOURCE_DIR}/dependencies_build/libvpx/lib" NO_CACHE REQUIRED NO_DEFAULT_PATH)
-endif()
-message("LIB_VPX: ${LIB_VPX}")
+# # libvpx
+# if (WIN32 OR MSVC)
+# find_library(LIB_VPX libvpx PATHS "${CMAKE_SOURCE_DIR}/dependencies/windows/msvc/lib/x64" NO_CACHE REQUIRED NO_DEFAULT_PATH)
+# else()
+# find_library(LIB_VPX vpx PATHS "${CMAKE_SOURCE_DIR}/dependencies_build/libvpx/lib" NO_CACHE REQUIRED NO_DEFAULT_PATH)
+# endif()
+# message("LIB_VPX: ${LIB_VPX}")
 
-# opus
-if (WIN32 OR MSVC)
-find_library(LIB_OPUS libopus PATHS "${CMAKE_SOURCE_DIR}/dependencies/windows/msvc/lib/x64" NO_CACHE REQUIRED NO_DEFAULT_PATH)
-else()
-find_library(LIB_OPUS opus PATHS "${CMAKE_SOURCE_DIR}/dependencies_build/opus/lib" NO_CACHE REQUIRED NO_DEFAULT_PATH)
-endif()
-message("LIB_OPUS: ${LIB_OPUS}")
+# # opus
+# if (WIN32 OR MSVC)
+# find_library(LIB_OPUS libopus PATHS "${CMAKE_SOURCE_DIR}/dependencies/windows/msvc/lib/x64" NO_CACHE REQUIRED NO_DEFAULT_PATH)
+# else()
+# find_library(LIB_OPUS opus PATHS "${CMAKE_SOURCE_DIR}/dependencies_build/opus/lib" NO_CACHE REQUIRED NO_DEFAULT_PATH)
+# endif()
+# message("LIB_OPUS: ${LIB_OPUS}")
 
 # x264
 if (WIN32 OR MSVC)
@@ -49,13 +49,13 @@ find_library(LIB_X264 x264 PATHS "${CMAKE_SOURCE_DIR}/dependencies_build/x264/li
 endif()
 message("LIB_X264: ${LIB_X264}")
 
-# x265
-if (WIN32 OR MSVC)
-find_library(LIB_X265 libx265 PATHS "${CMAKE_SOURCE_DIR}/dependencies/windows/msvc/lib/x64" NO_CACHE REQUIRED NO_DEFAULT_PATH)
-else()
-find_library(LIB_X265 x265 PATHS "${CMAKE_SOURCE_DIR}/dependencies_build/x265/lib" NO_CACHE REQUIRED NO_DEFAULT_PATH)
-endif()
-message("LIB_X265: ${LIB_X265}")
+# # x265
+# if (WIN32 OR MSVC)
+# find_library(LIB_X265 libx265 PATHS "${CMAKE_SOURCE_DIR}/dependencies/windows/msvc/lib/x64" NO_CACHE REQUIRED NO_DEFAULT_PATH)
+# else()
+# find_library(LIB_X265 x265 PATHS "${CMAKE_SOURCE_DIR}/dependencies_build/x265/lib" NO_CACHE REQUIRED NO_DEFAULT_PATH)
+# endif()
+# message("LIB_X265: ${LIB_X265}")
 
 # mfx
 if (WIN32 OR MSVC)
@@ -100,32 +100,23 @@ message("LIB_AVUTIL: ${LIB_AVUTIL}")
 # include_directories("video_decoder")
 # include_directories("video_encoder")
 
-# duplicator
-if (WIN32 OR MSVC)
-    aux_source_directory("duplicator/windows" DUPLICATOR_SOURCE)
-elseif (APPLE)
-    aux_source_directory("duplicator/macos" DUPLICATOR_SOURCE)
-endif()
-message("duplicator source: ${DUPLICATOR_SOURCE}")
+set(SOURCES "")
 
-# ffi_log
-aux_source_directory(ffi_log FFI_LOG_SOURCE)
-message("ffi_log source: ${FFI_LOG_SOURCE}")
+add_subdirectory(desktop_duplicator)
+add_subdirectory(rust_log)
+add_subdirectory(video_encoder)
+add_subdirectory(video_decoder)
 
-# video_encoder
-aux_source_directory(video_encoder VIDEO_ENCODER_SOURCE)
-message("video_encoder source: ${VIDEO_ENCODER_SOURCE}")
+message("SOURCES:")
+message("${SOURCES}")
 
-# video_decoder
-aux_source_directory(video_decoder VIDEO_DECODER_SOURCE)
-message("video_decoder source: ${VIDEO_DECODER_SOURCE}")
-
-add_library(mirrorx_native STATIC ${DUPLICATOR_SOURCE} ${FFI_LOG_SOURCE} ${VIDEO_ENCODER_SOURCE} ${VIDEO_DECODER_SOURCE})
+add_library(mirrorx_native STATIC ${SOURCES})
 
 if (APPLE)
+# ${LIB_VPX} ${LIB_X264} ${LIB_X265} ${LIB_OPUS}
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-    COMMAND xcrun -r libtool -static -a -o "${CMAKE_SOURCE_DIR}/build/lib/lib${PROJECT_NAME}.a" "${CMAKE_SOURCE_DIR}/build/lib/lib${PROJECT_NAME}.a" ${LIB_VPX} ${LIB_X264} ${LIB_X265} ${LIB_OPUS} ${LIB_AVFORMAT} ${LIB_AVDEVICE} ${LIB_AVUTIL} ${LIB_AVCODEC}
-    DEPENDS ${LIB_VPX} ${LIB_X264} ${LIB_X265} ${LIB_OPUS} ${LIB_AVCODEC} ${LIB_AVFORMAT} ${LIB_AVDEVICE} ${LIB_AVUTIL})
+    COMMAND xcrun -r libtool -static -a -o "${CMAKE_SOURCE_DIR}/build/lib/lib${PROJECT_NAME}.a" "${CMAKE_SOURCE_DIR}/build/lib/lib${PROJECT_NAME}.a" ${LIB_AVFORMAT} ${LIB_AVDEVICE} ${LIB_AVUTIL} ${LIB_AVCODEC} ${LIB_X264}
+    DEPENDS ${LIB_AVCODEC} ${LIB_AVFORMAT} ${LIB_AVDEVICE} ${LIB_AVUTIL} ${LIB_X264})
 elseif (UNIX)
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ar crsT ${CMAKE_BINARY_DIR}/lib${PROJECT_NAME}.a ${LIB_VPX} ${LIB_X264} ${LIB_X265} ${LIB_OPUS} ${LIB_FFMPEG}

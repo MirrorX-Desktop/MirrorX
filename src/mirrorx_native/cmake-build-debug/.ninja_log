@@ -1,0 +1,9 @@
+# ninja log v5
+34	475	1652698102689443577	CMakeFiles/mirrorx_native.dir/video_decoder/video_decoder.c.o	d477e51f94a72087
+1	2641	1652649740107464140	CMakeFiles/mirrorx_native.dir/capture_session/macos/capture_session.m.o	77e33b75a9a9f030
+1	2647	1652649740115417532	CMakeFiles/mirrorx_native.dir/capture_session/macos/capture_session_context.m.o	d64d313c2ea15703
+17	594	1652697130980832068	CMakeFiles/mirrorx_native.dir/rust_log/rust_log.c.o	ec4d0f8e8fc63fdc
+34	1907	1652698104099959531	CMakeFiles/mirrorx_native.dir/video_encoder/video_encoder.c.o	ee747179804ccf05
+33	3876	1652698106081993677	CMakeFiles/mirrorx_native.dir/desktop_duplicator/macos/desktop_duplicator.m.o	3ba3f9e227521c14
+16	2283	1652697132707502486	CMakeFiles/mirrorx_native.dir/desktop_duplicator/macos/desktop_duplicator_context.m.o	d60090344fef525e
+3876	4063	1652698106282219690	../build/lib/libmirrorx_native.a	20de5ac7ed72b959

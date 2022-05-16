@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:mirrorx/app/bindings/initial.dart';
-import 'package:mirrorx/app/core/lang/translation.dart';
-import 'package:mirrorx/app/modules/splash/page.dart';
+import 'package:app/src/bindings/initial.dart';
+import 'package:app/src/core/lang/translation.dart';
+import 'package:app/src/modules/splash/page.dart';
 import 'dart:ui' as ui;
 
 void main() async {
