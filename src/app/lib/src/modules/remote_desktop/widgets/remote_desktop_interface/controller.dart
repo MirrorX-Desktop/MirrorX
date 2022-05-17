@@ -17,7 +17,6 @@ class RemoteDesktopInterfaceController extends GetxController {
   @override
   void onInit() async {
     _sdk = Get.find();
-    await registerStream(remoteID);
     super.onInit();
   }
 
@@ -41,14 +40,5 @@ class RemoteDesktopInterfaceController extends GetxController {
 
   Future<void> deregisterTexture() async {
     await AppPlugin.deregisterTextureID(textureID);
-  }
-
-  Future<void> registerStream(String remoteID) async {
-    _sdk
-        .getInstance()
-        .desktopRegisterFrameStream(remoteDeviceId: remoteID)
-        .listen((event) {
-      log("stream: $event");
-    });
   }
 }

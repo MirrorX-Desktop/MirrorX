@@ -2,6 +2,7 @@ import 'dart:ffi';
 
 import 'package:ffi/ffi.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:get/get.dart';
 import 'package:app/src/modules/remote_desktop/widgets/remote_desktop_interface/controller.dart';
 
@@ -30,12 +31,15 @@ class RemoteDesktopInterface extends GetView<RemoteDesktopInterfaceController> {
               return Text(snapshot.error.toString());
             } else {
               return RepaintBoundary(
-                child: Texture(
-                  textureId: snapshot.data as int,
-                  freeze: true,
-                  filterQuality: FilterQuality.none,
+                  child: Center(
+                child: AspectRatio(
+                  aspectRatio: 16.0 / 9.0,
+                  child: Texture(
+                    textureId: snapshot.data as int,
+                    filterQuality: FilterQuality.none,
+                  ),
                 ),
-              );
+              ));
             }
           }
         });
