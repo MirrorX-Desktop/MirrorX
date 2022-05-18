@@ -74,17 +74,17 @@ bool DuplicationManager::Init(int display_index) {
                          &m_device_context);
 
   if (FAILED(hr)) {
-    ffi_log(FFI_LOG_ERROR, "D3D11CreateDevice failed: %d", hr);
+    rust_log(LEVEL_ERROR, "D3D11CreateDevice failed: %lld", hr);
     goto CLEAN;
   }
 
-  ffi_log(FFI_LOG_INFO,
-          "D3D11CreateDevice succeeded, feature level:%s",
-          GetD3DFeatureLevelName(feature_level));
+  rust_log(LEVEL_INFO,
+           "D3D11CreateDevice succeeded, feature level:%s",
+           GetD3DFeatureLevelName(feature_level));
 
   hr = display_output->output->GetDesc(&m_output_desc);
   if (FAILED(hr)) {
-    ffi_log(FFI_LOG_ERROR, "GetDesc failed: %d", hr);
+    rust_log(LEVEL_ERROR, "GetDesc failed: %lld", hr);
     goto CLEAN;
   }
 
@@ -92,13 +92,13 @@ bool DuplicationManager::Init(int display_index) {
       __uuidof(IDXGIOutput1),
       reinterpret_cast<void**>(&dxgi_output));
   if (FAILED(hr)) {
-    ffi_log(FFI_LOG_ERROR, "IDXGIOutput QI failed: %d", hr);
+    rust_log(LEVEL_ERROR, "IDXGIOutput QI failed: %lld", hr);
     goto CLEAN;
   }
 
   hr = dxgi_output->DuplicateOutput(m_device, &m_output_duplication);
   if (FAILED(hr)) {
-    ffi_log(FFI_LOG_ERROR, "IDXGIOutput create DuplicateOutput failed: %d", hr);
+    rust_log(LEVEL_ERROR, "IDXGIOutput create DuplicateOutput failed: %lld", hr);
     goto CLEAN;
   }
 
@@ -110,7 +110,7 @@ CLEAN:
   return SUCCEEDED(hr);
 }
 
-void DuplicationManager::CaptureFrame(void* tx, capture_callback cb) {
+void DuplicationManager::CaptureFrame(void* tx, capture_session_callback cb) {
   if (m_should_reinit_back_texture) {
     init_back_texture();
     m_should_reinit_back_texture = false;
@@ -150,10 +150,15 @@ void DuplicationManager::CaptureFrame(void* tx, capture_callback cb) {
   cb(tx,
      width,
      height,
-     y_mapped_resource.RowPitch,
+     true,
      (uint8_t*)y_mapped_resource.pData,
+     y_mapped_resource.RowPitch,
+     (uint8_t*)uv_mapped_resource.pData,
      uv_mapped_resource.RowPitch,
-     (uint8_t*)uv_mapped_resource.pData);
+     0,
+     0,
+     0,
+     0);
 
   m_device_context->Unmap(m_y_staging_texture, 0);
   m_device_context->Unmap(m_uv_staging_texture, 0);
@@ -164,7 +169,7 @@ bool DuplicationManager::init_shaders() {
   HRESULT hr =
       m_device->CreateVertexShader(g_VS, g_VS_SIZE, nullptr, &m_vertex_shader);
   if (FAILED(hr)) {
-    ffi_log(FFI_LOG_ERROR, "Failed to create vertex shader: %d", hr);
+    rust_log(LEVEL_ERROR, "Failed to create vertex shader: %d", hr);
     return false;
   }
 
@@ -197,7 +202,7 @@ bool DuplicationManager::init_shaders() {
   hr =
       m_device->CreateBuffer(&buffer_desc, &subresource_data, &m_vertex_buffer);
   if (FAILED(hr)) {
-    ffi_log(FFI_LOG_ERROR, "Failed to create vertex buffer: %d", hr);
+    rust_log(LEVEL_ERROR, "Failed to create vertex buffer: %d", hr);
     return false;
   }
 
@@ -232,7 +237,7 @@ bool DuplicationManager::init_shaders() {
                                    g_VS_SIZE,
                                    &m_input_layout);
   if (FAILED(hr)) {
-    ffi_log(FFI_LOG_ERROR, "Failed to create input layout: %d", hr);
+    rust_log(LEVEL_ERROR, "Failed to create input layout: %d", hr);
     return false;
   }
 
@@ -244,7 +249,7 @@ bool DuplicationManager::init_shaders() {
                                    nullptr,
                                    &m_y_pixel_shader);
   if (FAILED(hr)) {
-    ffi_log(FFI_LOG_ERROR, "Failed to create y pixel shader: %d", hr);
+    rust_log(LEVEL_ERROR, "Failed to create y pixel shader: %d", hr);
     return false;
   }
 
@@ -254,7 +259,7 @@ bool DuplicationManager::init_shaders() {
                                    nullptr,
                                    &m_uv_pixel_shader);
   if (FAILED(hr)) {
-    ffi_log(FFI_LOG_ERROR, "Failed to create uv pixel shader: %d", hr);
+    rust_log(LEVEL_ERROR, "Failed to create uv pixel shader: %d", hr);
     return false;
   }
 
@@ -281,7 +286,7 @@ bool DuplicationManager::init_back_texture() {
   HRESULT hr =
       m_device->CreateTexture2D(&back_texture_desc, nullptr, &m_back_texture);
   if (FAILED(hr) || !m_back_texture) {
-    ffi_log(FFI_LOG_ERROR, "Failed to create back texture: %d", hr);
+    rust_log(LEVEL_ERROR, "Failed to create back texture: %d", hr);
     return false;
   }
 
@@ -292,7 +297,7 @@ bool DuplicationManager::init_back_texture() {
                                  nullptr,
                                  &m_y_render_texture);
   if (FAILED(hr) || !m_y_render_texture) {
-    ffi_log(FFI_LOG_ERROR, "Failed to create y render texture: %d", hr);
+    rust_log(LEVEL_ERROR, "Failed to create y render texture: %d", hr);
     return false;
   }
 
@@ -304,7 +309,7 @@ bool DuplicationManager::init_back_texture() {
                                  nullptr,
                                  &m_y_staging_texture);
   if (FAILED(hr) || !m_y_staging_texture) {
-    ffi_log(FFI_LOG_ERROR, "Failed to create y staging texture: %d", hr);
+    rust_log(LEVEL_ERROR, "Failed to create y staging texture: %d", hr);
     return false;
   }
 
@@ -327,7 +332,7 @@ bool DuplicationManager::init_back_texture() {
                                  nullptr,
                                  &m_uv_render_texture);
   if (FAILED(hr) || !m_uv_render_texture) {
-    ffi_log(FFI_LOG_ERROR, "Failed to create uv render texture: %d", hr);
+    rust_log(LEVEL_ERROR, "Failed to create uv render texture: %d", hr);
     return false;
   }
 
@@ -339,7 +344,7 @@ bool DuplicationManager::init_back_texture() {
                                  nullptr,
                                  &m_uv_staging_texture);
   if (FAILED(hr) || !m_uv_staging_texture) {
-    ffi_log(FFI_LOG_ERROR, "Failed to create uv staging texture: %d", hr);
+    rust_log(LEVEL_ERROR, "Failed to create uv staging texture: %d", hr);
     return false;
   }
 
@@ -367,7 +372,7 @@ bool DuplicationManager::make_rtv(ID3D11RenderTargetView** render_target_view,
       m_device->CreateRenderTargetView(texture, nullptr, render_target_view);
 
   if (FAILED(hr)) {
-    ffi_log(FFI_LOG_ERROR, "Failed to create render target view: %d", hr);
+    rust_log(LEVEL_ERROR, "Failed to create render target view: %d", hr);
   }
 
   return SUCCEEDED(hr);
@@ -390,7 +395,7 @@ bool DuplicationManager::capture_raw_frame() {
   SAFE_RELEASE(desktop_resource)
 
   if (FAILED(hr)) {
-    ffi_log(FFI_LOG_ERROR, "Failed to get desktop image: %d", hr);
+    rust_log(LEVEL_ERROR, "Failed to get desktop image: %d", hr);
     return false;
   }
 
@@ -417,7 +422,7 @@ bool DuplicationManager::process_frame() {
                                                   &shader_resource_view_desc,
                                                   &shader_resource_view);
   if (FAILED(hr)) {
-    ffi_log(FFI_LOG_ERROR, "Failed to create shader resource view: %d", hr);
+    rust_log(LEVEL_ERROR, "Failed to create shader resource view: %d", hr);
     return false;
   }
 

@@ -1,19 +1,19 @@
 #ifndef VIDEO_ENCODER_H
 #define VIDEO_ENCODER_H
 
+#include <stdbool.h>
+#include <stdio.h>
+#include "../rust_log/rust_log.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 #include <libavcodec/avcodec.h>
-#include <libavcodec/videotoolbox.h>
 #include <libavutil/imgutils.h>
 #include <libavutil/opt.h>
 #include <libavutil/pixfmt.h>
 #include <libavutil/rational.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include "../rust_log/rust_log.h"
 
 typedef void (*EncodeCallback)(void* tx,
                                uint8_t* packet_data,

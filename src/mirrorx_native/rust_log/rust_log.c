@@ -29,7 +29,7 @@ void ffmpeg_log_callback(void* avcl, int level, const char* fmt, va_list vl) {
 #if defined(__APPLE__)
   vsprintf(&message_buffer[prefix_len], fmt, vl);
 #else
-  vsprintf_s(message_buffer[prefix_len],
+  vsprintf_s(&message_buffer[prefix_len],
              MAX_LOG_STR_SIZE - prefix_len,
              fmt,
              vl);
@@ -39,22 +39,22 @@ void ffmpeg_log_callback(void* avcl, int level, const char* fmt, va_list vl) {
     case AV_LOG_QUIET:
       return;
     case AV_LOG_TRACE:
-      log_to_rust(TRACE, message_buffer);
+      log_to_rust(LEVEL_TRACE, message_buffer);
       break;
     case AV_LOG_VERBOSE:
     case AV_LOG_DEBUG:
-      log_to_rust(DEBUG, message_buffer);
+      log_to_rust(LEVEL_DEBUG, message_buffer);
       break;
     case AV_LOG_INFO:
-      log_to_rust(INFO, message_buffer);
+      log_to_rust(LEVEL_INFO, message_buffer);
       break;
     case AV_LOG_WARNING:
-      log_to_rust(WARN, message_buffer);
+      log_to_rust(LEVEL_WARN, message_buffer);
       break;
     case AV_LOG_ERROR:
     case AV_LOG_PANIC:
     case AV_LOG_FATAL:
-      log_to_rust(ERROR, message_buffer);
+      log_to_rust(LEVEL_ERROR, message_buffer);
       break;
     default:
       break;

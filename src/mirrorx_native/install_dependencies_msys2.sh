@@ -69,17 +69,11 @@ build_x264() {
     CC=cl \
         ./configure \
         --prefix="$absolute_dst_dir" \
-        --enable-pic \
-        --enable-shared \
-        --enable-strip \
-        --enable-lto \
+        --enable-static \
         --disable-cli \
         --disable-opencl
 
     make -j"$CPU_CORES" && make install && make clean
-
-    # modify name
-    # cp "$absolute_dst_dir"/lib/libx264.lib "$absolute_dst_dir"/lib/x264.lib
 
     cd "$WORK_DIRECTORY" || exit
     echo "Build x264 success"
@@ -257,7 +251,7 @@ build_media_sdk() {
     gen_libmfx_pc "$absolute_dst_dir"
 
     # modify name
-    # cp "$absolute_dst_dir"/lib/libmfx_vs2015.lib "$absolute_dst_dir"/lib/mfx.lib
+    cp "$absolute_dst_dir"/lib/libmfx_vs2015.lib "$absolute_dst_dir"/lib/mfx.lib
 
     cd "$WORK_DIRECTORY" || exit
     echo "Build media_sdk success"
@@ -293,7 +287,7 @@ build_ffmpeg() {
     absolute_dst_dir="$WORK_DIRECTORY"/dependencies_build/ffmpeg
     mkdir -p "$absolute_dst_dir"
     absolute_dst_dir=$(cygpath -m "$absolute_dst_dir")
-    
+
     check_already_built "ffmpeg" "$src_dir" "$dst_dir"
     already_built=$?
 
@@ -305,9 +299,9 @@ build_ffmpeg() {
     cd "$src_dir" || exit
 
     export PKG_CONFIG_PATH="$PKG_CONFIG_PATH":"$WORK_DIRECTORY"/dependencies_build/x264/lib/pkgconfig
-    export PKG_CONFIG_PATH="$PKG_CONFIG_PATH":"$WORK_DIRECTORY"/dependencies_build/x265/lib/pkgconfig
-    export PKG_CONFIG_PATH="$PKG_CONFIG_PATH":"$WORK_DIRECTORY"/dependencies_build/opus/lib/pkgconfig
-    export PKG_CONFIG_PATH="$PKG_CONFIG_PATH":"$WORK_DIRECTORY"/dependencies_build/libvpx/lib/pkgconfig
+    # export PKG_CONFIG_PATH="$PKG_CONFIG_PATH":"$WORK_DIRECTORY"/dependencies_build/x265/lib/pkgconfig
+    # export PKG_CONFIG_PATH="$PKG_CONFIG_PATH":"$WORK_DIRECTORY"/dependencies_build/opus/lib/pkgconfig
+    # export PKG_CONFIG_PATH="$PKG_CONFIG_PATH":"$WORK_DIRECTORY"/dependencies_build/libvpx/lib/pkgconfig
     export PKG_CONFIG_PATH="$PKG_CONFIG_PATH":"$WORK_DIRECTORY"/dependencies_build/MediaSDK/lib/pkgconfig
     export PKG_CONFIG_PATH="$PKG_CONFIG_PATH":"$WORK_DIRECTORY"/dependencies_build/nv_codec_headers/lib/pkgconfig
 
@@ -322,8 +316,8 @@ build_ffmpeg() {
         --disable-all \
         --disable-autodetect \
         --toolchain=msvc \
-        --enable-shared \
-        --disable-static \
+        --enable-static \
+        --disable-shared \
         --disable-debug \
         --enable-d3d11va \
         --enable-w32threads \
@@ -336,17 +330,8 @@ build_ffmpeg() {
         --enable-avformat \
         --enable-avutil \
         --enable-libx264 \
-        --enable-libx265 \
-        --enable-libvpx \
-        --enable-libopus \
         --enable-encoder=libx264 \
         --enable-decoder=h264 \
-        --enable-encoder=libx265 \
-        --enable-decoder=hevc \
-        --enable-encoder=libvpx_vp9 \
-        --enable-decoder=libvpx_vp9 \
-        --enable-encoder=libopus \
-        --enable-decoder=libopus \
         --disable-doc \
         --disable-htmlpages \
         --disable-manpages \
@@ -355,27 +340,36 @@ build_ffmpeg() {
         --disable-network \
         --enable-cuvid \
         --enable-ffnvcodec \
-        --enable-ffnvcodec \
         --enable-nvenc \
         --enable-nvdec \
-        --enable-encoder=h264_nvenc \
-        --enable-encoder=hevc_nvenc \
-        --enable-decoder=h264_cuvid \
-        --enable-decoder=hevc_cuvid \
-        --enable-decoder=vp9_cuvid \
-        --enable-amf \
-        --enable-encoder=h264_amf \
-        --enable-encoder=hevc_amf \
         --enable-libmfx \
+        --enable-amf \
+        --enable-encoder=h264_nvenc \
+        --enable-decoder=h264_cuvid \
+        --enable-encoder=h264_amf \
         --enable-encoder=h264_qsv \
-        --enable-encoder=hevc_qsv \
-        --enable-encoder=vp9_qsv \
         --enable-decoder=h264_qsv \
-        --enable-decoder=hevc_qsv \
-        --enable-decoder=vp9_qsv
+        --extra-cflags=-I"$WORK_DIRECTORY"/dependencies_build/AMF/include \
+        --extra-cflags=-DAMF_CORE_STATIC 
 
     set +x
-
+    # --enable-libx265 \
+    # --enable-libvpx \
+    # --enable-libopus \
+    # --enable-encoder=libx265 \
+    # --enable-decoder=hevc \
+    # --enable-encoder=libvpx_vp9 \
+    # --enable-decoder=libvpx_vp9 \
+    # --enable-encoder=libopus \
+    # --enable-decoder=libopus \
+    # --enable-decoder=vp9_cuvid \
+    # --enable-encoder=vp9_qsv \
+    # --enable-decoder=vp9_qsv
+    # --enable-encoder=hevc_amf \
+    # --enable-encoder=hevc_qsv \
+    # --enable-decoder=hevc_qsv \
+    # --enable-decoder=hevc_cuvid \
+    # --enable-encoder=hevc_nvenc \
     make -j"$CPU_CORES" && make install && make clean
 
     cd "$WORK_DIRECTORY" || exit
@@ -438,18 +432,18 @@ check_tool_installed "autoconf"
 check_tool_installed "pkg-config"
 
 clone_source "x264" "https://code.videolan.org/videolan/x264.git" "stable" "./dependencies_repo/x264"
-clone_source "x265" "https://bitbucket.org/multicoreware/x265_git.git" "3.5" "./dependencies_repo/x265"
-clone_source "opus" "https://gitlab.xiph.org/xiph/opus.git" "v1.3.1" "./dependencies_repo/opus"
-clone_source "libvpx" "https://github.com/webmproject/libvpx.git" "main" "./dependencies_repo/libvpx"
+# clone_source "x265" "https://bitbucket.org/multicoreware/x265_git.git" "3.5" "./dependencies_repo/x265"
+# clone_source "opus" "https://gitlab.xiph.org/xiph/opus.git" "v1.3.1" "./dependencies_repo/opus"
+# clone_source "libvpx" "https://github.com/webmproject/libvpx.git" "main" "./dependencies_repo/libvpx"
 clone_source "AMF" "https://github.com/GPUOpen-LibrariesAndSDKs/AMF.git" "v1.4.24" "./dependencies_repo/AMF"
 clone_source "MediaSDK" "https://github.com/Intel-Media-SDK/MediaSDK.git" "intel-mediasdk-22.3.0" "./dependencies_repo/MediaSDK"
 clone_source "nv_codec_headers" "https://github.com/FFmpeg/nv-codec-headers.git" "n11.1.5.1" "./dependencies_repo/nv_codec_headers"
 clone_source "ffmpeg" "https://git.ffmpeg.org/ffmpeg.git" "n5.0" "./dependencies_repo/ffmpeg"
 
 build_x264 "./dependencies_repo/x264" "./dependencies_build/x264"
-build_x265 "./dependencies_repo/x265" "./dependencies_build/x265"
-build_opus "./dependencies_repo/opus" "./dependencies_build/opus"
-build_libvpx "./dependencies_repo/libvpx" "./dependencies_build/libvpx"
+# build_x265 "./dependencies_repo/x265" "./dependencies_build/x265"
+# build_opus "./dependencies_repo/opus" "./dependencies_build/opus"
+# build_libvpx "./dependencies_repo/libvpx" "./dependencies_build/libvpx"
 build_amf "./dependencies_repo/AMF" "./dependencies_build/AMF"
 build_media_sdk "./dependencies_repo/MediaSDK" "./dependencies_build/MediaSDK"
 build_nv_codec_headers "./dependencies_repo/nv_codec_headers" "./dependencies_build/nv_codec_headers"

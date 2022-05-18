@@ -6,6 +6,7 @@
 #include "shaders/pixel_shader_uv.h"
 #include "shaders/pixel_shader_y.h"
 #include "shaders/vertex_shader.h"
+#include "../desktop_duplicator_callback.h"
 
 typedef struct VERTEX {
   DirectX::XMFLOAT3 Pos;
@@ -17,7 +18,7 @@ class DuplicationManager {
   DuplicationManager();
   ~DuplicationManager();
   bool Init(int display_index);
-  void CaptureFrame(void* tx, capture_callback cb);
+  void CaptureFrame(void* tx, capture_session_callback cb);
 
  private:
   ID3D11Device* m_device;

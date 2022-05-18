@@ -13,15 +13,18 @@ fn main() {
 
 #[allow(dead_code)]
 fn link_native_windows() {
+    
+
+    println!("cargo:rustc-link-search=../mirrorx_native/dependencies/msvc/lib/x64");
+    println!("cargo:rustc-link-lib=libx264");
+    // println!("cargo:rustc-link-lib=static=libmfx");
+    println!("cargo:rustc-link-lib=libavcodec");
+    println!("cargo:rustc-link-lib=libavutil");
+    println!("cargo:rustc-link-lib=libavformat");
+    println!("cargo:rustc-link-lib=libavdevice");
+
     println!("cargo:rustc-link-search=../mirrorx_native/build/lib/Release");
-    println!("cargo:rustc-link-search=../mirrorx_native/dependencies/windows/msvc/lib/x64");
-
     println!("cargo:rustc-link-lib=mirrorx_native");
-
-    println!("cargo:rustc-link-lib=avutil");
-    println!("cargo:rustc-link-lib=avcodec");
-    println!("cargo:rustc-link-lib=avformat");
-    println!("cargo:rustc-link-lib=avdevice");
 }
 
 #[allow(dead_code)]

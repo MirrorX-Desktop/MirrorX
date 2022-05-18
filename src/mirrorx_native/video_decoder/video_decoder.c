@@ -14,7 +14,7 @@ VideoDecoder* video_decoder_create(const char* decoder_name,
   av_log_set_flags(AV_LOG_SKIP_REPEATED);
   av_log_set_callback(ffmpeg_log_callback);
 
-  rust_log(TRACE,
+  rust_log(LEVEL_TRACE,
            "video_decoder: create video decoder, decoder_name: %s",
            decoder_name);
 
@@ -22,12 +22,12 @@ VideoDecoder* video_decoder_create(const char* decoder_name,
 
   while ((print_type = av_hwdevice_iterate_types(print_type)) !=
          AV_HWDEVICE_TYPE_NONE) {
-    rust_log(INFO, "suport devices %s", av_hwdevice_get_type_name(print_type));
+    rust_log(LEVEL_INFO, "suport devices %s", av_hwdevice_get_type_name(print_type));
   }
 
   const AVCodec* codec = avcodec_find_decoder_by_name(decoder_name);
   if (NULL == codec) {
-    rust_log(ERROR,
+    rust_log(LEVEL_ERROR,
              "video_decoder: can't find an decoder named '%s'",
              decoder_name);
     goto CLEAN;
@@ -35,7 +35,7 @@ VideoDecoder* video_decoder_create(const char* decoder_name,
 
   codec_ctx = avcodec_alloc_context3(codec);
   if (NULL == codec_ctx) {
-    rust_log(ERROR, "video_decoder: alloc codec context failed");
+    rust_log(LEVEL_ERROR, "video_decoder: alloc codec context failed");
     goto CLEAN;
   }
 
@@ -46,7 +46,7 @@ VideoDecoder* video_decoder_create(const char* decoder_name,
     // software decoder
     parse_ctx = av_parser_init(codec->id);
     if (NULL == parse_ctx) {
-      rust_log(ERROR, "video_decoder: init codec parse context failed");
+      rust_log(LEVEL_ERROR, "video_decoder: init codec parse context failed");
       goto CLEAN;
     }
   } else {
@@ -57,7 +57,7 @@ VideoDecoder* video_decoder_create(const char* decoder_name,
                                  NULL,
                                  0);
     if (ret < 0) {
-      rust_log(ERROR, "video_decoder: create hw_device context failed");
+      rust_log(LEVEL_ERROR, "video_decoder: create hw_device context failed");
       goto CLEAN;
     }
 
@@ -65,26 +65,26 @@ VideoDecoder* video_decoder_create(const char* decoder_name,
 
     hw_transfer_frame = av_frame_alloc();
     if (NULL == hw_transfer_frame) {
-      rust_log(ERROR, "video_decoder: alloc hw_copied_frame failed");
+      rust_log(LEVEL_ERROR, "video_decoder: alloc hw_copied_frame failed");
       goto CLEAN;
     }
   }
 
   packet = av_packet_alloc();
   if (NULL == packet) {
-    rust_log(ERROR, "video_decoder: alloc packet failed");
+    rust_log(LEVEL_ERROR, "video_decoder: alloc packet failed");
     goto CLEAN;
   }
 
   frame = av_frame_alloc();
   if (NULL == frame) {
-    rust_log(ERROR, "video_decoder: alloc frame failed");
+    rust_log(LEVEL_ERROR, "video_decoder: alloc frame failed");
     goto CLEAN;
   }
 
   ret = avcodec_open2(codec_ctx, codec, NULL);
   if (ret != 0) {
-    rust_log(ERROR,
+    rust_log(LEVEL_ERROR,
              "video_decoder: open codec context failed with code: %d",
              ret);
     goto CLEAN;
@@ -141,22 +141,22 @@ void video_decoder_decode(VideoDecoder* video_decoder,
   int ret;
 
   if (!video_decoder) {
-    rust_log(ERROR, "video_decoder: video_decoder pointer is null");
+    rust_log(LEVEL_ERROR, "video_decoder: video_decoder pointer is null");
     return;
   }
 
   if (!tx) {
-    rust_log(ERROR, "video_decoder: tx pointer is null");
+    rust_log(LEVEL_ERROR, "video_decoder: tx pointer is null");
     return;
   }
 
   if (!packet_data) {
-    rust_log(ERROR, "video_decoder: packet_data pointer is null");
+    rust_log(LEVEL_ERROR, "video_decoder: packet_data pointer is null");
     return;
   }
 
   if (!packet_size) {
-    rust_log(ERROR, "video_decoder: packet_size is zero");
+    rust_log(LEVEL_ERROR, "video_decoder: packet_size is zero");
     return;
   }
 
@@ -173,12 +173,12 @@ void video_decoder_decode(VideoDecoder* video_decoder,
                            dts,
                            0);
     if (ret < 0) {
-      rust_log(ERROR, "video_decoder: call av_parser_parse2 failed");
+      rust_log(LEVEL_ERROR, "video_decoder: call av_parser_parse2 failed");
       return;
     }
 
     if (video_decoder->packet->size == 0) {
-      rust_log(TRACE, "video_decoder: parsed packet size is 0, need more data");
+      rust_log(LEVEL_TRACE, "video_decoder: parsed packet size is 0, need more data");
       return;
     }
   } else {
@@ -192,13 +192,13 @@ void video_decoder_decode(VideoDecoder* video_decoder,
   if (ret < 0) {
     if (ret == AVERROR(EAGAIN)) {
       rust_log(
-          ERROR,
+          LEVEL_ERROR,
           "video_decoder: can not send more frame, should receive more packet");
     } else if (ret == AVERROR_EOF) {
-      rust_log(ERROR,
+      rust_log(LEVEL_ERROR,
                "video_decoder: encoder closed, shouldn't send new frame");
     } else {
-      rust_log(ERROR, "video_decoder: send frame failed with code: %d", ret);
+      rust_log(LEVEL_ERROR, "video_decoder: send frame failed with code: %d", ret);
     }
 
     return;
@@ -213,7 +213,7 @@ void video_decoder_decode(VideoDecoder* video_decoder,
     if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
       break;
     } else if (ret < 0) {
-      rust_log(ERROR, "video_decoder: receive frame failed with code: %d", ret);
+      rust_log(LEVEL_ERROR, "video_decoder: receive frame failed with code: %d", ret);
       break;
     }
 
@@ -223,7 +223,7 @@ void video_decoder_decode(VideoDecoder* video_decoder,
                                      0);
       if (ret < 0) {
         rust_log(
-            ERROR,
+            LEVEL_ERROR,
             "video_decoder: call av_hwframe_transfer_data failed with code: %d",
             ret);
         break;
@@ -246,7 +246,7 @@ void video_decoder_decode(VideoDecoder* video_decoder,
                               frame->pkt_dts,
                               frame->pts);
     } else {
-      rust_log(ERROR, "video_decoder: callback is null");
+      rust_log(LEVEL_ERROR, "video_decoder: callback is null");
     }
   }
 

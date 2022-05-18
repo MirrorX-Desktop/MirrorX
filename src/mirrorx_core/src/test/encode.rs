@@ -11,6 +11,10 @@ async fn test_encode() -> anyhow::Result<()> {
     let (duplicator, duplicator_frame_rx) = media::desktop_duplicator::DesktopDuplicator::new(60)?;
     let (mut encoder, packet_rx) =
         media::video_encoder::VideoEncoder::new("libx264", 60, 1920, 1080)?;
+    
+    #[cfg(target_os = "windows")]
+    let (mut decoder, frame_rx) = media::video_decoder::VideoDecoder::new("h264_cuvid")?;
+    #[cfg(target_os = "macos")]
     let (mut decoder, frame_rx) = media::video_decoder::VideoDecoder::new("h264")?;
 
     std::thread::spawn(move || loop {

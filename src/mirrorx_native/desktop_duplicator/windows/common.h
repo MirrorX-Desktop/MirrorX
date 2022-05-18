@@ -6,8 +6,8 @@
 #include <atomic>
 #include <thread>
 #include <vector>
-#include "../../ffi_log/ffi_log.h"
-#include "../include/callback.h"
+#include "../../rust_log/rust_log.h"
+#include "../desktop_duplicator_callback.h"
 #include "DirectXMath.h"
 
 #pragma comment(lib, "d3d11.lib")

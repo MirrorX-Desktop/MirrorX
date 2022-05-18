@@ -12,11 +12,13 @@ VideoEncoder* video_encoder_create(const char* encoder_name,
   av_log_set_flags(AV_LOG_SKIP_REPEATED);
   av_log_set_callback(ffmpeg_log_callback);
 
-  rust_log(TRACE, "video_encoder: new video encoder, name: %s", encoder_name);
+  rust_log(LEVEL_TRACE,
+           "video_encoder: new video encoder, name: %s",
+           encoder_name);
 
   const AVCodec* codec = avcodec_find_encoder_by_name(encoder_name);
   if (NULL == codec) {
-    rust_log(ERROR,
+    rust_log(LEVEL_ERROR,
              "video_encoder: can't find an encoder named: %s",
              encoder_name);
     goto CLEAN;
@@ -24,14 +26,19 @@ VideoEncoder* video_encoder_create(const char* encoder_name,
 
   codec_ctx = avcodec_alloc_context3(codec);
   if (NULL == codec_ctx) {
-    rust_log(ERROR, "video_encoder: alloc codec context failed");
+    rust_log(LEVEL_ERROR, "video_encoder: alloc codec context failed");
     goto CLEAN;
   }
 
   codec_ctx->width = screen_width;
   codec_ctx->height = screen_height;
-  codec_ctx->time_base = (AVRational){1, fps * 100};
-  codec_ctx->framerate = (AVRational){fps, 1};
+
+  codec_ctx->time_base.num = 1;
+  codec_ctx->time_base.den = fps * 100;
+
+  codec_ctx->framerate.num = fps;
+  codec_ctx->framerate.den = 1;
+
   codec_ctx->gop_size = fps * 3;
   codec_ctx->has_b_frames = 0;
   codec_ctx->max_b_frames = 0;
@@ -48,7 +55,7 @@ VideoEncoder* video_encoder_create(const char* encoder_name,
   if (strcmp(encoder_name, "libx264") == 0) {
     ret = av_opt_set(codec_ctx->priv_data, "preset", "ultrafast", 0);
     if (ret < 0) {
-      rust_log(ERROR,
+      rust_log(LEVEL_ERROR,
                "video_encoder: set codec_ctx opt <preset,fast> failed "
                "with code: %d",
                ret);
@@ -57,7 +64,7 @@ VideoEncoder* video_encoder_create(const char* encoder_name,
 
     ret = av_opt_set(codec_ctx->priv_data, "profile", "baseline", 0);
     if (ret < 0) {
-      rust_log(ERROR,
+      rust_log(LEVEL_ERROR,
                "video_encoder: set codec_ctx opt <profile,high> failed "
                "with code: %d",
                ret);
@@ -66,7 +73,7 @@ VideoEncoder* video_encoder_create(const char* encoder_name,
 
     ret = av_opt_set(codec_ctx->priv_data, "level", "5.2", 0);
     if (ret < 0) {
-      rust_log(ERROR,
+      rust_log(LEVEL_ERROR,
                "video_encoder: set codec_ctx opt <profile,high> failed "
                "with code: %d",
                ret);
@@ -75,7 +82,7 @@ VideoEncoder* video_encoder_create(const char* encoder_name,
 
     ret = av_opt_set(codec_ctx->priv_data, "tune", "zerolatency", 0);
     if (ret < 0) {
-      rust_log(ERROR,
+      rust_log(LEVEL_ERROR,
                "video_encoder: set codec_ctx opt <tune,zerolatency> failed "
                "with code: %d",
                ret);
@@ -84,7 +91,7 @@ VideoEncoder* video_encoder_create(const char* encoder_name,
 
     ret = av_opt_set(codec_ctx->priv_data, "sc_threshold", "499", 0);
     if (ret < 0) {
-      rust_log(ERROR,
+      rust_log(LEVEL_ERROR,
                "video_encoder: set codec_ctx opt <tune,zerolatency> failed "
                "with code: %d",
                ret);
@@ -95,7 +102,7 @@ VideoEncoder* video_encoder_create(const char* encoder_name,
   if (strcmp(encoder_name, "h264_videotoolbox") == 0) {
     ret = av_opt_set(codec_ctx->priv_data, "profile", "high", 0);
     if (ret < 0) {
-      rust_log(ERROR,
+      rust_log(LEVEL_ERROR,
                "video_encoder: set codec_ctx opt profile=high failed "
                "with code: %d",
                ret);
@@ -104,7 +111,7 @@ VideoEncoder* video_encoder_create(const char* encoder_name,
 
     ret = av_opt_set(codec_ctx->priv_data, "level", "5.2", 0);
     if (ret < 0) {
-      rust_log(ERROR,
+      rust_log(LEVEL_ERROR,
                "video_encoder: set codec_ctx opt level=5.2 failed "
                "with code: %d",
                ret);
@@ -123,13 +130,15 @@ VideoEncoder* video_encoder_create(const char* encoder_name,
 
   ret = avcodec_open2(codec_ctx, codec, NULL);
   if (ret != 0) {
-    rust_log(ERROR, "video_encoder: open codec failed with code: %d", ret);
+    rust_log(LEVEL_ERROR,
+             "video_encoder: open codec failed with code: %d",
+             ret);
     goto CLEAN;
   }
 
   VideoEncoder* video_encoder = (VideoEncoder*)malloc(sizeof(VideoEncoder));
   if (NULL == video_encoder) {
-    rust_log(ERROR, "video_encoder: malloc video encoder failed");
+    rust_log(LEVEL_ERROR, "video_encoder: malloc video encoder failed");
     goto CLEAN;
   }
   memset(video_encoder, 0, sizeof(VideoEncoder));
@@ -163,22 +172,24 @@ bool video_encoder_encode(VideoEncoder* video_encoder,
   bool update_parameters = false;
 
   if (!video_encoder) {
-    rust_log(ERROR, "video_encoder: video_encoder pointer is null");
+    rust_log(LEVEL_ERROR, "video_encoder: video_encoder pointer is null");
     return false;
   }
 
   if (!tx) {
-    rust_log(ERROR, "video_encoder: tx pointer is null");
+    rust_log(LEVEL_ERROR, "video_encoder: tx pointer is null");
     return false;
   }
 
   if (!y_plane_buffer_address) {
-    rust_log(ERROR, "video_encoder: y_plane_buffer_address pointer is null");
+    rust_log(LEVEL_ERROR,
+             "video_encoder: y_plane_buffer_address pointer is null");
     return false;
   }
 
   if (!uv_plane_buffer_address) {
-    rust_log(ERROR, "video_encoder: uv_plane_buffer_address pointer is null");
+    rust_log(LEVEL_ERROR,
+             "video_encoder: uv_plane_buffer_address pointer is null");
     return false;
   }
 
@@ -193,7 +204,7 @@ bool video_encoder_encode(VideoEncoder* video_encoder,
 
     AVFrame* frame = av_frame_alloc();
     if (NULL == frame) {
-      rust_log(ERROR, "video_encoder: alloc frame failed");
+      rust_log(LEVEL_ERROR, "video_encoder: alloc frame failed");
       return false;
     }
 
@@ -205,7 +216,7 @@ bool video_encoder_encode(VideoEncoder* video_encoder,
 
     ret = av_frame_get_buffer(frame, 32);
     if (ret < 0) {
-      rust_log(ERROR,
+      rust_log(LEVEL_ERROR,
                "video_encoder: alloc frame buffer failed with code: %d",
                ret);
       return false;
@@ -217,7 +228,7 @@ bool video_encoder_encode(VideoEncoder* video_encoder,
 
   ret = av_frame_make_writable(video_encoder->frame);
   if (ret != 0) {
-    rust_log(ERROR,
+    rust_log(LEVEL_ERROR,
              "video_encoder: make frame writable failed with code: %d",
              ret);
     return false;
@@ -237,13 +248,15 @@ bool video_encoder_encode(VideoEncoder* video_encoder,
   if (ret != 0) {
     if (ret == AVERROR(EAGAIN)) {
       rust_log(
-          ERROR,
+          LEVEL_ERROR,
           "video_encoder: can not send more frame, should receive more packet");
     } else if (ret == AVERROR_EOF) {
-      rust_log(ERROR,
+      rust_log(LEVEL_ERROR,
                "video_encoder: encoder closed, shouldn't send new frame");
     } else {
-      rust_log(ERROR, "video_encoder: send frame failed with code: %d", ret);
+      rust_log(LEVEL_ERROR,
+               "video_encoder: send frame failed with code: %d",
+               ret);
     }
 
     return false;
@@ -258,7 +271,7 @@ bool video_encoder_encode(VideoEncoder* video_encoder,
 
     AVPacket* packet = av_packet_alloc();
     if (NULL == packet) {
-      rust_log(ERROR, "video_encoder: alloc packet failed");
+      rust_log(LEVEL_ERROR, "video_encoder: alloc packet failed");
       return false;
     }
 
@@ -270,7 +283,7 @@ bool video_encoder_encode(VideoEncoder* video_encoder,
 
     ret = av_new_packet(packet, packet_size);
     if (ret < 0) {
-      rust_log(ERROR,
+      rust_log(LEVEL_ERROR,
                "video_encoder: alloc packet buffer failed with code: %d",
                ret);
       return false;
@@ -283,10 +296,10 @@ bool video_encoder_encode(VideoEncoder* video_encoder,
     ret =
         avcodec_receive_packet(video_encoder->codec_ctx, video_encoder->packet);
     if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
-      rust_log(TRACE, "video_encoder: no more packet can receive");
+      rust_log(LEVEL_TRACE, "video_encoder: no more packet can receive");
       return true;
     } else if (ret < 0) {
-      rust_log(ERROR,
+      rust_log(LEVEL_ERROR,
                "video_encoder: receive packet failed with code: %d",
                ret);
       return false;

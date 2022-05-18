@@ -187,6 +187,7 @@ pub fn begin_video(texture_id: i64) -> anyhow::Result<()> {
     std::thread::spawn(move || loop {
         match frame_rx.recv() {
             Ok(frame) => unsafe {
+                #[cfg(not(test))]
                 dispatch_frame(
                     texture_id,
                     0,
@@ -220,9 +221,11 @@ pub fn begin_video(texture_id: i64) -> anyhow::Result<()> {
 }
 
 /// cbindgen:ignore
+#[cfg(not(test))]
 extern "C" {
+    #[link_name = "dispatch_frame"]
     pub fn dispatch_frame(
-        flutter_texture_id: c_long,
+        flutter_texture_id: i64,
         frame_id: c_ulong,
         width: u16,
         height: u16,

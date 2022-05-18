@@ -1,6 +1,9 @@
 #ifndef VIDEO_DECODER_H
 #define VIDEO_DECODER_H
 
+#include <stdbool.h>
+#include "../rust_log/rust_log.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -8,8 +11,6 @@ extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavutil/opt.h>
 #include <libavutil/pixdesc.h>
-#include <stdbool.h>
-#include "../rust_log/rust_log.h"
 
 typedef void (*DecodeCallback)(void* tx,
                                uint16_t width,
