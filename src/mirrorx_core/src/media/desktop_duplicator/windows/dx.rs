@@ -1,16 +1,89 @@
 use super::shader;
 use anyhow::bail;
 use log::{error, info};
-use std::mem::zeroed;
+use std::{ffi::c_void, mem::zeroed};
 use windows::{
     core::PCSTR,
     Win32::Graphics::{Direct3D::*, Direct3D11::*, Dxgi::Common::*},
 };
 
+#[repr(C)]
+struct XMFLOAT2 {
+    pub x: f32,
+    pub y: f32,
+}
+
+#[repr(C)]
+struct XMFLOAT3 {
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
+}
+
+#[repr(C)]
+struct VERTEX {
+    pub pos: XMFLOAT3,
+    pub tex_coord: XMFLOAT2,
+}
+
+static VERTEX_STRIDES: u32 = std::mem::size_of::<VERTEX>() as u32;
+
+static VERTICES: [VERTEX; 6] = [
+    VERTEX {
+        pos: XMFLOAT3 {
+            x: -1.0,
+            y: -1.0,
+            z: 0.0,
+        },
+        tex_coord: XMFLOAT2 { x: 0.0, y: 1.0 },
+    },
+    VERTEX {
+        pos: XMFLOAT3 {
+            x: -1.0,
+            y: 1.0,
+            z: 0.0,
+        },
+        tex_coord: XMFLOAT2 { x: 0.0, y: 0.0 },
+    },
+    VERTEX {
+        pos: XMFLOAT3 {
+            x: 1.0,
+            y: -1.0,
+            z: 0.0,
+        },
+        tex_coord: XMFLOAT2 { x: 1.0, y: 1.0 },
+    },
+    VERTEX {
+        pos: XMFLOAT3 {
+            x: 1.0,
+            y: -1.0,
+            z: 0.0,
+        },
+        tex_coord: XMFLOAT2 { x: 1.0, y: 1.0 },
+    },
+    VERTEX {
+        pos: XMFLOAT3 {
+            x: -1.0,
+            y: 1.0,
+            z: 0.0,
+        },
+        tex_coord: XMFLOAT2 { x: 0.0, y: 0.0 },
+    },
+    VERTEX {
+        pos: XMFLOAT3 {
+            x: 1.0,
+            y: 1.0,
+            z: 0.0,
+        },
+        tex_coord: XMFLOAT2 { x: 1.0, y: 0.0 },
+    },
+];
+
 pub struct DX {
     device: ID3D11Device,
     device_context: ID3D11DeviceContext,
     vertex_shader: ID3D11VertexShader,
+    buffer: ID3D11Buffer,
     pixel_shader_lumina: ID3D11PixelShader,
     pixel_shader_chrominance: ID3D11PixelShader,
     input_layout: ID3D11InputLayout,
@@ -23,6 +96,7 @@ impl DX {
                 D3D_DRIVER_TYPE_HARDWARE,
                 D3D_DRIVER_TYPE_WARP,
                 D3D_DRIVER_TYPE_REFERENCE,
+                // D3D_DRIVER_TYPE_UNKNOWN,
             ];
 
             let feature_levels = [
@@ -79,7 +153,7 @@ impl DX {
                     }
                     Err(err) => {
                         error!(
-                            r#"create_device: failed to create device {{"driver_type": "{}", "error":"{}"}}"#,
+                            r#"create_device: failed to create device {{"driver_type": "{}", "error":"{:?}"}}"#,
                             match driver_type {
                                 D3D_DRIVER_TYPE_UNKNOWN => "D3D_DRIVER_TYPE_UNKNOWN",
                                 D3D_DRIVER_TYPE_HARDWARE => "D3D_DRIVER_TYPE_HARDWARE",
@@ -89,18 +163,65 @@ impl DX {
                                 D3D_DRIVER_TYPE_WARP => "D3D_DRIVER_TYPE_WARP",
                                 _ => "Unknown",
                             },
-                            err
+                            err.code()
                         )
                     }
                 };
             }
 
             if let (Some(device), Some(device_context)) = (device, device_context) {
-                let vertex_shader = device.CreateVertexShader(shader::VERTEX_SHADER_BYTES, None)?;
+                let vertex_shader = device.CreateVertexShader(shader::VERTEX_SHADER_BYTES, None).map_err(|err| {
+                    anyhow::anyhow!(
+                        r#"Duplication: ID3D11Device::CreateVertexShader failed {{"shader_name":"{}", "error": "{:?}"}}"#,
+                        "vertex_shader",
+                        err.code()
+                    )
+                })?;
+
+                device_context.VSSetShader(&vertex_shader, &[]);
+
+                let buffer_desc = D3D11_BUFFER_DESC {
+                    ByteWidth: VERTEX_STRIDES * VERTICES.len() as u32,
+                    Usage: D3D11_USAGE_DEFAULT,
+                    BindFlags: D3D11_BIND_VERTEX_BUFFER.0,
+                    CPUAccessFlags: 0,
+                    MiscFlags: 0,
+                    StructureByteStride: 0,
+                };
+
+                let subresource_data = D3D11_SUBRESOURCE_DATA {
+                    pSysMem: &VERTICES as *const _ as *const c_void,
+                    SysMemPitch: 0,
+                    SysMemSlicePitch: 0,
+                };
+
+                let buffer = device.CreateBuffer(&buffer_desc, &subresource_data).map_err(|err| {
+                    anyhow::anyhow!(
+                        r#"Duplication: ID3D11Device::CreateBuffer failed {{"error": "{:?}"}}"#,
+                        err.code()
+                    )
+                })?;
+
+                device_context.IASetVertexBuffers(0, 1, &Some(buffer.clone()), &VERTEX_STRIDES, &0);
+                device_context.IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
                 let pixel_shader_lumina =
-                    device.CreatePixelShader(shader::PIXEL_SHADER_LUMINA_BYTES, None)?;
+                    device.CreatePixelShader(shader::PIXEL_SHADER_LUMINA_BYTES, None).map_err(|err| {
+                        anyhow::anyhow!(
+                            r#"Duplication: ID3D11Device::CreatePixelShader failed {{"shader_name":"{}", "error": "{:?}"}}"#,
+                            "pixel_shader_lumina",
+                            err.code()
+                        )
+                    })?;
+
                 let pixel_shader_chrominance =
-                    device.CreatePixelShader(shader::PIXEL_SHADER_CHROMINANCE_BYTES, None)?;
+                    device.CreatePixelShader(shader::PIXEL_SHADER_CHROMINANCE_BYTES, None).map_err(|err| {
+                        anyhow::anyhow!(
+                            r#"Duplication: ID3D11Device::CreatePixelShader failed {{"shader_name":"{}", "error": "{:?}"}}"#,
+                            "pixel_shader_chrominance",
+                            err.code()
+                        )
+                    })?;
 
                 let input_element_desc_array = [
                     D3D11_INPUT_ELEMENT_DESC {
@@ -124,7 +245,12 @@ impl DX {
                 ];
 
                 let input_layout = device
-                    .CreateInputLayout(&input_element_desc_array, shader::VERTEX_SHADER_BYTES)?;
+                    .CreateInputLayout(&input_element_desc_array, shader::VERTEX_SHADER_BYTES).map_err(|err| {
+                        anyhow::anyhow!(
+                            r#"Duplication: ID3D11Device::CreateInputLayout failed {{"error": "{:?}"}}"#,
+                            err.code()
+                        )
+                    })?;
 
                 device_context.IASetInputLayout(&input_layout);
 
@@ -132,6 +258,7 @@ impl DX {
                     device,
                     device_context,
                     vertex_shader,
+                    buffer,
                     pixel_shader_lumina,
                     pixel_shader_chrominance,
                     input_layout,

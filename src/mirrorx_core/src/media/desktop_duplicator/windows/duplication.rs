@@ -15,13 +15,14 @@ use windows::{
             SystemServices::GENERIC_ALL,
             WindowsProgramming::INFINITE,
         },
+        UI::HiDpi::{SetProcessDpiAwarenessContext, DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2},
     },
 };
 
 pub struct Duplication {
     dx: DX,
-    dxgi_output_desc: DXGI_OUTPUT_DESC,
-    dxgi_output_duplication: IDXGIOutputDuplication,
+    output_desc: DXGI_OUTPUT_DESC,
+    output_duplication: IDXGIOutputDuplication,
     backend_texture: ID3D11Texture2D,
     render_texture_lumina: ID3D11Texture2D,
     render_texture_chrominance: ID3D11Texture2D,
@@ -49,12 +50,17 @@ impl Duplication {
                 bail!("Duplication: SetThreadDesktop failed");
             }
 
+            if !SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2).as_bool()
+            {
+                bail!("Duplication:SetProcessDpiAwarenessContext failed");
+            }
+
             let dx = DX::new()?;
-            let (dxgi_output_desc, dxgi_output_duplication) =
+            let (output_desc, output_duplication) =
                 init_output_duplication(&dx, output_idx)?;
 
             let mut dxgi_outdupl_desc = zeroed();
-            dxgi_output_duplication.GetDesc(&mut dxgi_outdupl_desc);
+            output_duplication.GetDesc(&mut dxgi_outdupl_desc);
 
             let mut texture_desc = D3D11_TEXTURE2D_DESC {
                 Width: dxgi_outdupl_desc.ModeDesc.Width,
@@ -76,7 +82,7 @@ impl Duplication {
                 .CreateTexture2D(&texture_desc, null())
                 .map_err(|err| {
                     anyhow::anyhow!(
-                        r#"Duplication: ID3D11Device::CreateTexture2D failed {{"texture":"{}", "error": "{:?}"}}"#,
+                        r#"Duplication: ID3D11Device::CreateTexture2D failed {{"texture_name":"{}", "error": "{:?}"}}"#,
                         "backend_texture",
                         err.code()
                     )
@@ -86,11 +92,11 @@ impl Duplication {
 
             texture_desc.Format = DXGI_FORMAT_R8_UNORM;
             texture_desc.BindFlags = D3D11_BIND_RENDER_TARGET;
-            let render_texture_lumina =dx. device()
+            let render_texture_lumina = dx. device()
                 .CreateTexture2D(&texture_desc, null())
                 .map_err(|err| {
                     anyhow::anyhow!(
-                        r#"Duplication: ID3D11Device::CreateTexture2D failed {{"texture":"{}", "error": "{:?}"}}"#,
+                        r#"Duplication: ID3D11Device::CreateTexture2D failed {{"texture_name":"{}", "error": "{:?}"}}"#,
                         "render_texture_lumina",
                         err.code()
                     )
@@ -101,7 +107,7 @@ impl Duplication {
             texture_desc.BindFlags = D3D11_BIND_FLAG(0);
             let staging_texture_lumina = dx.device().CreateTexture2D(&texture_desc, null()).map_err(|err|{
                 anyhow::anyhow!(
-                    r#"Duplication: ID3D11Device::CreateTexture2D failed {{"texture":"{}", "error": "{:?}"}}"#,
+                    r#"Duplication: ID3D11Device::CreateTexture2D failed {{"texture_name":"{}", "error": "{:?}"}}"#,
                     "staging_texture_lumina",
                     err.code()
                 )
@@ -118,7 +124,7 @@ impl Duplication {
 
             let render_target_view_lumina = dx.device().CreateRenderTargetView(&render_texture_lumina,null()).map_err(|err|{
                 anyhow::anyhow!(
-                    r#"Duplication: ID3D11Device::CreateRenderTargetView failed {{"texture":"{}", "error": "{:?}"}}"#,
+                    r#"Duplication: ID3D11Device::CreateRenderTargetView failed {{"texture_name":"{}", "error": "{:?}"}}"#,
                     "render_texture_lumina",
                     err.code()
                 )
@@ -137,7 +143,7 @@ impl Duplication {
                 .CreateTexture2D(&texture_desc, null())
                 .map_err(|err| {
                     anyhow::anyhow!(
-                        r#"Duplication: ID3D11Device::CreateTexture2D failed {{"texture":"{}", "error": "{:?}"}}"#,
+                        r#"Duplication: ID3D11Device::CreateTexture2D failed {{"texture_name":"{}", "error": "{:?}"}}"#,
                         "render_texture_chrominance",
                         err.code()
                     )
@@ -148,7 +154,7 @@ impl Duplication {
             texture_desc.BindFlags = D3D11_BIND_FLAG(0);
             let staging_texture_chrominance =dx. device().CreateTexture2D(&texture_desc, null()).map_err(|err|{
                 anyhow::anyhow!(
-                    r#"Duplication: ID3D11Device::CreateTexture2D failed {{"texture":"{}", "error": "{:?}"}}"#,
+                    r#"Duplication: ID3D11Device::CreateTexture2D failed {{"texture_name":"{}", "error": "{:?}"}}"#,
                     "staging_texture_chrominance",
                     err.code()
                 )
@@ -165,7 +171,7 @@ impl Duplication {
 
             let render_target_view_chrominance = dx.device().CreateRenderTargetView(&render_texture_chrominance,null()).map_err(|err|{
                 anyhow::anyhow!(
-                    r#"Duplication: ID3D11Device::CreateRenderTargetView failed {{"texture":"{}", "error": "{:?}"}}"#,
+                    r#"Duplication: ID3D11Device::CreateRenderTargetView failed {{"texture_name":"{}", "error": "{:?}"}}"#,
                     "render_texture_chrominance",
                     err.code()
                 )
@@ -173,8 +179,8 @@ impl Duplication {
 
             Ok(Duplication {
                 dx,
-                dxgi_output_desc: dxgi_output_desc,
-                dxgi_output_duplication: dxgi_output_duplication,
+                output_desc,
+                output_duplication,
                 backend_texture,
                 render_texture_lumina,
                 render_texture_chrominance,
@@ -204,7 +210,7 @@ impl Duplication {
 
             let mapped_resource_lumina = self.dx.device_context().Map(&self.staging_texture_lumina, 0, D3D11_MAP_READ, 0).map_err(|err|{
                 anyhow::anyhow!(
-                    r#"Duplication: ID3D11DeviceContext::Map failed {{"source": "{}", "error": "{:?}"}}"#,
+                    r#"Duplication: ID3D11DeviceContext::Map failed {{"resource_name": "{}", "error": "{:?}"}}"#,
                     "staging_texture_lumina",
                     err.code()
                 )
@@ -212,17 +218,17 @@ impl Duplication {
 
             let mapped_resource_chrominance = self.dx.device_context().Map(&self.staging_texture_chrominance, 0, D3D11_MAP_READ, 0).map_err(|err|{
                 anyhow::anyhow!(
-                    r#"Duplication: ID3D11DeviceContext::Map failed {{"source": "{}", "error": "{:?}"}}"#,
+                    r#"Duplication: ID3D11DeviceContext::Map failed {{"resource_name": "{}", "error": "{:?}"}}"#,
                     "staging_texture_chrominance",
                     err.code()
                 )
             })?;
 
-            let width = self.dxgi_output_desc.DesktopCoordinates.right
-                - self.dxgi_output_desc.DesktopCoordinates.left;
+            let width = self.output_desc.DesktopCoordinates.right
+                - self.output_desc.DesktopCoordinates.left;
 
-            let height = self.dxgi_output_desc.DesktopCoordinates.bottom
-                - self.dxgi_output_desc.DesktopCoordinates.top;
+            let height = self.output_desc.DesktopCoordinates.bottom
+                - self.output_desc.DesktopCoordinates.top;
 
             info!(
                 "captured: width: {}, height: {}, y_stride: {}, uv_stride: {}",
@@ -231,6 +237,22 @@ impl Duplication {
                 mapped_resource_lumina.RowPitch,
                 mapped_resource_chrominance.RowPitch
             );
+
+            let mut v1 = std::slice::from_raw_parts(
+                mapped_resource_lumina.pData as *const u8,
+                (height as usize) * (mapped_resource_lumina.RowPitch as usize),
+            )
+            .to_vec();
+
+            let mut v2 = std::slice::from_raw_parts(
+                mapped_resource_chrominance.pData as *const u8,
+                ((height / 2) as usize) * (mapped_resource_chrominance.RowPitch as usize),
+            )
+            .to_vec();
+
+            v1.append(&mut v2);
+
+            std::fs::write("D:\\pic.yuv", v1);
 
             self.dx
                 .device_context()
@@ -249,7 +271,7 @@ impl Duplication {
 
         let mut failures = 0;
         while failures < 10 {
-            let hr = match self.dxgi_output_duplication.AcquireNextFrame(
+            let hr = match self.output_duplication.AcquireNextFrame(
                 INFINITE,
                 &mut dxgi_outdupl_frame_info,
                 &mut dxgi_resource,
@@ -271,19 +293,19 @@ impl Duplication {
             if hr == DXGI_ERROR_ACCESS_LOST {
                 warn!("Duplication: IDXGIOutputDuplication::AcquireNextFrame returns DXGI_ERROR_ACCESS_LOST, re-init DXGIOutputDuplication");
 
-                let _ = self.dxgi_output_duplication.ReleaseFrame();
+                let _ = self.output_duplication.ReleaseFrame();
 
-                std::ptr::drop_in_place(&mut self.dxgi_output_duplication);
+                std::ptr::drop_in_place(&mut self.output_duplication);
 
                 let (dxgi_output_desc, dxgi_output_duplication) =
                     init_output_duplication(&self.dx, 0)?;
 
-                self.dxgi_output_duplication = dxgi_output_duplication;
-                self.dxgi_output_desc = dxgi_output_desc;
+                self.output_duplication = dxgi_output_duplication;
+                self.output_desc = dxgi_output_desc;
             }
         }
 
-        let frame_texture :ID3D11Texture2D =match dxgi_resource{
+        let frame_texture :ID3D11Texture2D = match dxgi_resource{
                 Some(resource)=>resource.cast().map_err(|err|{
                     anyhow::anyhow!(
                         r#"Duplication: IDXGIResource::QueryInterface for ID3D11Texture2D failed {{"error": "{:?}"}}"#,         
@@ -297,7 +319,7 @@ impl Duplication {
             .device_context()
             .CopyResource(&self.backend_texture, frame_texture);
 
-        self.dxgi_output_duplication.ReleaseFrame().map_err(|err| {
+        self.output_duplication.ReleaseFrame().map_err(|err| {
             anyhow::anyhow!(
                 r#"Duplication: IDXGIOutputDuplication::ReleaseFrame failed {{"error": "{:?}"}}"#,
                 err.code()
@@ -337,7 +359,7 @@ impl Duplication {
             .OMSetRenderTargets(&[Some(self.render_target_view_lumina.clone())], None);
         self.dx
             .device_context()
-            .PSSetShader(self.dx.pixel_shader_lumina(), &[None]);
+            .PSSetShader(self.dx.pixel_shader_lumina(), &[]);
         self.dx
             .device_context()
             .RSSetViewports(&[self.view_port_lumina]);
@@ -349,7 +371,7 @@ impl Duplication {
             .OMSetRenderTargets(&[Some(self.render_target_view_chrominance.clone())], None);
         self.dx
             .device_context()
-            .PSSetShader(self.dx.pixel_shader_chrominance(), &[None]);
+            .PSSetShader(self.dx.pixel_shader_chrominance(), &[]);
         self.dx
             .device_context()
             .RSSetViewports(&[self.view_port_chrominance]);
@@ -376,6 +398,9 @@ unsafe fn init_output_duplication(
             err.code()
         )
     })?;
+
+    let adapter_desc = dxgi_adapter.GetDesc()?;
+    info!("{:?}", String::from_utf16_lossy(&adapter_desc.Description));
 
     let dxgi_output = dxgi_adapter.EnumOutputs(output_idx).map_err(|err| {
         anyhow::anyhow!(

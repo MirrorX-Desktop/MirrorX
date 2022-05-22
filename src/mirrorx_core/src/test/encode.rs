@@ -89,9 +89,12 @@ async fn test_encode() -> anyhow::Result<()> {
     // tokio::time::sleep(Duration::from_secs(10)).await;
 
     let mut dup = media::desktop_duplicator::windows::duplication::Duplication::new(0)?;
-    dup.capture_frame()?;
 
-    OK(())
+    for _ in 0..10 {
+        dup.capture_frame()?;
+        tokio::time::sleep(Duration::from_millis(60)).await;
+    }
+    Ok(())
 
     // unsafe {
     //     let factory = windows::Win32::Graphics::Dxgi::CreateDXGIFactory1::<
@@ -101,7 +104,7 @@ async fn test_encode() -> anyhow::Result<()> {
     //     for dxgi_adapter_enum_index in 0.. {
     //         if let Ok(adapter) = factory.EnumAdapters(dxgi_adapter_enum_index) {
     //             let adapter_desc = adapter.GetDesc()?;
-    //             info!("{:?}", String::from_utf16_lossy(&adapter_desc.Description));
+    //             info!("{:?}", adapter_desc);
 
     //             for dxgi_output_enum_index in 0.. {
     //                 if let Ok(output) = adapter.EnumOutputs(dxgi_output_enum_index) {
