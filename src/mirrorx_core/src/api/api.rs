@@ -150,72 +150,72 @@ pub fn utility_generate_device_password() -> String {
 }
 
 pub fn begin_video(texture_id: i64) -> anyhow::Result<()> {
-    let (duplicator, duplicator_frame_rx) = media::desktop_duplicator::DesktopDuplicator::new(60)?;
-    let (mut encoder, packet_rx) =
-        media::video_encoder::VideoEncoder::new("libx264", 60, 1920, 1080)?;
-    let (mut decoder, frame_rx) = media::video_decoder::VideoDecoder::new("h264")?;
+    // let (duplicator, duplicator_frame_rx) = media::desktop_duplicator::DesktopDuplicator::new(60)?;
+    // let (mut encoder, packet_rx) =
+    //     media::video_encoder::VideoEncoder::new("libx264", 60, 1920, 1080)?;
+    // let (mut decoder, frame_rx) = media::video_decoder::VideoDecoder::new("h264")?;
 
-    std::thread::spawn(move || loop {
-        match duplicator_frame_rx.recv() {
-            Ok(frame) => {
-                info!("duplicator frame len: {}", duplicator_frame_rx.len());
-                if let Err(err) = encoder.encode(&frame) {
-                    // error!("encode failed: {}", err);
-                    break;
-                }
-            }
-            Err(err) => {
-                info!("duplicator_frame_rx closeda a ");
-                break;
-            }
-        }
-    });
+    // std::thread::spawn(move || loop {
+    //     match duplicator_frame_rx.recv() {
+    //         Ok(frame) => {
+    //             info!("duplicator frame len: {}", duplicator_frame_rx.len());
+    //             if let Err(err) = encoder.encode(&frame) {
+    //                 // error!("encode failed: {}", err);
+    //                 break;
+    //             }
+    //         }
+    //         Err(err) => {
+    //             info!("duplicator_frame_rx closeda a ");
+    //             break;
+    //         }
+    //     }
+    // });
 
-    std::thread::spawn(move || loop {
-        match packet_rx.recv() {
-            Ok(packet) => {
-                info!("packet len: {}", packet_rx.len());
-                decoder.decode(&packet);
-            }
-            Err(err) => {
-                info!("packet_rx closed");
-                break;
-            }
-        };
-    });
+    // std::thread::spawn(move || loop {
+    //     match packet_rx.recv() {
+    //         Ok(packet) => {
+    //             info!("packet len: {}", packet_rx.len());
+    //             decoder.decode(&packet);
+    //         }
+    //         Err(err) => {
+    //             info!("packet_rx closed");
+    //             break;
+    //         }
+    //     };
+    // });
 
-    std::thread::spawn(move || loop {
-        match frame_rx.recv() {
-            Ok(frame) => unsafe {
-                #[cfg(not(test))]
-                dispatch_frame(
-                    texture_id,
-                    0,
-                    frame.width,
-                    frame.height,
-                    frame.is_full_color_range,
-                    frame.y_plane_buffer.as_ptr(),
-                    frame.y_plane_stride,
-                    frame.uv_plane_buffer.as_ptr(),
-                    frame.uv_plane_stride,
-                    frame.dts,
-                    frame.pts,
-                );
-            },
-            Err(err) => {
-                info!("frame_rx closed");
-                break;
-            }
-        };
-    });
+    // std::thread::spawn(move || loop {
+    //     match frame_rx.recv() {
+    //         Ok(frame) => unsafe {
+    //             #[cfg(not(test))]
+    //             dispatch_frame(
+    //                 texture_id,
+    //                 0,
+    //                 frame.width,
+    //                 frame.height,
+    //                 frame.is_full_color_range,
+    //                 frame.y_plane_buffer.as_ptr(),
+    //                 frame.y_plane_stride,
+    //                 frame.uv_plane_buffer.as_ptr(),
+    //                 frame.uv_plane_stride,
+    //                 frame.dts,
+    //                 frame.pts,
+    //             );
+    //         },
+    //         Err(err) => {
+    //             info!("frame_rx closed");
+    //             break;
+    //         }
+    //     };
+    // });
 
-    RuntimeProvider::current()?.spawn(async move {
-        info!("start capture");
-        duplicator.start_capture();
-        tokio::time::sleep(Duration::from_secs(3600)).await;
-        duplicator.stop_capture();
-        info!("stop capture");
-    });
+    // RuntimeProvider::current()?.spawn(async move {
+    //     info!("start capture");
+    //     duplicator.start_capture();
+    //     tokio::time::sleep(Duration::from_secs(3600)).await;
+    //     duplicator.stop_capture();
+    //     info!("stop capture");
+    // });
 
     Ok(())
 }

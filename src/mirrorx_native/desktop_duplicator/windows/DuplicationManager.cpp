@@ -382,7 +382,7 @@ bool DuplicationManager::capture_raw_frame() {
   IDXGIResource* desktop_resource = nullptr;
   DXGI_OUTDUPL_FRAME_INFO frame_info;
   HRESULT hr =
-      m_output_duplication->AcquireNextFrame(0, &frame_info, &desktop_resource);
+      m_output_duplication->AcquireNextFrame(INFINITE, &frame_info, &desktop_resource);
   if (FAILED(hr)) {
     // if there's no desktop picture changed, it will fail
     return false;

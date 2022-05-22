@@ -1,6 +1,5 @@
-mod bindings;
-mod desktop_duplicator;
-mod dxgi;
-mod shader;
+#[cfg(target_os = "macos")]
+pub mod macos;
 
-pub use desktop_duplicator::DesktopDuplicator;
+#[cfg(target_os = "windows")]
+pub mod windows;

@@ -13,8 +13,6 @@ fn main() {
 
 #[allow(dead_code)]
 fn link_native_windows() {
-    
-
     println!("cargo:rustc-link-search=../mirrorx_native/dependencies/msvc/lib/x64");
     println!("cargo:rustc-link-lib=libx264");
     // println!("cargo:rustc-link-lib=static=libmfx");
