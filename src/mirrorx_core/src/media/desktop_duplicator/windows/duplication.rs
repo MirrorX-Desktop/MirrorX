@@ -1,4 +1,4 @@
-use super::dx::DX;
+use super::{dx::DX, dx_math::VERTICES};
 use anyhow::bail;
 use log::{info, warn};
 use std::{mem::zeroed, ptr::null};
@@ -363,7 +363,7 @@ impl Duplication {
         self.dx
             .device_context()
             .RSSetViewports(&[self.view_port_lumina]);
-        self.dx.device_context().Draw(6, 0);
+        self.dx.device_context().Draw(VERTICES.len() as u32, 0);
 
         // draw chrominance plane
         self.dx
@@ -375,7 +375,7 @@ impl Duplication {
         self.dx
             .device_context()
             .RSSetViewports(&[self.view_port_chrominance]);
-        self.dx.device_context().Draw(6, 0);
+        self.dx.device_context().Draw(VERTICES.len() as u32, 0);
 
         Ok(())
     }

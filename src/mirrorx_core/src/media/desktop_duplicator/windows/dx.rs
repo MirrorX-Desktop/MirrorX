@@ -1,4 +1,4 @@
-use super::shader;
+use super::{shader, dx_math::{VERTEX_STRIDES, VERTICES}};
 use anyhow::bail;
 use log::{error, info};
 use std::{ffi::c_void, mem::zeroed};
@@ -7,77 +7,6 @@ use windows::{
     Win32::Graphics::{Direct3D::*, Direct3D11::*, Dxgi::Common::*},
 };
 
-#[repr(C)]
-struct XMFLOAT2 {
-    pub x: f32,
-    pub y: f32,
-}
-
-#[repr(C)]
-struct XMFLOAT3 {
-    pub x: f32,
-    pub y: f32,
-    pub z: f32,
-}
-
-#[repr(C)]
-struct VERTEX {
-    pub pos: XMFLOAT3,
-    pub tex_coord: XMFLOAT2,
-}
-
-static VERTEX_STRIDES: u32 = std::mem::size_of::<VERTEX>() as u32;
-
-static VERTICES: [VERTEX; 6] = [
-    VERTEX {
-        pos: XMFLOAT3 {
-            x: -1.0,
-            y: -1.0,
-            z: 0.0,
-        },
-        tex_coord: XMFLOAT2 { x: 0.0, y: 1.0 },
-    },
-    VERTEX {
-        pos: XMFLOAT3 {
-            x: -1.0,
-            y: 1.0,
-            z: 0.0,
-        },
-        tex_coord: XMFLOAT2 { x: 0.0, y: 0.0 },
-    },
-    VERTEX {
-        pos: XMFLOAT3 {
-            x: 1.0,
-            y: -1.0,
-            z: 0.0,
-        },
-        tex_coord: XMFLOAT2 { x: 1.0, y: 1.0 },
-    },
-    VERTEX {
-        pos: XMFLOAT3 {
-            x: 1.0,
-            y: -1.0,
-            z: 0.0,
-        },
-        tex_coord: XMFLOAT2 { x: 1.0, y: 1.0 },
-    },
-    VERTEX {
-        pos: XMFLOAT3 {
-            x: -1.0,
-            y: 1.0,
-            z: 0.0,
-        },
-        tex_coord: XMFLOAT2 { x: 0.0, y: 0.0 },
-    },
-    VERTEX {
-        pos: XMFLOAT3 {
-            x: 1.0,
-            y: 1.0,
-            z: 0.0,
-        },
-        tex_coord: XMFLOAT2 { x: 1.0, y: 0.0 },
-    },
-];
 
 pub struct DX {
     device: ID3D11Device,
