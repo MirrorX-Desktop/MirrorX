@@ -12,7 +12,7 @@ use std::ffi::{c_void, CString};
 
 use super::bindings::{
     kCVPixelBufferHeightKey, kCVPixelBufferPixelFormatTypeKey, kCVPixelBufferWidthKey,
-    kCVPixelFormatType_420YpCbCr8BiPlanarFullRange,
+    kCVPixelFormatType_420YpCbCr8BiPlanarFullRange, CMSampleBufferRef,
 };
 
 pub struct AVCaptureVideoDataOutput {
@@ -21,7 +21,7 @@ pub struct AVCaptureVideoDataOutput {
 }
 
 impl AVCaptureVideoDataOutput {
-    pub fn new(callback: impl Fn(*mut Object) -> () + 'static) -> Self {
+    pub fn new(callback: impl Fn(CMSampleBufferRef) -> () + 'static) -> Self {
         unsafe {
             let cls = class!(AVCaptureVideoDataOutput);
             let obj: *mut Object = msg_send![cls, new];

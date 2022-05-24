@@ -8,12 +8,14 @@ use objc::{
 };
 use std::{ffi::c_void, sync::Once};
 
+use crate::media::desktop_duplicator::macos::bindings::CMSampleBufferRef;
+
 static VIDEO_DATA_OUTPUT_CALLBACK_CLASS_INIT_ONCE: Once = Once::new();
 
 pub struct VideoDataOutputCallback {}
 
 impl VideoDataOutputCallback {
-    pub fn set_callback(&mut self, callback: impl Fn(*mut Object) -> () + 'static) {
+    pub fn set_callback(&mut self, callback: impl Fn(CMSampleBufferRef) -> () + 'static) {
         unsafe {
             let block = ConcreteBlock::new(callback).copy();
             let block_ptr = Box::into_raw(Box::new(block));
@@ -47,12 +49,13 @@ impl objc_foundation::INSObject for VideoDataOutputCallback {
                 this: &mut Object,
                 _: Sel,
                 _: *mut Object,
-                didOutputSampleBuffer: *mut Object,
+                #[allow(non_snake_case)] didOutputSampleBuffer: CMSampleBufferRef,
                 _: *mut Object,
             ) {
                 unsafe {
-                    let callback_block: *mut RcBlock<(), ()> = msg_send![this, callback];
-                    (&*callback_block).call(());
+                    let callback_block: *mut RcBlock<(CMSampleBufferRef,), ()> =
+                        msg_send![this, callback];
+                    (&*callback_block).call((didOutputSampleBuffer,));
                 }
             }
 
@@ -75,7 +78,7 @@ impl objc_foundation::INSObject for VideoDataOutputCallback {
                 &mut Object,
                 Sel,
                 *mut Object,
-                *mut Object,
+                CMSampleBufferRef,
                 *mut Object,
             ) = capture_out_callback;
 
@@ -113,7 +116,7 @@ impl Drop for VideoDataOutputCallback {
         unsafe {
             let obj = &mut *(self as *mut _ as *mut Object);
             let block_ptr: *const c_void = msg_send![obj, callback];
-            let block = Box::from_raw(block_ptr as *mut RcBlock<(), ()>);
+            let block = Box::from_raw(block_ptr as *mut RcBlock<(CMSampleBufferRef,), ()>);
             drop(block);
 
             msg_send![obj, release]

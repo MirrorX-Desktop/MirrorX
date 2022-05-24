@@ -10,6 +10,7 @@ async fn test_encode() -> anyhow::Result<()> {
         AVCaptureSession, AVCaptureSessionPreset,
     };
     use crate::media::desktop_duplicator::macos::av_capture_video_data_output::AVCaptureVideoDataOutput;
+    use crate::media::desktop_duplicator::macos::bindings::*;
 
     env_logger::init_from_env(env_logger::Env::default().default_filter_or("info"));
 
@@ -88,8 +89,46 @@ async fn test_encode() -> anyhow::Result<()> {
         info!("can't add input");
     }
 
-    let capture_video_data_output = AVCaptureVideoDataOutput::new(|_| {
-        info!("capture_video_data_output callback");
+    let capture_video_data_output = AVCaptureVideoDataOutput::new(|cm_sample_buffer| unsafe {
+        if !CMSampleBufferIsValid(cm_sample_buffer) {
+            error!("invalid sample buffer");
+            return;
+        }
+
+        let mut timing_info: CMSampleTimingInfo = std::mem::zeroed();
+        let ret = CMSampleBufferGetSampleTimingInfo(cm_sample_buffer, 0, &mut timing_info);
+        if ret != 0 {
+            error!("CMSampleBufferGetSampleTimingInfo failed");
+            return;
+        }
+
+        let image_buffer = CMSampleBufferGetImageBuffer(cm_sample_buffer);
+        if image_buffer.is_null() {
+            error!("CMSampleBufferGetImageBuffer failed");
+            return;
+        }
+
+        let pix_fmt = CVPixelBufferGetPixelFormatType(image_buffer);
+
+        let lock_result = CVPixelBufferLockBaseAddress(image_buffer, 1);
+        if lock_result != 0 {
+            error!("CVPixelBufferLockBaseAddress failed");
+            return;
+        }
+
+        let width = CVPixelBufferGetWidth(image_buffer);
+        let height = CVPixelBufferGetHeight(image_buffer);
+        let y_plane_stride = CVPixelBufferGetBytesPerRowOfPlane(image_buffer, 0);
+        let y_plane_bytes_address = CVPixelBufferGetBaseAddressOfPlane(image_buffer, 0);
+        let uv_plane_stride = CVPixelBufferGetBytesPerRowOfPlane(image_buffer, 1);
+        let uv_plane_bytes_address = CVPixelBufferGetBaseAddressOfPlane(image_buffer, 1);
+
+        info!(
+            "captured width:{} height:{} y_plane_stride:{} uv_plane_stride:{}",
+            width, height, y_plane_stride, uv_plane_stride
+        );
+
+        CVPixelBufferUnlockBaseAddress(image_buffer, 1);
     });
 
     if capture_session.can_add_output(&capture_video_data_output) {
