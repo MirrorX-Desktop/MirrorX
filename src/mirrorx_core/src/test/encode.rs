@@ -78,9 +78,7 @@ async fn test_encode() -> anyhow::Result<()> {
     let capture_screen_input = AVCaptureScreenInput::new(0);
     capture_screen_input.set_captures_cursor(true);
     capture_screen_input.set_captures_mouse_clicks(true);
-    capture_screen_input.set_min_frame_duration(unsafe {
-        crate::media::desktop_duplicator::macos::bindings::CMTimeMake(1, 60)
-    });
+    capture_screen_input.set_min_frame_duration(unsafe { CMTimeMake(1, 60) });
 
     if capture_session.can_add_input(&capture_screen_input) {
         info!("can add input");
@@ -101,6 +99,8 @@ async fn test_encode() -> anyhow::Result<()> {
             error!("CMSampleBufferGetSampleTimingInfo failed");
             return;
         }
+
+        info!("{:?}", timing_info);
 
         let image_buffer = CMSampleBufferGetImageBuffer(cm_sample_buffer);
         if image_buffer.is_null() {

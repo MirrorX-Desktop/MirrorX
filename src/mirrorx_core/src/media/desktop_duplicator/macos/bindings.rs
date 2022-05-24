@@ -12,6 +12,7 @@ pub type CMTimeEpoch = i64;
 pub type CMTimeFlags = u32;
 
 #[repr(C)]
+#[derive(Debug)]
 pub struct CMTime {
     pub value: CMTimeValue,
     pub time_scale: CMTimeScale,
@@ -36,6 +37,7 @@ pub type CVImageBufferRef = *mut c_void;
 pub type CVPixelBufferRef = CVImageBufferRef;
 
 #[repr(C)]
+#[derive(Debug)]
 pub struct CMSampleTimingInfo {
     pub duration: CMTime,
     pub presentation_timestamp: CMTime,
