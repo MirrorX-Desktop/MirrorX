@@ -30,9 +30,16 @@ reqwest = { version = "0.11.10", features = ["json"] }
 rustc-hash = "1.1.0"
 crossbeam-channel = "0.5.4"
 
+[target.x86_64-apple-darwin.dependencies]
+objc = { version = "0.2.7" }
+objc-encode = "1.1.0"
+block = "0.1.6"
+dispatch = "0.2.0"
+objc-foundation = "0.1.1"
+objc_id = "0.1.1"
+core-foundation = "0.9.3"
+
 [target.x86_64-pc-windows-msvc.dependencies]
-# winapi = { version = "0.3.9", features = ["winuser", "d3d11", "dxgi1_2"] }
-# wio = "0.2.2"
 windows = { version = "0.37.0", features = [
     "Win32_Foundation",
     "Win32_Graphics_Dxgi",
@@ -43,7 +50,7 @@ windows = { version = "0.37.0", features = [
     "Win32_System_SystemServices",
     "Win32_Graphics_Gdi",
     "Win32_System_WindowsProgramming",
-    "Win32_UI_HiDpi"
+    "Win32_UI_HiDpi",
 ] }
 
 [profile.dev.package.num-bigint-dig]
