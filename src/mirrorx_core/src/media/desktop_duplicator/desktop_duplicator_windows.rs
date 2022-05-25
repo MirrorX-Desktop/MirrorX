@@ -1,7 +1,8 @@
 use super::windows::duplication::Duplication;
 use crate::media::video_encoder::VideoEncoder;
-use std::{sync::atomic::{AtomicBool,Ordering}, time::Duration};
+use std::{sync::atomic::{AtomicBool,Ordering}, time::Duration, ops::Sub};
 use log::error;
+use tokio::time::Instant;
 
 pub struct DesktopDuplicator {
     fps: i32,
@@ -37,6 +38,7 @@ impl DesktopDuplicator {
                     break;
                 }
 
+                let start_time = Instant::now();
                 if let Err(err) = duplication.capture_frame(
                     |width,
                      height,
@@ -59,6 +61,11 @@ impl DesktopDuplicator {
                     },
                 ) {
                     error!("{}", err);
+                }
+
+                let remaining = except_wait_time.checked_sub(start_time.elapsed());
+                if let Some(remaining)= remaining{
+                    std::thread::sleep(remaining);
                 }
             }
         });
