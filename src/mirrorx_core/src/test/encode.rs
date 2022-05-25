@@ -24,7 +24,7 @@ fn test_encode() -> anyhow::Result<()> {
                     bytes += packet.data.len();
                 }
                 Err(_) => {
-                    info!("packet_rx closed, {}", bytes);
+                    info!("packet_rx closed, {} B", bytes);
                     break;
                 }
             };
