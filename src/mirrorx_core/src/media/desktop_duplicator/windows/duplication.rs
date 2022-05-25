@@ -232,14 +232,6 @@ impl Duplication {
             let height = self.output_desc.DesktopCoordinates.bottom
                 - self.output_desc.DesktopCoordinates.top;
 
-            info!(
-                "captured: width: {}, height: {}, y_stride: {}, uv_stride: {}",
-                width,
-                height,
-                mapped_resource_lumina.RowPitch,
-                mapped_resource_chrominance.RowPitch
-            );
-
             callback(
                 width,
                 height,

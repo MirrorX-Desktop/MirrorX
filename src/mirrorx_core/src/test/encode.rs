@@ -39,5 +39,7 @@ fn test_encode() -> anyhow::Result<()> {
     desktop_duplicator.stop();
     info!("stop capture");
 
+    std::thread::sleep(std::time::Duration::from_secs(2));
+
     Ok(())
 }
