@@ -1,5 +1,13 @@
-use crate::media::desktop_duplicator::macos::video_data_output_callback::VideoDataOutputCallback;
+use super::bindings::{
+    kCVPixelBufferHeightKey, kCVPixelBufferPixelFormatTypeKey, kCVPixelBufferWidthKey,
+    kCVPixelFormatType_420YpCbCr8BiPlanarFullRange, CMSampleBufferRef,
+};
+use crate::media::{
+    desktop_duplicator::macos::video_data_output_callback::VideoDataOutputCallback,
+    video_encoder::VideoEncoder, video_packet::VideoPacket,
+};
 use core_foundation::{base::ToVoid, dictionary::CFMutableDictionary, number::CFNumber};
+use crossbeam_channel::Sender;
 use dispatch::ffi::{dispatch_queue_create, dispatch_release, DISPATCH_QUEUE_SERIAL};
 use objc::{
     class, msg_send,
@@ -8,20 +16,24 @@ use objc::{
 };
 use objc_foundation::INSObject;
 use objc_id::Id;
-use std::ffi::{c_void, CString};
-
-use super::bindings::{
-    kCVPixelBufferHeightKey, kCVPixelBufferPixelFormatTypeKey, kCVPixelBufferWidthKey,
-    kCVPixelFormatType_420YpCbCr8BiPlanarFullRange, CMSampleBufferRef,
+use std::{
+    ffi::{c_void, CString},
+    sync::Arc,
 };
 
 pub struct AVCaptureVideoDataOutput {
     obj: *mut Object,
+    tx: Arc<VideoEncoder>,
     _delegate: Id<VideoDataOutputCallback>,
 }
 
 impl AVCaptureVideoDataOutput {
-    pub fn new(callback: impl Fn(CMSampleBufferRef) -> () + 'static) -> Self {
+    pub fn new(
+        video_encoder: VideoEncoder,
+        callback: impl Fn(&VideoEncoder, CMSampleBufferRef) -> () + 'static,
+    ) -> Self {
+        let tx = Arc::new(video_encoder);
+
         unsafe {
             let cls = class!(AVCaptureVideoDataOutput);
             let obj: *mut Object = msg_send![cls, new];
@@ -36,6 +48,7 @@ impl AVCaptureVideoDataOutput {
 
             let mut delegate = VideoDataOutputCallback::new();
             delegate.set_callback(callback);
+            delegate.set_video_encoder(tx.clone().as_ref() as *const _ as *const c_void);
 
             let queue_label =
                 CString::new("cloud.mirrorx.desktop_duplicator.video_data_output_queue").unwrap();
@@ -50,6 +63,7 @@ impl AVCaptureVideoDataOutput {
 
             AVCaptureVideoDataOutput {
                 obj,
+                tx,
                 _delegate: delegate,
             }
         }

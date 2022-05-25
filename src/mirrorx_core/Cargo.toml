@@ -6,7 +6,7 @@ build = "build.rs"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [lib]
-crate-type = ["lib", "staticlib"]
+crate-type = ["lib", "cdylib"]
 
 [dependencies]
 log = { version = "0.4.16", features = ["kv_unstable_serde"] }
@@ -59,3 +59,4 @@ opt-level = 3
 [profile.release]
 lto = true
 incremental = true
+strip = true

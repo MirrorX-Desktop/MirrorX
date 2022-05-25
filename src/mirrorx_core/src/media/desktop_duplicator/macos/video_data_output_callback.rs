@@ -1,4 +1,5 @@
 use block::{ConcreteBlock, RcBlock};
+use crossbeam_channel::Sender;
 use objc::{
     class,
     declare::ClassDecl,
@@ -8,19 +9,32 @@ use objc::{
 };
 use std::{ffi::c_void, sync::Once};
 
-use crate::media::desktop_duplicator::macos::bindings::CMSampleBufferRef;
+use crate::media::{
+    desktop_duplicator::macos::bindings::CMSampleBufferRef, video_encoder::VideoEncoder,
+    video_packet::VideoPacket,
+};
 
 static VIDEO_DATA_OUTPUT_CALLBACK_CLASS_INIT_ONCE: Once = Once::new();
 
 pub struct VideoDataOutputCallback {}
 
 impl VideoDataOutputCallback {
-    pub fn set_callback(&mut self, callback: impl Fn(CMSampleBufferRef) -> () + 'static) {
+    pub fn set_callback(
+        &mut self,
+        callback: impl Fn(&VideoEncoder, CMSampleBufferRef) -> () + 'static,
+    ) {
         unsafe {
             let block = ConcreteBlock::new(callback).copy();
             let block_ptr = Box::into_raw(Box::new(block));
             let obj = &mut *(self as *mut _ as *mut Object);
             msg_send![obj, setCallback: block_ptr as *const c_void]
+        }
+    }
+
+    pub fn set_video_encoder(&mut self, video_encoder: *const c_void) {
+        unsafe {
+            let obj = &mut *(self as *mut _ as *mut Object);
+            msg_send![obj, setVideoEncoder: video_encoder]
         }
     }
 }
@@ -34,6 +48,7 @@ impl objc_foundation::INSObject for VideoDataOutputCallback {
             let mut cls = ClassDecl::new("VideoOutputCallback", super_class).unwrap();
 
             cls.add_ivar::<*const c_void>("_capture_callback");
+            cls.add_ivar::<*const c_void>("_video_encoder");
 
             extern "C" fn set_callback(this: &mut Object, _cmd: Sel, callback: *const c_void) {
                 unsafe {
@@ -45,6 +60,16 @@ impl objc_foundation::INSObject for VideoDataOutputCallback {
                 unsafe { *this.get_ivar("_capture_callback") }
             }
 
+            extern "C" fn set_video_encoder(this: &mut Object, _cmd: Sel, callback: *const c_void) {
+                unsafe {
+                    this.set_ivar("_video_encoder", callback);
+                }
+            }
+
+            extern "C" fn get_video_encoder(this: &Object, _cmd: Sel) -> *const c_void {
+                unsafe { *this.get_ivar("_video_encoder") }
+            }
+
             extern "C" fn capture_out_callback(
                 this: &mut Object,
                 _: Sel,
@@ -53,9 +78,12 @@ impl objc_foundation::INSObject for VideoDataOutputCallback {
                 _: *mut Object,
             ) {
                 unsafe {
-                    let callback_block: *mut RcBlock<(CMSampleBufferRef,), ()> =
+                    let callback_block: *mut RcBlock<(&VideoEncoder, CMSampleBufferRef), ()> =
                         msg_send![this, callback];
-                    (&*callback_block).call((didOutputSampleBuffer,));
+
+                    let video_encoder: *const VideoEncoder = msg_send![this, videoEncoder];
+
+                    (&*callback_block).call((&*video_encoder, didOutputSampleBuffer));
                 }
             }
 
@@ -73,6 +101,14 @@ impl objc_foundation::INSObject for VideoDataOutputCallback {
 
             let get_callback_fn: extern "C" fn(&Object, Sel) -> *const c_void = get_callback;
             cls.add_method(sel!(callback), get_callback_fn);
+
+            let set_video_encoder_fn: extern "C" fn(&mut Object, Sel, *const c_void) =
+                set_video_encoder;
+            cls.add_method(sel!(setVideoEncoder:), set_video_encoder_fn);
+
+            let get_video_encoder_fn: extern "C" fn(&Object, Sel) -> *const c_void =
+                get_video_encoder;
+            cls.add_method(sel!(videoEncoder), get_video_encoder_fn);
 
             let capture_out_callback_fn: extern "C" fn(
                 &mut Object,

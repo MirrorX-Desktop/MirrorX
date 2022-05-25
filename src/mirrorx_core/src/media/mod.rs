@@ -1,4 +1,5 @@
 mod ffi_log;
+mod ffmpeg;
 
 pub mod desktop_duplicator;
 pub mod video_decoder;

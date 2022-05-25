@@ -14,12 +14,12 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/build/bin)
 
 
 # 3rd party libraries include directories
-include_directories("${CMAKE_SOURCE_DIR}/dependencies_build/ffmpeg/include")
+include_directories("${CMAKE_SOURCE_DIR}/../third/dependencies_build/ffmpeg/include")
 # include_directories("${CMAKE_SOURCE_DIR}/dependencies_build/libvpx/include")
 # include_directories("${CMAKE_SOURCE_DIR}/dependencies_build/opus/include")
-include_directories("${CMAKE_SOURCE_DIR}/dependencies_build/x264/include")
+include_directories("${CMAKE_SOURCE_DIR}/../third/dependencies_build/x264/include")
 # include_directories("${CMAKE_SOURCE_DIR}/dependencies_build/x265/include")
-include_directories("${CMAKE_SOURCE_DIR}/dependencies_build/MediaSDK/include")
+include_directories("${CMAKE_SOURCE_DIR}/../third/dependencies_build/MediaSDK/include")
 
 
 # # # libvpx
@@ -98,8 +98,6 @@ include_directories("${CMAKE_SOURCE_DIR}/dependencies_build/MediaSDK/include")
 # include_directories("video_encoder")
 
 set(SOURCES "")
-
-add_subdirectory(desktop_duplicator)
 
 # rust_log
 list(APPEND SOURCES "rust_log/rust_log.h")

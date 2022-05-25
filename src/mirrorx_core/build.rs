@@ -4,6 +4,8 @@ fn main() {
 
     println!("enter test");
 
+    link_ffmpeg();
+
     #[cfg(target_os = "macos")]
     link_native_macos();
 
@@ -35,4 +37,18 @@ fn link_native_macos() {
     println!("cargo:rustc-link-lib=framework=CoreMedia");
     println!("cargo:rustc-link-lib=framework=AVFoundation");
     println!("cargo:rustc-link-lib=framework=VideoToolbox");
+}
+
+fn link_ffmpeg() {
+    #[cfg(target_os = "macos")]
+    {
+        println!("cargo:rustc-link-search=../third/dependencies_build/ffmpeg/lib");
+        println!("cargo:rustc-link-lib=avcodec");
+        println!("cargo:rustc-link-lib=avformat");
+        println!("cargo:rustc-link-lib=avutil");
+        println!("cargo:rustc-link-lib=avdevice");
+
+        println!("cargo:rustc-link-search=../third/dependencies_build/x264/lib");
+        println!("cargo:rustc-link-lib=x264");
+    }
 }
