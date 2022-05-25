@@ -1,7 +1,7 @@
 use super::{dx::DX, dx_math::VERTICES};
 use anyhow::bail;
 use log::{info, warn};
-use std::{mem::zeroed, ptr::null};
+use std::{mem::zeroed, ptr::null, slice::from_raw_parts};
 use windows::{
     core::Interface,
     Win32::{
@@ -56,8 +56,7 @@ impl Duplication {
             }
 
             let dx = DX::new()?;
-            let (output_desc, output_duplication) =
-                init_output_duplication(&dx, output_idx)?;
+            let (output_desc, output_duplication) = init_output_duplication(&dx, output_idx)?;
 
             let mut dxgi_outdupl_desc = zeroed();
             output_duplication.GetDesc(&mut dxgi_outdupl_desc);
@@ -194,7 +193,10 @@ impl Duplication {
         }
     }
 
-    pub fn capture_frame(&mut self) -> anyhow::Result<()> {
+    pub fn capture_frame(
+        &mut self,
+        callback: impl FnOnce(i32, i32, *mut u8, u32, *mut u8, u32) -> (),
+    ) -> anyhow::Result<()> {
         unsafe {
             self.get_frame()?;
             self.process_frame()?;
@@ -238,21 +240,14 @@ impl Duplication {
                 mapped_resource_chrominance.RowPitch
             );
 
-            let mut v1 = std::slice::from_raw_parts(
-                mapped_resource_lumina.pData as *const u8,
-                (height as usize) * (mapped_resource_lumina.RowPitch as usize),
-            )
-            .to_vec();
-
-            let mut v2 = std::slice::from_raw_parts(
-                mapped_resource_chrominance.pData as *const u8,
-                ((height / 2) as usize) * (mapped_resource_chrominance.RowPitch as usize),
-            )
-            .to_vec();
-
-            v1.append(&mut v2);
-
-            std::fs::write("D:\\pic.yuv", v1);
+            callback(
+                width,
+                height,
+                mapped_resource_lumina.pData as *mut u8,
+                mapped_resource_lumina.RowPitch,
+                mapped_resource_chrominance.pData as *mut u8,
+                mapped_resource_chrominance.RowPitch,
+            );
 
             self.dx
                 .device_context()

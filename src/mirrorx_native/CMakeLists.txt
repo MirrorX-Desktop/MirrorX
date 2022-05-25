@@ -14,13 +14,16 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/build/bin)
 
 
 # 3rd party libraries include directories
+if (WIN32 OR MSVC)
+include_directories("${CMAKE_SOURCE_DIR}/../third/dependencies/msvc/include")
+else()
 include_directories("${CMAKE_SOURCE_DIR}/../third/dependencies_build/ffmpeg/include")
 # include_directories("${CMAKE_SOURCE_DIR}/dependencies_build/libvpx/include")
 # include_directories("${CMAKE_SOURCE_DIR}/dependencies_build/opus/include")
 include_directories("${CMAKE_SOURCE_DIR}/../third/dependencies_build/x264/include")
 # include_directories("${CMAKE_SOURCE_DIR}/dependencies_build/x265/include")
 include_directories("${CMAKE_SOURCE_DIR}/../third/dependencies_build/MediaSDK/include")
-
+endif()
 
 # # # libvpx
 # # if (WIN32 OR MSVC)

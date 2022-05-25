@@ -24,6 +24,9 @@ pub struct VideoEncoder {
     tx: Sender<VideoPacket>,
 }
 
+unsafe impl Send for VideoEncoder {}
+unsafe impl Sync for VideoEncoder {}
+
 impl VideoEncoder {
     pub fn new(
         encoder_name: &str,

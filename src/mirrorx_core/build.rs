@@ -15,14 +15,6 @@ fn main() {
 
 #[allow(dead_code)]
 fn link_native_windows() {
-    println!("cargo:rustc-link-search=../mirrorx_native/dependencies/msvc/lib/x64");
-    println!("cargo:rustc-link-lib=libx264");
-    // println!("cargo:rustc-link-lib=static=libmfx");
-    println!("cargo:rustc-link-lib=libavcodec");
-    println!("cargo:rustc-link-lib=libavutil");
-    println!("cargo:rustc-link-lib=libavformat");
-    println!("cargo:rustc-link-lib=libavdevice");
-
     println!("cargo:rustc-link-search=../mirrorx_native/build/lib/Release");
     println!("cargo:rustc-link-lib=mirrorx_native");
 }
@@ -50,5 +42,15 @@ fn link_ffmpeg() {
 
         println!("cargo:rustc-link-search=../third/dependencies_build/x264/lib");
         println!("cargo:rustc-link-lib=x264");
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        println!("cargo:rustc-link-search=../third/dependencies/msvc/lib/x64");
+        println!("cargo:rustc-link-lib=libx264");
+        println!("cargo:rustc-link-lib=libavcodec");
+        println!("cargo:rustc-link-lib=libavutil");
+        println!("cargo:rustc-link-lib=libavformat");
+        println!("cargo:rustc-link-lib=libavdevice");
     }
 }
