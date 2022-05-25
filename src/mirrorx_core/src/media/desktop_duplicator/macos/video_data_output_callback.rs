@@ -1,5 +1,7 @@
+use crate::media::{
+    desktop_duplicator::macos::bindings::CMSampleBufferRef, video_encoder::VideoEncoder,
+};
 use block::{ConcreteBlock, RcBlock};
-use crossbeam_channel::Sender;
 use objc::{
     class,
     declare::ClassDecl,
@@ -8,11 +10,6 @@ use objc::{
     sel, sel_impl,
 };
 use std::{ffi::c_void, sync::Once};
-
-use crate::media::{
-    desktop_duplicator::macos::bindings::CMSampleBufferRef, video_encoder::VideoEncoder,
-    video_packet::VideoPacket,
-};
 
 static VIDEO_DATA_OUTPUT_CALLBACK_CLASS_INIT_ONCE: Once = Once::new();
 

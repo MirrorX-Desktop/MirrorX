@@ -96,8 +96,9 @@ impl DesktopDuplicator {
         Ok(DesktopDuplicator { capture_session })
     }
 
-    pub fn start(&mut self) {
+    pub fn start(&mut self) -> anyhow::Result<()> {
         self.capture_session.start_running();
+        Ok(())
     }
 
     pub fn stop(&mut self) {

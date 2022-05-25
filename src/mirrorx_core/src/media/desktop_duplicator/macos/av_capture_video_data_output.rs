@@ -4,10 +4,9 @@ use super::bindings::{
 };
 use crate::media::{
     desktop_duplicator::macos::video_data_output_callback::VideoDataOutputCallback,
-    video_encoder::VideoEncoder, video_packet::VideoPacket,
+    video_encoder::VideoEncoder,
 };
 use core_foundation::{base::ToVoid, dictionary::CFMutableDictionary, number::CFNumber};
-use crossbeam_channel::Sender;
 use dispatch::ffi::{dispatch_queue_create, dispatch_release, DISPATCH_QUEUE_SERIAL};
 use objc::{
     class, msg_send,
@@ -23,7 +22,7 @@ use std::{
 
 pub struct AVCaptureVideoDataOutput {
     obj: *mut Object,
-    tx: Arc<VideoEncoder>,
+    video_encoder: Arc<VideoEncoder>,
     _delegate: Id<VideoDataOutputCallback>,
 }
 
@@ -32,7 +31,7 @@ impl AVCaptureVideoDataOutput {
         video_encoder: VideoEncoder,
         callback: impl Fn(&VideoEncoder, CMSampleBufferRef) -> () + 'static,
     ) -> Self {
-        let tx = Arc::new(video_encoder);
+        let video_encoder = Arc::new(video_encoder);
 
         unsafe {
             let cls = class!(AVCaptureVideoDataOutput);
@@ -48,7 +47,7 @@ impl AVCaptureVideoDataOutput {
 
             let mut delegate = VideoDataOutputCallback::new();
             delegate.set_callback(callback);
-            delegate.set_video_encoder(tx.clone().as_ref() as *const _ as *const c_void);
+            delegate.set_video_encoder(video_encoder.clone().as_ref() as *const _ as *const c_void);
 
             let queue_label =
                 CString::new("cloud.mirrorx.desktop_duplicator.video_data_output_queue").unwrap();
@@ -63,7 +62,7 @@ impl AVCaptureVideoDataOutput {
 
             AVCaptureVideoDataOutput {
                 obj,
-                tx,
+                video_encoder,
                 _delegate: delegate,
             }
         }
