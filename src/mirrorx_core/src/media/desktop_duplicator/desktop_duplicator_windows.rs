@@ -1,7 +1,11 @@
 use super::windows::duplication::Duplication;
 use crate::media::video_encoder::VideoEncoder;
-use std::{sync::atomic::{AtomicBool,Ordering}, time::Duration, ops::Sub};
 use log::error;
+use std::{
+    ops::Sub,
+    sync::atomic::{AtomicBool, Ordering},
+    time::Duration,
+};
 use tokio::time::Instant;
 
 pub struct DesktopDuplicator {
@@ -64,7 +68,7 @@ impl DesktopDuplicator {
                 }
 
                 let remaining = except_wait_time.checked_sub(start_time.elapsed());
-                if let Some(remaining)= remaining{
+                if let Some(remaining) = remaining {
                     std::thread::sleep(remaining);
                 }
             }
