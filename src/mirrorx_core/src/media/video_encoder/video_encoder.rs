@@ -9,7 +9,10 @@ use crate::media::{
             error::AVERROR_EOF,
             frame::{av_frame_alloc, av_frame_free, av_frame_get_buffer, av_frame_make_writable},
             imgutils::av_image_get_buffer_size,
-            pixfmt::AV_PIX_FMT_NV12,
+            pixfmt::{
+                AVCOL_PRI_BT709, AVCOL_RANGE_JPEG, AVCOL_SPC_BT709, AVCOL_TRC_BT709,
+                AV_PIX_FMT_NV12,
+            },
         },
     },
     video_packet::VideoPacket,
@@ -154,6 +157,10 @@ impl VideoEncoder {
                 (*(*self.video_encoder_ptr).frame).width = width;
                 (*(*self.video_encoder_ptr).frame).height = height;
                 (*(*self.video_encoder_ptr).frame).format = AV_PIX_FMT_NV12;
+                (*(*self.video_encoder_ptr).frame).color_range = AVCOL_RANGE_JPEG;
+                (*(*self.video_encoder_ptr).frame).color_primaries = AVCOL_PRI_BT709;
+                (*(*self.video_encoder_ptr).frame).color_trc = AVCOL_TRC_BT709;
+                (*(*self.video_encoder_ptr).frame).color_space = AVCOL_SPC_BT709;
 
                 ret = av_frame_get_buffer((*self.video_encoder_ptr).frame, 32);
                 if ret < 0 {
