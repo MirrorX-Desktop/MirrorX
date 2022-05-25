@@ -242,7 +242,7 @@ impl VideoEncoder {
                 );
 
                 // todo: AVERROR(EAGAIN) is -35 in unix but windwos?
-                if ret == -35 || ret == AVERROR_EOF {
+                if ret == -libc::EAGAIN || ret == AVERROR_EOF {
                     return;
                 } else if ret < 0 {
                     error!(

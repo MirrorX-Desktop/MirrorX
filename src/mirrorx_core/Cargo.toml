@@ -29,6 +29,7 @@ dashmap = "5.3.3"
 reqwest = { version = "0.11.10", features = ["json"] }
 rustc-hash = "1.1.0"
 crossbeam-channel = "0.5.4"
+libc = "0.2.126"
 
 [target.x86_64-apple-darwin.dependencies]
 objc = { version = "0.2.7" }
