@@ -1,4 +1,7 @@
-use crate::media::ffmpeg::{avcodec::packet::AVPacket, avutil::frame::AVFrame};
+use crate::media::ffmpeg::{
+    avcodec::{avcodec::AVCodecContext, packet::AVPacket},
+    avutil::frame::AVFrame,
+};
 use std::{
     ffi::c_void,
     os::raw::{c_char, c_int},
@@ -7,7 +10,7 @@ use std::{
 #[repr(C)]
 pub struct VideoEncoder {
     pub codec: *const c_void,
-    pub codec_ctx: *mut c_void,
+    pub codec_ctx: *mut AVCodecContext,
     pub frame: *mut AVFrame,
     pub packet: *mut AVPacket,
 }

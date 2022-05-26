@@ -1,4 +1,3 @@
-use log::{debug, error, info, trace, warn};
 use std::ffi::CStr;
 use std::os::raw::{c_char, c_int};
 
@@ -11,22 +10,22 @@ pub extern "C" fn log_to_rust(level: c_int, message: *const c_char) {
             Ok(message) => {
                 let message = message.trim();
                 match level {
-                    1 => trace!("{}", message),
-                    2 => debug!("{}", message),
-                    3 => info!("{}", message),
-                    4 => warn!("{}", message),
-                    5 => error!("{}", message),
+                    1 => tracing::trace!(message),
+                    2 => tracing::debug!(message),
+                    3 => tracing::info!(message),
+                    4 => tracing::warn!(message),
+                    5 => tracing::error!(message),
                     _ => {
-                        warn!(
+                        tracing::warn!(
                             "unknown ffi_log level: {}, the message is '{}'",
-                            level, message
+                            level,
+                            message
                         );
                     }
                 }
             }
-            Err(err) => error!(
-                "invalid ffi_log message, convert from raw pointer(*const c_char) failed: {}",
-                err
+            Err(err) => tracing::error!(err = ?err,
+                "invalid ffi_log message, convert from raw pointer(*const c_char) failed",
             ),
         }
     }

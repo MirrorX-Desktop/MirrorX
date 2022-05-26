@@ -1,7 +1,6 @@
 use anyhow::bail;
 use dashmap::DashMap;
 use flutter_rust_bridge::{StreamSink, ZeroCopyBuffer};
-use log::error;
 use once_cell::sync::OnceCell;
 
 static CURRENT_FRAME_STREAM_PROVIDER: OnceCell<FrameStreamProvider> = OnceCell::new();
@@ -46,7 +45,7 @@ impl FrameStreamProvider {
             drop(stream);
             if !success {
                 self.streams.remove(remote_device_id);
-                error!("FrameStreamProvider: send failed");
+                tracing::error!("frame stream send failed");
             }
         }
     }

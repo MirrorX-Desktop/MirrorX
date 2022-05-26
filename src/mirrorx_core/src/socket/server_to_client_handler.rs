@@ -1,4 +1,3 @@
-use log::info;
 use std::sync::Arc;
 
 // pub async fn heartbeat(

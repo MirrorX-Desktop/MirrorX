@@ -8,13 +8,12 @@ use super::{
 };
 use crate::{provider::config::ConfigProvider, socket::endpoint::CacheKey};
 use anyhow::anyhow;
-use log::{info, trace};
 use ring::rand::SecureRandom;
 use rsa::{PaddingScheme, PublicKeyParts, RsaPrivateKey, RsaPublicKey};
 use std::sync::Arc;
 
 pub async fn connect(endpoint: Arc<EndPoint>, req: ConnectRequest) -> anyhow::Result<ConnectReply> {
-    info!("connect: {}", req);
+    tracing::trace!(req = %req, "connect");
 
     let mut rng = rand::thread_rng();
     let priv_key = RsaPrivateKey::new(&mut rng, 4096)?;
@@ -36,7 +35,7 @@ pub async fn key_exchange_and_verify_password(
     endpoint: Arc<EndPoint>,
     req: KeyExchangeAndVerifyPasswordRequest,
 ) -> anyhow::Result<KeyExchangeAndVerifyPasswordReply> {
-    info!("key_exchange_and_verify_password: {}", req);
+    tracing::trace!(req = %req, "key_exchange_and_verify_password");
 
     // todo: check white list
 
@@ -180,13 +179,7 @@ pub async fn key_exchange_and_verify_password(
         .set_sealing_key(unbound_sealing_key, sealing_initial_nonce)
         .await;
 
-    trace!("key exchange and password verify success");
-
-    trace!("sealing key: {:X?}", sealing_key);
-    trace!("opening key: {:X?}", opening_key);
-
-    trace!("opening initial nonce: {}", opening_initial_nonce);
-    trace!("sealing initial nonce: {}", sealing_initial_nonce);
+    tracing::trace!("key_exchange_and_verify_password success");
 
     Ok(KeyExchangeAndVerifyPasswordReply {
         password_correct: true,
@@ -199,7 +192,7 @@ pub async fn start_media_transmission(
     endpoint: Arc<EndPoint>,
     req: StartMediaTransmissionRequest,
 ) -> anyhow::Result<StartMediaTransmissionReply> {
-    info!("start_media_transmission: {}", req);
+    tracing::trace!(req = %req, "start_media_transmission");
 
     Ok(StartMediaTransmissionReply {
         os_name: crate::constants::OS_NAME

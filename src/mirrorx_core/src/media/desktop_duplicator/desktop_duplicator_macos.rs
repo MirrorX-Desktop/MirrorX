@@ -6,7 +6,6 @@ use super::macos::{
 };
 use crate::media::{desktop_duplicator::macos::bindings::*, video_encoder::VideoEncoder};
 use anyhow::bail;
-use log::error;
 
 pub struct DesktopDuplicator {
     capture_session: AVCaptureSession,
@@ -26,26 +25,26 @@ impl DesktopDuplicator {
         if capture_session.can_add_input(&capture_screen_input) {
             capture_session.add_input(capture_screen_input);
         } else {
-            bail!("DesktopDuplicator: can't add input");
+            bail!("can't add input");
         }
 
         let capture_video_data_output =
             AVCaptureVideoDataOutput::new(encoder, |encoder, cm_sample_buffer| unsafe {
                 if !CMSampleBufferIsValid(cm_sample_buffer) {
-                    error!("DesktopDuplicator: invalid sample buffer");
+                    tracing::error!("invalid sample buffer");
                     return;
                 }
 
                 let mut timing_info: CMSampleTimingInfo = std::mem::zeroed();
                 let ret = CMSampleBufferGetSampleTimingInfo(cm_sample_buffer, 0, &mut timing_info);
                 if ret != 0 {
-                    error!("DesktopDuplicator: CMSampleBufferGetSampleTimingInfo failed");
+                    tracing::error!(ret = ret, "CMSampleBufferGetSampleTimingInfo failed");
                     return;
                 }
 
                 let image_buffer = CMSampleBufferGetImageBuffer(cm_sample_buffer);
                 if image_buffer.is_null() {
-                    error!("DesktopDuplicator: CMSampleBufferGetImageBuffer failed");
+                    tracing::error!("CMSampleBufferGetImageBuffer failed");
                     return;
                 }
 
@@ -53,7 +52,7 @@ impl DesktopDuplicator {
 
                 let lock_result = CVPixelBufferLockBaseAddress(image_buffer, 1);
                 if lock_result != 0 {
-                    error!("DesktopDuplicator CVPixelBufferLockBaseAddress failed");
+                    tracing::error!("CVPixelBufferLockBaseAddress failed");
                     return;
                 }
 
@@ -63,11 +62,6 @@ impl DesktopDuplicator {
                 let y_plane_bytes_address = CVPixelBufferGetBaseAddressOfPlane(image_buffer, 0);
                 let uv_plane_stride = CVPixelBufferGetBytesPerRowOfPlane(image_buffer, 1);
                 let uv_plane_bytes_address = CVPixelBufferGetBaseAddressOfPlane(image_buffer, 1);
-
-                // info!(
-                //     "captured width:{} height:{} y_plane_stride:{} uv_plane_stride:{}",
-                //     width, height, y_plane_stride, uv_plane_stride
-                // );
 
                 encoder.encode(
                     width as i32,
@@ -88,7 +82,7 @@ impl DesktopDuplicator {
         if capture_session.can_add_output(&capture_video_data_output) {
             capture_session.add_output(capture_video_data_output);
         } else {
-            bail!("DesktopDuplicator: can't add output");
+            bail!("can't add output");
         }
 
         capture_session.commit_configuration();

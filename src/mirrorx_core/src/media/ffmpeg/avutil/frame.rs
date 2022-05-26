@@ -10,7 +10,7 @@ use super::{
 };
 use std::ffi::c_void;
 
-const AV_NUM_DATA_POINTERS: usize = 8;
+pub const AV_NUM_DATA_POINTERS: usize = 8;
 
 #[allow(non_camel_case_types)]
 pub type AVFrameSideDataType = u32;

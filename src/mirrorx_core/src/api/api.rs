@@ -1,30 +1,21 @@
-use dashmap::DashMap;
-use flutter_rust_bridge::{StreamSink, ZeroCopyBuffer};
-use log::{error, info};
-use once_cell::sync::{Lazy, OnceCell};
-
 use super::http::device_register;
 use crate::{
-    media::{self, video_frame::VideoFrame},
+    media::video_frame::VideoFrame,
     provider::{
-        config::ConfigProvider,
-        endpoint::EndPointProvider,
-        frame_stream::{self, FrameStreamProvider},
-        http::HTTPProvider,
-        runtime::RuntimeProvider,
-        socket::SocketProvider,
+        config::ConfigProvider, endpoint::EndPointProvider, frame_stream::FrameStreamProvider,
+        http::HTTPProvider, runtime::RuntimeProvider, socket::SocketProvider,
     },
     socket::message::client_to_client::StartMediaTransmissionReply,
     utility::token::parse_register_token,
 };
+use dashmap::DashMap;
+use flutter_rust_bridge::{StreamSink, ZeroCopyBuffer};
+use once_cell::sync::Lazy;
 use std::{
-    ffi::c_void,
-    io::Write,
-    os::raw::{c_int, c_long, c_longlong, c_ulong},
     path::Path,
     sync::{atomic::AtomicBool, Once},
-    time::Duration,
 };
+use tracing::{event, Level};
 
 static LOGGER_INIT_ONCE: Once = Once::new();
 static INIT_SUCCESS: AtomicBool = AtomicBool::new(false);
@@ -32,27 +23,30 @@ static FrameMap: Lazy<dashmap::DashMap<u64, VideoFrame>> = Lazy::new(|| DashMap:
 
 pub fn init(os_name: String, os_version: String, config_dir: String) -> anyhow::Result<()> {
     LOGGER_INIT_ONCE.call_once(|| {
-        env_logger::Builder::new()
-            .filter_level(log::LevelFilter::Info)
-            .format(|buf, record| {
-                writeln!(
-                    buf,
-                    "[{}] [{}({}#{})] {} {}",
-                    chrono::Local::now().format("%Y-%m-%d %H:%M:%S.%3f"),
-                    record.module_path().unwrap_or(""),
-                    record.file().unwrap_or(""),
-                    record.line().unwrap_or(0),
-                    record.level(),
-                    record.args(),
-                )
-            })
-            .target(env_logger::Target::Stdout)
-            .init();
+        // env_logger::Builder::new()
+        //     .filter_level(log::LevelFilter::Info)
+        //     .format(|buf, record| {
+        //         writeln!(
+        //             buf,
+        //             "[{}] [{}({}#{})] {} {}",
+        //             chrono::Local::now().format("%Y-%m-%d %H:%M:%S.%3f"),
+        //             record.module_path().unwrap_or(""),
+        //             record.file().unwrap_or(""),
+        //             record.line().unwrap_or(0),
+        //             record.level(),
+        //             record.args(),
+        //         )
+        //     })
+        //     .target(env_logger::Target::Stdout)
+        //     .init();
+        tracing_subscriber::fmt::init();
     });
 
-    info!(
-        "init: os_name={}, os_version={}, config_dir={}",
-        os_name, os_version, config_dir
+    tracing::trace!(
+        os = ?os_name,
+        os_version = ?os_version,
+        config_dir = ?config_dir,
+        "init",
     );
 
     if INIT_SUCCESS.load(std::sync::atomic::Ordering::SeqCst) {
@@ -73,9 +67,10 @@ pub fn init(os_name: String, os_version: String, config_dir: String) -> anyhow::
     let resp = RuntimeProvider::current()?.block_on(device_register(device_id))?;
     let (device_id, expiration, _) = parse_register_token(&resp.token)?;
 
-    info!(
-        "init: register success, device_id: {}, expiration: {}",
-        device_id, expiration
+    tracing::trace!(
+        device_id = ?device_id,
+        expiration = ?expiration,
+        "init register",
     );
 
     ConfigProvider::current()?.save_device_id(&device_id)?;

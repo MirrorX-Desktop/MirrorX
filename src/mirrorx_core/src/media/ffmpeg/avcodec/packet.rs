@@ -1,7 +1,6 @@
 use crate::media::ffmpeg::avutil::{buffer::AVBufferRef, rational::AVRational};
 use std::ffi::c_void;
 
-#[allow(non_camel_case_types)]
 pub type AVPacketSideDataType = u32;
 pub const AV_PKT_DATA_PALETTE: AVPacketSideDataType = 0;
 pub const AV_PKT_DATA_NEW_EXTRADATA: AVPacketSideDataType = 1;

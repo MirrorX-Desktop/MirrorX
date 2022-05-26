@@ -18,7 +18,6 @@ use bincode::Options;
 use bytes::Bytes;
 use dashmap::DashMap;
 use futures::{SinkExt, StreamExt};
-use log::{error, info, trace, warn};
 use once_cell::sync::OnceCell;
 use std::{sync::Arc, time::Duration};
 use tokio::{
@@ -40,10 +39,7 @@ macro_rules! handle_client_to_client_message {
             let message = match res {
                 Ok(message) => message,
                 Err(err) => {
-                    error!(
-                        "handle_client_to_client_message: handle message error: {:?}",
-                        err
-                    );
+                    tracing::error!(err = ?err, "handle message failed");
                     ClientToClientMessage::Error
                 }
             };
@@ -59,11 +55,11 @@ macro_rules! handle_client_to_client_message {
                         )
                         .await
                     {
-                        error!("handle_client_to_client_message: reply error: {:?}", err);
+                        tracing::error!(err = ?err, "reply failed");
                     }
                 }
                 Err(_) => {
-                    error!("handle_client_to_client_message: socket provider uninitialized");
+                    tracing::error!("socket provider uninitialized");
                 }
             }
         });
@@ -196,7 +192,7 @@ impl SocketProvider {
     fn set_client_call_reply(&self, call_id: u16, message: ClientToClientMessage) {
         self.remove_client_call(call_id).map(|tx| {
             if let Err(err) = tx.try_send(message) {
-                error!("set_client_call_reply: reply failed: {}", err)
+                tracing::error!(err = %err, "client call reply failed")
             }
         });
     }
@@ -204,7 +200,7 @@ impl SocketProvider {
     fn set_server_call_reply(&self, call_id: u16, message: ServerToClientMessage) {
         self.remove_server_call(call_id).map(|tx| {
             if let Err(err) = tx.try_send(message) {
-                error!("set_server_call_reply: reply failed: {}", err)
+                tracing::error!(err = %err, "server call reply failed")
             }
         });
     }
@@ -249,15 +245,15 @@ fn serve_stream(stream: TcpStream, mut rx: mpsc::Receiver<Vec<u8>>) -> anyhow::R
                     Ok(packet_bytes) => packet_bytes,
                     Err(err) => match err.kind() {
                         std::io::ErrorKind::UnexpectedEof => {
-                            info!("serve_stream: disconnected, exit");
+                            tracing::info!("serve stream disconnected, exit");
                             break;
                         }
                         std::io::ErrorKind::ConnectionReset => {
-                            info!("serve_stream: connection reset, exit");
+                            tracing::info!("serve stream connection reset, exit");
                             break;
                         }
                         _ => {
-                            error!("serve_stream: read packet error: {:?}", err);
+                            tracing::error!(err = ?err, "serve stream read packet failed");
                             continue;
                         }
                     },
@@ -268,16 +264,16 @@ fn serve_stream(stream: TcpStream, mut rx: mpsc::Receiver<Vec<u8>>) -> anyhow::R
             let packet = match BINCODE_SERIALIZER.deserialize::<Packet>(&packet_bytes) {
                 Ok(packet) => packet,
                 Err(err) => {
-                    error!("serve_stream: deserialize packet error: {:?}", err);
+                    tracing::error!(err = ?err, "serve stream deserialize packet failed");
                     continue;
                 }
             };
 
             match packet {
                 Packet::ClientToServer(_, message) => {
-                    warn!(
-                        "serve_stream: received unexpected client to server packet: {}",
-                        message
+                    tracing::warn!(
+                        message = %message,
+                        "serve stream received unexpected client to server packet"
                     );
                 }
                 Packet::ServerToClient(call_id, message) => {
@@ -288,7 +284,7 @@ fn serve_stream(stream: TcpStream, mut rx: mpsc::Receiver<Vec<u8>>) -> anyhow::R
                     if let Ok(socket_provider) = SocketProvider::current() {
                         socket_provider.set_server_call_reply(call_id, message);
                     } else {
-                        error!("serve_stream: socket provider uninitialized");
+                        tracing::error!("serve stream socket provider uninitialized");
                     }
                 }
                 Packet::ClientToClient(
@@ -301,14 +297,14 @@ fn serve_stream(stream: TcpStream, mut rx: mpsc::Receiver<Vec<u8>>) -> anyhow::R
                     let endpoint = match select_endpoint(to_device_id, from_device_id) {
                         Ok(ep) => ep,
                         Err(err) => {
-                            error!("{}", err);
+                            tracing::error!(err = ?err, "select endpoint failed");
                             continue;
                         }
                     };
 
                     if is_secure {
                         if let Err(err) = endpoint.secure_open(&mut message_bytes).await {
-                            error!("{}", err);
+                            tracing::error!(err = ?err, "secure open endpoint failed");
                             continue;
                         }
                     }
@@ -318,22 +314,19 @@ fn serve_stream(stream: TcpStream, mut rx: mpsc::Receiver<Vec<u8>>) -> anyhow::R
                     {
                         Ok(message) => message,
                         Err(err) => {
-                            error!(
-                                "serve_stream: deserialize client to client message failed: {}",
-                                err
-                            );
+                            tracing::error!(err = ?err, "serve stream deserialize client to client message failed");
                             continue;
                         }
                     };
 
                     if let Err(err) = handle_client_to_client_message(endpoint, call_id, message) {
-                        error!("{}", err);
+                        tracing::error!(err = ?err, "handle client to client message failed");
                     }
                 }
             };
         }
 
-        info!("serve_stream: stream_loop exit");
+        tracing::info!("serve stream read loop exit");
     });
 
     RuntimeProvider::current()?.spawn(async move {
@@ -343,14 +336,14 @@ fn serve_stream(stream: TcpStream, mut rx: mpsc::Receiver<Vec<u8>>) -> anyhow::R
                 None => break,
             };
 
-            trace!("serve_stream: send packet: {:02X?}", buf);
+            tracing::trace!(buffer = ?format!("{:02X?}", buf), "serve stream send packet");
 
             if let Err(err) = sink.send(Bytes::from(buf)).await {
-                error!("serve_stream: send failed: {}", err);
+                tracing::error!(err = ?err, "serve stream send failed");
             }
         }
 
-        info!("serve_stream: sink_loop exit");
+        tracing::info!("serve stream send loop exit");
     });
 
     Ok(())
@@ -395,7 +388,7 @@ fn serve_heart_beat(provider: Arc<SocketProvider>) -> anyhow::Result<()> {
                 )
                 .await
             {
-                error!("serve_heart_beat: timeout: {}", err);
+                tracing::error!(err = ?err, "heart beat timeout");
                 timeout_counter += 1;
             }
 

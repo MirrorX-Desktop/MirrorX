@@ -1,7 +1,6 @@
 #include "video_decoder.h"
 
-VideoDecoder* video_decoder_create(const char* decoder_name,
-                                   DecodeCallback callback) {
+VideoDecoder* video_decoder_create(const char* decoder_name) {
   int ret;
   AVCodecContext* codec_ctx = NULL;
   AVPacket* packet = NULL;
@@ -22,7 +21,9 @@ VideoDecoder* video_decoder_create(const char* decoder_name,
 
   while ((print_type = av_hwdevice_iterate_types(print_type)) !=
          AV_HWDEVICE_TYPE_NONE) {
-    rust_log(LEVEL_INFO, "suport devices %s", av_hwdevice_get_type_name(print_type));
+    rust_log(LEVEL_INFO,
+             "suport devices %s",
+             av_hwdevice_get_type_name(print_type));
   }
 
   const AVCodec* codec = avcodec_find_decoder_by_name(decoder_name);
@@ -100,7 +101,6 @@ VideoDecoder* video_decoder_create(const char* decoder_name,
   video_decoder->frame = frame;
   video_decoder->parser_ctx = parse_ctx;
   video_decoder->hw_transfer_frame = hw_transfer_frame;
-  video_decoder->callback = callback;
 
   return video_decoder;
 
@@ -178,7 +178,8 @@ void video_decoder_decode(VideoDecoder* video_decoder,
     }
 
     if (video_decoder->packet->size == 0) {
-      rust_log(LEVEL_TRACE, "video_decoder: parsed packet size is 0, need more data");
+      rust_log(LEVEL_TRACE,
+               "video_decoder: parsed packet size is 0, need more data");
       return;
     }
   } else {
@@ -198,7 +199,9 @@ void video_decoder_decode(VideoDecoder* video_decoder,
       rust_log(LEVEL_ERROR,
                "video_decoder: encoder closed, shouldn't send new frame");
     } else {
-      rust_log(LEVEL_ERROR, "video_decoder: send frame failed with code: %d", ret);
+      rust_log(LEVEL_ERROR,
+               "video_decoder: send frame failed with code: %d",
+               ret);
     }
 
     return;
@@ -213,7 +216,9 @@ void video_decoder_decode(VideoDecoder* video_decoder,
     if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
       break;
     } else if (ret < 0) {
-      rust_log(LEVEL_ERROR, "video_decoder: receive frame failed with code: %d", ret);
+      rust_log(LEVEL_ERROR,
+               "video_decoder: receive frame failed with code: %d",
+               ret);
       break;
     }
 

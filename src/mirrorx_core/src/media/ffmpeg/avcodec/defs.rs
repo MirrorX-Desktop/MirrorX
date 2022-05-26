@@ -1,0 +1,19 @@
+pub type AVAudioServiceType = u32;
+pub const AV_AUDIO_SERVICE_TYPE_MAIN: AVAudioServiceType = 0;
+pub const AV_AUDIO_SERVICE_TYPE_EFFECTS: AVAudioServiceType = 1;
+pub const AV_AUDIO_SERVICE_TYPE_VISUALLY_IMPAIRED: AVAudioServiceType = 2;
+pub const AV_AUDIO_SERVICE_TYPE_HEARING_IMPAIRED: AVAudioServiceType = 3;
+pub const AV_AUDIO_SERVICE_TYPE_DIALOGUE: AVAudioServiceType = 4;
+pub const AV_AUDIO_SERVICE_TYPE_COMMENTARY: AVAudioServiceType = 5;
+pub const AV_AUDIO_SERVICE_TYPE_EMERGENCY: AVAudioServiceType = 6;
+pub const AV_AUDIO_SERVICE_TYPE_VOICE_OVER: AVAudioServiceType = 7;
+pub const AV_AUDIO_SERVICE_TYPE_KARAOKE: AVAudioServiceType = 8;
+
+pub type AVDiscard = i32;
+pub const AVDISCARD_NONE: AVDiscard = -16;
+pub const AVDISCARD_DEFAULT: AVDiscard = 0;
+pub const AVDISCARD_NONREF: AVDiscard = 8;
+pub const AVDISCARD_BIDIR: AVDiscard = 16;
+pub const AVDISCARD_NONINTRA: AVDiscard = 24;
+pub const AVDISCARD_NONKEY: AVDiscard = 32;
+pub const AVDISCARD_ALL: AVDiscard = 48;

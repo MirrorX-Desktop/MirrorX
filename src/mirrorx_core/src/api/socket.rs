@@ -7,7 +7,6 @@ use crate::socket::message::client_to_client::KeyExchangeAndVerifyPasswordReques
 use crate::socket::message::client_to_client::StartMediaTransmissionReply;
 use crate::socket::message::client_to_client::StartMediaTransmissionRequest;
 use anyhow::anyhow;
-use log::trace;
 use once_cell::sync::Lazy;
 use rand::thread_rng;
 use ring::rand::SecureRandom;
@@ -17,6 +16,7 @@ use rsa::RsaPublicKey;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::Mutex;
+use tracing::Level;
 
 pub async fn desktop_connect(remote_device_id: String) -> anyhow::Result<()> {
     static CONNECT_MUTEX: Lazy<Mutex<()>> = Lazy::new(|| Mutex::new(()));
@@ -202,13 +202,7 @@ pub async fn desktop_key_exchange_and_password_verify(
         .set_sealing_key(unbound_sealing_key, sealing_initial_nonce)
         .await;
 
-    trace!("key exchange and password verify success");
-
-    trace!("sealing key: {:X?}", sealing_key);
-    trace!("opening key: {:X?}", opening_key);
-
-    trace!("opening initial nonce: {}", opening_initial_nonce);
-    trace!("sealing initial nonce: {}", sealing_initial_nonce);
+    tracing::trace!("key exchange success");
 
     Ok(true)
 }
