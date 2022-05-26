@@ -6,7 +6,7 @@ use crate::media::{
             packet::{av_new_packet, av_packet_alloc, av_packet_free, av_packet_unref},
         },
         avutil::{
-            error::AVERROR_EOF,
+            error::{AVERROR, AVERROR_EOF},
             frame::{av_frame_alloc, av_frame_free, av_frame_get_buffer, av_frame_make_writable},
             imgutils::av_image_get_buffer_size,
             pixfmt::{
@@ -222,7 +222,7 @@ impl VideoEncoder {
             );
 
             if ret != 0 {
-                if ret == -35 {
+                if ret == AVERROR(libc::EAGAIN) {
                     error!("video_encoder: can not send more frame, should receive more packet");
                 } else if ret == AVERROR_EOF {
                     error!("video_encoder: encoder closed, shouldn't send new frame");
@@ -241,8 +241,7 @@ impl VideoEncoder {
                     (*self.video_encoder_ptr).packet,
                 );
 
-                // todo: AVERROR(EAGAIN) is -35 in unix but windwos?
-                if ret == -libc::EAGAIN || ret == AVERROR_EOF {
+                if ret == AVERROR(libc::EAGAIN) || ret == AVERROR_EOF {
                     return;
                 } else if ret < 0 {
                     error!(
