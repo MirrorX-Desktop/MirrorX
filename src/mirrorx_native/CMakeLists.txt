@@ -105,6 +105,7 @@ set(SOURCES "")
 # rust_log
 list(APPEND SOURCES "rust_log/rust_log.h")
 list(APPEND SOURCES "rust_log/rust_log.c")
+list(APPEND SOURCES "rust_log/test.m")
 
 # video_encoder
 list(APPEND SOURCES "video_encoder/video_encoder.h")
