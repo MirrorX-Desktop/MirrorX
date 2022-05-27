@@ -202,7 +202,7 @@ impl VideoEncoder {
     }
 
     pub fn encode(
-        &self,
+        &mut self,
         width: i32,
         height: i32,
         lumina_plane_bytes_address: *mut u8,
@@ -315,7 +315,7 @@ impl VideoEncoder {
                     return;
                 }
 
-                if let Some(tx) = self.output_tx {
+                if let Some(tx) = &self.output_tx {
                     if let Err(err) = tx.try_send(VideoPacket {
                         data: from_raw_parts((*self.packet).data, (*self.packet).size as usize)
                             .to_vec(),

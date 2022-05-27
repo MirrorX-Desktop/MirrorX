@@ -9,8 +9,14 @@ fn test_encode() -> anyhow::Result<()> {
         "h264_videotoolbox"
     };
 
-    let (encoder, packet_rx) =
-        crate::media::video_encoder::VideoEncoder::new(encoder_name, 60, 1920, 1080)?;
+    let mut encoder = crate::media::video_encoder::VideoEncoder::new(encoder_name, 60, 1920, 1080)?;
+    encoder.set_opt("profile", "high", 0)?;
+    encoder.set_opt("level", "5.2", 0)?;
+    encoder.set_opt("preset", "ultrafast", 0)?;
+    encoder.set_opt("tune", "zerolatency", 0)?;
+    encoder.set_opt("sc_threshold", "499", 0)?;
+
+    let packet_rx = encoder.open()?;
 
     let mut desktop_duplicator =
         crate::media::desktop_duplicator::DesktopDuplicator::new(60, encoder)?;

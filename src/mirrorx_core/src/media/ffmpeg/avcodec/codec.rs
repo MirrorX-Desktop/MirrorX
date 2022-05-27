@@ -17,8 +17,7 @@ pub struct AVProfile {
     pub name: *const c_char,
 }
 
-#[repr(C)]
-pub struct AVCodecDefault {}
+pub enum AVCodecDefault {}
 
 #[repr(C)]
 pub struct AVCodec {

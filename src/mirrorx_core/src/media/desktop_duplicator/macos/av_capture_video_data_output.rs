@@ -15,24 +15,18 @@ use objc::{
 };
 use objc_foundation::INSObject;
 use objc_id::Id;
-use std::{
-    ffi::{c_void, CString},
-    sync::Arc,
-};
+use std::ffi::{c_void, CString};
 
 pub struct AVCaptureVideoDataOutput {
     obj: *mut Object,
-    video_encoder: Arc<VideoEncoder>,
     _delegate: Id<VideoDataOutputCallback>,
 }
 
 impl AVCaptureVideoDataOutput {
     pub fn new(
-        video_encoder: VideoEncoder,
-        callback: impl Fn(&VideoEncoder, CMSampleBufferRef) -> () + 'static,
+        mut video_encoder: VideoEncoder,
+        callback: impl Fn(&mut VideoEncoder, CMSampleBufferRef) -> () + 'static,
     ) -> Self {
-        let video_encoder = Arc::new(video_encoder);
-
         unsafe {
             let cls = class!(AVCaptureVideoDataOutput);
             let obj: *mut Object = msg_send![cls, new];
@@ -47,7 +41,7 @@ impl AVCaptureVideoDataOutput {
 
             let mut delegate = VideoDataOutputCallback::new();
             delegate.set_callback(callback);
-            delegate.set_video_encoder(video_encoder.clone().as_ref() as *const _ as *const c_void);
+            delegate.set_video_encoder(video_encoder);
 
             let queue_label =
                 CString::new("cloud.mirrorx.desktop_duplicator.video_data_output_queue").unwrap();
@@ -62,7 +56,6 @@ impl AVCaptureVideoDataOutput {
 
             AVCaptureVideoDataOutput {
                 obj,
-                video_encoder,
                 _delegate: delegate,
             }
         }
