@@ -14,7 +14,7 @@ class MainFlutterWindow: NSWindow {
     self.isMovableByWindowBackground = true
 
     RegisterGeneratedPlugins(registry: flutterViewController)
-
+    
     super.awakeFromNib()
   }
 }

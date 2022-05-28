@@ -1,4 +1,4 @@
-use super::bindings::CMTime;
+use crate::media::bindings::macos::CMTime;
 use objc::{
     class, msg_send,
     runtime::{Object, NO, YES},

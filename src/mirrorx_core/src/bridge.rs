@@ -4,6 +4,7 @@
     clippy::redundant_closure,
     clippy::useless_conversion,
     clippy::unit_arg,
+    clippy::double_parens,
     non_snake_case
 )]
 // AUTO GENERATED FILE, DO NOT EDIT.
@@ -212,7 +213,7 @@ pub extern "C" fn wire_utility_generate_device_password(port_: i64) {
 }
 
 #[no_mangle]
-pub extern "C" fn wire_begin_video(port_: i64, texture_id: i64) {
+pub extern "C" fn wire_begin_video(port_: i64, texture_id: i64, callback_ptr: i64) {
     FLUTTER_RUST_BRIDGE_HANDLER.wrap(
         WrapInfo {
             debug_name: "begin_video",
@@ -221,7 +222,8 @@ pub extern "C" fn wire_begin_video(port_: i64, texture_id: i64) {
         },
         move || {
             let api_texture_id = texture_id.wire2api();
-            move |task_callback| begin_video(api_texture_id)
+            let api_callback_ptr = callback_ptr.wire2api();
+            move |task_callback| begin_video(api_texture_id, api_callback_ptr)
         },
     )
 }

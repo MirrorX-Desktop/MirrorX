@@ -1,10 +1,11 @@
 use crate::media::{
+    bindings::macos::{CVPixelBufferRef, CVPixelBufferRetain},
     ffmpeg::{
         avcodec::{
             avcodec::{
                 av_parser_close, av_parser_init, av_parser_parse2, avcodec_alloc_context3,
                 avcodec_free_context, avcodec_open2, avcodec_receive_frame, avcodec_send_packet,
-                AVCodecContext, AVCodecParserContext,
+                AVCodecContext, AVCodecParserContext, AV_CODEC_FLAG2_LOCAL_HEADER,
             },
             codec::{
                 avcodec_find_decoder_by_name, avcodec_get_hw_config, AVCodec,
@@ -13,6 +14,7 @@ use crate::media::{
             packet::{av_packet_alloc, av_packet_free, av_packet_unref, AVPacket},
         },
         avutil::{
+            buffer::av_buffer_ref,
             error::{AVERROR, AVERROR_EOF},
             frame::{av_frame_alloc, av_frame_free, AVFrame},
             hwcontext::{
@@ -20,15 +22,22 @@ use crate::media::{
                 av_hwframe_transfer_data, AV_HWDEVICE_TYPE_NONE,
             },
             log::{av_log_set_flags, av_log_set_level, AV_LOG_SKIP_REPEATED, AV_LOG_TRACE},
+            pixfmt::{
+                AVCOL_PRI_BT709, AVCOL_RANGE_JPEG, AVCOL_SPC_BT709, AVCOL_TRC_BT709,
+                AV_PIX_FMT_NV12,
+            },
         },
     },
+    native_frame::NativeFrame,
     video_frame::VideoFrame,
 };
 use anyhow::bail;
 use crossbeam_channel::{bounded, Receiver, Sender};
 use std::{
     ffi::{CStr, CString},
+    mem::zeroed,
     ptr,
+    slice::from_raw_parts,
 };
 
 pub struct VideoDecoder {
@@ -38,7 +47,7 @@ pub struct VideoDecoder {
     packet: *mut AVPacket,
     decode_frame: *mut AVFrame,
     hw_decode_frame: *mut AVFrame,
-    output_tx: Option<Sender<VideoFrame>>,
+    output_tx: Option<Sender<NativeFrame>>,
 }
 
 unsafe impl Send for VideoDecoder {}
@@ -51,6 +60,16 @@ impl VideoDecoder {
         unsafe {
             av_log_set_level(AV_LOG_TRACE);
             av_log_set_flags(AV_LOG_SKIP_REPEATED);
+
+            let mut decoder = VideoDecoder {
+                codec: ptr::null(),
+                codec_ctx: ptr::null_mut(),
+                parser_ctx: ptr::null_mut(),
+                packet: ptr::null_mut(),
+                decode_frame: ptr::null_mut(),
+                hw_decode_frame: ptr::null_mut(),
+                output_tx: None,
+            };
 
             let mut support_hw_device_type = AV_HWDEVICE_TYPE_NONE;
             loop {
@@ -66,39 +85,42 @@ impl VideoDecoder {
                 );
             }
 
-            let codec = avcodec_find_decoder_by_name(decoder_name_ptr.as_ptr());
-            if codec.is_null() {
+            decoder.codec = avcodec_find_decoder_by_name(decoder_name_ptr.as_ptr());
+            if decoder.codec.is_null() {
                 bail!("find decoder failed");
             }
 
-            let codec_ctx = avcodec_alloc_context3(codec);
-            if codec_ctx.is_null() {
+            decoder.codec_ctx = avcodec_alloc_context3(decoder.codec);
+            if decoder.codec_ctx.is_null() {
                 bail!("alloc codec context failed");
             }
 
-            (*codec_ctx).flags |= AV_CODEC_CAP_TRUNCATED;
+            // (*decoder.codec_ctx).pix_fmt = AV_PIX_FMT_NV12;
+            // (*decoder.codec_ctx).flags |= AV_CODEC_FLAG2_LOCAL_HEADER;
+            // (*decoder.codec_ctx).color_range = AVCOL_RANGE_JPEG;
+            // (*decoder.codec_ctx).color_primaries = AVCOL_PRI_BT709;
+            // (*decoder.codec_ctx).color_trc = AVCOL_TRC_BT709;
+            // (*decoder.codec_ctx).colorspace = AVCOL_SPC_BT709;
 
-            let packet = av_packet_alloc();
-            if packet.is_null() {
+            decoder.packet = av_packet_alloc();
+            if decoder.packet.is_null() {
                 bail!("alloc packet failed");
             }
 
-            let decode_frame = av_frame_alloc();
-            if decode_frame.is_null() {
+            decoder.decode_frame = av_frame_alloc();
+            if decoder.decode_frame.is_null() {
                 bail!("alloc decode frame failed");
             }
 
-            let mut parser_ctx = ptr::null_mut();
-            let mut hwdevice_ctx = ptr::null_mut();
-            let mut hw_decode_frame = ptr::null_mut();
-
-            let hw_config = avcodec_get_hw_config(codec, 0);
+            let hw_config = avcodec_get_hw_config(decoder.codec, 0);
             if hw_config.is_null() {
-                parser_ctx = av_parser_init((*codec).id);
-                if parser_ctx.is_null() {
+                decoder.parser_ctx = av_parser_init((*decoder.codec).id);
+                if decoder.parser_ctx.is_null() {
                     bail!("init parser failed");
                 }
             } else {
+                let mut hwdevice_ctx = ptr::null_mut();
+
                 let ret = av_hwdevice_ctx_create(
                     &mut hwdevice_ctx,
                     (*hw_config).device_type,
@@ -111,25 +133,19 @@ impl VideoDecoder {
                     bail!("create hw device context failed");
                 }
 
-                hw_decode_frame = av_frame_alloc();
-                if hw_decode_frame.is_null() {
+                (*decoder.codec_ctx).hw_device_ctx = hwdevice_ctx;
+
+                decoder.hw_decode_frame = av_frame_alloc();
+                if decoder.hw_decode_frame.is_null() {
                     bail!("alloc hw decode frame failed");
                 }
             }
 
-            Ok(VideoDecoder {
-                codec,
-                codec_ctx,
-                parser_ctx,
-                packet,
-                decode_frame,
-                hw_decode_frame,
-                output_tx: None,
-            })
+            Ok(decoder)
         }
     }
 
-    pub fn open(&mut self) -> anyhow::Result<Receiver<VideoFrame>> {
+    pub fn open(&mut self) -> anyhow::Result<Receiver<NativeFrame>> {
         if self.output_tx.is_some() {
             bail!("video decoder already opened");
         }
@@ -140,7 +156,7 @@ impl VideoDecoder {
                 bail!("open decoder failed ret={}", ret)
             }
 
-            let (tx, rx) = bounded::<VideoFrame>(600);
+            let (tx, rx) = bounded::<NativeFrame>(600);
             self.output_tx = Some(tx);
             Ok(rx)
         }
@@ -185,7 +201,7 @@ impl VideoDecoder {
                 return;
             }
 
-            let mut tmp_frame: *mut AVFrame;
+            let mut tmp_frame: *mut AVFrame = ptr::null_mut();
 
             loop {
                 ret = avcodec_receive_frame(self.codec_ctx, self.decode_frame);
@@ -200,20 +216,51 @@ impl VideoDecoder {
                     break;
                 }
 
-                if (*(*self).codec_ctx).hw_device_ctx.is_null() {
+                if !self.parser_ctx.is_null() {
                     tmp_frame = self.decode_frame;
                 } else {
-                    ret = av_hwframe_transfer_data(self.hw_decode_frame, self.decode_frame, 0);
+                    // ret = av_hwframe_transfer_data(self.hw_decode_frame, self.decode_frame, 0);
 
-                    if ret < 0 {
-                        tracing::error!(ret = ret, "av_hwframe_transfer_data failed");
-                        break;
+                    // if ret < 0 {
+                    //     tracing::error!(ret = ret, "av_hwframe_transfer_data failed");
+                    //     break;
+                    // }
+
+                    // tmp_frame = self.hw_decode_frame;
+                    let p = CVPixelBufferRetain((*self.decode_frame).data[3] as CVPixelBufferRef);
+                    if let Some(tx) = &self.output_tx {
+                        if let Err(e) = tx.try_send(NativeFrame(p)) {
+                            tracing::error!(e = ?e, "send video frame failed");
+                        }
                     }
-
-                    tmp_frame = self.hw_decode_frame;
                 }
 
-                tracing::info!("decode finish");
+                // let frame = VideoFrame {
+                //     width: (*tmp_frame).width,
+                //     height: (*tmp_frame).height,
+                //     y_plane_buffer: from_raw_parts(
+                //         (*tmp_frame).data[0],
+                //         ((*tmp_frame).linesize[0] * (*tmp_frame).height) as usize,
+                //     )
+                //     .to_vec(),
+                //     y_plane_stride: (*tmp_frame).linesize[0],
+                //     uv_plane_buffer: from_raw_parts(
+                //         (*tmp_frame).data[1],
+                //         ((*tmp_frame).linesize[1] * (*tmp_frame).height / 2) as usize,
+                //     )
+                //     .to_vec(),
+                //     uv_plane_stride: (*tmp_frame).linesize[1],
+                //     dts: 0,
+                //     dts_scale: 0,
+                //     pts: (*tmp_frame).pts,
+                //     pts_scale: 0,
+                // };
+
+                // if let Some(tx) = &self.output_tx {
+                //     if let Err(e) = tx.try_send(frame) {
+                //         tracing::error!(e = ?e, "send video frame failed");
+                //     }
+                // }
             }
 
             av_packet_unref((*self).packet);
@@ -246,6 +293,7 @@ impl Drop for VideoDecoder {
             }
 
             if !self.codec_ctx.is_null() {
+                // av_buffer_unref(self.codec_ctx.hw_device_ctx)
                 avcodec_free_context(&mut self.codec_ctx);
             }
         }

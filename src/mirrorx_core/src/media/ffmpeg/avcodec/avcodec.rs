@@ -237,7 +237,7 @@ pub struct AVCodecContext {
     pub thread_count: i32,
     pub thread_type: i32,
     pub active_thread_type: i32,
-    // pub thread_safe_callbacks: i32, // todo:deprecated
+    pub thread_safe_callbacks: i32, // use when LIBAVCODEC_VERSION_MAJOR < 60, current 59
     pub execute: extern "C" fn(
         c: *mut AVCodecContext,
         func: extern "C" fn(*mut AVCodecContext, *mut c_void),
@@ -274,7 +274,7 @@ pub struct AVCodecContext {
     pub sub_charenc_mode: i32,
     pub skip_alpha: i32,
     pub seek_preroll: i32,
-    // pub debug_mv: i32, // todo deprecated
+    pub debug_mv: i32, // use when LIBAVCODEC_VERSION_MAJOR < 60, current 59
     pub chroma_intra_matrix: *mut u8,
     pub dump_separator: *mut u8,
     pub codec_whitelist: *mut c_char,
@@ -282,7 +282,7 @@ pub struct AVCodecContext {
     pub coded_side_data: *mut AVPacketSideData,
     pub nb_codec_side_data: i32,
     pub hw_frames_ctx: *mut AVBufferRef,
-    // pub sub_text_format: i32, // todo:deprecated
+    pub sub_text_format: i32, // use when LIBAVCODEC_VERSION_MAJOR < 60, current 59
     pub trailing_padding: i32,
     pub max_pixels: i64,
     pub hw_device_ctx: *mut AVBufferRef,

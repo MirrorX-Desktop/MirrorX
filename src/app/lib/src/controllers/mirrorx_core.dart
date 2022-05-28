@@ -2,11 +2,11 @@ import 'dart:developer';
 import 'dart:ffi';
 import 'dart:io';
 
+import 'package:app_plugin/bridge_generated.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:app/plugin/bridge_generated.dart';
 import 'package:path_provider/path_provider.dart';
 
 class MirrorXCoreController extends GetxController

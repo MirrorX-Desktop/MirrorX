@@ -2,14 +2,15 @@ use super::macos::{
     av_capture_screen_input::AVCaptureScreenInput,
     av_capture_session::{AVCaptureSession, AVCaptureSessionPreset},
     av_capture_video_data_output::AVCaptureVideoDataOutput,
-    bindings::CMTimeMake,
 };
-use crate::media::{desktop_duplicator::macos::bindings::*, video_encoder::VideoEncoder};
+use crate::media::{bindings::macos::*, video_encoder::VideoEncoder};
 use anyhow::bail;
 
 pub struct DesktopDuplicator {
     capture_session: AVCaptureSession,
 }
+
+unsafe impl Send for DesktopDuplicator {}
 
 impl DesktopDuplicator {
     pub fn new(fps: i32, encoder: VideoEncoder) -> anyhow::Result<Self> {
@@ -21,7 +22,7 @@ impl DesktopDuplicator {
         capture_screen_input.set_captures_cursor(true);
         capture_screen_input.set_captures_mouse_clicks(true);
         capture_screen_input.set_min_frame_duration(unsafe { CMTimeMake(1, fps) });
-
+        // CMTimeMakeWithSeconds(DISPLAY_DELAY, 1000)
         if capture_session.can_add_input(&capture_screen_input) {
             capture_session.add_input(capture_screen_input);
         } else {
@@ -60,6 +61,8 @@ impl DesktopDuplicator {
                 let height = CVPixelBufferGetHeight(image_buffer);
                 let y_plane_stride = CVPixelBufferGetBytesPerRowOfPlane(image_buffer, 0);
                 let y_plane_bytes_address = CVPixelBufferGetBaseAddressOfPlane(image_buffer, 0);
+                // let y_plane_height = CVPixelBufferGetHeightOfPlane(image_buffer, 0);
+
                 let uv_plane_stride = CVPixelBufferGetBytesPerRowOfPlane(image_buffer, 1);
                 let uv_plane_bytes_address = CVPixelBufferGetBaseAddressOfPlane(image_buffer, 1);
 

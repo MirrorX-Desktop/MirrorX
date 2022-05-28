@@ -22,6 +22,6 @@ Pod::Spec.new do |s|
   s.platform = :osx, '10.15'
   s.pod_target_xcconfig = { 'DEFINES_MODULE' => 'YES' } #
   s.swift_version = '5.0'
-  s.static_framework = true # the metal shader library can't be founded if this enabled.
-  s.vendored_libraries = "**.a"
+  s.static_framework = true
+  s.vendored_libraries = "**.{a,dylib}"
 end

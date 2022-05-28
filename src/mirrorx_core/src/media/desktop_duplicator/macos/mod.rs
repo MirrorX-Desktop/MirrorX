@@ -1,4 +1,3 @@
-pub mod bindings;
 mod video_data_output_callback;
 
 pub mod av_capture_screen_input;

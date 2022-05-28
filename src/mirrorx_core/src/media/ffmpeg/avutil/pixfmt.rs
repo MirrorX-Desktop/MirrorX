@@ -1,10 +1,8 @@
-#[allow(non_camel_case_types)]
 pub type AVColorRange = u32;
 pub const AVCOL_RANGE_UNSPECIFIED: AVColorRange = 0;
 pub const AVCOL_RANGE_MPEG: AVColorRange = 1;
 pub const AVCOL_RANGE_JPEG: AVColorRange = 2;
 
-#[allow(non_camel_case_types)]
 pub type AVColorPrimaries = u32;
 pub const AVCOL_PRI_RESERVED0: AVColorPrimaries = 0;
 pub const AVCOL_PRI_BT709: AVColorPrimaries = 1;
@@ -23,7 +21,6 @@ pub const AVCOL_PRI_SMPTE432: AVColorPrimaries = 12;
 pub const AVCOL_PRI_EBU3213: AVColorPrimaries = 22;
 pub const AVCOL_PRI_JEDEC_P22: AVColorPrimaries = AVCOL_PRI_EBU3213;
 
-#[allow(non_camel_case_types)]
 pub type AVColorTransferCharacteristic = u32;
 pub const AVCOL_TRC_RESERVED0: AVColorTransferCharacteristic = 0;
 pub const AVCOL_TRC_BT709: AVColorTransferCharacteristic = 1;
@@ -47,7 +44,6 @@ pub const AVCOL_TRC_SMPTE428: AVColorTransferCharacteristic = 17;
 pub const AVCOL_TRC_SMPTEST428_1: AVColorTransferCharacteristic = AVCOL_TRC_SMPTE428;
 pub const AVCOL_TRC_ARIB_STD_B67: AVColorTransferCharacteristic = 18;
 
-#[allow(non_camel_case_types)]
 pub type AVColorSpace = u32;
 pub const AVCOL_SPC_RGB: AVColorSpace = 0;
 pub const AVCOL_SPC_BT709: AVColorSpace = 1;
@@ -66,7 +62,6 @@ pub const AVCOL_SPC_CHROMA_DERIVED_NCL: AVColorSpace = 12;
 pub const AVCOL_SPC_CHROMA_DERIVED_CL: AVColorSpace = 13;
 pub const AVCOL_SPC_ICTCP: AVColorSpace = 14;
 
-#[allow(non_camel_case_types)]
 pub type AVChromaLocation = u32;
 pub const AVCHROMA_LOC_UNSPECIFIED: AVChromaLocation = 0;
 pub const AVCHROMA_LOC_LEFT: AVChromaLocation = 1;
@@ -76,7 +71,6 @@ pub const AVCHROMA_LOC_TOP: AVChromaLocation = 4;
 pub const AVCHROMA_LOC_BOTTOMLEFT: AVChromaLocation = 5;
 pub const AVCHROMA_LOC_BOTTOM: AVChromaLocation = 6;
 
-#[allow(non_camel_case_types)]
 pub type AVPixelFormat = i32;
 pub const AV_PIX_FMT_NONE: AVPixelFormat = -1;
 pub const AV_PIX_FMT_YUV420P: AVPixelFormat = 0; //  planar YUV 4:2:0, 12bpp, (1 Cr & Cb sample per 2x2 Y samples)

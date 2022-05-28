@@ -31,10 +31,13 @@ class RemoteDesktopInterfaceController extends GetxController {
       return _textureID;
     }
 
-    var newTextureID = await AppPlugin.videoTextureRegister();
-    log("register texture: $newTextureID");
-    _textureID = newTextureID;
-    await _sdk.getInstance().beginVideo(textureId: _textureID);
+    var res = await AppPlugin.videoTextureRegister();
+    log("register texture: $res");
+    _textureID = int.parse(res?["textureID"] as String);
+
+    await _sdk.getInstance().beginVideo(
+        textureId: _textureID,
+        callbackPtr: int.parse(res?["callbackPtr"] as String));
     return _textureID;
   }
 

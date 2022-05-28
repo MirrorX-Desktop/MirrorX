@@ -1,12 +1,12 @@
 use std::fmt::Display;
 
 pub struct VideoFrame {
-    pub width: u16,
-    pub height: u16,
+    pub width: i32,
+    pub height: i32,
     pub y_plane_buffer: Vec<u8>,
-    pub y_plane_stride: u32,
+    pub y_plane_stride: i32,
     pub uv_plane_buffer: Vec<u8>,
-    pub uv_plane_stride: u32,
+    pub uv_plane_stride: i32,
     pub dts: i64,
     pub dts_scale: i32,
     pub pts: i64,

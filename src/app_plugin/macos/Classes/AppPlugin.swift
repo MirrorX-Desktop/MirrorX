@@ -23,7 +23,13 @@ public class AppPlugin: NSObject, FlutterPlugin {
         switch call.method {
         case "video_texture_register":
             let textureID = createVideoTexture(with: self.textureRegistry)
-            result(textureID)
+            let a = unsafeBitCast(update_frame_callback, to: Int64.self)
+            
+            var res = Dictionary<String,String>.init()
+            res["textureID"]=String(textureID)
+            res["callbackPtr"]=String(a)
+            
+            result(res)
         case "video_texture_deregister":
             guard let textureID: Int64 = args?["texture_id"] as? Int64 else {
                 result(Void.self)

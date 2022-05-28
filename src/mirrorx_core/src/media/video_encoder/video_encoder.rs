@@ -166,12 +166,12 @@ impl VideoEncoder {
             let ret = av_opt_set(
                 (*self.codec_ctx).priv_data,
                 opt_name.as_ptr(),
-                opt_name.as_ptr(),
+                opt_value.as_ptr(),
                 search_flags,
             );
 
             if ret == AVERROR_OPTION_NOT_FOUND {
-                bail!("option not found")
+                bail!("option not found key={} value={}", key, value);
             } else if ret == AVERROR(libc::ERANGE) {
                 bail!("option value out of range")
             } else if ret == AVERROR(libc::EINVAL) {
@@ -250,7 +250,7 @@ impl VideoEncoder {
                 (*self.frame).color_trc = AVCOL_TRC_BT709;
                 (*self.frame).color_space = AVCOL_SPC_BT709;
 
-                ret = av_frame_get_buffer(self.frame, 32);
+                ret = av_frame_get_buffer(self.frame, 1);
                 if ret < 0 {
                     tracing::error!(ret = ret, "av_frame_get_buffer failed");
                     return;

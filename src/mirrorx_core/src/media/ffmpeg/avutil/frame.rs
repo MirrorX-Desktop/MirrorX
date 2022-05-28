@@ -12,7 +12,6 @@ use std::ffi::c_void;
 
 pub const AV_NUM_DATA_POINTERS: usize = 8;
 
-#[allow(non_camel_case_types)]
 pub type AVFrameSideDataType = u32;
 pub const AV_FRAME_DATA_PANSCAN: AVFrameSideDataType = 0;
 pub const AV_FRAME_DATA_A53_CC: AVFrameSideDataType = 1;

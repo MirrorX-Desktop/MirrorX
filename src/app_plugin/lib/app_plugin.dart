@@ -9,14 +9,10 @@ import 'bridge_generated.dart';
 class AppPlugin {
   static const MethodChannel _channel = MethodChannel('app_plugin');
 
-  static Future<int> videoTextureRegister() async {
+  static Future<Map?> videoTextureRegister() async {
     try {
-      final textureID =
-          await _channel.invokeMethod<int>('video_texture_register');
-      if (textureID == null) {
-        return -1;
-      }
-      return textureID;
+      Map? res = await _channel.invokeMethod('video_texture_register');
+      return res;
     } catch (error) {
       return Future.error("VideoTextureRegister: call error($error)");
     }

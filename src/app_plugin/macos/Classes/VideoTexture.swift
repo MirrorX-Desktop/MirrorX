@@ -7,8 +7,8 @@ class VideoTexture: NSObject, FlutterTexture {
     var pixelBufferQueue: CMSimpleQueue
     var registry: FlutterTextureRegistry
     var dispathQueue: DispatchQueue
-    var sem:DispatchSemaphore
-    var currentPixelBuffer:CVPixelBuffer?
+    var sem: DispatchSemaphore
+    var currentPixelBuffer: Unmanaged<CVPixelBuffer>?
     
     init(registry: FlutterTextureRegistry) {
         self.registry = registry
@@ -18,48 +18,48 @@ class VideoTexture: NSObject, FlutterTexture {
         self.pixelBufferQueue = cmSimpleQueue!
         
         self.dispathQueue = DispatchQueue.init(label: "dispatch_queue.texture")
-        self.sem=DispatchSemaphore.init(value: 0)
+        self.sem = DispatchSemaphore.init(value: 0)
     }
     
-    func notifiyTextureUpdate(textureID: Int64, width:UInt16,height:UInt16,isFullColorRange:CBool,yPlaneBufferAddress:UnsafeMutablePointer<UInt8>,yPlaneStride:UInt32,uvPlaneBufferAddress:UnsafeMutablePointer<UInt8>,uvPlaneStride:UInt32,dts:Int64,pts:Int64) {
+    func notifiyTextureUpdate(textureID:Int64, pixelBuffer: Unmanaged<CVPixelBuffer>) {
         
-        setupPixelBufferPool(isFullRange:isFullColorRange, width: width, height: height, stride: yPlaneStride)
+        // setupPixelBufferPool(isFullRange:isFullColorRange, width: width, height: height, stride: yPlaneStride)
         
-        guard let pixelBufferPool = self.pixelBufferPool else {
-            print("pixel buffer pool is nil")
-            return;
-        }
+        // guard let pixelBufferPool = self.pixelBufferPool else {
+        //     print("pixel buffer pool is nil")
+        //     return;
+        // }
         
-        var pixelBuffer:CVPixelBuffer?
-        let ret = CVPixelBufferPoolCreatePixelBuffer(kCFAllocatorDefault, pixelBufferPool, &pixelBuffer)
-        if ret != kCVReturnSuccess{
-            print("create pixel buffer failed: \(ret)")
-        }
+        // var pixelBuffer:CVPixelBuffer?
+        // let ret = CVPixelBufferPoolCreatePixelBuffer(kCFAllocatorDefault, pixelBufferPool, &pixelBuffer)
+        // if ret != kCVReturnSuccess{
+        //     print("create pixel buffer failed: \(ret)")
+        // }
         
-        CVPixelBufferLockBaseAddress(pixelBuffer!, CVPixelBufferLockFlags.init(rawValue: 0))
+        // CVPixelBufferLockBaseAddress(pixelBuffer!, CVPixelBufferLockFlags.init(rawValue: 0))
         
-        let yPlaneBaseAddress = CVPixelBufferGetBaseAddressOfPlane(pixelBuffer!, 0)
-        memcpy(yPlaneBaseAddress, yPlaneBufferAddress, Int(yPlaneStride)*Int(height))
+        // let yPlaneBaseAddress = CVPixelBufferGetBaseAddressOfPlane(pixelBuffer!, 0)
+        // memcpy(yPlaneBaseAddress, yPlaneBufferAddress, Int(yPlaneStride)*Int(height))
         
-        let uvPlaneBaseAddress = CVPixelBufferGetBaseAddressOfPlane(pixelBuffer!, 1)
-        memcpy(uvPlaneBaseAddress, uvPlaneBufferAddress, Int(uvPlaneStride)*Int(height)/2)
+        // let uvPlaneBaseAddress = CVPixelBufferGetBaseAddressOfPlane(pixelBuffer!, 1)
+        // memcpy(uvPlaneBaseAddress, uvPlaneBufferAddress, Int(uvPlaneStride)*Int(height)/2)
         
-        CVPixelBufferUnlockBaseAddress(pixelBuffer!, CVPixelBufferLockFlags.init(rawValue: 0))
+        // CVPixelBufferUnlockBaseAddress(pixelBuffer!, CVPixelBufferLockFlags.init(rawValue: 0))
         
-        self.currentPixelBuffer = pixelBuffer!
+        self.currentPixelBuffer = pixelBuffer
         
         self.registry.textureFrameAvailable(textureID)
         self.sem.wait()
     }
     
     func copyPixelBuffer() -> Unmanaged<CVPixelBuffer>? {
-        defer{
+        defer {
             self.sem.signal()
         }
         
-        if self.currentPixelBuffer != nil{
-            return Unmanaged.passRetained(self.currentPixelBuffer!)
-        }else{
+        if self.currentPixelBuffer != nil {
+            return self.currentPixelBuffer!
+        } else {
             return nil
         }
     }
@@ -84,13 +84,13 @@ class VideoTexture: NSObject, FlutterTexture {
         pixelBufferAttributes[kCVPixelBufferHeightKey as String] = height
         pixelBufferAttributes[kCVPixelBufferBytesPerRowAlignmentKey as String] = stride
         
-        var pixelBufferPool:CVPixelBufferPool?
+        var pixelBufferPool: CVPixelBufferPool?
         let returnCode = CVPixelBufferPoolCreate(
             kCFAllocatorDefault, nil, pixelBufferAttributes as CFDictionary, &pixelBufferPool)
         
-        if returnCode == kCVReturnSuccess  {
+        if returnCode == kCVReturnSuccess {
             self.pixelBufferPool = pixelBufferPool!
-        }else{
+        } else {
             print("setup CVPixelBufferPool failed, return code: \(returnCode)")
         }
     }

@@ -1,4 +1,4 @@
-use super::bindings::{
+use crate::media::bindings::macos::{
     kCVPixelBufferHeightKey, kCVPixelBufferPixelFormatTypeKey, kCVPixelBufferWidthKey,
     kCVPixelFormatType_420YpCbCr8BiPlanarFullRange, CMSampleBufferRef,
 };
@@ -24,7 +24,7 @@ pub struct AVCaptureVideoDataOutput {
 
 impl AVCaptureVideoDataOutput {
     pub fn new(
-        mut video_encoder: VideoEncoder,
+        video_encoder: VideoEncoder,
         callback: impl Fn(&mut VideoEncoder, CMSampleBufferRef) -> () + 'static,
     ) -> Self {
         unsafe {

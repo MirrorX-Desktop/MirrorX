@@ -1,6 +1,4 @@
-use crate::media::{
-    desktop_duplicator::macos::bindings::CMSampleBufferRef, video_encoder::VideoEncoder,
-};
+use crate::media::{bindings::macos::CMSampleBufferRef, video_encoder::VideoEncoder};
 use block::{ConcreteBlock, RcBlock};
 use objc::{
     class,

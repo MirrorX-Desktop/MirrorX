@@ -1,6 +1,5 @@
 use super::http::device_register;
 use crate::{
-    media::video_frame::VideoFrame,
     provider::{
         config::ConfigProvider, endpoint::EndPointProvider, frame_stream::FrameStreamProvider,
         http::HTTPProvider, runtime::RuntimeProvider, socket::SocketProvider,
@@ -8,18 +7,16 @@ use crate::{
     socket::message::client_to_client::StartMediaTransmissionReply,
     utility::token::parse_register_token,
 };
-use dashmap::DashMap;
 use flutter_rust_bridge::{StreamSink, ZeroCopyBuffer};
-use once_cell::sync::Lazy;
+use libc::c_void;
 use std::{
     path::Path,
     sync::{atomic::AtomicBool, Once},
+    time::Duration,
 };
-use tracing::{event, Level};
 
 static LOGGER_INIT_ONCE: Once = Once::new();
 static INIT_SUCCESS: AtomicBool = AtomicBool::new(false);
-static FrameMap: Lazy<dashmap::DashMap<u64, VideoFrame>> = Lazy::new(|| DashMap::new());
 
 pub fn init(os_name: String, os_version: String, config_dir: String) -> anyhow::Result<()> {
     LOGGER_INIT_ONCE.call_once(|| {
@@ -144,95 +141,96 @@ pub fn utility_generate_device_password() -> String {
     crate::utility::rng::generate_device_password()
 }
 
-pub fn begin_video(texture_id: i64) -> anyhow::Result<()> {
-    // let (duplicator, duplicator_frame_rx) = media::desktop_duplicator::DesktopDuplicator::new(60)?;
-    // let (mut encoder, packet_rx) =
-    //     media::video_encoder::VideoEncoder::new("libx264", 60, 1920, 1080)?;
-    // let (mut decoder, frame_rx) = media::video_decoder::VideoDecoder::new("h264")?;
+pub fn begin_video(texture_id: i64, callback_ptr: i64) -> anyhow::Result<()> {
+    let mut encoder =
+        crate::media::video_encoder::VideoEncoder::new("h264_videotoolbox", 60, 1920, 1080)?;
+    encoder.set_opt("profile", "high", 0)?;
+    encoder.set_opt("level", "5.2", 0)?;
+    // if encoder_name == "libx264" {
+    //     encoder.set_opt("preset", "ultrafast", 0)?;
+    //     encoder.set_opt("tune", "zerolatency", 0)?;
+    //     encoder.set_opt("sc_threshold", "499", 0)?;
+    // } else {
+    encoder.set_opt("realtime", "1", 0)?;
+    encoder.set_opt("allow_sw", "0", 0)?;
+    // }
 
-    // std::thread::spawn(move || loop {
-    //     match duplicator_frame_rx.recv() {
-    //         Ok(frame) => {
-    //             info!("duplicator frame len: {}", duplicator_frame_rx.len());
-    //             if let Err(err) = encoder.encode(&frame) {
-    //                 // error!("encode failed: {}", err);
-    //                 break;
-    //             }
-    //         }
-    //         Err(err) => {
-    //             info!("duplicator_frame_rx closeda a ");
-    //             break;
-    //         }
-    //     }
-    // });
+    let packet_rx = encoder.open()?;
 
-    // std::thread::spawn(move || loop {
-    //     match packet_rx.recv() {
-    //         Ok(packet) => {
-    //             info!("packet len: {}", packet_rx.len());
-    //             decoder.decode(&packet);
-    //         }
-    //         Err(err) => {
-    //             info!("packet_rx closed");
-    //             break;
-    //         }
-    //     };
-    // });
+    let mut desktop_duplicator =
+        crate::media::desktop_duplicator::DesktopDuplicator::new(60, encoder)?;
 
-    // std::thread::spawn(move || loop {
-    //     match frame_rx.recv() {
-    //         Ok(frame) => unsafe {
-    //             #[cfg(not(test))]
-    //             dispatch_frame(
-    //                 texture_id,
-    //                 0,
-    //                 frame.width,
-    //                 frame.height,
-    //                 frame.is_full_color_range,
-    //                 frame.y_plane_buffer.as_ptr(),
-    //                 frame.y_plane_stride,
-    //                 frame.uv_plane_buffer.as_ptr(),
-    //                 frame.uv_plane_stride,
-    //                 frame.dts,
-    //                 frame.pts,
-    //             );
-    //         },
-    //         Err(err) => {
-    //             info!("frame_rx closed");
-    //             break;
-    //         }
-    //     };
-    // });
+    let mut decoder = crate::media::video_decoder::VideoDecoder::new("h264")?;
 
-    // RuntimeProvider::current()?.spawn(async move {
-    //     info!("start capture");
-    //     duplicator.start_capture();
-    //     tokio::time::sleep(Duration::from_secs(3600)).await;
-    //     duplicator.stop_capture();
-    //     info!("stop capture");
-    // });
+    let frame_rx = decoder.open()?;
+
+    std::thread::spawn(move || {
+        let mut total_bytes = 0;
+        loop {
+            match packet_rx.recv() {
+                Ok(packet) => {
+                    total_bytes += packet.data.len();
+                    tracing::info!(total_bytes = total_bytes, "send");
+                    decoder.decode(
+                        packet.data.as_ptr(),
+                        packet.data.len() as i32,
+                        packet.dts,
+                        packet.pts,
+                    );
+                }
+                Err(_) => {
+                    tracing::info!(total_packet_bytes = total_bytes, "packet_rx closed");
+                    break;
+                }
+            };
+        }
+    });
+
+    std::thread::spawn(move || loop {
+        match frame_rx.recv() {
+            Ok(frame) => unsafe {
+                let a = callback_ptr as *mut c_void;
+                let f =
+                    std::mem::transmute::<*mut c_void, unsafe extern "C" fn(i64, *mut c_void)>(a);
+
+                f(texture_id, frame.0);
+                tracing::info!("finish");
+            },
+            Err(_) => {
+                tracing::info!("frame_rx closed");
+                break;
+            }
+        };
+    });
+
+    RuntimeProvider::current()?.spawn(async move {
+        tracing::info!("start capture");
+        let _ = desktop_duplicator.start();
+        tokio::time::sleep(Duration::from_secs(3600)).await;
+        desktop_duplicator.stop();
+        tracing::info!("stop capture");
+    });
 
     Ok(())
 }
 
-/// cbindgen:ignore
-#[cfg(not(test))]
-extern "C" {
-    #[link_name = "dispatch_frame"]
-    pub fn dispatch_frame(
-        flutter_texture_id: i64,
-        frame_id: c_ulong,
-        width: u16,
-        height: u16,
-        is_full_color_range: bool,
-        y_plane_buffer_address: *const u8,
-        y_plane_stride: u32,
-        uv_plane_buffer_address: *const u8,
-        uv_plane_stride: u32,
-        dts: i64,
-        pts: i64,
-    ) -> bool;
-}
+// #[cfg(not(test))]
+// extern "C" {
+//     #[link(name = "dispatch_frame", kind = "static")]
+//     pub fn dispatch_frame(
+//         flutter_texture_id: i64,
+//         frame_id: *mut c_void,
+//         // width: u16,
+//         // height: u16,
+//         // is_full_color_range: bool,
+//         // y_plane_buffer_address: *const u8,
+//         // y_plane_stride: u32,
+//         // uv_plane_buffer_address: *const u8,
+//         // uv_plane_stride: u32,
+//         // dts: i64,
+//         // pts: i64,
+//     ) -> bool;
+// }
 
 // #[no_mangle]
 // pub extern "C" fn notify_release(frame_id: c_ulong) {

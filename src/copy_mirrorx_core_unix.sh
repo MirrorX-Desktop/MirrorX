@@ -4,7 +4,7 @@ cmd_make_debug="cargo make --cwd ./mirrorx_core --makefile MakeFile.toml make-de
 cmd_make_release="cargo make --cwd ./mirrorx_core --makefile MakeFile.toml make-release"
 cmd_copy_debug_artifacts="cp -f mirrorx_core/target/x86_64-apple-darwin/debug/libmirrorx_core.dylib app_plugin/mirrorx_sdk/macos/libmirrorx_core.dylib"
 cmd_copy_release_artifacts="cp -f mirrorx_core/target/x86_64-apple-darwin/release/libmirrorx_core.dylib app_plugin/mirrorx_sdk/macos/libmirrorx_core.dylib"
-cmd_gen_bridge="flutter_rust_bridge_codegen --rust-crate-dir mirrorx_core --rust-input mirrorx_core/src/api/mod.rs --dart-output app/lib/plugin/bridge_generated.dart --c-output app_plugin/macos/Classes/bridge_generated.h --class-name MirrorXCore"
+cmd_gen_bridge="flutter_rust_bridge_codegen --rust-crate-dir mirrorx_core --rust-input mirrorx_core/src/api/mod.rs --dart-output app_plugin/libbridge_generated.dart --c-output app_plugin/macos/Classes/bridge_generated.h --class-name MirrorXCore"
 
 status=$?
 
