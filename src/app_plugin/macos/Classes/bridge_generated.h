@@ -47,7 +47,10 @@ void wire_desktop_register_frame_stream(int64_t port_, struct wire_uint_8_list *
 
 void wire_utility_generate_device_password(int64_t port_);
 
-void wire_begin_video(int64_t port_, int64_t texture_id, int64_t callback_ptr);
+void wire_begin_video(int64_t port_,
+                      int64_t texture_id,
+                      int64_t video_texture_ptr,
+                      int64_t update_frame_callback_ptr);
 
 struct wire_uint_8_list *new_uint_8_list(int32_t len);
 

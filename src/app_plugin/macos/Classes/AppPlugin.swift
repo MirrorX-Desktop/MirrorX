@@ -1,6 +1,11 @@
 import Cocoa
 import FlutterMacOS
 
+let update_frame_callback:@convention(c)(Int64, UnsafeMutableRawPointer, UnsafeMutableRawPointer) -> Void = { (textureID,videoTexturePointer,newFramePointer) in
+    let videoTexture = Unmanaged<VideoTexture>.fromOpaque(videoTexturePointer).takeUnretainedValue()
+    let newFrame = Unmanaged<CVPixelBuffer>.fromOpaque(newFramePointer)
+    videoTexture.updateFrame(textureID: textureID, pixelBuffer: newFrame)
+}
 
 public class AppPlugin: NSObject, FlutterPlugin {
     var textureRegistry: FlutterTextureRegistry
@@ -17,26 +22,41 @@ public class AppPlugin: NSObject, FlutterPlugin {
     }
     
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-        print("handle: \(call)")
-        let args: NSDictionary? = call.arguments as? NSDictionary
+        let args = call.arguments as? NSDictionary
         
         switch call.method {
-        case "video_texture_register":
-            let textureID = createVideoTexture(with: self.textureRegistry)
-            let a = unsafeBitCast(update_frame_callback, to: Int64.self)
+        case "register_video_texture":
+            let videoTexture = VideoTexture.init(registry: self.textureRegistry)
+            let textureID = self.textureRegistry.register(videoTexture)
+            let updateFrameCallbackPointer = unsafeBitCast(update_frame_callback, to: Int64.self)
+            let videoTexturePointer = Int64(Int(bitPattern: Unmanaged.passRetained(videoTexture).toOpaque()))
             
-            var res = Dictionary<String,String>.init()
-            res["textureID"]=String(textureID)
-            res["callbackPtr"]=String(a)
+            var res = Dictionary<String, Int64>.init()
+            res["texture_id"] = textureID
+            res["video_texture_ptr"] = videoTexturePointer
+            res["update_frame_callback_ptr"] = updateFrameCallbackPointer
             
             result(res)
-        case "video_texture_deregister":
+        case "deregister_video_texture":
             guard let textureID: Int64 = args?["texture_id"] as? Int64 else {
-                result(Void.self)
+                result("texture_id is invalid")
                 return
             }
             
-            removeVideoTexture(with: self.textureRegistry, textureID: textureID)
+            guard let videoTexturePointerAddress:Int64 = args?["video_texture_ptr"] as? Int64 else{
+                result("video_texture_ptr is invalid")
+                return
+            }
+            
+            self.textureRegistry.unregisterTexture(textureID)
+            
+            guard let videoTexturePointer = UnsafeMutablePointer<VideoTexture>.init(bitPattern: Int(videoTexturePointerAddress)) else{
+                result("parse video texture pointer failed")
+                return
+            }
+            
+            Unmanaged<VideoTexture>.fromOpaque(videoTexturePointer).release()
+            
             result(Void.self)
         default:
             result(FlutterMethodNotImplemented)

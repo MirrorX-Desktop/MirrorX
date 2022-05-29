@@ -213,7 +213,12 @@ pub extern "C" fn wire_utility_generate_device_password(port_: i64) {
 }
 
 #[no_mangle]
-pub extern "C" fn wire_begin_video(port_: i64, texture_id: i64, callback_ptr: i64) {
+pub extern "C" fn wire_begin_video(
+    port_: i64,
+    texture_id: i64,
+    video_texture_ptr: i64,
+    update_frame_callback_ptr: i64,
+) {
     FLUTTER_RUST_BRIDGE_HANDLER.wrap(
         WrapInfo {
             debug_name: "begin_video",
@@ -222,8 +227,15 @@ pub extern "C" fn wire_begin_video(port_: i64, texture_id: i64, callback_ptr: i6
         },
         move || {
             let api_texture_id = texture_id.wire2api();
-            let api_callback_ptr = callback_ptr.wire2api();
-            move |task_callback| begin_video(api_texture_id, api_callback_ptr)
+            let api_video_texture_ptr = video_texture_ptr.wire2api();
+            let api_update_frame_callback_ptr = update_frame_callback_ptr.wire2api();
+            move |task_callback| {
+                begin_video(
+                    api_texture_id,
+                    api_video_texture_ptr,
+                    api_update_frame_callback_ptr,
+                )
+            }
         },
     )
 }

@@ -46,7 +46,10 @@ abstract class MirrorXCore {
   Future<String> utilityGenerateDevicePassword({dynamic hint});
 
   Future<void> beginVideo(
-      {required int textureId, required int callbackPtr, dynamic hint});
+      {required int textureId,
+      required int videoTexturePtr,
+      required int updateFrameCallbackPtr,
+      dynamic hint});
 }
 
 class StartMediaTransmissionReply {
@@ -236,16 +239,22 @@ class MirrorXCoreImpl extends FlutterRustBridgeBase<MirrorXCoreWire>
       ));
 
   Future<void> beginVideo(
-          {required int textureId, required int callbackPtr, dynamic hint}) =>
+          {required int textureId,
+          required int videoTexturePtr,
+          required int updateFrameCallbackPtr,
+          dynamic hint}) =>
       executeNormal(FlutterRustBridgeTask(
         callFfi: (port_) => inner.wire_begin_video(
-            port_, _api2wire_i64(textureId), _api2wire_i64(callbackPtr)),
+            port_,
+            _api2wire_i64(textureId),
+            _api2wire_i64(videoTexturePtr),
+            _api2wire_i64(updateFrameCallbackPtr)),
         parseSuccessData: _wire2api_unit,
         constMeta: const FlutterRustBridgeTaskConstMeta(
           debugName: "begin_video",
-          argNames: ["textureId", "callbackPtr"],
+          argNames: ["textureId", "videoTexturePtr", "updateFrameCallbackPtr"],
         ),
-        argValues: [textureId, callbackPtr],
+        argValues: [textureId, videoTexturePtr, updateFrameCallbackPtr],
         hint: hint,
       ));
 
@@ -565,21 +574,23 @@ class MirrorXCoreWire implements FlutterRustBridgeWireBase {
   void wire_begin_video(
     int port_,
     int texture_id,
-    int callback_ptr,
+    int video_texture_ptr,
+    int update_frame_callback_ptr,
   ) {
     return _wire_begin_video(
       port_,
       texture_id,
-      callback_ptr,
+      video_texture_ptr,
+      update_frame_callback_ptr,
     );
   }
 
   late final _wire_begin_videoPtr = _lookup<
       ffi.NativeFunction<
           ffi.Void Function(
-              ffi.Int64, ffi.Int64, ffi.Int64)>>('wire_begin_video');
+              ffi.Int64, ffi.Int64, ffi.Int64, ffi.Int64)>>('wire_begin_video');
   late final _wire_begin_video =
-      _wire_begin_videoPtr.asFunction<void Function(int, int, int)>();
+      _wire_begin_videoPtr.asFunction<void Function(int, int, int, int)>();
 
   ffi.Pointer<wire_uint_8_list> new_uint_8_list(
     int len,

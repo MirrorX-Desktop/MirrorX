@@ -141,7 +141,11 @@ pub fn utility_generate_device_password() -> String {
     crate::utility::rng::generate_device_password()
 }
 
-pub fn begin_video(texture_id: i64, callback_ptr: i64) -> anyhow::Result<()> {
+pub fn begin_video(
+    texture_id: i64,
+    video_texture_ptr: i64,
+    update_frame_callback_ptr: i64,
+) -> anyhow::Result<()> {
     let mut encoder =
         crate::media::video_encoder::VideoEncoder::new("h264_videotoolbox", 60, 1920, 1080)?;
     encoder.set_opt("profile", "high", 0)?;
@@ -170,7 +174,6 @@ pub fn begin_video(texture_id: i64, callback_ptr: i64) -> anyhow::Result<()> {
             match packet_rx.recv() {
                 Ok(packet) => {
                     total_bytes += packet.data.len();
-                    tracing::info!(total_bytes = total_bytes, "send");
                     decoder.decode(
                         packet.data.as_ptr(),
                         packet.data.len() as i32,
@@ -189,12 +192,18 @@ pub fn begin_video(texture_id: i64, callback_ptr: i64) -> anyhow::Result<()> {
     std::thread::spawn(move || loop {
         match frame_rx.recv() {
             Ok(frame) => unsafe {
-                let a = callback_ptr as *mut c_void;
-                let f =
-                    std::mem::transmute::<*mut c_void, unsafe extern "C" fn(i64, *mut c_void)>(a);
+                let video_texture_ptr = video_texture_ptr as *mut c_void;
+                let update_frame_callback_ptr = update_frame_callback_ptr as *mut c_void;
+                let update_frame_callback = std::mem::transmute::<
+                    *mut c_void,
+                    unsafe extern "C" fn(
+                        texture_id: i64,
+                        video_texture_ptr: *mut c_void,
+                        new_frame_ptr: *mut c_void,
+                    ),
+                >(update_frame_callback_ptr);
 
-                f(texture_id, frame.0);
-                tracing::info!("finish");
+                update_frame_callback(texture_id, video_texture_ptr, frame.0);
             },
             Err(_) => {
                 tracing::info!("frame_rx closed");
@@ -213,27 +222,3 @@ pub fn begin_video(texture_id: i64, callback_ptr: i64) -> anyhow::Result<()> {
 
     Ok(())
 }
-
-// #[cfg(not(test))]
-// extern "C" {
-//     #[link(name = "dispatch_frame", kind = "static")]
-//     pub fn dispatch_frame(
-//         flutter_texture_id: i64,
-//         frame_id: *mut c_void,
-//         // width: u16,
-//         // height: u16,
-//         // is_full_color_range: bool,
-//         // y_plane_buffer_address: *const u8,
-//         // y_plane_stride: u32,
-//         // uv_plane_buffer_address: *const u8,
-//         // uv_plane_stride: u32,
-//         // dts: i64,
-//         // pts: i64,
-//     ) -> bool;
-// }
-
-// #[no_mangle]
-// pub extern "C" fn notify_release(frame_id: c_ulong) {
-//     info!("release frame");
-//     FrameMap.remove(&(frame_id as u64));
-// }

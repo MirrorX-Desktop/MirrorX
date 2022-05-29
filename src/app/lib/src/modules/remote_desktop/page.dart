@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:app/src/modules/remote_desktop/widgets/remote_desktop_interface/widget.dart';
 
 import 'controller.dart';
+import 'widgets/desktop_surface/widget.dart';
 
 class RemoteDesktopPage extends GetView<RemoteDesktopController> {
   const RemoteDesktopPage({
@@ -39,14 +38,8 @@ class RemoteDesktopPage extends GetView<RemoteDesktopController> {
           ],
         ),
         Expanded(
-            child: Container(
-          child: RemoteDesktopInterface(remoteID: _remoteID),
-          // child: RepaintBoundary(
-          //     child: Texture(
-          //   textureId: textureID!,
-          //   filterQuality: FilterQuality.none,
-          // )),
-        ))
+          child: DesktopSurface(remoteID: _remoteID),
+        )
       ],
     );
   }

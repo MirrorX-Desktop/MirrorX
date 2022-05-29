@@ -3,51 +3,17 @@ import FlutterMacOS
 
 class VideoTexture: NSObject, FlutterTexture {
     
-    var pixelBufferPool: CVPixelBufferPool?
-    var pixelBufferQueue: CMSimpleQueue
     var registry: FlutterTextureRegistry
-    var dispathQueue: DispatchQueue
     var sem: DispatchSemaphore
     var currentPixelBuffer: Unmanaged<CVPixelBuffer>?
     
     init(registry: FlutterTextureRegistry) {
         self.registry = registry
-        
-        var cmSimpleQueue: CMSimpleQueue?
-        CMSimpleQueueCreate(allocator: kCFAllocatorDefault, capacity: 600, queueOut: &cmSimpleQueue)
-        self.pixelBufferQueue = cmSimpleQueue!
-        
-        self.dispathQueue = DispatchQueue.init(label: "dispatch_queue.texture")
-        self.sem = DispatchSemaphore.init(value: 0)
+        self.sem =  DispatchSemaphore.init(value: 0)
     }
     
-    func notifiyTextureUpdate(textureID:Int64, pixelBuffer: Unmanaged<CVPixelBuffer>) {
-        
-        // setupPixelBufferPool(isFullRange:isFullColorRange, width: width, height: height, stride: yPlaneStride)
-        
-        // guard let pixelBufferPool = self.pixelBufferPool else {
-        //     print("pixel buffer pool is nil")
-        //     return;
-        // }
-        
-        // var pixelBuffer:CVPixelBuffer?
-        // let ret = CVPixelBufferPoolCreatePixelBuffer(kCFAllocatorDefault, pixelBufferPool, &pixelBuffer)
-        // if ret != kCVReturnSuccess{
-        //     print("create pixel buffer failed: \(ret)")
-        // }
-        
-        // CVPixelBufferLockBaseAddress(pixelBuffer!, CVPixelBufferLockFlags.init(rawValue: 0))
-        
-        // let yPlaneBaseAddress = CVPixelBufferGetBaseAddressOfPlane(pixelBuffer!, 0)
-        // memcpy(yPlaneBaseAddress, yPlaneBufferAddress, Int(yPlaneStride)*Int(height))
-        
-        // let uvPlaneBaseAddress = CVPixelBufferGetBaseAddressOfPlane(pixelBuffer!, 1)
-        // memcpy(uvPlaneBaseAddress, uvPlaneBufferAddress, Int(uvPlaneStride)*Int(height)/2)
-        
-        // CVPixelBufferUnlockBaseAddress(pixelBuffer!, CVPixelBufferLockFlags.init(rawValue: 0))
-        
+    func updateFrame(textureID:Int64, pixelBuffer: Unmanaged<CVPixelBuffer>) {
         self.currentPixelBuffer = pixelBuffer
-        
         self.registry.textureFrameAvailable(textureID)
         self.sem.wait()
     }
@@ -57,41 +23,6 @@ class VideoTexture: NSObject, FlutterTexture {
             self.sem.signal()
         }
         
-        if self.currentPixelBuffer != nil {
-            return self.currentPixelBuffer!
-        } else {
-            return nil
-        }
-    }
-    
-    func setupPixelBufferPool(isFullRange: Bool, width: UInt16, height: UInt16, stride: UInt32) {
-        if self.pixelBufferPool != nil {
-            return
-        }
-        
-        var pixelBufferAttributes: [String: Any] = [:]
-        
-        if isFullRange {
-            pixelBufferAttributes[kCVPixelBufferPixelFormatTypeKey as String] =
-            kCVPixelFormatType_420YpCbCr8BiPlanarFullRange
-        } else {
-            pixelBufferAttributes[kCVPixelBufferPixelFormatTypeKey as String] =
-            kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange
-        }
-        
-        pixelBufferAttributes[kCVPixelBufferMetalCompatibilityKey as String] = true
-        pixelBufferAttributes[kCVPixelBufferWidthKey as String] = width
-        pixelBufferAttributes[kCVPixelBufferHeightKey as String] = height
-        pixelBufferAttributes[kCVPixelBufferBytesPerRowAlignmentKey as String] = stride
-        
-        var pixelBufferPool: CVPixelBufferPool?
-        let returnCode = CVPixelBufferPoolCreate(
-            kCFAllocatorDefault, nil, pixelBufferAttributes as CFDictionary, &pixelBufferPool)
-        
-        if returnCode == kCVReturnSuccess {
-            self.pixelBufferPool = pixelBufferPool!
-        } else {
-            print("setup CVPixelBufferPool failed, return code: \(returnCode)")
-        }
+        return self.currentPixelBuffer
     }
 }

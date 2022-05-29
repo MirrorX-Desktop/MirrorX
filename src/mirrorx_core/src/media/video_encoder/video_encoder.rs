@@ -136,6 +136,7 @@ impl VideoEncoder {
             };
             (*codec_ctx).framerate = AVRational { num: fps, den: 1 };
             (*codec_ctx).gop_size = fps * 3;
+            (*codec_ctx).bit_rate = 40000000;
             (*codec_ctx).has_b_frames = 0;
             (*codec_ctx).max_b_frames = 0;
             (*codec_ctx).qmax = 28;
