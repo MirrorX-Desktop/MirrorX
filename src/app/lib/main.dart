@@ -1,28 +1,34 @@
+import 'package:app/pages/loading/loading_page.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
-import 'package:app/src/bindings/initial.dart';
-import 'package:app/src/core/lang/translation.dart';
-import 'package:app/src/modules/splash/page.dart';
 import 'dart:ui' as ui;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  runApp(GetMaterialApp(
-    showPerformanceOverlay: false,
-    translations: Translation(),
-    locale: ui.window.locale,
-    fallbackLocale: const Locale('en'),
-    initialBinding: InitialBindings(),
-    debugShowCheckedModeBanner: false,
-    title: "MirrorX",
-    theme: ThemeData(
-        backgroundColor: Colors.white,
-        scrollbarTheme:
-            ScrollbarThemeData(thickness: MaterialStateProperty.all(4)),
-        fontFamily: "Microsoft YaHei"),
-    defaultTransition: Transition.circularReveal,
-    transitionDuration: const Duration(milliseconds: 1500),
-    home: const SplashPage(),
-  ));
+  runApp(const App());
+}
+
+class App extends StatelessWidget {
+  const App({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      showPerformanceOverlay: false,
+      locale: ui.window.locale,
+      debugShowCheckedModeBanner: false,
+      title: "MirrorX",
+      theme: ThemeData(
+        useMaterial3: true,
+        scrollbarTheme: ScrollbarTheme.of(context)
+            .copyWith(thickness: MaterialStateProperty.all(4)),
+      ),
+      home: Material(
+        child: Container(
+          color: Colors.white,
+          child: const LoadingPage(),
+        ),
+      ),
+    );
+  }
 }

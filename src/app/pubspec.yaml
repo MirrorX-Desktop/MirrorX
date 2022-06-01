@@ -38,7 +38,6 @@ dependencies:
   flutter_rust_bridge: ^1.28.1
   provider: ^6.0.2
   font_awesome_flutter: ^9.2.0
-  get: ^4.6.1
   path_provider: ^2.0.9
   ffi: ^1.1.2
   device_info_plus: ^3.2.3
@@ -46,6 +45,8 @@ dependencies:
 
   app_plugin:
     path: ../app_plugin
+  flutter_bloc: ^8.0.1
+  equatable: ^2.0.3
 
 dev_dependencies:
   flutter_test:
