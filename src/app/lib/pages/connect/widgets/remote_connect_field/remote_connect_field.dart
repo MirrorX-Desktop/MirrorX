@@ -1,3 +1,4 @@
+import 'package:app/env/langs/tr.dart';
 import 'package:app/pages/connect/widgets/remote_connect_field/digit_input.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -43,8 +44,8 @@ class _RemoteConnectFieldState extends State<RemoteConnectField> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            "Connect Remote",
-            style: TextStyle(fontSize: 27),
+            Tr.of(context).connectPageConnectRemoteTitle,
+            style: const TextStyle(fontSize: 27),
           ),
           FocusScope(
             node: _focusScopeNode,
@@ -62,7 +63,11 @@ class _RemoteConnectFieldState extends State<RemoteConnectField> {
                 const VerticalDivider(width: 6),
                 _createField(),
                 const VerticalDivider(width: 6),
+                _createField(),
+                const VerticalDivider(width: 6),
                 const Text("-", style: TextStyle(fontSize: 36)),
+                const VerticalDivider(width: 6),
+                _createField(),
                 const VerticalDivider(width: 6),
                 _createField(),
                 const VerticalDivider(width: 6),
@@ -87,5 +92,16 @@ class _RemoteConnectFieldState extends State<RemoteConnectField> {
           textEditingController: controller,
           focusNode: _focusScopeNode,
         ));
+  }
+
+  @override
+  void dispose() {
+    _focusScopeNode.dispose();
+
+    for (var controller in _textControllers) {
+      controller.dispose();
+    }
+
+    super.dispose();
   }
 }

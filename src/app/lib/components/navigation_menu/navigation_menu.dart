@@ -1,8 +1,5 @@
-import 'dart:developer';
-import 'dart:io';
-
 import 'package:app/business/page_manager/page_manager_bloc.dart';
-import 'package:app/components/navigation_menu/navigation_button.dart';
+import 'package:app/env/langs/tr.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -26,18 +23,41 @@ class NavigationMenu extends StatelessWidget {
           Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              for (int i = 0; i < state.fixedPages.length; i += 1)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 2.0),
-                  child: NavigationMenuItem(
-                      itemIndex: i,
-                      icon: state.fixedPages[i].titleIcon,
-                      label: state.fixedPages[i].title,
-                      onTap: () {
-                        BlocProvider.of<PageManagerBloc>(context)
-                            .add(PageManagerSwitchPage(pageIndex: i));
-                      }),
-                ),
+              NavigationMenuItem(
+                  pageTag: "Connect",
+                  icon: Icons.screen_share,
+                  title: Tr.of(context).connectPageTitle,
+                  onTap: () => context
+                      .read<PageManagerBloc>()
+                      .add(PageManagerSwitchPage(pageTag: "Connect"))),
+              NavigationMenuItem(
+                  pageTag: "Intranet",
+                  icon: Icons.lan,
+                  title: Tr.of(context).intranetPageTitle,
+                  onTap: () => context
+                      .read<PageManagerBloc>()
+                      .add(PageManagerSwitchPage(pageTag: "Intranet"))),
+              NavigationMenuItem(
+                  pageTag: "Files",
+                  icon: Icons.drive_file_move_rtl,
+                  title: Tr.of(context).filesPageTitle,
+                  onTap: () => context
+                      .read<PageManagerBloc>()
+                      .add(PageManagerSwitchPage(pageTag: "Files"))),
+              NavigationMenuItem(
+                  pageTag: "History",
+                  icon: Icons.history,
+                  title: Tr.of(context).historyPageTitle,
+                  onTap: () => context
+                      .read<PageManagerBloc>()
+                      .add(PageManagerSwitchPage(pageTag: "History"))),
+              NavigationMenuItem(
+                  pageTag: "Settings",
+                  icon: Icons.settings,
+                  title: Tr.of(context).settingsPageTitle,
+                  onTap: () => context
+                      .read<PageManagerBloc>()
+                      .add(PageManagerSwitchPage(pageTag: "Settings"))),
             ],
           ),
           Visibility(
@@ -60,14 +80,12 @@ class NavigationMenu extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 2.0),
                       child: NavigationMenuItem(
-                        itemIndex: state.dynamicPages.length + i,
-                        icon: state.dynamicPages[i].titleIcon,
-                        label: state.dynamicPages[i].title,
-                        onTap: () {
-                          BlocProvider.of<PageManagerBloc>(context).add(
-                              PageManagerSwitchPage(
-                                  pageIndex: state.fixedPages.length + i));
-                        },
+                        pageTag: state.dynamicPages[i].uniqueTag,
+                        icon: state.dynamicPages[i].icon,
+                        title: state.dynamicPages[i].uniqueTag,
+                        onTap: () => context.read<PageManagerBloc>().add(
+                            PageManagerSwitchPage(
+                                pageTag: state.dynamicPages[i].uniqueTag)),
                       ),
                     ),
                 ],
@@ -83,15 +101,15 @@ class NavigationMenu extends StatelessWidget {
 class NavigationMenuItem extends StatefulWidget {
   const NavigationMenuItem({
     Key? key,
-    required this.itemIndex,
+    required this.pageTag,
     required this.icon,
-    required this.label,
+    required this.title,
     required this.onTap,
   }) : super(key: key);
 
-  final int itemIndex;
+  final String pageTag;
   final IconData icon;
-  final String label;
+  final String title;
   final VoidCallback onTap;
 
   @override
@@ -111,9 +129,9 @@ class _NavigationMenuItemState extends State<NavigationMenuItem>
   void initState() {
     super.initState();
 
-    final bloc = BlocProvider.of<PageManagerBloc>(context);
+    final bloc = context.read<PageManagerBloc>();
 
-    _buttonStatusFSM = _ButtonStatusFSM(bloc.isSelected(widget.itemIndex));
+    _buttonStatusFSM = _ButtonStatusFSM();
 
     _textAnimationController =
         AnimationController(duration: kThemeAnimationDuration * 2, vsync: this);
@@ -134,13 +152,11 @@ class _NavigationMenuItemState extends State<NavigationMenuItem>
 
   @override
   Widget build(BuildContext context) {
-    final bloc = BlocProvider.of<PageManagerBloc>(context);
-
     return BlocListener<PageManagerBloc, PageManagerState>(
       listener: ((context, state) {
         final before = _buttonStatusFSM._status;
 
-        state.currentPage.getIndex() == widget.itemIndex
+        state.currentPageTag == widget.pageTag
             ? _buttonStatusFSM.goActive()
             : _buttonStatusFSM.goNormal();
 
@@ -153,56 +169,63 @@ class _NavigationMenuItemState extends State<NavigationMenuItem>
           _indicatorAnimationController.forward();
         }
       }),
-      child: _addMouseRegion(
-        bloc,
-        AnimatedBuilder(
-            animation: _textAnimation,
-            builder: (context, child) {
-              final color = _textAnimation.isDismissed
-                  ? _buttonStatusFSM.currentColors.second
-                  : ColorTween(
-                      begin: _buttonStatusFSM.currentColors.first,
-                      end: _buttonStatusFSM.currentColors.second,
-                    ).transform(
-                      CurveTween(curve: Curves.easeInOutCubicEmphasized)
-                          .transform(_textAnimation.value));
-
-              return SizedBox(
-                  width: 56,
-                  height: 56,
-                  child:
-                      Stack(alignment: AlignmentDirectional.center, children: [
-                    child!,
-                    Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(widget.icon, color: color),
-                        Text(widget.label,
-                            style: TextStyle(
-                                fontSize: 12, height: 1.33, color: color))
-                      ],
-                    )
-                  ]));
-            },
-            child: AnimatedBuilder(
-              animation: _indicatorAnimation,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 2.0),
+        child: _addMouseRegion(
+          context.read<PageManagerBloc>(),
+          AnimatedBuilder(
+              animation: _textAnimation,
               builder: (context, child) {
-                final length = 56.0 *
-                    (!_isHover && bloc.isSelected(widget.itemIndex)
-                        ? _indicatorAnimation.value
-                        : 1 - _indicatorAnimation.value);
+                final color = _textAnimation.isDismissed
+                    ? _buttonStatusFSM.currentColors.second
+                    : ColorTween(
+                        begin: _buttonStatusFSM.currentColors.first,
+                        end: _buttonStatusFSM.currentColors.second,
+                      ).transform(
+                        CurveTween(curve: Curves.easeInOutCubicEmphasized)
+                            .transform(_textAnimation.value));
 
-                return DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: Colors.yellow,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: SizedBox(
-                      width: length,
-                      height: length,
-                    ));
+                return SizedBox(
+                    width: 56,
+                    height: 56,
+                    child: Stack(
+                        alignment: AlignmentDirectional.center,
+                        children: [
+                          child!,
+                          Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(widget.icon, color: color),
+                              Text(widget.title,
+                                  style: TextStyle(
+                                      fontSize: 12, height: 1.33, color: color))
+                            ],
+                          )
+                        ]));
               },
-            )),
+              child: AnimatedBuilder(
+                animation: _indicatorAnimation,
+                builder: (context, child) {
+                  final length = 56.0 *
+                      (!_isHover &&
+                              context
+                                  .read<PageManagerBloc>()
+                                  .isSelected(widget.pageTag)
+                          ? _indicatorAnimation.value
+                          : 1 - _indicatorAnimation.value);
+
+                  return DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: Colors.yellow,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: SizedBox(
+                        width: length,
+                        height: length,
+                      ));
+                },
+              )),
+        ),
       ),
     );
   }
@@ -210,7 +233,7 @@ class _NavigationMenuItemState extends State<NavigationMenuItem>
   Widget _addMouseRegion(PageManagerBloc bloc, Widget child) {
     return MouseRegion(
       onEnter: (_) {
-        if (!bloc.isSelected(widget.itemIndex)) {
+        if (!bloc.isSelected(widget.pageTag)) {
           _isHover = true;
           _buttonStatusFSM.goHover();
           _textAnimationController.reset();
@@ -218,7 +241,7 @@ class _NavigationMenuItemState extends State<NavigationMenuItem>
         }
       },
       onExit: (_) {
-        if (!bloc.isSelected(widget.itemIndex)) {
+        if (!bloc.isSelected(widget.pageTag)) {
           _isHover = true;
           _buttonStatusFSM.goNormal();
           _textAnimationController.reset();
@@ -228,7 +251,7 @@ class _NavigationMenuItemState extends State<NavigationMenuItem>
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: () {
-          if (!bloc.isSelected(widget.itemIndex)) {
+          if (!bloc.isSelected(widget.pageTag)) {
             _isHover = false;
             widget.onTap();
           }
@@ -258,11 +281,9 @@ class _ButtonStatusFSM {
 
   Pair<Color, Color> get currentColors => _colors;
 
-  _ButtonStatusFSM(bool initialSelected)
-      : _status =
-            initialSelected ? _ButtonStatus.actived : _ButtonStatus.normal,
-        _colors = Pair(initialSelected ? Colors.white : Colors.black,
-            initialSelected ? Colors.white : Colors.black);
+  _ButtonStatusFSM()
+      : _status = _ButtonStatus.normal,
+        _colors = Pair(Colors.black, Colors.black);
 
   void goHover() {
     if (_status == _ButtonStatus.normal) {
@@ -287,6 +308,11 @@ class _ButtonStatusFSM {
     if (_status == _ButtonStatus.hover) {
       _status = _ButtonStatus.actived;
       _colors = Pair(Colors.yellow, Colors.white);
+    }
+
+    if (_status == _ButtonStatus.normal) {
+      _status = _ButtonStatus.actived;
+      _colors = Pair(Colors.black, Colors.white);
     }
   }
 }

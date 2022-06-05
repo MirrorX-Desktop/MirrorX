@@ -6,10 +6,10 @@ abstract class PageManagerEvent {}
 class PageManagerInit extends PageManagerEvent {}
 
 class PageManagerSwitchPage extends PageManagerEvent {
-  final int pageIndex;
+  final String pageTag;
 
   PageManagerSwitchPage({
-    required this.pageIndex,
+    required this.pageTag,
   });
 }
 
@@ -22,7 +22,7 @@ class PageManagerAddPage extends PageManagerEvent {
 }
 
 class PageManagerRemovePage extends PageManagerEvent {
-  final int pageIndex;
+  final String pageTag;
 
-  PageManagerRemovePage({required this.pageIndex});
+  PageManagerRemovePage({required this.pageTag});
 }

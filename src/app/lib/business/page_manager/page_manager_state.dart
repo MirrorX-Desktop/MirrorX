@@ -1,25 +1,22 @@
 part of 'page_manager_bloc.dart';
 
 class PageManagerState extends Equatable {
-  const PageManagerState({
-    this.fixedPages = const [],
-    this.dynamicPages = const [],
-    this.currentPage = const ConnectPage(),
-  });
+  const PageManagerState(
+      {this.dynamicPages = const [], this.currentPage, this.currentPageTag});
 
-  final List<NavigationPage> fixedPages;
   final List<NavigationPage> dynamicPages;
-  final NavigationPage currentPage;
+  final Widget? currentPage;
+  final String? currentPageTag;
 
   PageManagerState copyWith({
-    List<NavigationPage>? fixedPages,
     List<NavigationPage>? dynamicPages,
-    NavigationPage? currentPage,
+    Widget? currentPage,
+    String? currentPageTag,
   }) =>
       PageManagerState(
-        fixedPages: fixedPages ?? this.fixedPages,
         dynamicPages: dynamicPages ?? this.dynamicPages,
         currentPage: currentPage ?? this.currentPage,
+        currentPageTag: currentPageTag ?? this.currentPageTag,
       );
 
   @override

@@ -1,0 +1,11 @@
+{
+    "@@local": "zh",
+    "connectPageTitle": "连接",
+    "connectPageDeviceIDTitle": "设备ID",
+    "connectPagePasswordTitle": "密码",
+    "connectPageConnectRemoteTitle": "连接远程设备",
+    "intranetPageTitle": "局域网",
+    "filesPageTitle": "文件",
+    "historyPageTitle": "历史",
+    "settingsPageTitle": "设置"
+}

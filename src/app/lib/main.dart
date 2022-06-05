@@ -1,6 +1,9 @@
+import 'package:app/business/mirrorx_core/mirrorx_core_bloc.dart';
 import 'package:app/pages/loading/loading_page.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'dart:ui' as ui;
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -14,21 +17,28 @@ class App extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      showPerformanceOverlay: false,
-      locale: ui.window.locale,
-      debugShowCheckedModeBanner: false,
-      title: "MirrorX",
-      theme: ThemeData(
-        useMaterial3: true,
-        scrollbarTheme: ScrollbarTheme.of(context)
-            .copyWith(thickness: MaterialStateProperty.all(4)),
-      ),
-      home: Material(
-        child: Container(
-          color: Colors.white,
-          child: const LoadingPage(),
+        showPerformanceOverlay: false,
+        locale: ui.window.locale,
+        debugShowCheckedModeBanner: false,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        title: "MirrorX",
+        theme: ThemeData(
+          useMaterial3: true,
+          scrollbarTheme: ScrollbarTheme.of(context)
+              .copyWith(thickness: MaterialStateProperty.all(4)),
         ),
-      ),
-    );
+        home: MultiBlocProvider(
+          providers: [
+            BlocProvider<MirrorXCoreBloc>(
+                create: (context) => MirrorXCoreBloc()..add(MirrorXCoreInit()))
+          ],
+          child: Material(
+            child: Container(
+              color: Colors.white,
+              child: const LoadingPage(),
+            ),
+          ),
+        ));
   }
 }

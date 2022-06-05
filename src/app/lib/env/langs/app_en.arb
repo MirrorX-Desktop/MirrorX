@@ -1,0 +1,11 @@
+{
+    "@@local": "en",
+    "connectPageTitle": "Connect",
+    "connectPageDeviceIDTitle": "Device ID",
+    "connectPagePasswordTitle": "Password",
+    "connectPageConnectRemoteTitle": "Connect Remote",
+    "intranetPageTitle": "Intranet",
+    "filesPageTitle": "Files",
+    "historyPageTitle": "History",
+    "settingsPageTitle": "Settings"
+}

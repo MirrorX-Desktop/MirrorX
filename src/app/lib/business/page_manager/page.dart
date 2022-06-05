@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 
 abstract class NavigationPage extends StatelessWidget {
-  final IconData titleIcon;
-  final String title;
-
-  const NavigationPage({Key? key, required this.titleIcon, required this.title})
+  const NavigationPage({Key? key, required this.uniqueTag, required this.icon})
       : super(key: key);
 
-  int getIndex();
+  final String uniqueTag;
+
+  final IconData icon;
 }

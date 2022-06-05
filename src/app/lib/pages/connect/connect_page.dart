@@ -1,12 +1,14 @@
+import 'package:app/business/mirrorx_core/mirrorx_core_bloc.dart';
 import 'package:app/business/page_manager/page.dart';
-import 'package:app/pages/connect/widgets/connect_id_field/connect_id_field.dart';
+import 'package:app/env/langs/tr.dart';
+import 'package:app/pages/connect/widgets/device_id_field/device_id_field.dart';
 import 'package:app/pages/connect/widgets/password_field/password_field.dart';
 import 'package:app/pages/connect/widgets/remote_connect_field/remote_connect_field.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
-class ConnectPage extends NavigationPage {
-  const ConnectPage({Key? key})
-      : super(key: key, title: 'Connect', titleIcon: Icons.screen_share);
+class ConnectPage extends StatelessWidget {
+  const ConnectPage({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -21,7 +23,7 @@ class ConnectPage extends NavigationPage {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: const [
-                ConnectIdField(),
+                DeviceIdField(),
                 Divider(
                   color: Colors.transparent,
                   height: 12,
@@ -40,7 +42,4 @@ class ConnectPage extends NavigationPage {
       ],
     );
   }
-
-  @override
-  int getIndex() => 0;
 }

@@ -6,7 +6,7 @@ pub fn generate_device_password() -> String {
 
     let mut password: String = String::new();
 
-    for _ in 0..10 {
+    for _ in 0..8 {
         let n = thread_rng().gen_range(0..DEVICE_PASSWORD_ALPHABET.len());
         password.push(DEVICE_PASSWORD_ALPHABET[n] as char);
     }

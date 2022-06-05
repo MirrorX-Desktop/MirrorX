@@ -2,12 +2,11 @@ import 'package:app/business/page_manager/page.dart';
 import 'package:app/pages/connect/connect_page.dart';
 import 'package:app/pages/files/files_page.dart';
 import 'package:app/pages/history/history_page.dart';
-import 'package:app/pages/lan/lan_page.dart';
+import 'package:app/pages/intranet/intranet_page.dart';
 import 'package:app/pages/settings/settings_page.dart';
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
-import 'package:meta/meta.dart';
 
 part 'page_manager_event.dart';
 part 'page_manager_state.dart';
@@ -20,34 +19,43 @@ class PageManagerBloc extends Bloc<PageManagerEvent, PageManagerState> {
     on<PageManagerRemovePage>(_removePage);
   }
 
-  bool isSelected(int index) => state.currentPage.getIndex() == index;
+  bool isSelected(String pageTag) => state.currentPageTag == pageTag;
 
   void _init(PageManagerInit event, Emitter<PageManagerState> emit) {
-    final fixedPages = [
-      const ConnectPage(),
-      const LanPage(),
-      const FilesPage(),
-      const HistoryPage(),
-      const SettingsPage()
-    ];
-
-    emit(state.copyWith(fixedPages: fixedPages, currentPage: fixedPages[0]));
+    add(PageManagerSwitchPage(pageTag: "Connect"));
   }
 
   void _switchPage(
       PageManagerSwitchPage event, Emitter<PageManagerState> emit) {
-    for (var page in state.fixedPages) {
-      if (page.getIndex() == event.pageIndex) {
-        emit(state.copyWith(currentPage: page));
-        return;
-      }
-    }
-
-    for (var page in state.dynamicPages) {
-      if (page.getIndex() == event.pageIndex) {
-        emit(state.copyWith(currentPage: page));
-        return;
-      }
+    switch (event.pageTag) {
+      case "Connect":
+        emit(state.copyWith(
+            currentPage: const ConnectPage(), currentPageTag: "Connect"));
+        break;
+      case "Intranet":
+        emit(state.copyWith(
+            currentPage: const IntranetPage(), currentPageTag: "Intranet"));
+        break;
+      case "Files":
+        emit(state.copyWith(
+            currentPage: const FilesPage(), currentPageTag: "Files"));
+        break;
+      case "History":
+        emit(state.copyWith(
+            currentPage: const HistoryPage(), currentPageTag: "History"));
+        break;
+      case "Settings":
+        emit(state.copyWith(
+            currentPage: const SettingsPage(), currentPageTag: "Settings"));
+        break;
+      default:
+        for (var page in state.dynamicPages) {
+          if (page.uniqueTag == event.pageTag) {
+            emit(state.copyWith(
+                currentPage: page, currentPageTag: page.uniqueTag));
+            break;
+          }
+        }
     }
   }
 
@@ -57,26 +65,29 @@ class PageManagerBloc extends Bloc<PageManagerEvent, PageManagerState> {
 
   void _removePage(
       PageManagerRemovePage event, Emitter<PageManagerState> emit) {
-    if (state.currentPage ==
-        state.dynamicPages
-            .singleWhere((element) => element.getIndex() == event.pageIndex)) {
-      // remove current display page
-      var newCurrenPage = state.fixedPages[0];
-      if (state.dynamicPages.length > 1) {
-        var newCurrentPageIndex =
-            state.dynamicPages.indexOf(state.currentPage) - 1;
-
-        if (newCurrentPageIndex < 0) {
-          newCurrentPageIndex += 1;
-        }
-        newCurrenPage = state.dynamicPages[newCurrentPageIndex];
-      }
-
-      add(PageManagerSwitchPage(pageIndex: newCurrenPage.getIndex()));
+    final removePageIndex = state.dynamicPages
+        .indexWhere((element) => element.uniqueTag == event.pageTag);
+    if (removePageIndex == -1) {
+      return;
     }
+
+    String switchPageTag;
+    if (state.dynamicPages.length == 1) {
+      switchPageTag = "Connect";
+    } else {
+      if (removePageIndex == state.dynamicPages.length - 1) {
+        // remove the last page, switch to the previous page
+        switchPageTag = state.dynamicPages[removePageIndex - 1].uniqueTag;
+      } else {
+        // remove the first or middle page, switch to the next page
+        switchPageTag = state.dynamicPages[removePageIndex + 1].uniqueTag;
+      }
+    }
+
+    add(PageManagerSwitchPage(pageTag: switchPageTag));
 
     emit(state.copyWith(
         dynamicPages: state.dynamicPages
-          ..removeWhere((element) => element.getIndex() == event.pageIndex)));
+          ..removeWhere((element) => element.uniqueTag == event.pageTag)));
   }
 }
