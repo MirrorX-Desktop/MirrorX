@@ -1,7 +1,6 @@
 use super::{dx::DX, dx_math::VERTICES};
 use anyhow::bail;
-use log::{info, warn};
-use std::{mem::zeroed, ptr::null, slice::from_raw_parts};
+use std::{mem::zeroed, ptr::null};
 use windows::{
     core::Interface,
     Win32::{
@@ -278,7 +277,7 @@ impl Duplication {
             }
 
             if hr == DXGI_ERROR_ACCESS_LOST {
-                warn!("Duplication: IDXGIOutputDuplication::AcquireNextFrame returns DXGI_ERROR_ACCESS_LOST, re-init DXGIOutputDuplication");
+                tracing::warn!("Duplication: IDXGIOutputDuplication::AcquireNextFrame returns DXGI_ERROR_ACCESS_LOST, re-init DXGIOutputDuplication");
 
                 let _ = self.output_duplication.ReleaseFrame();
 
@@ -387,7 +386,7 @@ unsafe fn init_output_duplication(
     })?;
 
     let adapter_desc = dxgi_adapter.GetDesc()?;
-    info!("{:?}", String::from_utf16_lossy(&adapter_desc.Description));
+    tracing::info!("{:?}", String::from_utf16_lossy(&adapter_desc.Description));
 
     let dxgi_output = dxgi_adapter.EnumOutputs(output_idx).map_err(|err| {
         anyhow::anyhow!(

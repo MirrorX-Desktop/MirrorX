@@ -1,8 +1,7 @@
 use super::windows::duplication::Duplication;
 use crate::media::video_encoder::VideoEncoder;
 use crossbeam_channel::{Receiver, Sender, TryRecvError};
-use log::error;
-use std::{ops::Sub, sync::Arc, time::Duration};
+use std::{sync::Arc, time::Duration};
 use tokio::time::Instant;
 
 pub struct DesktopDuplicator {
@@ -74,7 +73,7 @@ impl DesktopDuplicator {
                         );
                     },
                 ) {
-                    error!("{}", err);
+                    tracing::error!("{}", err);
                 }
 
                 let remaining = except_wait_time.checked_sub(start_time.elapsed());

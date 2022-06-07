@@ -1,13 +1,10 @@
 use super::{shader, dx_math::{VERTEX_STRIDES, VERTICES}};
 use anyhow::bail;
-use log::{error, info};
 use std::{ffi::c_void, mem::zeroed};
 use windows::{
     core::PCSTR,
     Win32::Graphics::{Direct3D::*, Direct3D11::*, Dxgi::Common::*},
 };
-
-
 pub struct DX {
     device: ID3D11Device,
     device_context: ID3D11DeviceContext,
@@ -52,7 +49,7 @@ impl DX {
                     &mut device_context,
                 ) {
                     Ok(_) => {
-                        info!(
+                        tracing::info!(
                             r#"create_device: create device successfully {{"driver_type": "{}", "feature_level": "{}"}}"#,
                             match driver_type {
                                 D3D_DRIVER_TYPE_UNKNOWN => "D3D_DRIVER_TYPE_UNKNOWN",
@@ -81,7 +78,7 @@ impl DX {
                         break;
                     }
                     Err(err) => {
-                        error!(
+                        tracing::error!(
                             r#"create_device: failed to create device {{"driver_type": "{}", "error":"{:?}"}}"#,
                             match driver_type {
                                 D3D_DRIVER_TYPE_UNKNOWN => "D3D_DRIVER_TYPE_UNKNOWN",

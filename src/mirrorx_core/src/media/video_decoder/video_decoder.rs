@@ -1,5 +1,7 @@
+#[cfg(target_os = "macos")]
+use crate::media::bindings::macos::{CVPixelBufferRef, CVPixelBufferRetain};
+
 use crate::media::{
-    bindings::macos::{CVPixelBufferRef, CVPixelBufferRetain},
     ffmpeg::{
         avcodec::{
             avcodec::{
@@ -28,7 +30,7 @@ use crate::media::{
             },
         },
     },
-    native_frame::NativeFrame,
+    native_frame::{NativeFrame, self},
     video_frame::VideoFrame,
 };
 use anyhow::bail;
@@ -37,7 +39,7 @@ use std::{
     ffi::{CStr, CString},
     mem::zeroed,
     ptr,
-    slice::from_raw_parts,
+    slice::from_raw_parts, os::raw::c_void,
 };
 
 pub struct VideoDecoder {
@@ -226,41 +228,18 @@ impl VideoDecoder {
                     //     break;
                     // }
 
-                    // tmp_frame = self.hw_decode_frame;
-                    let p = CVPixelBufferRetain((*self.decode_frame).data[3] as CVPixelBufferRef);
+                    #[cfg(target_os = "macos")]
+                    let native_frame = CVPixelBufferRetain((*self.decode_frame).data[3] as CVPixelBufferRef);
+
+                    #[cfg(target_os = "windows")]
+                    let native_frame = (*self.decode_frame).data[3] as *mut c_void;
+                    
                     if let Some(tx) = &self.output_tx {
-                        if let Err(e) = tx.try_send(NativeFrame(p)) {
+                        if let Err(e) = tx.try_send(NativeFrame(native_frame)) {
                             tracing::error!(e = ?e, "send video frame failed");
                         }
                     }
                 }
-
-                // let frame = VideoFrame {
-                //     width: (*tmp_frame).width,
-                //     height: (*tmp_frame).height,
-                //     y_plane_buffer: from_raw_parts(
-                //         (*tmp_frame).data[0],
-                //         ((*tmp_frame).linesize[0] * (*tmp_frame).height) as usize,
-                //     )
-                //     .to_vec(),
-                //     y_plane_stride: (*tmp_frame).linesize[0],
-                //     uv_plane_buffer: from_raw_parts(
-                //         (*tmp_frame).data[1],
-                //         ((*tmp_frame).linesize[1] * (*tmp_frame).height / 2) as usize,
-                //     )
-                //     .to_vec(),
-                //     uv_plane_stride: (*tmp_frame).linesize[1],
-                //     dts: 0,
-                //     dts_scale: 0,
-                //     pts: (*tmp_frame).pts,
-                //     pts_scale: 0,
-                // };
-
-                // if let Some(tx) = &self.output_tx {
-                //     if let Err(e) = tx.try_send(frame) {
-                //         tracing::error!(e = ?e, "send video frame failed");
-                //     }
-                // }
             }
 
             av_packet_unref((*self).packet);

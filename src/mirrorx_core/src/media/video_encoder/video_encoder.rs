@@ -203,7 +203,7 @@ impl VideoEncoder {
     }
 
     pub fn encode(
-        &mut self,
+        &self,
         width: i32,
         height: i32,
         lumina_plane_bytes_address: *mut u8,
@@ -216,7 +216,7 @@ impl VideoEncoder {
         pts_scale: i32,
     ) {
         unsafe {
-            let mut ret = 0;
+            let mut ret: i32;
 
             // when video rect changed, we need to reallocate frame and packet
             if self.frame.is_null()
