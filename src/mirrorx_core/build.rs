@@ -1,19 +1,7 @@
 fn main() {
-    // println!("cargo:rerun-if-changed=build.rs");
-    // build_native();
-
-    println!("enter test");
-
+    println!("cargo:rerun-if-changed=build.rs");
+ 
     link_ffmpeg();
-
-    #[cfg(target_os = "windows")]
-    link_native_windows();
-}
-
-#[allow(dead_code)]
-fn link_native_windows() {
-    println!("cargo:rustc-link-search=../mirrorx_native/build/lib/Release");
-    println!("cargo:rustc-link-lib=mirrorx_native");
 }
 
 fn link_ffmpeg() {

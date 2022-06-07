@@ -60,8 +60,6 @@ impl DesktopDuplicator {
                      chrominance_plane_bytes_address,
                      chrominance_plane_stride| {
                         encoder.encode(
-                            width,
-                            height,
                             lumina_plane_bytes_address,
                             lumina_plane_stride as i32,
                             chrominance_plane_bytes_address,
