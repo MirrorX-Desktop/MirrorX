@@ -1,8 +1,8 @@
 // This is a generated file; do not edit or check into version control.
-FLUTTER_ROOT=/usr/local/flutter
-FLUTTER_APPLICATION_PATH=/Users/chenbaiyu/workspace/mirrorx/src/app
+FLUTTER_ROOT=C:\flutter
+FLUTTER_APPLICATION_PATH=F:\MirrorX\src\app
 COCOAPODS_PARALLEL_CODE_SIGN=true
-FLUTTER_TARGET=lib/main.dart
+FLUTTER_TARGET=lib\main.dart
 FLUTTER_BUILD_DIR=build
 FLUTTER_BUILD_NAME=1.0.0
 FLUTTER_BUILD_NUMBER=1

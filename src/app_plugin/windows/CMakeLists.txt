@@ -22,3 +22,6 @@ set(app_plugin_bundled_libraries
   ""
   PARENT_SCOPE
 )
+
+# Include Rust crate
+include(./rust.cmake)
