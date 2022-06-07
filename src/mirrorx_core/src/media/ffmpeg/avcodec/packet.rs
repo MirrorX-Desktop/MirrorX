@@ -60,6 +60,12 @@ pub struct AVPacket {
     pub time_base: AVRational,
 }
 
+impl Drop for AVPacket {
+    fn drop(&mut self) {
+        unsafe { av_packet_free(&mut (self as *mut _)) }
+    }
+}
+
 extern "C" {
     pub fn av_packet_free(pkt: *mut *mut AVPacket);
     pub fn av_packet_alloc() -> *mut AVPacket;

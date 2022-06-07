@@ -67,8 +67,6 @@ impl DesktopDuplicator {
                 let uv_plane_bytes_address = CVPixelBufferGetBaseAddressOfPlane(image_buffer, 1);
 
                 encoder.encode(
-                    width as i32,
-                    height as i32,
                     y_plane_bytes_address as *mut u8,
                     y_plane_stride as i32,
                     uv_plane_bytes_address as *mut u8,

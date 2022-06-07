@@ -101,6 +101,12 @@ pub struct AVFrame {
     pub private_ref: *mut AVBufferRef,
 }
 
+impl Drop for AVFrame {
+    fn drop(&mut self) {
+        unsafe { av_frame_free(&mut (self as *mut _)) }
+    }
+}
+
 extern "C" {
     pub fn av_frame_free(frame: *mut *mut AVFrame);
     pub fn av_frame_alloc() -> *mut AVFrame;

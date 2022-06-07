@@ -296,6 +296,12 @@ pub struct AVCodecContext {
         extern "C" fn(s: *mut AVCodecContext, pkt: *mut AVPacket, flags: i32) -> i32,
 }
 
+impl Drop for AVCodecContext {
+    fn drop(&mut self) {
+        unsafe { avcodec_free_context(&mut (self as *mut _)) }
+    }
+}
+
 pub enum MpegEncContext {}
 
 #[repr(C)]
