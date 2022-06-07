@@ -34,11 +34,14 @@ class ConnectPage extends StatelessWidget {
           ),
         ),
         Expanded(
-          child: Container(
-            padding: const EdgeInsets.fromLTRB(16, 26, 0, 0),
-            child: const RemoteConnectField(),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 26, 16, 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [const RemoteConnectField()],
+            ),
           ),
-        )
+        ),
       ],
     );
   }

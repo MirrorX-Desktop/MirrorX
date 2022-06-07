@@ -13,10 +13,12 @@ class RemoteConnectField extends StatefulWidget {
 class _RemoteConnectFieldState extends State<RemoteConnectField> {
   final List<TextEditingController> _textControllers = [];
   late FocusScopeNode _focusScopeNode;
+  bool _connectButtonDisabled = true;
 
   @override
   void initState() {
     super.initState();
+
     _focusScopeNode = FocusScopeNode(
       onKeyEvent: ((node, event) {
         if (event.logicalKey == LogicalKeyboardKey.delete ||
@@ -25,73 +27,115 @@ class _RemoteConnectFieldState extends State<RemoteConnectField> {
           if (scopeNode.focusedChild != null) {
             final index =
                 scopeNode.children.toList().indexOf(scopeNode.focusedChild!);
-            if (index > 0 && _textControllers[index].text.isEmpty) {
-              scopeNode.previousFocus();
+
+            if (_textControllers[index].text.isEmpty) {
+              if (index > 0) {
+                scopeNode.previousFocus();
+              }
+            } else {
+              _textControllers[index].clear();
             }
+            return KeyEventResult.handled;
           }
         }
 
         return KeyEventResult.ignored;
       }),
     );
+
+    for (var i = 0; i < 10; i++) {
+      final controller = TextEditingController();
+      controller.addListener(() {
+        if (mounted) {
+          setState(() {
+            _connectButtonDisabled =
+                _textControllers.any((element) => element.text.isEmpty);
+          });
+        }
+      });
+      _textControllers.add(controller);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            Tr.of(context).connectPageConnectRemoteTitle,
-            style: const TextStyle(fontSize: 27),
-          ),
-          FocusScope(
-            node: _focusScopeNode,
-            child: Row(
+    return Container(
+      height: 110,
+      width: 498,
+      decoration: const BoxDecoration(
+        border: Border(left: BorderSide(color: Colors.yellow, width: 4)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.only(left: 12.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _createField(),
-                const VerticalDivider(width: 6),
-                _createField(),
-                const VerticalDivider(width: 6),
-                const Text("-", style: TextStyle(fontSize: 36)),
-                const VerticalDivider(width: 6),
-                _createField(),
-                const VerticalDivider(width: 6),
-                _createField(),
-                const VerticalDivider(width: 6),
-                _createField(),
-                const VerticalDivider(width: 6),
-                _createField(),
-                const VerticalDivider(width: 6),
-                const Text("-", style: TextStyle(fontSize: 36)),
-                const VerticalDivider(width: 6),
-                _createField(),
-                const VerticalDivider(width: 6),
-                _createField(),
-                const VerticalDivider(width: 6),
-                _createField(),
-                const VerticalDivider(width: 6),
-                _createField(),
+                Text(
+                  Tr.of(context).connectPageConnectRemoteTitle,
+                  style: const TextStyle(fontSize: 27),
+                ),
+                IconButton(
+                  onPressed: _connectButtonDisabled
+                      ? null
+                      : (() {
+                          print("object");
+                        }),
+                  icon: const Icon(Icons.login),
+                  splashRadius: 20,
+                  hoverColor: Colors.yellow,
+                  disabledColor: Colors.grey,
+                  tooltip: Tr.of(context)
+                      .connectPageConnectRemoteButtonConnectTooltip,
+                ),
               ],
             ),
-          )
-        ],
+            Expanded(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  FocusScope(
+                    node: _focusScopeNode,
+                    child: Row(
+                      children: [
+                        _createField(0, 3, _textControllers[0]),
+                        _createField(3, 6, _textControllers[1]),
+                        const Text("-", style: TextStyle(fontSize: 36)),
+                        _createField(6, 3, _textControllers[2]),
+                        _createField(3, 3, _textControllers[3]),
+                        _createField(3, 3, _textControllers[4]),
+                        _createField(3, 6, _textControllers[5]),
+                        const Text("-", style: TextStyle(fontSize: 36)),
+                        _createField(6, 3, _textControllers[6]),
+                        _createField(3, 3, _textControllers[7]),
+                        _createField(3, 3, _textControllers[8]),
+                        _createField(3, 0, _textControllers[9]),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            )
+          ],
+        ),
       ),
     );
   }
 
-  Widget _createField() {
-    final controller = TextEditingController();
-    _textControllers.add(controller);
-
-    return SizedBox(
+  Widget _createField(double leftPadding, double rightPadding,
+      TextEditingController controller) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(leftPadding, 0, rightPadding, 0),
+      child: SizedBox(
         width: 38,
         child: DigitInput(
           textEditingController: controller,
           focusNode: _focusScopeNode,
-        ));
+        ),
+      ),
+    );
   }
 
   @override

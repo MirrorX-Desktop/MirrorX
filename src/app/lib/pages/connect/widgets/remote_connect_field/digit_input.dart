@@ -17,6 +17,27 @@ class _DigitInputState extends State<DigitInput> {
   Color _borderColor = Colors.black;
 
   @override
+  void initState() {
+    super.initState();
+
+    widget.textEditingController.addListener(() {
+      if (mounted) {
+        setState(() {
+          if (widget.textEditingController.text.isEmpty) {
+            _borderColor = Colors.black;
+          } else {
+            _borderColor = Colors.yellow;
+            if (widget.focusNode.focusedChild !=
+                widget.focusNode.children.last) {
+              widget.focusNode.nextFocus();
+            }
+          }
+        });
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     return CupertinoTextField(
       controller: widget.textEditingController,
@@ -29,19 +50,6 @@ class _DigitInputState extends State<DigitInput> {
           ),
         ),
       ),
-      onChanged: (text) {
-        setState(() {
-          if (text.isEmpty) {
-            _borderColor = Colors.black;
-          } else {
-            _borderColor = Colors.yellow;
-            if (widget.focusNode.focusedChild !=
-                widget.focusNode.children.last) {
-              widget.focusNode.nextFocus();
-            }
-          }
-        });
-      },
       keyboardType: TextInputType.number,
       textInputAction: TextInputAction.next,
       textAlign: TextAlign.center,

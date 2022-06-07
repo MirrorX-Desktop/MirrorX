@@ -50,6 +50,7 @@ dependencies:
   flutter_bloc: ^8.0.1
   equatable: ^2.0.3
   intl: ^0.17.0
+  window_manager: ^0.2.5
 
 dev_dependencies:
   flutter_test:

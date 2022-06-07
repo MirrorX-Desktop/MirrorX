@@ -20,6 +20,7 @@ class _PasswordFieldState extends State<PasswordField> {
   @override
   Widget build(BuildContext context) {
     return Container(
+      height: 110,
       width: 360,
       decoration: const BoxDecoration(
         border: Border(left: BorderSide(color: Colors.yellow, width: 4)),
@@ -39,14 +40,17 @@ class _PasswordFieldState extends State<PasswordField> {
                 _buildTopButton(),
               ],
             ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                BlocBuilder<MirrorXCoreBloc, MirrorXCoreState>(
-                    builder: (context, state) =>
-                        _buildPasswordField(context, state)),
-                _buildBottomButton(),
-              ],
+            Expanded(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  BlocBuilder<MirrorXCoreBloc, MirrorXCoreState>(
+                      builder: (context, state) =>
+                          _buildPasswordField(context, state)),
+                  _buildBottomButton(),
+                ],
+              ),
             ),
           ],
         ),
@@ -120,6 +124,11 @@ class _PasswordFieldState extends State<PasswordField> {
         });
       },
       icon: Icon(_isEditing ? Icons.check : Icons.edit),
+      splashRadius: 20,
+      hoverColor: Colors.yellow,
+      tooltip: _isEditing
+          ? Tr.of(context).connectPagePasswordButtonCommitTooltip
+          : Tr.of(context).connectPagePasswordButtonEditTooltip,
     );
   }
 
@@ -136,11 +145,18 @@ class _PasswordFieldState extends State<PasswordField> {
           }
         });
       },
+      splashRadius: 20,
+      hoverColor: Colors.yellow,
       icon: Icon(_isEditing
           ? Icons.lock_reset
           : _isVisible
               ? Icons.visibility_off
               : Icons.visibility),
+      tooltip: _isEditing
+          ? Tr.of(context).connectPagePasswordButtonRandomGenerateTooltip
+          : _isVisible
+              ? Tr.of(context).connectPagePasswordVisibilityToggleHideTooltip
+              : Tr.of(context).connectPagePasswordVisibilityToggleShowTooltip,
     );
   }
 

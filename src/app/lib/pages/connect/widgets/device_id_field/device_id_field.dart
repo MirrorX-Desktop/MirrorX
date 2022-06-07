@@ -1,6 +1,7 @@
 import 'package:app/business/mirrorx_core/mirrorx_core_bloc.dart';
 import 'package:app/env/langs/tr.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 class DeviceIdField extends StatelessWidget {
@@ -10,6 +11,7 @@ class DeviceIdField extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<MirrorXCoreBloc, MirrorXCoreState>(
       builder: (context, state) => Container(
+        height: 110,
         width: 360,
         decoration: const BoxDecoration(
           border: Border(left: BorderSide(color: Colors.yellow, width: 4)),
@@ -26,10 +28,24 @@ class DeviceIdField extends StatelessWidget {
                     Tr.of(context).connectPageDeviceIDTitle,
                     style: const TextStyle(fontSize: 27),
                   ),
-                  IconButton(onPressed: () {}, icon: const Icon(Icons.copy)),
+                  IconButton(
+                    onPressed: () {
+                      Clipboard.setData(ClipboardData(text: state.deviceId))
+                          .then(
+                        (_) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                            content: Text(Tr.of(context)
+                                .connectPageDeviceIDButtonCopySnackbarContent))),
+                      );
+                    },
+                    icon: const Icon(Icons.copy),
+                    splashRadius: 20,
+                    hoverColor: Colors.yellow,
+                    tooltip:
+                        Tr.of(context).connectPageDeviceIDButtonCopyTooltip,
+                  ),
                 ],
               ),
-              _buildDeviceId(context, state)
+              Expanded(child: _buildDeviceId(context, state))
             ],
           ),
         ),
