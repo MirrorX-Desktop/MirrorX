@@ -38,7 +38,7 @@ class ConnectPage extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(16, 26, 16, 0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: [const RemoteConnectField()],
+              children: const [RemoteConnectField()],
             ),
           ),
         ),
