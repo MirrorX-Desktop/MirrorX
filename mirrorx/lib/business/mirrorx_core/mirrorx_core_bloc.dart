@@ -2,10 +2,10 @@ import 'dart:developer';
 import 'dart:ffi';
 import 'dart:io';
 
-import 'package:mirrorx_core/mirrorx_core.dart';
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:meta/meta.dart';
+import 'package:mirrorx/mirrorx_core.dart';
 import 'package:path_provider/path_provider.dart';
 
 part 'mirrorx_core_event.dart';
