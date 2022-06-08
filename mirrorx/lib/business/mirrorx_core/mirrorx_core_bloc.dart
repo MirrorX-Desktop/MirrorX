@@ -96,7 +96,11 @@ class MirrorXCoreBloc extends Bloc<MirrorXCoreEvent, MirrorXCoreState> {
 const String _libName = 'mirrorx_core';
 
 final DynamicLibrary _dylib = () {
-  if (Platform.isMacOS || Platform.isIOS) {
+  if (Platform.isIOS) {
+    return DynamicLibrary.process();
+  }
+
+  if (Platform.isMacOS) {
     return DynamicLibrary.executable();
   }
   if (Platform.isAndroid || Platform.isLinux) {

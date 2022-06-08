@@ -1,21 +1,12 @@
-import 'dart:io';
 import 'package:mirrorx/business/mirrorx_core/mirrorx_core_bloc.dart';
 import 'package:mirrorx/pages/loading/loading_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'dart:ui' as ui;
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
-import 'package:window_size/window_size.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
-    setWindowTitle('MirrorX');
-    setWindowFrame(const Rect.fromLTWH(0, 0, 995, 636));
-    setWindowMinSize(const Size(995, 636));
-    setWindowMaxSize(Size.infinite);
-  }
 
   runApp(const App());
 }
