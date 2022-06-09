@@ -27,6 +27,8 @@
 		33CC10F32044A3C60003C045 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 33CC10F22044A3C60003C045 /* Assets.xcassets */; };
 		33CC10F62044A3C60003C045 /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = 33CC10F42044A3C60003C045 /* MainMenu.xib */; };
 		33CC11132044BFA00003C045 /* MainFlutterWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33CC11122044BFA00003C045 /* MainFlutterWindow.swift */; };
+		B2B212702852297C00832DEB /* mirrorx_core.h in Resources */ = {isa = PBXBuildFile; fileRef = B2B2126328521C9B00832DEB /* mirrorx_core.h */; };
+		B2B212732852406400832DEB /* mirrorx_core.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = B2B2126B2852290600832DEB /* mirrorx_core.dylib */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -36,6 +38,27 @@
 			proxyType = 1;
 			remoteGlobalIDString = 33CC111A2044C6BA0003C045;
 			remoteInfo = FLX;
+		};
+		B2B2126A2852290600832DEB /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B2B212652852290600832DEB /* mirrorx_core.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = CA609E9089768CEA73924C33;
+			remoteInfo = "mirrorx_core-cdylib";
+		};
+		B2B2126C2852290600832DEB /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B2B212652852290600832DEB /* mirrorx_core.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = CA60ECA6ECE1396A830B7CF7;
+			remoteInfo = "mirrorx_core-staticlib";
+		};
+		B2B2126E2852293300832DEB /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B2B212652852290600832DEB /* mirrorx_core.xcodeproj */;
+			proxyType = 1;
+			remoteGlobalIDString = CA609E9089769970DBE49CBE;
+			remoteInfo = "mirrorx_core-cdylib";
 		};
 /* End PBXContainerItemProxy section */
 
@@ -73,6 +96,8 @@
 		88703C45CF8815F7AB1DA3DA /* Pods_Runner.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Runner.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		9740EEB21CF90195004384FC /* Debug.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
 		99AB02EC139CB556450EBA3A /* Pods-Runner.profile.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.profile.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.profile.xcconfig"; sourceTree = "<group>"; };
+		B2B2126328521C9B00832DEB /* mirrorx_core.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = mirrorx_core.h; sourceTree = "<group>"; };
+		B2B212652852290600832DEB /* mirrorx_core.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = mirrorx_core.xcodeproj; path = ../../../mirrorx_core/mirrorx_core.xcodeproj; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -80,6 +105,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B2B212732852406400832DEB /* mirrorx_core.dylib in Frameworks */,
 				09FDB6DEADA377D6636C24C5 /* Pods_Runner.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -142,6 +168,8 @@
 		33FAB671232836740065AC1E /* Runner */ = {
 			isa = PBXGroup;
 			children = (
+				B2B212652852290600832DEB /* mirrorx_core.xcodeproj */,
+				B2B2126328521C9B00832DEB /* mirrorx_core.h */,
 				33CC10F02044A3C60003C045 /* AppDelegate.swift */,
 				33CC11122044BFA00003C045 /* MainFlutterWindow.swift */,
 				33E51913231747F40026EE4D /* DebugProfile.entitlements */,
@@ -150,6 +178,15 @@
 				33BA886A226E78AF003329D5 /* Configs */,
 			);
 			path = Runner;
+			sourceTree = "<group>";
+		};
+		B2B212662852290600832DEB /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				B2B2126B2852290600832DEB /* mirrorx_core.dylib */,
+				B2B2126D2852290600832DEB /* libmirrorx_core_static.a */,
+			);
+			name = Products;
 			sourceTree = "<group>";
 		};
 		B9ADE92A66C56C107481587E /* Pods */ = {
@@ -188,6 +225,7 @@
 			buildRules = (
 			);
 			dependencies = (
+				B2B2126F2852293300832DEB /* PBXTargetDependency */,
 				33CC11202044C79F0003C045 /* PBXTargetDependency */,
 			);
 			name = Runner;
@@ -232,6 +270,12 @@
 			mainGroup = 33CC10E42044A3C60003C045;
 			productRefGroup = 33CC10EE2044A3C60003C045 /* Products */;
 			projectDirPath = "";
+			projectReferences = (
+				{
+					ProductGroup = B2B212662852290600832DEB /* Products */;
+					ProjectRef = B2B212652852290600832DEB /* mirrorx_core.xcodeproj */;
+				},
+			);
 			projectRoot = "";
 			targets = (
 				33CC10EC2044A3C60003C045 /* Runner */,
@@ -240,11 +284,29 @@
 		};
 /* End PBXProject section */
 
+/* Begin PBXReferenceProxy section */
+		B2B2126B2852290600832DEB /* mirrorx_core.dylib */ = {
+			isa = PBXReferenceProxy;
+			fileType = "compiled.mach-o.dylib";
+			path = mirrorx_core.dylib;
+			remoteRef = B2B2126A2852290600832DEB /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		B2B2126D2852290600832DEB /* libmirrorx_core_static.a */ = {
+			isa = PBXReferenceProxy;
+			fileType = archive.ar;
+			path = libmirrorx_core_static.a;
+			remoteRef = B2B2126C2852290600832DEB /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+/* End PBXReferenceProxy section */
+
 /* Begin PBXResourcesBuildPhase section */
 		33CC10EB2044A3C60003C045 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B2B212702852297C00832DEB /* mirrorx_core.h in Resources */,
 				33CC10F32044A3C60003C045 /* Assets.xcassets in Resources */,
 				33CC10F62044A3C60003C045 /* MainMenu.xib in Resources */,
 			);
@@ -350,6 +412,11 @@
 			target = 33CC111A2044C6BA0003C045 /* Flutter Assemble */;
 			targetProxy = 33CC111F2044C79F0003C045 /* PBXContainerItemProxy */;
 		};
+		B2B2126F2852293300832DEB /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = "mirrorx_core-cdylib";
+			targetProxy = B2B2126E2852293300832DEB /* PBXContainerItemProxy */;
+		};
 /* End PBXTargetDependency section */
 
 /* Begin PBXVariantGroup section */
@@ -428,6 +495,7 @@
 					"@executable_path/../Frameworks",
 				);
 				PROVISIONING_PROFILE_SPECIFIER = "";
+				SWIFT_OBJC_BRIDGING_HEADER = Runner/mirrorx_core.h;
 				SWIFT_VERSION = 5.0;
 			};
 			name = Profile;
@@ -557,6 +625,7 @@
 					"@executable_path/../Frameworks",
 				);
 				PROVISIONING_PROFILE_SPECIFIER = "";
+				SWIFT_OBJC_BRIDGING_HEADER = Runner/mirrorx_core.h;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 			};
@@ -578,6 +647,7 @@
 					"@executable_path/../Frameworks",
 				);
 				PROVISIONING_PROFILE_SPECIFIER = "";
+				SWIFT_OBJC_BRIDGING_HEADER = Runner/mirrorx_core.h;
 				SWIFT_VERSION = 5.0;
 			};
 			name = Release;
