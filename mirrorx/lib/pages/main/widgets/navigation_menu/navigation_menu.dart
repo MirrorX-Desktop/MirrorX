@@ -1,14 +1,7 @@
-import 'package:mirrorx/business/page_manager/page_manager_bloc.dart';
 import 'package:mirrorx/env/langs/tr.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-
-class Pair<T1, T2> {
-  T1 first;
-  T2 second;
-
-  Pair(this.first, this.second);
-}
+import 'package:mirrorx/pages/main/cubit/main_page_manager_cubit.dart';
 
 class NavigationMenu extends StatelessWidget {
   const NavigationMenu({
@@ -17,51 +10,50 @@ class NavigationMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<PageManagerBloc, PageManagerState>(
+    return BlocBuilder<MainPageManagerCubit, MainPageManagerState>(
       builder: (context, state) => Column(
         children: [
           Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              NavigationMenuItem(
+              _NavigationMenuItem(
                   pageTag: "Connect",
                   icon: Icons.screen_share,
                   title: Tr.of(context).connectPageTitle,
                   onTap: () => context
-                      .read<PageManagerBloc>()
-                      .add(PageManagerSwitchPage(pageTag: "Connect"))),
-              NavigationMenuItem(
+                      .read<MainPageManagerCubit>()
+                      .switchPage("Connect")),
+              _NavigationMenuItem(
                   pageTag: "Intranet",
                   icon: Icons.lan,
                   title: Tr.of(context).intranetPageTitle,
                   onTap: () => context
-                      .read<PageManagerBloc>()
-                      .add(PageManagerSwitchPage(pageTag: "Intranet"))),
-              NavigationMenuItem(
+                      .read<MainPageManagerCubit>()
+                      .switchPage("Intranet")),
+              _NavigationMenuItem(
                   pageTag: "Files",
                   icon: Icons.drive_file_move_rtl,
                   title: Tr.of(context).filesPageTitle,
-                  onTap: () => context
-                      .read<PageManagerBloc>()
-                      .add(PageManagerSwitchPage(pageTag: "Files"))),
-              NavigationMenuItem(
+                  onTap: () =>
+                      context.read<MainPageManagerCubit>().switchPage("Files")),
+              _NavigationMenuItem(
                   pageTag: "History",
                   icon: Icons.history,
                   title: Tr.of(context).historyPageTitle,
                   onTap: () => context
-                      .read<PageManagerBloc>()
-                      .add(PageManagerSwitchPage(pageTag: "History"))),
-              NavigationMenuItem(
+                      .read<MainPageManagerCubit>()
+                      .switchPage("History")),
+              _NavigationMenuItem(
                   pageTag: "Settings",
                   icon: Icons.settings,
                   title: Tr.of(context).settingsPageTitle,
                   onTap: () => context
-                      .read<PageManagerBloc>()
-                      .add(PageManagerSwitchPage(pageTag: "Settings"))),
+                      .read<MainPageManagerCubit>()
+                      .switchPage("Settings")),
             ],
           ),
           Visibility(
-              visible: state.dynamicPages.isNotEmpty,
+              visible: state.registerTextures.isNotEmpty,
               child: Container(
                   width: 36,
                   margin: const EdgeInsets.symmetric(vertical: 6),
@@ -75,20 +67,18 @@ class NavigationMenu extends StatelessWidget {
               child: ListView(
                 primary: true,
                 physics: const BouncingScrollPhysics(),
-                children: <Widget>[
-                  for (int i = 0; i < state.dynamicPages.length; i += 1)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 2.0),
-                      child: NavigationMenuItem(
-                        pageTag: state.dynamicPages[i].uniqueTag,
-                        icon: state.dynamicPages[i].icon,
-                        title: state.dynamicPages[i].uniqueTag,
-                        onTap: () => context.read<PageManagerBloc>().add(
-                            PageManagerSwitchPage(
-                                pageTag: state.dynamicPages[i].uniqueTag)),
-                      ),
-                    ),
-                ],
+                children: state.registerTextures.entries
+                    .map((entry) => Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 2.0),
+                          child: _NavigationMenuItem(
+                              pageTag: entry.key,
+                              icon: Icons.apple,
+                              title: entry.key,
+                              onTap: () => context
+                                  .read<MainPageManagerCubit>()
+                                  .switchPage(entry.key)),
+                        ))
+                    .toList(),
               ),
             ),
           )
@@ -98,8 +88,8 @@ class NavigationMenu extends StatelessWidget {
   }
 }
 
-class NavigationMenuItem extends StatefulWidget {
-  const NavigationMenuItem({
+class _NavigationMenuItem extends StatefulWidget {
+  const _NavigationMenuItem({
     Key? key,
     required this.pageTag,
     required this.icon,
@@ -116,7 +106,7 @@ class NavigationMenuItem extends StatefulWidget {
   _NavigationMenuItemState createState() => _NavigationMenuItemState();
 }
 
-class _NavigationMenuItemState extends State<NavigationMenuItem>
+class _NavigationMenuItemState extends State<_NavigationMenuItem>
     with TickerProviderStateMixin {
   late _ButtonStatusFSM _buttonStatusFSM;
   late AnimationController _textAnimationController;
@@ -128,8 +118,6 @@ class _NavigationMenuItemState extends State<NavigationMenuItem>
   @override
   void initState() {
     super.initState();
-
-    final bloc = context.read<PageManagerBloc>();
 
     _buttonStatusFSM = _ButtonStatusFSM();
 
@@ -152,7 +140,7 @@ class _NavigationMenuItemState extends State<NavigationMenuItem>
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<PageManagerBloc, PageManagerState>(
+    return BlocListener<MainPageManagerCubit, MainPageManagerState>(
       listener: ((context, state) {
         final before = _buttonStatusFSM._status;
 
@@ -172,15 +160,15 @@ class _NavigationMenuItemState extends State<NavigationMenuItem>
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 2.0),
         child: _addMouseRegion(
-          context.read<PageManagerBloc>(),
+          context.read<MainPageManagerCubit>(),
           AnimatedBuilder(
               animation: _textAnimation,
               builder: (context, child) {
                 final color = _textAnimation.isDismissed
-                    ? _buttonStatusFSM.currentColors.second
+                    ? _buttonStatusFSM.currentColors.newColor
                     : ColorTween(
-                        begin: _buttonStatusFSM.currentColors.first,
-                        end: _buttonStatusFSM.currentColors.second,
+                        begin: _buttonStatusFSM.currentColors.oldColor,
+                        end: _buttonStatusFSM.currentColors.newColor,
                       ).transform(
                         CurveTween(curve: Curves.easeInOutCubicEmphasized)
                             .transform(_textAnimation.value));
@@ -209,8 +197,8 @@ class _NavigationMenuItemState extends State<NavigationMenuItem>
                   final length = 56.0 *
                       (!_isHover &&
                               context
-                                  .read<PageManagerBloc>()
-                                  .isSelected(widget.pageTag)
+                                  .read<MainPageManagerCubit>()
+                                  .isPageSelected(widget.pageTag)
                           ? _indicatorAnimation.value
                           : 1 - _indicatorAnimation.value);
 
@@ -230,10 +218,10 @@ class _NavigationMenuItemState extends State<NavigationMenuItem>
     );
   }
 
-  Widget _addMouseRegion(PageManagerBloc bloc, Widget child) {
+  Widget _addMouseRegion(MainPageManagerCubit bloc, Widget child) {
     return MouseRegion(
       onEnter: (_) {
-        if (!bloc.isSelected(widget.pageTag)) {
+        if (!bloc.isPageSelected(widget.pageTag)) {
           _isHover = true;
           _buttonStatusFSM.goHover();
           _textAnimationController.reset();
@@ -241,7 +229,7 @@ class _NavigationMenuItemState extends State<NavigationMenuItem>
         }
       },
       onExit: (_) {
-        if (!bloc.isSelected(widget.pageTag)) {
+        if (!bloc.isPageSelected(widget.pageTag)) {
           _isHover = true;
           _buttonStatusFSM.goNormal();
           _textAnimationController.reset();
@@ -251,7 +239,7 @@ class _NavigationMenuItemState extends State<NavigationMenuItem>
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: () {
-          if (!bloc.isSelected(widget.pageTag)) {
+          if (!bloc.isPageSelected(widget.pageTag)) {
             _isHover = false;
             widget.onTap();
           }
@@ -269,6 +257,13 @@ class _NavigationMenuItemState extends State<NavigationMenuItem>
   }
 }
 
+class _TransitionColorPair {
+  Color oldColor;
+  Color newColor;
+
+  _TransitionColorPair(this.oldColor, this.newColor);
+}
+
 enum _ButtonStatus {
   normal,
   hover,
@@ -277,29 +272,29 @@ enum _ButtonStatus {
 
 class _ButtonStatusFSM {
   _ButtonStatus _status;
-  Pair<Color, Color> _colors;
+  _TransitionColorPair _colors;
 
-  Pair<Color, Color> get currentColors => _colors;
+  _TransitionColorPair get currentColors => _colors;
 
   _ButtonStatusFSM()
       : _status = _ButtonStatus.normal,
-        _colors = Pair(Colors.black, Colors.black);
+        _colors = _TransitionColorPair(Colors.black, Colors.black);
 
   void goHover() {
     if (_status == _ButtonStatus.normal) {
       _status = _ButtonStatus.hover;
-      _colors = Pair(Colors.black, Colors.yellow);
+      _colors = _TransitionColorPair(Colors.black, Colors.yellow);
     }
   }
 
   void goNormal() {
     if (_status == _ButtonStatus.hover) {
-      _colors = Pair(Colors.yellow, Colors.black);
+      _colors = _TransitionColorPair(Colors.yellow, Colors.black);
       _status = _ButtonStatus.normal;
     }
 
     if (_status == _ButtonStatus.actived) {
-      _colors = Pair(Colors.white, Colors.black);
+      _colors = _TransitionColorPair(Colors.white, Colors.black);
       _status = _ButtonStatus.normal;
     }
   }
@@ -307,12 +302,12 @@ class _ButtonStatusFSM {
   void goActive() {
     if (_status == _ButtonStatus.hover) {
       _status = _ButtonStatus.actived;
-      _colors = Pair(Colors.yellow, Colors.white);
+      _colors = _TransitionColorPair(Colors.yellow, Colors.white);
     }
 
     if (_status == _ButtonStatus.normal) {
       _status = _ButtonStatus.actived;
-      _colors = Pair(Colors.black, Colors.white);
+      _colors = _TransitionColorPair(Colors.black, Colors.white);
     }
   }
 }

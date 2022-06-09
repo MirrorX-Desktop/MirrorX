@@ -1,17 +1,23 @@
+import 'dart:developer';
 import 'dart:io';
 
-import 'package:mirrorx/business/page_manager/page_manager_bloc.dart';
-import 'package:mirrorx/components/navigation_menu/navigation_menu.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:mirrorx/global_state/global_state_cubit.dart';
+import 'package:mirrorx/pages/main/cubit/main_page_manager_cubit.dart';
 
-class Layout extends StatelessWidget {
-  const Layout({Key? key}) : super(key: key);
+import 'widgets/navigation_menu/navigation_menu.dart';
+
+class MainPage extends StatelessWidget {
+  const MainPage({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) => PageManagerBloc()..add(PageManagerInit()),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(create: (context) => GlobalStateCubit()),
+        BlocProvider(create: (context) => MainPageManagerCubit()),
+      ],
       child: const _LayoutView(),
     );
   }
@@ -22,6 +28,10 @@ class _LayoutView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
+      context.read<MainPageManagerCubit>().switchPage("Connect");
+    });
+
     return Row(
       children: [
         Container(
@@ -58,21 +68,14 @@ class _LayoutPageBuilderState extends State<_LayoutPageBuilder>
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<PageManagerBloc, PageManagerState>(
-      buildWhen: ((previous, current) {
-        if (previous.currentPage != current.currentPage) {
-          _animationController.reset();
-          _animationController.forward();
-          return true;
-        }
-
-        return false;
-      }),
-      builder: (context, state) {
-        return FadeTransition(
-          opacity: _animationController.view,
-          child: BlocProvider.of<PageManagerBloc>(context).state.currentPage,
-        );
+    return BlocConsumer<MainPageManagerCubit, MainPageManagerState>(
+      builder: (context, state) => FadeTransition(
+        opacity: _animationController.view,
+        child: state.currentPage,
+      ),
+      listener: (context, state) {
+        _animationController.reset();
+        _animationController.forward();
       },
     );
   }

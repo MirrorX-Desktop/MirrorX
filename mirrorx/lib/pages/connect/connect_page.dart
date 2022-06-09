@@ -1,11 +1,8 @@
-import 'package:mirrorx/business/mirrorx_core/mirrorx_core_bloc.dart';
-import 'package:mirrorx/business/page_manager/page.dart';
-import 'package:mirrorx/env/langs/tr.dart';
-import 'package:mirrorx/pages/connect/widgets/device_id_field/device_id_field.dart';
-import 'package:mirrorx/pages/connect/widgets/password_field/password_field.dart';
 import 'package:mirrorx/pages/connect/widgets/remote_connect_field/remote_connect_field.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
+
+import 'widgets/device_id_field/device_id_field.dart';
+import 'widgets/device_password_field/device_password_field.dart';
 
 class ConnectPage extends StatelessWidget {
   const ConnectPage({Key? key}) : super(key: key);
@@ -23,12 +20,14 @@ class ConnectPage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: const [
-                DeviceIdField(),
-                Divider(
-                  color: Colors.transparent,
-                  height: 12,
+                Padding(
+                  padding: EdgeInsets.only(bottom: 10),
+                  child: DeviceIdField(),
                 ),
-                PasswordField(),
+                Padding(
+                  padding: EdgeInsets.only(top: 10),
+                  child: DevicePasswordField(),
+                ),
               ],
             ),
           ),

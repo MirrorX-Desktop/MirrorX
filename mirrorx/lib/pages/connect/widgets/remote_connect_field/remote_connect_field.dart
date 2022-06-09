@@ -1,7 +1,12 @@
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mirrorx/env/langs/tr.dart';
+import 'package:mirrorx/env/sdk/mirrorx_core_sdk.dart';
 import 'package:mirrorx/pages/connect/widgets/remote_connect_field/digit_input.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:mirrorx/pages/desktop/desktop_page.dart';
+import 'package:mirrorx/pages/main/cubit/main_page_manager_cubit.dart';
+import 'package:texture_render/texture_render.dart';
 
 class RemoteConnectField extends StatefulWidget {
   const RemoteConnectField({Key? key}) : super(key: key);
@@ -78,11 +83,7 @@ class _RemoteConnectFieldState extends State<RemoteConnectField> {
                   style: const TextStyle(fontSize: 27),
                 ),
                 IconButton(
-                  onPressed: _connectButtonDisabled
-                      ? null
-                      : (() {
-                          print("object");
-                        }),
+                  onPressed: _connectButtonDisabled ? null : _connect,
                   icon: const Icon(Icons.login),
                   splashRadius: 20,
                   hoverColor: Colors.yellow,
@@ -136,6 +137,20 @@ class _RemoteConnectFieldState extends State<RemoteConnectField> {
         ),
       ),
     );
+  }
+
+  void _connect() async {
+    final cubit = context.read<MainPageManagerCubit>();
+
+    final resp = await TextureRender.instance.registerTexture();
+
+    await MirrorXCoreSDK.instance.beginVideo(
+        textureId: resp.textureID,
+        videoTexturePtr: resp.videoTexturePointer,
+        updateFrameCallbackPtr: resp.updateFrameCallbackPointer);
+
+    cubit.addDesktopPage("123456789", resp);
+    cubit.switchPage("123456789");
   }
 
   @override

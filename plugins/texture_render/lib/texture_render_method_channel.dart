@@ -12,7 +12,7 @@ class MethodChannelTextureRender extends TextureRenderPlatform {
 
   @override
   Future<RegisterTextureResponse> registerTexture() async {
-    Map? result = await methodChannel.invokeMethod<Map>('registerTexture');
+    Map? result = await methodChannel.invokeMethod<Map>('register_texture');
     if (result == null) {
       return Future.error("registerTexture: method call returns null");
     }
@@ -22,7 +22,7 @@ class MethodChannelTextureRender extends TextureRenderPlatform {
   @override
   Future<void> deregisterTexture(int textureID, int videoTexturePointer) async {
     await methodChannel.invokeMethod(
-        'deregisterTexture',
+        'deregister_texture',
         DeregisterTextureRequest(textureID, videoTexturePointer)
             .toMap(textureID, videoTexturePointer));
   }
