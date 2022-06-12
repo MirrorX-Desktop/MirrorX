@@ -1,5 +1,16 @@
 {
     "@@local": "zh",
+    "dialogOK": "确定",
+    "dialogCancel": "取消",
+    "dialogYes": "是",
+    "dialogNo": "否",
+    "dialogConnectRemoteErrorPrefix": "远程连接错误: {error_message}",
+    "@dialogConnectRemoteErrorPrefix": {
+        "placeholders": {
+            "error_message": {}
+        }
+    },
+    "dialogContentInputDevicePassword": "请输入远程设备密码",
     "connectPageTitle": "连接",
     "connectPageDeviceIDTitle": "设备ID",
     "connectPageDeviceIDButtonCopyTooltip": "拷贝设备ID",
@@ -15,5 +26,6 @@
     "intranetPageTitle": "局域网",
     "filesPageTitle": "文件",
     "historyPageTitle": "历史",
-    "settingsPageTitle": "设置"
+    "settingsPageTitle": "设置",
+    "desktopPagePreparing": "桌面准备中"
 }

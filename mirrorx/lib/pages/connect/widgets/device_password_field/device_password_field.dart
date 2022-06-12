@@ -5,7 +5,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:mirrorx/global_state/global_state_cubit.dart';
+import 'package:mirrorx/state/profile/profile_state_cubit.dart';
 
 class DevicePasswordField extends StatefulWidget {
   const DevicePasswordField({Key? key}) : super(key: key);
@@ -59,7 +59,7 @@ class _DevicePasswordFieldState extends State<DevicePasswordField> {
   }
 
   Widget _buildDevicePasswordField() {
-    return BlocBuilder<GlobalStateCubit, GlobalState>(
+    return BlocBuilder<ProfileStateCubit, ProfileState>(
       builder: (context, state) {
         if (_isEditing) {
           _controller.text = state.devicePassword!;
@@ -100,7 +100,7 @@ class _DevicePasswordFieldState extends State<DevicePasswordField> {
             }
 
             return FutureBuilder(
-              future: context.read<GlobalStateCubit>().fetchDevicePassword(),
+              future: context.read<ProfileStateCubit>().getDevicePassword(),
               builder: (context, snapshot) {
                 switch (snapshot.connectionState) {
                   case ConnectionState.none:
@@ -137,7 +137,7 @@ class _DevicePasswordFieldState extends State<DevicePasswordField> {
         setState(() {
           if (_isEditing) {
             context
-                .read<GlobalStateCubit>()
+                .read<ProfileStateCubit>()
                 .updateDevicePassword(_controller.text);
             _isVisible = false;
           }
@@ -160,7 +160,7 @@ class _DevicePasswordFieldState extends State<DevicePasswordField> {
           if (!_isEditing) {
             _isVisible = !_isVisible;
           } else {
-            context.read<GlobalStateCubit>().updateDevicePassword(null);
+            context.read<ProfileStateCubit>().updateDevicePassword(null);
             _isVisible = false;
           }
         });

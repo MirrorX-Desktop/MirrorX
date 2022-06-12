@@ -4,7 +4,7 @@ import 'package:mirrorx/env/langs/tr.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:mirrorx/global_state/global_state_cubit.dart';
+import 'package:mirrorx/state/profile/profile_state_cubit.dart';
 
 class DeviceIdField extends StatelessWidget {
   const DeviceIdField({Key? key}) : super(key: key);
@@ -29,7 +29,7 @@ class DeviceIdField extends StatelessWidget {
                   Tr.of(context).connectPageDeviceIDTitle,
                   style: const TextStyle(fontSize: 27),
                 ),
-                BlocBuilder<GlobalStateCubit, GlobalState>(
+                BlocBuilder<ProfileStateCubit, ProfileState>(
                   builder: (context, state) => IconButton(
                     onPressed: () {
                       Clipboard.setData(ClipboardData(text: state.deviceID))
@@ -50,7 +50,7 @@ class DeviceIdField extends StatelessWidget {
             ),
             Expanded(
               child: FutureBuilder(
-                future: context.read<GlobalStateCubit>().fetchDeviceID(),
+                future: context.read<ProfileStateCubit>().getDeviceID(),
                 builder: (context, snapshot) {
                   switch (snapshot.connectionState) {
                     case ConnectionState.none:

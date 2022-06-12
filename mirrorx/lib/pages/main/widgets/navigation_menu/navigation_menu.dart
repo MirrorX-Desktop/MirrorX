@@ -1,7 +1,8 @@
 import 'package:mirrorx/env/langs/tr.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:mirrorx/pages/main/cubit/main_page_manager_cubit.dart';
+import 'package:mirrorx/state/desktop_manager/desktop_manager_cubit.dart';
+import 'package:mirrorx/state/page_manager/page_manager_cubit.dart';
 
 class NavigationMenu extends StatelessWidget {
   const NavigationMenu({
@@ -10,50 +11,41 @@ class NavigationMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<MainPageManagerCubit, MainPageManagerState>(
+    return BlocBuilder<DesktopManagerCubit, DesktopManagerState>(
       builder: (context, state) => Column(
         children: [
           Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               _NavigationMenuItem(
-                  pageTag: "Connect",
-                  icon: Icons.screen_share,
-                  title: Tr.of(context).connectPageTitle,
-                  onTap: () => context
-                      .read<MainPageManagerCubit>()
-                      .switchPage("Connect")),
+                pageTag: "Connect",
+                icon: Icons.screen_share,
+                title: Tr.of(context).connectPageTitle,
+              ),
               _NavigationMenuItem(
-                  pageTag: "Intranet",
-                  icon: Icons.lan,
-                  title: Tr.of(context).intranetPageTitle,
-                  onTap: () => context
-                      .read<MainPageManagerCubit>()
-                      .switchPage("Intranet")),
+                pageTag: "Intranet",
+                icon: Icons.lan,
+                title: Tr.of(context).intranetPageTitle,
+              ),
               _NavigationMenuItem(
-                  pageTag: "Files",
-                  icon: Icons.drive_file_move_rtl,
-                  title: Tr.of(context).filesPageTitle,
-                  onTap: () =>
-                      context.read<MainPageManagerCubit>().switchPage("Files")),
+                pageTag: "Files",
+                icon: Icons.drive_file_move_rtl,
+                title: Tr.of(context).filesPageTitle,
+              ),
               _NavigationMenuItem(
-                  pageTag: "History",
-                  icon: Icons.history,
-                  title: Tr.of(context).historyPageTitle,
-                  onTap: () => context
-                      .read<MainPageManagerCubit>()
-                      .switchPage("History")),
+                pageTag: "History",
+                icon: Icons.history,
+                title: Tr.of(context).historyPageTitle,
+              ),
               _NavigationMenuItem(
-                  pageTag: "Settings",
-                  icon: Icons.settings,
-                  title: Tr.of(context).settingsPageTitle,
-                  onTap: () => context
-                      .read<MainPageManagerCubit>()
-                      .switchPage("Settings")),
+                pageTag: "Settings",
+                icon: Icons.settings,
+                title: Tr.of(context).settingsPageTitle,
+              ),
             ],
           ),
           Visibility(
-              visible: state.registerTextures.isNotEmpty,
+              visible: state.desktopModels.isNotEmpty,
               child: Container(
                   width: 36,
                   margin: const EdgeInsets.symmetric(vertical: 6),
@@ -67,17 +59,17 @@ class NavigationMenu extends StatelessWidget {
               child: ListView(
                 primary: true,
                 physics: const BouncingScrollPhysics(),
-                children: state.registerTextures.entries
-                    .map((entry) => Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 2.0),
-                          child: _NavigationMenuItem(
-                              pageTag: entry.key,
-                              icon: Icons.apple,
-                              title: entry.key,
-                              onTap: () => context
-                                  .read<MainPageManagerCubit>()
-                                  .switchPage(entry.key)),
-                        ))
+                children: state.desktopModels
+                    .map(
+                      (model) => Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 2.0),
+                        child: _NavigationMenuItem(
+                          pageTag: model.remoteDeviceID,
+                          icon: Icons.apple,
+                          title: model.remoteDeviceID,
+                        ),
+                      ),
+                    )
                     .toList(),
               ),
             ),
@@ -94,13 +86,11 @@ class _NavigationMenuItem extends StatefulWidget {
     required this.pageTag,
     required this.icon,
     required this.title,
-    required this.onTap,
   }) : super(key: key);
 
   final String pageTag;
   final IconData icon;
   final String title;
-  final VoidCallback onTap;
 
   @override
   _NavigationMenuItemState createState() => _NavigationMenuItemState();
@@ -119,10 +109,14 @@ class _NavigationMenuItemState extends State<_NavigationMenuItem>
   void initState() {
     super.initState();
 
-    _buttonStatusFSM = _ButtonStatusFSM();
+    final cubit = context.read<PageManagerCubit>();
 
-    _textAnimationController =
-        AnimationController(duration: kThemeAnimationDuration * 2, vsync: this);
+    _buttonStatusFSM = _ButtonStatusFSM(cubit.isCurrent(widget.pageTag));
+
+    _textAnimationController = AnimationController(
+      duration: kThemeAnimationDuration * 2,
+      vsync: this,
+    );
 
     _textAnimation = CurvedAnimation(
       parent: _textAnimationController,
@@ -130,38 +124,57 @@ class _NavigationMenuItemState extends State<_NavigationMenuItem>
     );
 
     _indicatorAnimationController = AnimationController(
-        duration: kThemeAnimationDuration * 1, vsync: this, value: 1.0);
+      duration: kThemeAnimationDuration * 1,
+      vsync: this,
+      value: cubit.isCurrent(widget.pageTag) ? 0.0 : 1.0,
+    );
 
     _indicatorAnimation = CurvedAnimation(
       parent: _indicatorAnimationController,
       curve: Curves.easeInOut,
     );
+
+    _textAnimationController.forward();
+    _indicatorAnimationController.forward();
   }
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<MainPageManagerCubit, MainPageManagerState>(
-      listener: ((context, state) {
-        final before = _buttonStatusFSM._status;
+    return BlocBuilder<PageManagerCubit, PageManagerState>(
+      buildWhen: (previous, current) {
+        if (previous.currentPageTag == current.currentPageTag) {
+          return false;
+        }
 
-        state.currentPageTag == widget.pageTag
-            ? _buttonStatusFSM.goActive()
-            : _buttonStatusFSM.goNormal();
+        bool update = false;
 
-        final after = _buttonStatusFSM._status;
+        if (previous.currentPageTag == widget.pageTag &&
+            current.currentPageTag != widget.pageTag) {
+          _buttonStatusFSM.goNormal();
+          update = true;
+        }
 
-        if (before != after) {
+        if (previous.currentPageTag != widget.pageTag &&
+            current.currentPageTag == widget.pageTag) {
+          _buttonStatusFSM.goActive();
+          update = true;
+        }
+
+        if (update) {
           _textAnimationController.reset();
           _textAnimationController.forward();
           _indicatorAnimationController.reset();
           _indicatorAnimationController.forward();
         }
-      }),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 2.0),
-        child: _addMouseRegion(
-          context.read<MainPageManagerCubit>(),
-          AnimatedBuilder(
+
+        return update;
+      },
+      builder: (context, state) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 2.0),
+          child: _addMouseRegion(
+            context.read<PageManagerCubit>(),
+            AnimatedBuilder(
               animation: _textAnimation,
               builder: (context, child) {
                 final color = _textAnimation.isDismissed
@@ -197,8 +210,8 @@ class _NavigationMenuItemState extends State<_NavigationMenuItem>
                   final length = 56.0 *
                       (!_isHover &&
                               context
-                                  .read<MainPageManagerCubit>()
-                                  .isPageSelected(widget.pageTag)
+                                  .read<PageManagerCubit>()
+                                  .isCurrent(widget.pageTag)
                           ? _indicatorAnimation.value
                           : 1 - _indicatorAnimation.value);
 
@@ -212,16 +225,18 @@ class _NavigationMenuItemState extends State<_NavigationMenuItem>
                         height: length,
                       ));
                 },
-              )),
-        ),
-      ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
-  Widget _addMouseRegion(MainPageManagerCubit bloc, Widget child) {
+  Widget _addMouseRegion(PageManagerCubit cubit, Widget child) {
     return MouseRegion(
       onEnter: (_) {
-        if (!bloc.isPageSelected(widget.pageTag)) {
+        if (!cubit.isCurrent(widget.pageTag)) {
           _isHover = true;
           _buttonStatusFSM.goHover();
           _textAnimationController.reset();
@@ -229,7 +244,7 @@ class _NavigationMenuItemState extends State<_NavigationMenuItem>
         }
       },
       onExit: (_) {
-        if (!bloc.isPageSelected(widget.pageTag)) {
+        if (!cubit.isCurrent(widget.pageTag)) {
           _isHover = true;
           _buttonStatusFSM.goNormal();
           _textAnimationController.reset();
@@ -239,9 +254,9 @@ class _NavigationMenuItemState extends State<_NavigationMenuItem>
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: () {
-          if (!bloc.isPageSelected(widget.pageTag)) {
+          if (!cubit.isCurrent(widget.pageTag)) {
             _isHover = false;
-            widget.onTap();
+            context.read<PageManagerCubit>().switchPage(widget.pageTag);
           }
         },
         child: child,
@@ -276,9 +291,11 @@ class _ButtonStatusFSM {
 
   _TransitionColorPair get currentColors => _colors;
 
-  _ButtonStatusFSM()
-      : _status = _ButtonStatus.normal,
-        _colors = _TransitionColorPair(Colors.black, Colors.black);
+  _ButtonStatusFSM(bool actived)
+      : _status = actived ? _ButtonStatus.actived : _ButtonStatus.normal,
+        _colors = actived
+            ? _TransitionColorPair(Colors.black, Colors.white)
+            : _TransitionColorPair(Colors.black, Colors.black);
 
   void goHover() {
     if (_status == _ButtonStatus.normal) {

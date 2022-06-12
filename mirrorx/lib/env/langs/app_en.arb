@@ -1,5 +1,16 @@
 {
     "@@local": "en",
+    "dialogOK": "OK",
+    "dialogCancel": "Cancel",
+    "dialogYes": "Yes",
+    "dialogNo": "No",
+    "dialogConnectRemoteErrorPrefix": "Connect Remote Error: {error_message}",
+    "@dialogConnectRemoteErrorPrefix": {
+        "placeholders": {
+            "error_message": {}
+        }
+    },
+    "dialogContentInputDevicePassword": "Please enter the password for the remote device",
     "connectPageTitle": "Connect",
     "connectPageDeviceIDTitle": "Device ID",
     "connectPageDeviceIDButtonCopyTooltip": "Copy Device ID",
@@ -15,5 +26,6 @@
     "intranetPageTitle": "Intranet",
     "filesPageTitle": "Files",
     "historyPageTitle": "History",
-    "settingsPageTitle": "Settings"
+    "settingsPageTitle": "Settings",
+    "desktopPagePreparing": "Preparing Desktop"
 }

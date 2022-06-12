@@ -3,8 +3,15 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:mirrorx/global_state/global_state_cubit.dart';
-import 'package:mirrorx/pages/main/cubit/main_page_manager_cubit.dart';
+import 'package:mirrorx/pages/connect/connect_page.dart';
+import 'package:mirrorx/pages/desktop/desktop_page.dart';
+import 'package:mirrorx/pages/files/files_page.dart';
+import 'package:mirrorx/pages/history/history_page.dart';
+import 'package:mirrorx/pages/intranet/intranet_page.dart';
+import 'package:mirrorx/pages/settings/settings_page.dart';
+import 'package:mirrorx/state/desktop_manager/desktop_manager_cubit.dart';
+import 'package:mirrorx/state/page_manager/page_manager_cubit.dart';
+import 'package:mirrorx/state/profile/profile_state_cubit.dart';
 
 import 'widgets/navigation_menu/navigation_menu.dart';
 
@@ -15,8 +22,9 @@ class MainPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: [
-        BlocProvider(create: (context) => GlobalStateCubit()),
-        BlocProvider(create: (context) => MainPageManagerCubit()),
+        BlocProvider(create: (context) => ProfileStateCubit()),
+        BlocProvider(create: (context) => PageManagerCubit()),
+        BlocProvider(create: (context) => DesktopManagerCubit()),
       ],
       child: const _LayoutView(),
     );
@@ -29,7 +37,7 @@ class _LayoutView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
-      context.read<MainPageManagerCubit>().switchPage("Connect");
+      context.read<PageManagerCubit>().switchPage("Connect");
     });
 
     return Row(
@@ -68,16 +76,40 @@ class _LayoutPageBuilderState extends State<_LayoutPageBuilder>
 
   @override
   Widget build(BuildContext context) {
-    return BlocConsumer<MainPageManagerCubit, MainPageManagerState>(
+    return BlocConsumer<PageManagerCubit, PageManagerState>(
       builder: (context, state) => FadeTransition(
         opacity: _animationController.view,
-        child: state.currentPage,
+        child: _buildPage(state.currentPageTag),
       ),
       listener: (context, state) {
         _animationController.reset();
         _animationController.forward();
       },
     );
+  }
+
+  Widget? _buildPage(String pageTag) {
+    switch (pageTag) {
+      case "Connect":
+        return const ConnectPage();
+      case "Intranet":
+        return const IntranetPage();
+      case "Files":
+        return const FilesPage();
+      case "History":
+        return const HistoryPage();
+      case "Settings":
+        return const SettingsPage();
+      default:
+        for (final desktopModel
+            in context.read<DesktopManagerCubit>().state.desktopModels) {
+          if (desktopModel.remoteDeviceID == pageTag) {
+            return DesktopPage(model: desktopModel);
+          }
+        }
+        log("Unknown page tag: $pageTag");
+        return const ConnectPage();
+    }
   }
 
   @override

@@ -1,11 +1,17 @@
+import 'dart:developer';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/intl.dart';
 import 'package:mirrorx/env/langs/tr.dart';
 import 'package:mirrorx/env/sdk/mirrorx_core_sdk.dart';
+import 'package:mirrorx/model/desktop.dart';
 import 'package:mirrorx/pages/connect/widgets/remote_connect_field/digit_input.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mirrorx/pages/desktop/desktop_page.dart';
-import 'package:mirrorx/pages/main/cubit/main_page_manager_cubit.dart';
+import 'package:mirrorx/state/desktop_manager/desktop_manager_cubit.dart';
+import 'package:mirrorx/state/page_manager/page_manager_cubit.dart';
+import 'package:mirrorx/state/profile/profile_state_cubit.dart';
 import 'package:texture_render/texture_render.dart';
 
 class RemoteConnectField extends StatefulWidget {
@@ -83,7 +89,14 @@ class _RemoteConnectFieldState extends State<RemoteConnectField> {
                   style: const TextStyle(fontSize: 27),
                 ),
                 IconButton(
-                  onPressed: _connectButtonDisabled ? null : _connect,
+                  onPressed: _connectButtonDisabled
+                      ? null
+                      : () {
+                          _connect(
+                            context.read<PageManagerCubit>(),
+                            context.read<DesktopManagerCubit>(),
+                          );
+                        },
                   icon: const Icon(Icons.login),
                   splashRadius: 20,
                   hoverColor: Colors.yellow,
@@ -139,18 +152,113 @@ class _RemoteConnectFieldState extends State<RemoteConnectField> {
     );
   }
 
-  void _connect() async {
-    final cubit = context.read<MainPageManagerCubit>();
+  void _connect(
+    PageManagerCubit pageManagerCubit,
+    DesktopManagerCubit desktopManagerCubit,
+  ) async {
+    // 6034116984
+    try {
+      var chars = _textControllers.map((e) => e.text).toList();
+      chars.insert(2, "-");
+      chars.insert(7, "-");
 
-    final resp = await TextureRender.instance.registerTexture();
+      final remoteDeviceID = chars.join();
 
-    await MirrorXCoreSDK.instance.beginVideo(
-        textureId: resp.textureID,
-        videoTexturePtr: resp.videoTexturePointer,
-        updateFrameCallbackPtr: resp.updateFrameCallbackPointer);
+      log("remote device id: $remoteDeviceID");
 
-    cubit.addDesktopPage("123456789", resp);
-    cubit.switchPage("123456789");
+      // handshake with remote device
+      await MirrorXCoreSDK.instance
+          .desktopConnect(remoteDeviceId: remoteDeviceID);
+
+      final password = await _popupInputPasswordDialog();
+      if (password == null || password.isEmpty) {
+        return;
+      }
+
+      // auth password
+      await MirrorXCoreSDK.instance.desktopKeyExchangeAndPasswordVerify(
+          remoteDeviceId: remoteDeviceID, password: password);
+
+      // switch to desktop page
+      final resp = await TextureRender.instance.registerTexture();
+
+      desktopManagerCubit.addDesktop(
+        DesktopModel(
+          remoteDeviceID: remoteDeviceID,
+          textureID: resp.textureID,
+          videoTexturePointer: resp.videoTexturePointer,
+          updateFrameCallbackPointer: resp.updateFrameCallbackPointer,
+        ),
+      );
+
+      pageManagerCubit.switchPage(remoteDeviceID);
+    } catch (e) {
+      showDialog(
+          context: context,
+          builder: (context) {
+            return AlertDialog(
+              title: const Text(
+                "MirrorX",
+                textAlign: TextAlign.center,
+              ),
+              content: Text(Tr.of(context).dialogConnectRemoteErrorPrefix(e)),
+              actions: <Widget>[
+                TextButton(
+                  child: Text(Tr.of(context).dialogOK),
+                  onPressed: () => Navigator.of(context).pop(), //关闭对话框
+                ),
+              ],
+            );
+          });
+      log("error: $e");
+    }
+  }
+
+  Future<String?> _popupInputPasswordDialog() {
+    final textController = TextEditingController();
+
+    return showDialog<String?>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text(
+            "MirrorX",
+            textAlign: TextAlign.center,
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(Tr.of(context).dialogContentInputDevicePassword),
+              TextField(
+                textAlign: TextAlign.center,
+                textAlignVertical: TextAlignVertical.center,
+                controller: textController,
+                maxLines: 1,
+                maxLength: 8,
+                keyboardType: TextInputType.text,
+              ),
+            ],
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: Text(Tr.of(context).dialogOK),
+              onPressed: () {
+                final value = textController.text;
+                textController.dispose();
+                Navigator.of(context).pop(value.isEmpty ? null : value);
+              },
+            ),
+            TextButton(
+                child: Text(Tr.of(context).dialogCancel),
+                onPressed: () {
+                  textController.dispose();
+                  Navigator.of(context).pop(null);
+                }),
+          ],
+        );
+      },
+    );
   }
 
   @override
