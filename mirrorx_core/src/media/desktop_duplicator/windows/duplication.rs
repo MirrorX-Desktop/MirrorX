@@ -1,6 +1,9 @@
+use crate::media::frame::CaptureFrame;
+
 use super::{dx::DX, dx_math::VERTICES};
 use anyhow::bail;
-use std::{mem::zeroed, ptr::null};
+use crossbeam_channel::Sender;
+use std::{mem::zeroed, ptr::null, sync::Arc};
 use windows::{
     core::Interface,
     Win32::{
@@ -19,6 +22,7 @@ use windows::{
 };
 
 pub struct Duplication {
+    // DirectX
     dx: DX,
     output_desc: DXGI_OUTPUT_DESC,
     output_duplication: IDXGIOutputDuplication,
@@ -31,10 +35,16 @@ pub struct Duplication {
     view_port_chrominance: D3D11_VIEWPORT,
     render_target_view_lumina: ID3D11RenderTargetView,
     render_target_view_chrominance: ID3D11RenderTargetView,
+
+    // Additional
+    tx: Sender<Arc<CaptureFrame>>,
 }
 
+unsafe impl Send for Duplication{}
+unsafe impl Sync for Duplication{}
+
 impl Duplication {
-    pub fn new(output_idx: u32) -> anyhow::Result<Self> {
+    pub fn new(output_idx: u32, tx: Sender<Arc<CaptureFrame>>) -> anyhow::Result<Duplication> {
         unsafe {
             let current_desktop = OpenInputDesktop(0, false, GENERIC_ALL).map_err(|err| {
                 anyhow::anyhow!(
@@ -188,14 +198,12 @@ impl Duplication {
                 view_port_chrominance,
                 render_target_view_lumina,
                 render_target_view_chrominance,
+                tx,
             })
         }
     }
 
-    pub fn capture_frame(
-        &mut self,
-        callback: impl FnOnce(i32, i32, *mut u8, u32, *mut u8, u32) -> (),
-    ) -> anyhow::Result<()> {
+    pub fn capture_frame(&mut self) -> anyhow::Result<()> {
         unsafe {
             self.get_frame()?;
             self.process_frame()?;
@@ -231,14 +239,27 @@ impl Duplication {
             let height = self.output_desc.DesktopCoordinates.bottom
                 - self.output_desc.DesktopCoordinates.top;
 
-            callback(
+            let luminance_buffer_size = (height as u32) * mapped_resource_lumina.RowPitch;
+            let chrominance_buffer_size =
+                (height as u32) / 2 * mapped_resource_chrominance.RowPitch;
+
+            let capture_frame = CaptureFrame::new(
                 width,
                 height,
-                mapped_resource_lumina.pData as *mut u8,
+                std::slice::from_raw_parts(
+                    mapped_resource_lumina.pData as *mut u8,
+                    luminance_buffer_size as usize,
+                ),
                 mapped_resource_lumina.RowPitch,
-                mapped_resource_chrominance.pData as *mut u8,
+                std::slice::from_raw_parts(
+                    mapped_resource_chrominance.pData as *mut u8,
+                    chrominance_buffer_size as usize,
+                ),
                 mapped_resource_chrominance.RowPitch,
             );
+
+            self.tx.send(capture_frame.clone());
+            capture_frame.wait();
 
             self.dx
                 .device_context()

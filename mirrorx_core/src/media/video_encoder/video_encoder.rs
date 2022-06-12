@@ -159,9 +159,9 @@ impl VideoEncoder {
         &mut self,
         width: i32,
         height: i32,
-        lumina_plane_bytes_address: *mut u8,
+        lumina_plane_bytes_address: *const u8,
         lumina_plane_stride: i32,
-        chrominance_plane_bytes_address: *mut u8,
+        chrominance_plane_bytes_address: *const u8,
         chrominance_plane_stride: i32,
         dts: i64,
         dts_scale: i32,
@@ -222,9 +222,9 @@ impl VideoEncoder {
                 tracing::error!(ret = ret, "av_frame_make_writable failed");
             }
 
-            (*self.frame).data[0] = lumina_plane_bytes_address;
+            (*self.frame).data[0] = lumina_plane_bytes_address as *mut _;
             (*self.frame).linesize[0] = lumina_plane_stride;
-            (*self.frame).data[1] = chrominance_plane_bytes_address;
+            (*self.frame).data[1] = chrominance_plane_bytes_address as *mut _;
             (*self.frame).linesize[1] = chrominance_plane_stride;
             (*self.frame).time_base.num = 1;
             (*self.frame).time_base.den = pts_scale;

@@ -1,6 +1,6 @@
 use super::http::device_register;
 use crate::{
-    media::bindings::macos::*,
+    // media::bindings::macos::*,
     provider::{
         config::ConfigProvider, endpoint::EndPointProvider, frame_stream::FrameStreamProvider,
         http::HTTPProvider, runtime::RuntimeProvider, socket::SocketProvider,
@@ -148,130 +148,130 @@ pub fn begin_video(
     video_texture_ptr: i64,
     update_frame_callback_ptr: i64,
 ) -> anyhow::Result<()> {
-    #[cfg(target_os = "macos")]
-    unsafe {
-        let main_display_id = core_graphics::display::CGMainDisplayID();
-    }
-
-    let mut encoder =
-        crate::media::video_encoder::VideoEncoder::new("h264_videotoolbox", 60, 1920, 1080)?;
-    encoder.set_opt("profile", "high", 0)?;
-    encoder.set_opt("level", "5.2", 0)?;
-    // if encoder_name == "libx264" {
-    //     encoder.set_opt("preset", "ultrafast", 0)?;
-    //     encoder.set_opt("tune", "zerolatency", 0)?;
-    //     encoder.set_opt("sc_threshold", "499", 0)?;
-    // } else {
-    encoder.set_opt("realtime", "1", 0)?;
-    encoder.set_opt("allow_sw", "0", 0)?;
+    // #[cfg(target_os = "macos")]
+    // unsafe {
+    //     let main_display_id = core_graphics::display::CGMainDisplayID();
     // }
 
-    let packet_rx = encoder.open()?;
+    // let mut encoder =
+    //     crate::media::video_encoder::VideoEncoder::new("h264_videotoolbox", 60, 1920, 1080)?;
+    // encoder.set_opt("profile", "high", 0)?;
+    // encoder.set_opt("level", "5.2", 0)?;
+    // // if encoder_name == "libx264" {
+    // //     encoder.set_opt("preset", "ultrafast", 0)?;
+    // //     encoder.set_opt("tune", "zerolatency", 0)?;
+    // //     encoder.set_opt("sc_threshold", "499", 0)?;
+    // // } else {
+    // encoder.set_opt("realtime", "1", 0)?;
+    // encoder.set_opt("allow_sw", "0", 0)?;
+    // // }
 
-    let (mut desktop_duplicator, capture_frame_rx) =
-        crate::media::desktop_duplicator::DesktopDuplicator::new(60)?;
+    // let packet_rx = encoder.open()?;
 
-    let mut decoder = crate::media::video_decoder::VideoDecoder::new("h264")?;
+    // let (mut desktop_duplicator, capture_frame_rx) =
+    //     crate::media::desktop_duplicator::DesktopDuplicator::new(60)?;
 
-    let frame_rx = decoder.open()?;
+    // let mut decoder = crate::media::video_decoder::VideoDecoder::new("h264")?;
 
-    std::thread::spawn(move || unsafe {
-        loop {
-            let capture_frame = match capture_frame_rx.recv() {
-                Ok(frame) => frame,
-                Err(err) => {
-                    tracing::error!(?err, "capture_frame_rx.recv");
-                    return;
-                }
-            };
+    // let frame_rx = decoder.open()?;
 
-            let image_buffer = capture_frame.cv_pixel_buffer;
+    // std::thread::spawn(move || unsafe {
+    //     loop {
+    //         let capture_frame = match capture_frame_rx.recv() {
+    //             Ok(frame) => frame,
+    //             Err(err) => {
+    //                 tracing::error!(?err, "capture_frame_rx.recv");
+    //                 return;
+    //             }
+    //         };
 
-            // let pix_fmt = CVPixelBufferGetPixelFormatType(image_buffer);
+    //         let image_buffer = capture_frame.cv_pixel_buffer;
 
-            let lock_result = CVPixelBufferLockBaseAddress(image_buffer, 1);
-            if lock_result != 0 {
-                tracing::error!("CVPixelBufferLockBaseAddress failed");
-                return;
-            }
+    //         // let pix_fmt = CVPixelBufferGetPixelFormatType(image_buffer);
 
-            let width = CVPixelBufferGetWidth(image_buffer);
-            let height = CVPixelBufferGetHeight(image_buffer);
-            let y_plane_stride = CVPixelBufferGetBytesPerRowOfPlane(image_buffer, 0);
-            let y_plane_bytes_address = CVPixelBufferGetBaseAddressOfPlane(image_buffer, 0);
-            // let y_plane_height = CVPixelBufferGetHeightOfPlane(image_buffer, 0);
+    //         let lock_result = CVPixelBufferLockBaseAddress(image_buffer, 1);
+    //         if lock_result != 0 {
+    //             tracing::error!("CVPixelBufferLockBaseAddress failed");
+    //             return;
+    //         }
 
-            let uv_plane_stride = CVPixelBufferGetBytesPerRowOfPlane(image_buffer, 1);
-            let uv_plane_bytes_address = CVPixelBufferGetBaseAddressOfPlane(image_buffer, 1);
+    //         let width = CVPixelBufferGetWidth(image_buffer);
+    //         let height = CVPixelBufferGetHeight(image_buffer);
+    //         let y_plane_stride = CVPixelBufferGetBytesPerRowOfPlane(image_buffer, 0);
+    //         let y_plane_bytes_address = CVPixelBufferGetBaseAddressOfPlane(image_buffer, 0);
+    //         // let y_plane_height = CVPixelBufferGetHeightOfPlane(image_buffer, 0);
 
-            encoder.encode(
-                width as i32,
-                height as i32,
-                y_plane_bytes_address as *mut u8,
-                y_plane_stride as i32,
-                uv_plane_bytes_address as *mut u8,
-                uv_plane_stride as i32,
-                0, // timing_info.decode_timestamp.value,
-                0, // timing_info.decode_timestamp.time_scale,
-                0, // timing_info.presentation_timestamp.value,
-                0, // timing_info.presentation_timestamp.time_scale,
-            );
+    //         let uv_plane_stride = CVPixelBufferGetBytesPerRowOfPlane(image_buffer, 1);
+    //         let uv_plane_bytes_address = CVPixelBufferGetBaseAddressOfPlane(image_buffer, 1);
 
-            CVPixelBufferUnlockBaseAddress(image_buffer, 1);
-        }
-    });
+    //         encoder.encode(
+    //             width as i32,
+    //             height as i32,
+    //             y_plane_bytes_address as *mut u8,
+    //             y_plane_stride as i32,
+    //             uv_plane_bytes_address as *mut u8,
+    //             uv_plane_stride as i32,
+    //             0, // timing_info.decode_timestamp.value,
+    //             0, // timing_info.decode_timestamp.time_scale,
+    //             0, // timing_info.presentation_timestamp.value,
+    //             0, // timing_info.presentation_timestamp.time_scale,
+    //         );
 
-    std::thread::spawn(move || {
-        let mut total_bytes = 0;
-        loop {
-            match packet_rx.recv() {
-                Ok(packet) => {
-                    total_bytes += packet.data.len();
-                    decoder.decode(
-                        packet.data.as_ptr(),
-                        packet.data.len() as i32,
-                        packet.dts,
-                        packet.pts,
-                    );
-                }
-                Err(_) => {
-                    tracing::info!(total_packet_bytes = total_bytes, "packet_rx closed");
-                    break;
-                }
-            };
-        }
-    });
+    //         CVPixelBufferUnlockBaseAddress(image_buffer, 1);
+    //     }
+    // });
 
-    std::thread::spawn(move || loop {
-        match frame_rx.recv() {
-            Ok(frame) => unsafe {
-                let video_texture_ptr = video_texture_ptr as *mut c_void;
-                let update_frame_callback_ptr = update_frame_callback_ptr as *mut c_void;
-                let update_frame_callback = std::mem::transmute::<
-                    *mut c_void,
-                    unsafe extern "C" fn(
-                        texture_id: i64,
-                        video_texture_ptr: *mut c_void,
-                        new_frame_ptr: *mut c_void,
-                    ),
-                >(update_frame_callback_ptr);
+    // std::thread::spawn(move || {
+    //     let mut total_bytes = 0;
+    //     loop {
+    //         match packet_rx.recv() {
+    //             Ok(packet) => {
+    //                 total_bytes += packet.data.len();
+    //                 decoder.decode(
+    //                     packet.data.as_ptr(),
+    //                     packet.data.len() as i32,
+    //                     packet.dts,
+    //                     packet.pts,
+    //                 );
+    //             }
+    //             Err(_) => {
+    //                 tracing::info!(total_packet_bytes = total_bytes, "packet_rx closed");
+    //                 break;
+    //             }
+    //         };
+    //     }
+    // });
 
-                update_frame_callback(texture_id, video_texture_ptr, frame.0);
-            },
-            Err(_) => {
-                tracing::info!("frame_rx closed");
-                break;
-            }
-        };
-    });
+    // std::thread::spawn(move || loop {
+    //     match frame_rx.recv() {
+    //         Ok(frame) => unsafe {
+    //             let video_texture_ptr = video_texture_ptr as *mut c_void;
+    //             let update_frame_callback_ptr = update_frame_callback_ptr as *mut c_void;
+    //             let update_frame_callback = std::mem::transmute::<
+    //                 *mut c_void,
+    //                 unsafe extern "C" fn(
+    //                     texture_id: i64,
+    //                     video_texture_ptr: *mut c_void,
+    //                     new_frame_ptr: *mut c_void,
+    //                 ),
+    //             >(update_frame_callback_ptr);
 
-    RuntimeProvider::current()?.spawn(async move {
-        tracing::info!("start capture");
-        let _ = desktop_duplicator.start();
-        tokio::time::sleep(Duration::from_secs(3600)).await;
-        desktop_duplicator.stop();
-        tracing::info!("stop capture");
-    });
+    //             update_frame_callback(texture_id, video_texture_ptr, frame.0);
+    //         },
+    //         Err(_) => {
+    //             tracing::info!("frame_rx closed");
+    //             break;
+    //         }
+    //     };
+    // });
+
+    // RuntimeProvider::current()?.spawn(async move {
+    //     tracing::info!("start capture");
+    //     let _ = desktop_duplicator.start();
+    //     tokio::time::sleep(Duration::from_secs(3600)).await;
+    //     desktop_duplicator.stop();
+    //     tracing::info!("stop capture");
+    // });
 
     Ok(())
 }
