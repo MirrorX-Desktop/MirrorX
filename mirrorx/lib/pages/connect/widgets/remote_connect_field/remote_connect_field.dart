@@ -220,10 +220,7 @@ class _RemoteConnectFieldState extends State<RemoteConnectField> {
       context: context,
       pageBuilder: (ctx, a1, a2) {
         return AlertDialog(
-          title: const Text(
-            "MirrorX",
-            textAlign: TextAlign.center,
-          ),
+          title: const Text("MirrorX", textAlign: TextAlign.center),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
