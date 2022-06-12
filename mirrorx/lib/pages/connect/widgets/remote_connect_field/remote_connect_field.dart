@@ -216,11 +216,9 @@ class _RemoteConnectFieldState extends State<RemoteConnectField> {
 
   Future<String?> _popupInputPasswordDialog() {
     final textController = TextEditingController();
-
-    return showDialog<String?>(
+    return showGeneralDialog<String?>(
       context: context,
-      barrierDismissible: false,
-      builder: (context) {
+      pageBuilder: (ctx, a1, a2) {
         return AlertDialog(
           title: const Text(
             "MirrorX",
@@ -258,6 +256,18 @@ class _RemoteConnectFieldState extends State<RemoteConnectField> {
           ],
         );
       },
+      barrierDismissible: false,
+      transitionBuilder: (ctx, a1, a2, child) {
+        // var curve = Curves.easeInOut.transform(a1.value);
+        return Transform.scale(
+          scale: a1.value,
+          child: Opacity(
+            opacity: a1.value,
+            child: child,
+          ),
+        );
+      },
+      transitionDuration: kThemeAnimationDuration * 2,
     );
   }
 
