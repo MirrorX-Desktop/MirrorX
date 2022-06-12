@@ -25,12 +25,12 @@ use crate::media::{
             },
             log::{av_log_set_flags, av_log_set_level, AV_LOG_SKIP_REPEATED, AV_LOG_TRACE},
             pixfmt::{
-                AVCOL_PRI_BT709, AVCOL_RANGE_JPEG, AVCOL_SPC_BT709, AVCOL_TRC_BT709,
-                AV_PIX_FMT_NV12,
+                AVCOL_PRI_BT709, AVCOL_RANGE_JPEG, AVCOL_RANGE_MPEG, AVCOL_SPC_BT709,
+                AVCOL_TRC_BT709, AVCOL_TRC_IEC61966_2_1, AV_PIX_FMT_NV12,
             },
         },
     },
-    native_frame::{NativeFrame, self},
+    native_frame::{self, NativeFrame},
     video_frame::VideoFrame,
 };
 use anyhow::bail;
@@ -38,8 +38,9 @@ use crossbeam_channel::{bounded, Receiver, Sender};
 use std::{
     ffi::{CStr, CString},
     mem::zeroed,
+    os::raw::c_void,
     ptr,
-    slice::from_raw_parts, os::raw::c_void,
+    slice::from_raw_parts,
 };
 
 pub struct VideoDecoder {
@@ -97,11 +98,13 @@ impl VideoDecoder {
                 bail!("alloc codec context failed");
             }
 
-            // (*decoder.codec_ctx).pix_fmt = AV_PIX_FMT_NV12;
+            (*decoder.codec_ctx).width = 1920;
+            (*decoder.codec_ctx).height = 1080;
+            (*decoder.codec_ctx).pix_fmt = AV_PIX_FMT_NV12;
             // (*decoder.codec_ctx).flags |= AV_CODEC_FLAG2_LOCAL_HEADER;
-            // (*decoder.codec_ctx).color_range = AVCOL_RANGE_JPEG;
+            (*decoder.codec_ctx).color_range = AVCOL_RANGE_JPEG;
             // (*decoder.codec_ctx).color_primaries = AVCOL_PRI_BT709;
-            // (*decoder.codec_ctx).color_trc = AVCOL_TRC_BT709;
+            // (*decoder.codec_ctx).color_trc = AVCOL_TRC_IEC61966_2_1;
             // (*decoder.codec_ctx).colorspace = AVCOL_SPC_BT709;
 
             decoder.packet = av_packet_alloc();
@@ -229,11 +232,12 @@ impl VideoDecoder {
                     // }
 
                     #[cfg(target_os = "macos")]
-                    let native_frame = CVPixelBufferRetain((*self.decode_frame).data[3] as CVPixelBufferRef);
+                    let native_frame =
+                        CVPixelBufferRetain((*self.decode_frame).data[3] as CVPixelBufferRef);
 
                     #[cfg(target_os = "windows")]
                     let native_frame = (*self.decode_frame).data[3] as *mut c_void;
-                    
+
                     if let Some(tx) = &self.output_tx {
                         if let Err(e) = tx.try_send(NativeFrame(native_frame)) {
                             tracing::error!(e = ?e, "send video frame failed");

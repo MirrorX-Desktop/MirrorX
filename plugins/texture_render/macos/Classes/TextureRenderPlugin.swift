@@ -5,7 +5,7 @@ let update_frame_callback:
   @convention(c) (Int64, UnsafeMutableRawPointer, UnsafeMutableRawPointer) -> Void = {
     (textureID, videoTexturePointer, newFramePointer) in
     let videoTexture = Unmanaged<VideoTexture>.fromOpaque(videoTexturePointer).takeUnretainedValue()
-    let newFrame = Unmanaged<CVPixelBuffer>.fromOpaque(newFramePointer)
+    let newFrame = Unmanaged<CVPixelBuffer>.fromOpaque(newFramePointer)  // already retained by video decoder
     videoTexture.updateFrame(textureID: textureID, pixelBuffer: newFrame)
   }
 

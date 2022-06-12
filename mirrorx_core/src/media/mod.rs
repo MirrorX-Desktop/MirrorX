@@ -1,5 +1,5 @@
 /// cbindgen:ignore
-mod bindings;
+pub mod bindings;
 
 /// cbindgen:ignore
 mod ffi_log;
@@ -24,3 +24,7 @@ pub mod video_frame;
 
 /// cbindgen:ignore
 pub mod video_packet;
+
+pub mod frame;
+
+pub mod libyuv;

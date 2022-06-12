@@ -6,17 +6,19 @@ use crate::media::{
                 AVCodecContext, AV_CODEC_FLAG2_LOCAL_HEADER,
             },
             codec::{avcodec_find_encoder_by_name, AVCodec},
-            packet::{av_new_packet, av_packet_alloc, av_packet_unref, AVPacket},
+            packet::{av_new_packet, av_packet_alloc, av_packet_free, av_packet_unref, AVPacket},
         },
         avutil::{
             error::{AVERROR, AVERROR_EOF, AVERROR_OPTION_NOT_FOUND},
-            frame::{av_frame_alloc, av_frame_get_buffer, av_frame_make_writable, AVFrame},
+            frame::{
+                av_frame_alloc, av_frame_free, av_frame_get_buffer, av_frame_make_writable, AVFrame,
+            },
             imgutils::av_image_get_buffer_size,
             log::{av_log_set_flags, av_log_set_level, AV_LOG_SKIP_REPEATED, AV_LOG_TRACE},
             opt::av_opt_set,
             pixfmt::{
-                AVCOL_PRI_BT709, AVCOL_RANGE_JPEG, AVCOL_SPC_BT709, AVCOL_TRC_BT709,
-                AV_PIX_FMT_NV12,
+                AVCOL_PRI_BT709, AVCOL_RANGE_JPEG, AVCOL_RANGE_MPEG, AVCOL_SPC_BT709,
+                AVCOL_TRC_BT709, AVCOL_TRC_IEC61966_2_1, AV_PIX_FMT_NV12,
             },
             rational::AVRational,
         },
@@ -26,6 +28,7 @@ use crate::media::{
 use anyhow::{bail, Ok};
 use crossbeam_channel::{bounded, Receiver, Sender};
 use std::{ffi::CString, slice::from_raw_parts};
+use tracing::error;
 
 pub struct VideoEncoder {
     codec: *const AVCodec,
@@ -60,7 +63,7 @@ impl VideoEncoder {
                 bail!("find encoder failed");
             }
 
-            let mut codec_ctx = avcodec_alloc_context3(codec);
+            let codec_ctx = avcodec_alloc_context3(codec);
             if codec_ctx.is_null() {
                 bail!("alloc codec context failed");
             }
@@ -73,55 +76,27 @@ impl VideoEncoder {
             };
             (*codec_ctx).framerate = AVRational { num: fps, den: 1 };
             (*codec_ctx).gop_size = fps * 3;
-            (*codec_ctx).bit_rate = 40000000;
+            (*codec_ctx).bit_rate = 80000000;
+            (*codec_ctx).rc_max_rate = 80000000;
+            (*codec_ctx).rc_min_rate = 80000000;
+            (*codec_ctx).rc_buffer_size = 80000000;
+            (*codec_ctx).rc_initial_buffer_occupancy = (*codec_ctx).rc_buffer_size * 3 / 4;
             (*codec_ctx).has_b_frames = 0;
             (*codec_ctx).max_b_frames = 0;
-            (*codec_ctx).qmax = 28;
-            (*codec_ctx).qmin = 18;
+            (*codec_ctx).bit_rate_tolerance = 1;
             (*codec_ctx).thread_count = 2;
             (*codec_ctx).pix_fmt = AV_PIX_FMT_NV12;
             (*codec_ctx).flags |= AV_CODEC_FLAG2_LOCAL_HEADER;
             (*codec_ctx).color_range = AVCOL_RANGE_JPEG;
             (*codec_ctx).color_primaries = AVCOL_PRI_BT709;
-            (*codec_ctx).color_trc = AVCOL_TRC_BT709;
+            (*codec_ctx).color_trc = AVCOL_PRI_BT709;
             (*codec_ctx).colorspace = AVCOL_SPC_BT709;
-
-            let frame = av_frame_alloc();
-            if frame.is_null() {
-                bail!("av frame alloc failed");
-            }
-
-            (*frame).width = frame_width;
-            (*frame).height = frame_height;
-            (*frame).format = AV_PIX_FMT_NV12;
-            (*frame).color_range = AVCOL_RANGE_JPEG;
-            (*frame).color_primaries = AVCOL_PRI_BT709;
-            (*frame).color_trc = AVCOL_TRC_BT709;
-            (*frame).color_space = AVCOL_SPC_BT709;
-
-            ret = av_frame_get_buffer(frame, 1);
-            if ret < 0 {
-                bail!("av_frame_get_buffer failed ret={}", ret);
-            }
-
-            let packet = av_packet_alloc();
-            if packet.is_null() {
-                bail!("av_packet_alloc failed");
-            }
-
-            let packet_size =
-                av_image_get_buffer_size((*frame).format, frame_width, frame_height, 32);
-
-            ret = av_new_packet(packet, packet_size);
-            if ret < 0 {
-                bail!("av_new_packet failed ret={}", ret);
-            }
 
             Ok(VideoEncoder {
                 codec,
                 codec_ctx,
-                frame,
-                packet,
+                frame: std::ptr::null_mut(),
+                packet: std::ptr::null_mut(),
                 output_tx: None,
                 frame_height,
                 frame_width,
@@ -181,7 +156,9 @@ impl VideoEncoder {
     }
 
     pub fn encode(
-        &self,
+        &mut self,
+        width: i32,
+        height: i32,
         lumina_plane_bytes_address: *mut u8,
         lumina_plane_stride: i32,
         chrominance_plane_bytes_address: *mut u8,
@@ -193,6 +170,52 @@ impl VideoEncoder {
     ) {
         unsafe {
             let mut ret: i32;
+
+            if self.frame.is_null()
+                || (*self.frame).width != width
+                || (*self.frame).height != height
+            {
+                if !self.frame.is_null() {
+                    av_frame_free(&mut self.frame);
+                }
+
+                if !self.packet.is_null() {
+                    av_packet_free(&mut self.packet);
+                }
+
+                let frame = av_frame_alloc();
+                if frame.is_null() {
+                    error!("av frame alloc failed");
+                    return;
+                }
+
+                (*frame).width = width;
+                (*frame).height = height;
+                (*frame).format = AV_PIX_FMT_NV12;
+
+                ret = av_frame_get_buffer(frame, 1);
+                if ret < 0 {
+                    error!(ret = ret, "av_frame_get_buffer failed");
+                    return;
+                }
+
+                let packet = av_packet_alloc();
+                if packet.is_null() {
+                    error!("av_packet_alloc failed");
+                    return;
+                }
+
+                let packet_size = av_image_get_buffer_size((*frame).format, width, height, 32);
+
+                ret = av_new_packet(packet, packet_size);
+                if ret < 0 {
+                    error!(ret = ret, "av_new_packet failed");
+                    return;
+                }
+
+                self.frame = frame;
+                self.packet = packet;
+            }
 
             ret = av_frame_make_writable(self.frame);
             if ret < 0 {

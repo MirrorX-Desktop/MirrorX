@@ -1,5 +1,11 @@
-use crate::media::{bindings::macos::CMSampleBufferRef, video_encoder::VideoEncoder};
-use block::{ConcreteBlock, RcBlock};
+use crate::media::{
+    bindings::macos::{
+        CMSampleBufferGetImageBuffer, CMSampleBufferGetSampleTimingInfo, CMSampleBufferIsValid,
+        CMSampleBufferRef, CMSampleTimingInfo, CVPixelBufferRetain,
+    },
+    frame::CaptureFrame,
+};
+use crossbeam_channel::Sender;
 use objc::{
     class,
     declare::ClassDecl,
@@ -7,32 +13,19 @@ use objc::{
     runtime::{Class, Object, Protocol, Sel},
     sel, sel_impl,
 };
-use std::{ffi::c_void, sync::Once};
+use std::{os::raw::c_void, sync::Once};
+use tracing::error;
 
 static VIDEO_DATA_OUTPUT_CALLBACK_CLASS_INIT_ONCE: Once = Once::new();
 
 pub struct VideoDataOutputCallback {}
 
 impl VideoDataOutputCallback {
-    pub fn set_callback(
-        &mut self,
-        callback: impl Fn(&mut VideoEncoder, CMSampleBufferRef) -> () + 'static,
-    ) {
+    pub fn set_tx(&mut self, tx: Sender<CaptureFrame>) {
         unsafe {
             let obj = &mut *(self as *mut _ as *mut Object);
-
-            let block = ConcreteBlock::new(callback).copy();
-            let block_ptr = Box::into_raw(Box::new(block));
-            msg_send![obj, setCallback: block_ptr as *const c_void]
-        }
-    }
-
-    pub fn set_video_encoder(&mut self, video_encoder: VideoEncoder) {
-        unsafe {
-            let obj = &mut *(self as *mut _ as *mut Object);
-
-            let video_encoder_ptr = Box::into_raw(Box::new(video_encoder));
-            msg_send![obj, setVideoEncoder: video_encoder_ptr as *mut c_void]
+            let tx_ptr = Box::into_raw(Box::new(tx));
+            msg_send![obj, setTx: tx_ptr as *mut c_void]
         }
     }
 }
@@ -45,71 +38,25 @@ impl objc_foundation::INSObject for VideoDataOutputCallback {
             let super_class = class!(NSObject);
             let mut cls = ClassDecl::new("VideoOutputCallback", super_class).unwrap();
 
-            cls.add_ivar::<*const c_void>("_capture_callback");
-            cls.add_ivar::<*mut c_void>("_video_encoder");
+            // ivars
 
-            extern "C" fn set_callback(this: &mut Object, _cmd: Sel, callback: *const c_void) {
-                unsafe {
-                    this.set_ivar("_capture_callback", callback);
-                }
+            cls.add_ivar::<*mut c_void>("_tx");
+
+            // methods
+
+            extern "C" fn set_tx(this: &mut Object, _cmd: Sel, tx_ptr: *mut c_void) {
+                unsafe { this.set_ivar("_tx", tx_ptr) }
             }
 
-            extern "C" fn get_callback(this: &Object, _cmd: Sel) -> *const c_void {
-                unsafe { *this.get_ivar("_capture_callback") }
+            let set_tx_fn: extern "C" fn(&mut Object, Sel, *mut c_void) = set_tx;
+            cls.add_method(sel!(setTx:), set_tx_fn);
+
+            extern "C" fn get_tx(this: &Object, _cmd: Sel) -> *mut c_void {
+                unsafe { *this.get_ivar("_tx") }
             }
 
-            extern "C" fn set_video_encoder(this: &mut Object, _cmd: Sel, callback: *mut c_void) {
-                unsafe {
-                    this.set_ivar("_video_encoder", callback);
-                }
-            }
-
-            extern "C" fn get_video_encoder(this: &Object, _cmd: Sel) -> *mut c_void {
-                unsafe { *this.get_ivar("_video_encoder") }
-            }
-
-            extern "C" fn capture_out_callback(
-                this: &mut Object,
-                _: Sel,
-                _: *mut Object,
-                #[allow(non_snake_case)] didOutputSampleBuffer: CMSampleBufferRef,
-                _: *mut Object,
-            ) {
-                unsafe {
-                    let callback_block: *mut RcBlock<(&VideoEncoder, CMSampleBufferRef), ()> =
-                        msg_send![this, callback];
-
-                    let video_encoder: *mut VideoEncoder = msg_send![this, videoEncoder];
-
-                    (&*callback_block).call((
-                        &mut *video_encoder as &mut VideoEncoder,
-                        didOutputSampleBuffer,
-                    ));
-                }
-            }
-
-            extern "C" fn capture_drop_callback(
-                _: &mut Object,
-                _: Sel,
-                _: *mut Object,
-                _: *mut Object,
-                _: *mut Object,
-            ) {
-            }
-
-            let set_callback_fn: extern "C" fn(&mut Object, Sel, *const c_void) = set_callback;
-            cls.add_method(sel!(setCallback:), set_callback_fn);
-
-            let get_callback_fn: extern "C" fn(&Object, Sel) -> *const c_void = get_callback;
-            cls.add_method(sel!(callback), get_callback_fn);
-
-            let set_video_encoder_fn: extern "C" fn(&mut Object, Sel, *mut c_void) =
-                set_video_encoder;
-            cls.add_method(sel!(setVideoEncoder:), set_video_encoder_fn);
-
-            let get_video_encoder_fn: extern "C" fn(&Object, Sel) -> *mut c_void =
-                get_video_encoder;
-            cls.add_method(sel!(videoEncoder), get_video_encoder_fn);
+            let get_tx_fn: extern "C" fn(&Object, Sel) -> *mut c_void = get_tx;
+            cls.add_method(sel!(tx), get_tx_fn);
 
             let capture_out_callback_fn: extern "C" fn(
                 &mut Object,
@@ -141,6 +88,69 @@ impl objc_foundation::INSObject for VideoDataOutputCallback {
                 Protocol::get("AVCaptureVideoDataOutputSampleBufferDelegate").unwrap(),
             );
 
+            // protocol implementations
+
+            extern "C" fn capture_out_callback(
+                this: &mut Object,
+                _: Sel,
+                _: *mut Object,
+                #[allow(non_snake_case)] didOutputSampleBuffer: CMSampleBufferRef,
+                _: *mut Object,
+            ) {
+                unsafe {
+                    if !CMSampleBufferIsValid(didOutputSampleBuffer) {
+                        tracing::error!("CMSampleBufferRef is invalid");
+                        return;
+                    }
+
+                    let mut timing_info: CMSampleTimingInfo = std::mem::zeroed();
+                    let ret = CMSampleBufferGetSampleTimingInfo(
+                        didOutputSampleBuffer,
+                        0,
+                        &mut timing_info,
+                    );
+                    if ret != 0 {
+                        tracing::error!(
+                            ret = ret,
+                            "get sample timing info from CMSampleBufferRef failed"
+                        );
+                        return;
+                    }
+
+                    let image_buffer = CMSampleBufferGetImageBuffer(didOutputSampleBuffer);
+                    if image_buffer.is_null() {
+                        tracing::error!("get image buffer from CMSampleBufferRef failed");
+                        return;
+                    }
+
+                    let tx: *mut c_void = msg_send![this, tx];
+                    if tx.is_null() {
+                        return;
+                    }
+
+                    let tx = std::mem::transmute::<*mut c_void, &mut Sender<CaptureFrame>>(tx);
+
+                    CVPixelBufferRetain(image_buffer);
+
+                    let capture_frame = CaptureFrame {
+                        cv_pixel_buffer: image_buffer,
+                    };
+
+                    if let Err(err) = tx.send(capture_frame) {
+                        error!("send capture frame failed");
+                    }
+                }
+            }
+
+            extern "C" fn capture_drop_callback(
+                _: &mut Object,
+                _: Sel,
+                _: *mut Object,
+                _: *mut Object,
+                _: *mut Object,
+            ) {
+            }
+
             cls.register();
         });
 
@@ -153,14 +163,10 @@ impl Drop for VideoDataOutputCallback {
         unsafe {
             let obj = &mut *(self as *mut _ as *mut Object);
 
-            let block_ptr: *const c_void = msg_send![obj, callback];
-            let block =
-                Box::from_raw(block_ptr as *mut RcBlock<(&mut VideoEncoder, *mut c_void), ()>);
-            drop(block);
-
-            let video_encoder_ptr: *mut c_void = msg_send![obj, videoEncoder];
-            let video_encoder = Box::from_raw(video_encoder_ptr as *mut VideoEncoder);
-            drop(video_encoder);
+            let tx_ptr: *mut c_void = msg_send![obj, tx];
+            if !tx_ptr.is_null() {
+                Box::from_raw(tx_ptr as *mut Sender<CaptureFrame>);
+            }
 
             msg_send![obj, release]
         }

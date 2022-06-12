@@ -1,12 +1,12 @@
 use crate::media::bindings::macos::{
     kCVPixelBufferHeightKey, kCVPixelBufferPixelFormatTypeKey, kCVPixelBufferWidthKey,
-    kCVPixelFormatType_420YpCbCr8BiPlanarFullRange, CMSampleBufferRef,
+    kCVPixelFormatType_32BGRA, kCVPixelFormatType_420YpCbCr8BiPlanarFullRange,
+    kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange,
 };
-use crate::media::{
-    desktop_duplicator::macos::video_data_output_callback::VideoDataOutputCallback,
-    video_encoder::VideoEncoder,
-};
+use crate::media::desktop_duplicator::macos::video_data_output_callback::VideoDataOutputCallback;
+use crate::media::frame::CaptureFrame;
 use core_foundation::{base::ToVoid, dictionary::CFMutableDictionary, number::CFNumber};
+use crossbeam_channel::Sender;
 use dispatch::ffi::{dispatch_queue_create, dispatch_release, DISPATCH_QUEUE_SERIAL};
 use objc::{
     class, msg_send,
@@ -23,10 +23,7 @@ pub struct AVCaptureVideoDataOutput {
 }
 
 impl AVCaptureVideoDataOutput {
-    pub fn new(
-        video_encoder: VideoEncoder,
-        callback: impl Fn(&mut VideoEncoder, CMSampleBufferRef) -> () + 'static,
-    ) -> Self {
+    pub fn new(tx: Sender<CaptureFrame>) -> Self {
         unsafe {
             let cls = class!(AVCaptureVideoDataOutput);
             let obj: *mut Object = msg_send![cls, new];
@@ -40,8 +37,7 @@ impl AVCaptureVideoDataOutput {
             video_settings.add(&kCVPixelBufferHeightKey.to_void(), &CFNumber::from(1080i32));
 
             let mut delegate = VideoDataOutputCallback::new();
-            delegate.set_callback(callback);
-            delegate.set_video_encoder(video_encoder);
+            delegate.set_tx(tx);
 
             let queue_label =
                 CString::new("cloud.mirrorx.desktop_duplicator.video_data_output_queue").unwrap();
@@ -63,5 +59,11 @@ impl AVCaptureVideoDataOutput {
 
     pub fn obj_class(&self) -> *const Object {
         self.obj
+    }
+}
+
+impl Drop for AVCaptureVideoDataOutput {
+    fn drop(&mut self) {
+        unsafe { msg_send![self.obj, release] }
     }
 }

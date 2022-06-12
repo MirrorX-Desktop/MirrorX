@@ -23,13 +23,16 @@ class DesktopPage extends StatelessWidget {
         ),
         Expanded(
           child: RepaintBoundary(
-            child: Center(
-              child: AspectRatio(
-                aspectRatio: 16.0 / 9.0,
-                child: Texture(
-                  textureId: resp.textureID,
-                  freeze: true,
-                  filterQuality: FilterQuality.none,
+            child: Container(
+              color: Colors.black,
+              child: Center(
+                child: AspectRatio(
+                  aspectRatio: 16.0 / 9.0,
+                  child: Texture(
+                    textureId: resp.textureID,
+                    freeze: true,
+                    filterQuality: FilterQuality.none,
+                  ),
                 ),
               ),
             ),

@@ -45,7 +45,7 @@ clone_source() {
         echo "OK, found at: $dst_dir"
     else
         echo "Not exists, clone repository"
-        git clone -b "$branch" --depth=1 "$repo_url" "$dst_dir"
+        git clone -b "$branch" --depth=1 "$repo_url" "$dst_dir" || exit
     fi
 }
 
@@ -258,6 +258,31 @@ build_ffmpeg() {
     echo "Build ffmpeg success"
 }
 
+build_libyuv() {
+    src_dir=$1
+    dst_dir=$2
+    absolute_dst_dir="$BASE_DIR"/"$dst_dir"
+
+    check_already_built "libyuv" "$src_dir" "$dst_dir"
+    already_built=$?
+
+    if [ "$already_built" = 1 ]; then
+        return
+    fi
+
+    echo "Build libyuv..."
+    cd "$src_dir" || exit
+
+    mkdir out
+    cd out || exit
+    cmake -DCMAKE_INSTALL_PREFIX="$absolute_dst_dir" -DCMAKE_BUILD_TYPE="Release" -DJPEG_NAMES="" .. || exit
+    cmake --build . --config Release || exit
+    cmake --build . --target install --config Release || exit
+
+    cd "$BASE_DIR" || exit
+    echo "Build libyuv success"
+}
+
 gen_libvpx_pc() {
     build_dst_dir=$(readlink -f "$1")
     pc_path="$build_dst_dir"/lib/pkgconfig/vpx.pc
@@ -318,11 +343,13 @@ clone_source "x264" "https://code.videolan.org/videolan/x264.git" "stable" "./de
 # clone_source "opus" "https://gitlab.xiph.org/xiph/opus.git" "v1.3.1" "./dependencies_repo/opus"
 # clone_source "libvpx" "https://github.com/webmproject/libvpx.git" "main" "./dependencies_repo/libvpx"
 clone_source "ffmpeg" "https://git.ffmpeg.org/ffmpeg.git" "release/5.0" "./dependencies_repo/ffmpeg"
+clone_source "libyuv" "https://chromium.googlesource.com/libyuv/libyuv" "stable" "./dependencies_repo/libyuv"
 
 build_x264 "./dependencies_repo/x264" "./dependencies_build/x264"
 # build_x265 "./dependencies_repo/x265" "./dependencies_build/x265"
 # build_opus "./dependencies_repo/opus" "./dependencies_build/opus"
 # build_libvpx "./dependencies_repo/libvpx" "./dependencies_build/libvpx"
+build_libyuv "./dependencies_repo/libyuv" "./dependencies_build/libyuv"
 build_ffmpeg "./dependencies_build" "./dependencies_repo/ffmpeg" "./dependencies_build/ffmpeg"
 
 echo "All dependencies has built successfully!"

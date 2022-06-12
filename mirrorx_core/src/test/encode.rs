@@ -1,3 +1,8 @@
+use tracing::info;
+
+#[cfg(target_os = "macos")]
+use crate::media::bindings::macos::*;
+
 #[test]
 fn test_encode() -> anyhow::Result<()> {
     tracing_subscriber::fmt::init();
@@ -22,12 +27,75 @@ fn test_encode() -> anyhow::Result<()> {
 
     let packet_rx = encoder.open()?;
 
-    let mut desktop_duplicator =
-        crate::media::desktop_duplicator::DesktopDuplicator::new(60, encoder)?;
+    let (mut desktop_duplicator, capture_frame_rx) =
+        crate::media::desktop_duplicator::DesktopDuplicator::new(60)?;
 
     let mut decoder = crate::media::video_decoder::VideoDecoder::new("h264")?;
 
     let frame_rx = decoder.open()?;
+
+    std::thread::spawn(move || unsafe {
+        loop {
+            let capture_frame = match capture_frame_rx.recv() {
+                Ok(frame) => frame,
+                Err(err) => {
+                    tracing::error!(?err, "capture_frame_rx.recv");
+                    return;
+                }
+            };
+
+            let image_buffer = capture_frame.cv_pixel_buffer;
+
+            // let pix_fmt = CVPixelBufferGetPixelFormatType(image_buffer);
+            let color_matrix = CVBufferGetAttachment(
+                image_buffer,
+                kCVImageBufferYCbCrMatrixKey,
+                std::ptr::null_mut(),
+            );
+
+            if color_matrix == kCVImageBufferYCbCrMatrix_ITU_R_601_4 as *const _ {
+                info!("604")
+            } else if color_matrix == kCVImageBufferYCbCrMatrix_ITU_R_709_2 as *const _ {
+                info!("709")
+            } else if color_matrix == kCVImageBufferYCbCrMatrix_ITU_R_2020 as *const _ {
+                info!("2020")
+            } else if color_matrix == kCVImageBufferYCbCrMatrix_SMPTE_240M_1995 as *const _ {
+                info!("240M")
+            } else {
+                info!("unknown")
+            }
+
+            let lock_result = CVPixelBufferLockBaseAddress(image_buffer, 1);
+            if lock_result != 0 {
+                tracing::error!("CVPixelBufferLockBaseAddress failed");
+                return;
+            }
+
+            let width = CVPixelBufferGetWidth(image_buffer);
+            let height = CVPixelBufferGetHeight(image_buffer);
+            let y_plane_stride = CVPixelBufferGetBytesPerRowOfPlane(image_buffer, 0);
+            let y_plane_bytes_address = CVPixelBufferGetBaseAddressOfPlane(image_buffer, 0);
+            // let y_plane_height = CVPixelBufferGetHeightOfPlane(image_buffer, 0);
+
+            let uv_plane_stride = CVPixelBufferGetBytesPerRowOfPlane(image_buffer, 1);
+            let uv_plane_bytes_address = CVPixelBufferGetBaseAddressOfPlane(image_buffer, 1);
+
+            encoder.encode(
+                width as i32,
+                height as i32,
+                y_plane_bytes_address as *mut u8,
+                y_plane_stride as i32,
+                uv_plane_bytes_address as *mut u8,
+                uv_plane_stride as i32,
+                0, // timing_info.decode_timestamp.value,
+                0, // timing_info.decode_timestamp.time_scale,
+                0, // timing_info.presentation_timestamp.value,
+                0, // timing_info.presentation_timestamp.time_scale,
+            );
+
+            CVPixelBufferUnlockBaseAddress(image_buffer, 1);
+        }
+    });
 
     std::thread::spawn(move || {
         let mut total_bytes = 0;
