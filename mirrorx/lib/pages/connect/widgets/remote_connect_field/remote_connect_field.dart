@@ -218,7 +218,7 @@ class _RemoteConnectFieldState extends State<RemoteConnectField> {
     final textController = TextEditingController();
     return showGeneralDialog<String?>(
       context: context,
-      pageBuilder: (ctx, a1, a2) {
+      pageBuilder: (context, animationValue1, animationValue2) {
         return AlertDialog(
           title: const Text("MirrorX", textAlign: TextAlign.center),
           content: Column(
@@ -245,21 +245,21 @@ class _RemoteConnectFieldState extends State<RemoteConnectField> {
               },
             ),
             TextButton(
-                child: Text(Tr.of(context).dialogCancel),
-                onPressed: () {
-                  textController.dispose();
-                  Navigator.of(context).pop(null);
-                }),
+              child: Text(Tr.of(context).dialogCancel),
+              onPressed: () {
+                textController.dispose();
+                Navigator.of(context).pop(null);
+              },
+            ),
           ],
         );
       },
       barrierDismissible: false,
-      transitionBuilder: (ctx, a1, a2, child) {
-        // var curve = Curves.easeInOut.transform(a1.value);
+      transitionBuilder: (context, animationValue1, animationValue2, child) {
         return Transform.scale(
-          scale: a1.value,
+          scale: animationValue1.value,
           child: Opacity(
-            opacity: a1.value,
+            opacity: animationValue1.value,
             child: child,
           ),
         );
