@@ -15,7 +15,7 @@ use anyhow::anyhow;
 use ring::rand::SecureRandom;
 use rsa::{PaddingScheme, PublicKeyParts, RsaPrivateKey, RsaPublicKey};
 use std::{sync::Arc, time::Duration};
-use tracing::error;
+use tracing::{error, info};
 
 pub async fn handle_connect(
     endpoint: Arc<EndPoint>,
@@ -313,5 +313,9 @@ pub async fn handle_media_transmission(
     endpoint: Arc<EndPoint>,
     media_transmission: MediaTransmission,
 ) {
+    info!(
+        "receive media transmission, length: {}",
+        media_transmission.data.len()
+    );
     endpoint.transfer_desktop_video_frame(media_transmission.data);
 }

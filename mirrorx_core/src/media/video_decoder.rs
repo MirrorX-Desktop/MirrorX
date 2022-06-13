@@ -227,7 +227,7 @@ impl VideoDecoder {
                     let native_frame = (*self.decode_frame).data[3] as *mut libc::c_void;
 
                     if let Some(tx) = &self.output_tx {
-                        if let Err(e) = tx.try_send(NativeFrame(native_frame)) {
+                        if let Err(e) = tx.send(NativeFrame(native_frame)) {
                             tracing::error!(e = ?e, "send video frame failed");
                         }
                     }

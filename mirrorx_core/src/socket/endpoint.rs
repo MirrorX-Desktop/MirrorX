@@ -5,6 +5,7 @@ use crate::{
 };
 use anyhow::bail;
 use bincode::Options;
+use crossbeam::channel::{Receiver, Sender, TrySendError};
 use dashmap::DashMap;
 use once_cell::sync::OnceCell;
 use ring::aead::{BoundKey, Nonce, NonceSequence, OpeningKey, SealingKey, UnboundKey};
@@ -18,10 +19,8 @@ pub struct EndPoint {
     opening_key: Mutex<Option<OpeningKey<NonceValue>>>,
     sealing_key: Mutex<Option<SealingKey<NonceValue>>>,
     cache: MemoryCache,
-    // texture_id: OnceCell<i64>,
-    // video_texture_ptr: OnceCell<i64>,
-    // update_frame_callback: OnceCell<unsafe extern "C" fn(i64, *mut c_void, *mut c_void)>,
     video_decoder: OnceCell<VideoDecoder>,
+    video_decoder_tx: OnceCell<Sender<Vec<u8>>>,
 }
 
 impl EndPoint {
@@ -32,10 +31,8 @@ impl EndPoint {
             opening_key: Mutex::new(None),
             sealing_key: Mutex::new(None),
             cache: MemoryCache::new(),
-            // texture_id: OnceCell::new(),
-            // video_texture_ptr: OnceCell::new(),
-            // update_frame_callback: OnceCell::new(),
             video_decoder: OnceCell::new(),
+            video_decoder_tx: OnceCell::new(),
         }
     }
 
@@ -130,6 +127,17 @@ impl EndPoint {
 
             let frame_rx = decoder.open()?;
 
+            let (decoder_tx, decoder_rx) = crossbeam::channel::bounded::<Vec<u8>>(120);
+            std::thread::spawn(move || loop {
+                match decoder_rx.recv() {
+                    Ok(data) => decoder.decode(data.as_ptr(), data.len() as i32, 0, 0),
+                    Err(err) => {
+                        error!("decoder_rx.recv: {}", err);
+                        break;
+                    }
+                }
+            });
+
             std::thread::spawn(move || loop {
                 match frame_rx.recv() {
                     Ok(video_frame) => update_frame_callback(
@@ -144,15 +152,20 @@ impl EndPoint {
                 }
             });
 
-            let _ = self.video_decoder.set(decoder);
+            let _ = self.video_decoder_tx.set(decoder_tx);
 
             Ok(())
         }
     }
 
     pub fn transfer_desktop_video_frame(&self, frame: Vec<u8>) {
-        if let Some(decoder) = self.video_decoder.get() {
-            decoder.decode(frame.as_ptr(), frame.len() as i32, 0, 0);
+        if let Some(decoder) = self.video_decoder_tx.get() {
+            if let Err(err) = decoder.try_send(frame) {
+                match err {
+                    TrySendError::Full(_) => return,
+                    TrySendError::Disconnected(_) => return,
+                }
+            }
         }
     }
 }
