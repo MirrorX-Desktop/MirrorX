@@ -48,11 +48,11 @@ class DesktopPage extends StatelessWidget {
   }
 
   Future<void> prepare() async {
-    // await MirrorXCoreSDK.instance.beginVideo(
-    //     textureId: resp.textureID,
-    //     videoTexturePtr: resp.videoTexturePointer,
-    //     updateFrameCallbackPtr: resp.updateFrameCallbackPointer);
-    return Future.delayed(Duration(seconds: 10));
+    await MirrorXCoreSDK.instance.desktopStartMediaTransmission(
+        remoteDeviceId: model.remoteDeviceID,
+        textureId: model.textureID,
+        videoTexturePtr: model.videoTexturePointer,
+        updateFrameCallbackPtr: model.updateFrameCallbackPointer);
   }
 
   Widget _buildDesktopSurface() {
