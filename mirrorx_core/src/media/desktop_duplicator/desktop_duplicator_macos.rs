@@ -5,7 +5,7 @@ use super::macos::{
 };
 use crate::media::{bindings::macos::*, frame::CaptureFrame};
 use anyhow::bail;
-use crossbeam_channel::Receiver;
+use crossbeam::channel::Receiver;
 use tracing::info;
 
 pub struct DesktopDuplicator {
@@ -18,7 +18,7 @@ impl DesktopDuplicator {
     pub fn new(fps: i32) -> anyhow::Result<(Self, Receiver<CaptureFrame>)> {
         let mut capture_session = AVCaptureSession::new();
         capture_session.begin_configuration();
-        // capture_session.set_session_preset(AVCaptureSessionPreset::AVCaptureSessionPresetHigh);
+        capture_session.set_session_preset(AVCaptureSessionPreset::AVCaptureSessionPresetHigh);
 
         let capture_screen_input = AVCaptureScreenInput::new(0);
         capture_screen_input.set_captures_cursor(true);
@@ -31,7 +31,7 @@ impl DesktopDuplicator {
             bail!("can't add input");
         }
 
-        let (tx, rx) = crossbeam_channel::bounded(1);
+        let (tx, rx) = crossbeam::channel::bounded(1);
 
         let capture_video_data_output = AVCaptureVideoDataOutput::new(tx);
 

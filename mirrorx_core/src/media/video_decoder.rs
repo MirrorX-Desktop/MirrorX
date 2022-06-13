@@ -1,46 +1,33 @@
-#[cfg(target_os = "macos")]
-use crate::media::bindings::macos::{CVPixelBufferRef, CVPixelBufferRetain};
-
 use crate::media::{
+    bindings::macos::CVPixelBufferRetain,
     ffmpeg::{
         avcodec::{
             avcodec::{
                 av_parser_close, av_parser_init, av_parser_parse2, avcodec_alloc_context3,
                 avcodec_free_context, avcodec_open2, avcodec_receive_frame, avcodec_send_packet,
-                AVCodecContext, AVCodecParserContext, AV_CODEC_FLAG2_LOCAL_HEADER,
+                AVCodecContext, AVCodecParserContext,
             },
-            codec::{
-                avcodec_find_decoder_by_name, avcodec_get_hw_config, AVCodec,
-                AV_CODEC_CAP_TRUNCATED,
-            },
+            codec::{avcodec_find_decoder_by_name, avcodec_get_hw_config, AVCodec},
             packet::{av_packet_alloc, av_packet_free, av_packet_unref, AVPacket},
         },
         avutil::{
-            buffer::av_buffer_ref,
             error::{AVERROR, AVERROR_EOF},
             frame::{av_frame_alloc, av_frame_free, AVFrame},
             hwcontext::{
                 av_hwdevice_ctx_create, av_hwdevice_get_type_name, av_hwdevice_iterate_types,
-                av_hwframe_transfer_data, AV_HWDEVICE_TYPE_NONE,
+                AV_HWDEVICE_TYPE_NONE,
             },
             log::{av_log_set_flags, av_log_set_level, AV_LOG_SKIP_REPEATED, AV_LOG_TRACE},
-            pixfmt::{
-                AVCOL_PRI_BT709, AVCOL_RANGE_JPEG, AVCOL_RANGE_MPEG, AVCOL_SPC_BT709,
-                AVCOL_TRC_BT709, AVCOL_TRC_IEC61966_2_1, AV_PIX_FMT_NV12,
-            },
+            pixfmt::{AVCOL_RANGE_JPEG, AV_PIX_FMT_NV12},
         },
     },
-    native_frame::{self, NativeFrame},
-    video_frame::VideoFrame,
+    frame::NativeFrame,
 };
 use anyhow::bail;
-use crossbeam_channel::{bounded, Receiver, Sender};
+use crossbeam::channel::{bounded, Receiver, Sender};
 use std::{
     ffi::{CStr, CString},
-    mem::zeroed,
-    os::raw::c_void,
     ptr,
-    slice::from_raw_parts,
 };
 
 pub struct VideoDecoder {
@@ -232,8 +219,10 @@ impl VideoDecoder {
                     // }
 
                     #[cfg(target_os = "macos")]
-                    let native_frame =
-                        CVPixelBufferRetain((*self.decode_frame).data[3] as CVPixelBufferRef);
+                    let native_frame = CVPixelBufferRetain(
+                        (*self.decode_frame).data[3]
+                            as crate::media::bindings::macos::CVPixelBufferRef,
+                    );
 
                     #[cfg(target_os = "windows")]
                     let native_frame = (*self.decode_frame).data[3] as *mut c_void;

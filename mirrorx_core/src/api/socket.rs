@@ -1,5 +1,6 @@
 use crate::provider::config::ConfigProvider;
 use crate::provider::endpoint::EndPointProvider;
+use crate::provider::socket::SocketProvider;
 use crate::socket::endpoint::CacheKey;
 use crate::socket::endpoint::EndPoint;
 use crate::socket::message::client_to_client::ConnectRequest;
@@ -16,7 +17,6 @@ use rsa::RsaPublicKey;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::Mutex;
-use tracing::Level;
 
 pub async fn desktop_connect(remote_device_id: String) -> anyhow::Result<()> {
     static CONNECT_MUTEX: Lazy<Mutex<()>> = Lazy::new(|| Mutex::new(()));
@@ -36,8 +36,9 @@ pub async fn desktop_connect(remote_device_id: String) -> anyhow::Result<()> {
         }
     };
 
-    let resp = endpoint
-        .desktop_connect(ConnectRequest {}, Duration::from_secs(20))
+    let socket_provider = SocketProvider::current()?;
+    let resp = socket_provider
+        .desktop_connect(endpoint.clone(), ConnectRequest {}, Duration::from_secs(20))
         .await?;
 
     let n = BigUint::from_bytes_le(&resp.pub_key_n);
@@ -112,8 +113,10 @@ pub async fn desktop_key_exchange_and_password_verify(
         )
     })?;
 
-    let resp = endpoint
+    let socket_provider = SocketProvider::current()?;
+    let resp = socket_provider
         .desktop_key_exchange_and_verify_password(
+            endpoint.clone(),
             KeyExchangeAndVerifyPasswordRequest {
                 password_secret,
                 exchange_pub_key,
@@ -209,6 +212,9 @@ pub async fn desktop_key_exchange_and_password_verify(
 
 pub async fn desktop_start_media_transmission(
     remote_device_id: String,
+    texture_id: i64,
+    video_texture_ptr: i64,
+    update_frame_callback_ptr: i64,
 ) -> anyhow::Result<StartMediaTransmissionReply> {
     let endpoint = EndPointProvider::current()?
         .get(&remote_device_id)
@@ -217,9 +223,29 @@ pub async fn desktop_start_media_transmission(
             &remote_device_id
         ))?;
 
-    let resp = endpoint
-        .desktop_start_media_transmission(StartMediaTransmissionRequest {}, Duration::from_secs(10))
-        .await?;
+    endpoint.start_desktop_render_thread(
+        texture_id,
+        video_texture_ptr,
+        update_frame_callback_ptr,
+    )?;
+
+    let socket_provider = SocketProvider::current()?;
+
+    let resp = match socket_provider
+        .desktop_start_media_transmission(
+            endpoint.clone(),
+            StartMediaTransmissionRequest {},
+            Duration::from_secs(10),
+        )
+        .await
+    {
+        Ok(resp) => resp,
+        Err(err) => {
+            EndPointProvider::current()?.remove(&remote_device_id);
+            tracing::error!("desktop_start_media_transmission: {}", err);
+            return Err(err);
+        }
+    };
 
     Ok(resp)
 }

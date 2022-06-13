@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+#![allow(unused)]
 
 pub mod avcodec;
 pub mod avutil;

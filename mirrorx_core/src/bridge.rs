@@ -166,6 +166,9 @@ pub extern "C" fn wire_desktop_key_exchange_and_password_verify(
 pub extern "C" fn wire_desktop_start_media_transmission(
     port_: i64,
     remote_device_id: *mut wire_uint_8_list,
+    texture_id: i64,
+    video_texture_ptr: i64,
+    update_frame_callback_ptr: i64,
 ) {
     FLUTTER_RUST_BRIDGE_HANDLER.wrap(
         WrapInfo {
@@ -175,26 +178,16 @@ pub extern "C" fn wire_desktop_start_media_transmission(
         },
         move || {
             let api_remote_device_id = remote_device_id.wire2api();
-            move |task_callback| desktop_start_media_transmission(api_remote_device_id)
-        },
-    )
-}
-
-#[no_mangle]
-pub extern "C" fn wire_desktop_register_frame_stream(
-    port_: i64,
-    remote_device_id: *mut wire_uint_8_list,
-) {
-    FLUTTER_RUST_BRIDGE_HANDLER.wrap(
-        WrapInfo {
-            debug_name: "desktop_register_frame_stream",
-            port: Some(port_),
-            mode: FfiCallMode::Stream,
-        },
-        move || {
-            let api_remote_device_id = remote_device_id.wire2api();
+            let api_texture_id = texture_id.wire2api();
+            let api_video_texture_ptr = video_texture_ptr.wire2api();
+            let api_update_frame_callback_ptr = update_frame_callback_ptr.wire2api();
             move |task_callback| {
-                desktop_register_frame_stream(task_callback.stream_sink(), api_remote_device_id)
+                desktop_start_media_transmission(
+                    api_remote_device_id,
+                    api_texture_id,
+                    api_video_texture_ptr,
+                    api_update_frame_callback_ptr,
+                )
             }
         },
     )
@@ -209,34 +202,6 @@ pub extern "C" fn wire_utility_generate_device_password(port_: i64) {
             mode: FfiCallMode::Normal,
         },
         move || move |task_callback| Ok(utility_generate_device_password()),
-    )
-}
-
-#[no_mangle]
-pub extern "C" fn wire_begin_video(
-    port_: i64,
-    texture_id: i64,
-    video_texture_ptr: i64,
-    update_frame_callback_ptr: i64,
-) {
-    FLUTTER_RUST_BRIDGE_HANDLER.wrap(
-        WrapInfo {
-            debug_name: "begin_video",
-            port: Some(port_),
-            mode: FfiCallMode::Normal,
-        },
-        move || {
-            let api_texture_id = texture_id.wire2api();
-            let api_video_texture_ptr = video_texture_ptr.wire2api();
-            let api_update_frame_callback_ptr = update_frame_callback_ptr.wire2api();
-            move |task_callback| {
-                begin_video(
-                    api_texture_id,
-                    api_video_texture_ptr,
-                    api_update_frame_callback_ptr,
-                )
-            }
-        },
     )
 }
 

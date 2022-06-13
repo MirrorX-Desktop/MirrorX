@@ -1,19 +1,16 @@
-use crate::{provider::socket::SocketProvider, utility::serializer::BINCODE_SERIALIZER};
-
-use super::{
-    message::client_to_client::{
-        ClientToClientMessage, ConnectReply, ConnectRequest, KeyExchangeAndVerifyPasswordReply,
-        KeyExchangeAndVerifyPasswordRequest, StartMediaTransmissionReply,
-        StartMediaTransmissionRequest,
-    },
-    packet::Packet,
+use super::{message::client_to_client::ClientToClientMessage, packet::Packet};
+use crate::{
+    media::video_decoder::VideoDecoder, provider::socket::SocketProvider,
+    utility::serializer::BINCODE_SERIALIZER,
 };
 use anyhow::bail;
 use bincode::Options;
 use dashmap::DashMap;
+use once_cell::sync::OnceCell;
 use ring::aead::{BoundKey, Nonce, NonceSequence, OpeningKey, SealingKey, UnboundKey};
-use std::{any::Any, time::Duration};
+use std::{any::Any, os::raw::c_void};
 use tokio::sync::Mutex;
+use tracing::error;
 
 pub struct EndPoint {
     local_device_id: String,
@@ -21,6 +18,10 @@ pub struct EndPoint {
     opening_key: Mutex<Option<OpeningKey<NonceValue>>>,
     sealing_key: Mutex<Option<SealingKey<NonceValue>>>,
     cache: MemoryCache,
+    // texture_id: OnceCell<i64>,
+    // video_texture_ptr: OnceCell<i64>,
+    // update_frame_callback: OnceCell<unsafe extern "C" fn(i64, *mut c_void, *mut c_void)>,
+    video_decoder: OnceCell<VideoDecoder>,
 }
 
 impl EndPoint {
@@ -31,6 +32,10 @@ impl EndPoint {
             opening_key: Mutex::new(None),
             sealing_key: Mutex::new(None),
             cache: MemoryCache::new(),
+            // texture_id: OnceCell::new(),
+            // video_texture_ptr: OnceCell::new(),
+            // update_frame_callback: OnceCell::new(),
+            video_decoder: OnceCell::new(),
         }
     }
 
@@ -63,6 +68,22 @@ impl EndPoint {
         *key = Some(sealing_key);
     }
 
+    pub async fn secure_open(&self, buf: &mut [u8]) -> anyhow::Result<()> {
+        match self
+            .opening_key
+            .lock()
+            .await
+            .as_mut()
+            .and_then(|key| Some(key.open_in_place(ring::aead::Aad::empty(), buf)))
+        {
+            Some(res) => match res {
+                Ok(_) => Ok(()),
+                Err(err) => bail!("secure_open: opening message failed: {}", err),
+            },
+            None => bail!("secure_open: opening key is not set"),
+        }
+    }
+
     pub async fn secure_seal(&self, message: ClientToClientMessage) -> anyhow::Result<()> {
         let mut buf = BINCODE_SERIALIZER.serialize(&message)?;
         let mut sealing_key = self.sealing_key.lock().await;
@@ -89,90 +110,50 @@ impl EndPoint {
             .await
     }
 
-    pub async fn secure_open(&self, buf: &mut [u8]) -> anyhow::Result<()> {
-        match self
-            .opening_key
-            .lock()
-            .await
-            .as_mut()
-            .and_then(|key| Some(key.open_in_place(ring::aead::Aad::empty(), buf)))
-        {
-            Some(res) => match res {
-                Ok(_) => Ok(()),
-                Err(err) => bail!("secure_open: opening message failed: {}", err),
-            },
-            None => bail!("secure_open: opening key is not set"),
+    pub fn start_desktop_render_thread(
+        &self,
+        texture_id: i64,
+        video_texture_ptr: i64,
+        update_frame_callback_ptr: i64,
+    ) -> anyhow::Result<()> {
+        unsafe {
+            let update_frame_callback = std::mem::transmute::<
+                *mut c_void,
+                unsafe extern "C" fn(
+                    texture_id: i64,
+                    video_texture_ptr: *mut c_void,
+                    new_frame_ptr: *mut c_void,
+                ),
+            >(update_frame_callback_ptr as *mut c_void);
+
+            let mut decoder = crate::media::video_decoder::VideoDecoder::new("h264")?;
+
+            let frame_rx = decoder.open()?;
+
+            std::thread::spawn(move || loop {
+                match frame_rx.recv() {
+                    Ok(video_frame) => update_frame_callback(
+                        texture_id,
+                        video_texture_ptr as *mut c_void,
+                        video_frame.0,
+                    ),
+                    Err(err) => {
+                        error!(err= ?err,"desktop render thread error");
+                        break;
+                    }
+                }
+            });
+
+            let _ = self.video_decoder.set(decoder);
+
+            Ok(())
         }
     }
 
-    pub async fn desktop_connect(
-        &self,
-        req: ConnectRequest,
-        timeout: Duration,
-    ) -> anyhow::Result<ConnectReply> {
-        SocketProvider::current()?
-            .call_client(
-                self.local_device_id.to_owned(),
-                self.remote_device_id.to_owned(),
-                ClientToClientMessage::ConnectRequest(req),
-                timeout,
-            )
-            .await
-            .and_then(|resp| match resp {
-                ClientToClientMessage::Error => bail!("desktop_connect: remote error"),
-                ClientToClientMessage::ConnectReply(message) => Ok(message),
-                _ => bail!("desktop_connect: mismatched reply type, got {}", resp),
-            })
-    }
-
-    pub async fn desktop_key_exchange_and_verify_password(
-        &self,
-        req: KeyExchangeAndVerifyPasswordRequest,
-        timeout: Duration,
-    ) -> anyhow::Result<KeyExchangeAndVerifyPasswordReply> {
-        SocketProvider::current()?
-            .call_client(
-                self.local_device_id.to_owned(),
-                self.remote_device_id.to_owned(),
-                ClientToClientMessage::KeyExchangeAndVerifyPasswordRequest(req),
-                timeout,
-            )
-            .await
-            .and_then(|resp| match resp {
-                ClientToClientMessage::Error => {
-                    bail!("desktop_key_exchange_and_verify_password: remote error")
-                }
-                ClientToClientMessage::KeyExchangeAndVerifyPasswordReply(message) => Ok(message),
-                _ => bail!(
-                    "desktop_key_exchange_and_verify_password: mismatched reply type, got {}",
-                    resp
-                ),
-            })
-    }
-
-    pub async fn desktop_start_media_transmission(
-        &self,
-        req: StartMediaTransmissionRequest,
-        timeout: Duration,
-    ) -> anyhow::Result<StartMediaTransmissionReply> {
-        SocketProvider::current()?
-            .call_client(
-                self.local_device_id.to_owned(),
-                self.remote_device_id.to_owned(),
-                ClientToClientMessage::StartMediaTransmissionRequest(req),
-                timeout,
-            )
-            .await
-            .and_then(|resp| match resp {
-                ClientToClientMessage::Error => {
-                    bail!("desktop_start_media_transmission: remote error")
-                }
-                ClientToClientMessage::StartMediaTransmissionReply(message) => Ok(message),
-                _ => bail!(
-                    "desktop_start_media_transmission: mismatched reply type, got {}",
-                    resp
-                ),
-            })
+    pub fn transfer_desktop_video_frame(&self, frame: Vec<u8>) {
+        if let Some(decoder) = self.video_decoder.get() {
+            decoder.decode(frame.as_ptr(), frame.len() as i32, 0, 0);
+        }
     }
 }
 

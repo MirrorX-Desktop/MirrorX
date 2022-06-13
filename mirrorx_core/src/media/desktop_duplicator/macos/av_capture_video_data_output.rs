@@ -1,12 +1,8 @@
-use crate::media::bindings::macos::{
-    kCVPixelBufferHeightKey, kCVPixelBufferPixelFormatTypeKey, kCVPixelBufferWidthKey,
-    kCVPixelFormatType_32BGRA, kCVPixelFormatType_420YpCbCr8BiPlanarFullRange,
-    kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange,
-};
+use crate::media::bindings::macos::*;
 use crate::media::desktop_duplicator::macos::video_data_output_callback::VideoDataOutputCallback;
 use crate::media::frame::CaptureFrame;
 use core_foundation::{base::ToVoid, dictionary::CFMutableDictionary, number::CFNumber};
-use crossbeam_channel::Sender;
+use crossbeam::channel::Sender;
 use dispatch::ffi::{dispatch_queue_create, dispatch_release, DISPATCH_QUEUE_SERIAL};
 use objc::{
     class, msg_send,
@@ -37,7 +33,7 @@ impl AVCaptureVideoDataOutput {
             video_settings.add(&kCVPixelBufferHeightKey.to_void(), &CFNumber::from(1080i32));
 
             let mut delegate = VideoDataOutputCallback::new();
-            delegate.set_tx(tx);
+            delegate.initialize(tx);
 
             let queue_label =
                 CString::new("cloud.mirrorx.desktop_duplicator.video_data_output_queue").unwrap();

@@ -1,4 +1,5 @@
 use core_foundation::{array::CFIndex, base::CFTypeRef, string::CFStringRef};
+use libc::size_t;
 use std::{ffi::c_void, os::raw::c_int};
 
 pub type CMTimeValue = i64;
@@ -60,19 +61,19 @@ extern "C" {
     pub fn CVPixelBufferLockBaseAddress(pixel_buffer: CVPixelBufferRef, lock_flags: u32) -> i32;
     pub fn CVPixelBufferUnlockBaseAddress(pixel_buffer: CVPixelBufferRef, unlock_flags: u32)
         -> i32;
-    pub fn CVPixelBufferGetWidth(pixel_buffer: CVPixelBufferRef) -> isize;
-    pub fn CVPixelBufferGetHeight(pixel_buffer: CVPixelBufferRef) -> isize;
+    pub fn CVPixelBufferGetWidth(pixel_buffer: CVPixelBufferRef) -> size_t;
+    pub fn CVPixelBufferGetHeight(pixel_buffer: CVPixelBufferRef) -> size_t;
     pub fn CVPixelBufferGetBytesPerRowOfPlane(
         pixel_buffer: CVPixelBufferRef,
-        planeIndex: u32,
-    ) -> u32;
+        planeIndex: size_t,
+    ) -> size_t;
     pub fn CVPixelBufferGetBaseAddressOfPlane(
         pixel_buffer: CVPixelBufferRef,
-        planeIndex: u32,
+        planeIndex: size_t,
     ) -> *mut c_void;
     pub fn CVPixelBufferGetHeightOfPlane(pixel_buffer: CVPixelBufferRef, planeIndex: u32) -> u32;
     pub fn CVPixelBufferRetain(texture: CVPixelBufferRef) -> CVPixelBufferRef;
-    pub fn CVPixelBufferRelease(texture: CVPixelBufferRef);
+    // pub fn CVPixelBufferRelease(texture: CVPixelBufferRef);
 
     pub fn CVBufferGetAttachment(
         buffer: *mut c_void,

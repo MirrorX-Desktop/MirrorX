@@ -5,7 +5,11 @@ use crate::{
         client_to_client_handler,
         endpoint::EndPoint,
         message::{
-            client_to_client::ClientToClientMessage,
+            client_to_client::{
+                ClientToClientMessage, ConnectReply, ConnectRequest,
+                KeyExchangeAndVerifyPasswordReply, KeyExchangeAndVerifyPasswordRequest,
+                MediaTransmission, StartMediaTransmissionReply, StartMediaTransmissionRequest,
+            },
             client_to_server::{ClientToServerMessage, HandshakeRequest, HeartBeatRequest},
             server_to_client::{HandshakeStatus, ServerToClientMessage},
         },
@@ -29,7 +33,7 @@ use tokio_util::codec::LengthDelimitedCodec;
 
 static CURRENT_SOCKET_PROVIDER: OnceCell<Arc<SocketProvider>> = OnceCell::new();
 
-macro_rules! handle_client_to_client_message {
+macro_rules! handle_client_to_client_call_message {
     ($endpoint:expr, $call_id:ident, $handler:path, $req:ident, $reply_type:path) => {
         RuntimeProvider::current()?.spawn(async move {
             let res = $handler($endpoint.clone(), $req)
@@ -111,7 +115,7 @@ impl SocketProvider {
         }
     }
 
-    pub async fn call_client(
+    async fn call_client(
         &self,
         from_device_id: String,
         to_device_id: String,
@@ -143,7 +147,7 @@ impl SocketProvider {
         }
     }
 
-    pub async fn call_server(
+    async fn call_server(
         &self,
         message: ClientToServerMessage,
         timeout: Duration,
@@ -227,6 +231,95 @@ impl SocketProvider {
         self.call_client_tx_map
             .remove(&call_id)
             .map(|entry| entry.1)
+    }
+
+    pub async fn desktop_connect(
+        &self,
+        endpoint: Arc<EndPoint>,
+        req: ConnectRequest,
+        timeout: Duration,
+    ) -> anyhow::Result<ConnectReply> {
+        self.call_client(
+            endpoint.local_device_id().to_owned(),
+            endpoint.remote_device_id().to_owned(),
+            ClientToClientMessage::ConnectRequest(req),
+            timeout,
+        )
+        .await
+        .and_then(|resp| match resp {
+            ClientToClientMessage::Error => bail!("desktop_connect: remote error"),
+            ClientToClientMessage::ConnectReply(message) => Ok(message),
+            _ => bail!("desktop_connect: mismatched reply type, got {}", resp),
+        })
+    }
+
+    pub async fn desktop_key_exchange_and_verify_password(
+        &self,
+        endpoint: Arc<EndPoint>,
+        req: KeyExchangeAndVerifyPasswordRequest,
+        timeout: Duration,
+    ) -> anyhow::Result<KeyExchangeAndVerifyPasswordReply> {
+        self.call_client(
+            endpoint.local_device_id().to_owned(),
+            endpoint.remote_device_id().to_owned(),
+            ClientToClientMessage::KeyExchangeAndVerifyPasswordRequest(req),
+            timeout,
+        )
+        .await
+        .and_then(|resp| match resp {
+            ClientToClientMessage::Error => {
+                bail!("desktop_key_exchange_and_verify_password: remote error")
+            }
+            ClientToClientMessage::KeyExchangeAndVerifyPasswordReply(message) => Ok(message),
+            _ => bail!(
+                "desktop_key_exchange_and_verify_password: mismatched reply type, got {}",
+                resp
+            ),
+        })
+    }
+
+    pub async fn desktop_start_media_transmission(
+        &self,
+        endpoint: Arc<EndPoint>,
+        req: StartMediaTransmissionRequest,
+        timeout: Duration,
+    ) -> anyhow::Result<StartMediaTransmissionReply> {
+        self.call_client(
+            endpoint.local_device_id().to_owned(),
+            endpoint.remote_device_id().to_owned(),
+            ClientToClientMessage::StartMediaTransmissionRequest(req),
+            timeout,
+        )
+        .await
+        .and_then(|resp| match resp {
+            ClientToClientMessage::Error => {
+                bail!("desktop_start_media_transmission: remote error")
+            }
+            ClientToClientMessage::StartMediaTransmissionReply(message) => Ok(message),
+            _ => bail!(
+                "desktop_start_media_transmission: mismatched reply type, got {}",
+                resp
+            ),
+        })
+    }
+
+    pub async fn desktop_media_transmission(
+        &self,
+        endpoint: Arc<EndPoint>,
+        media_transmission: MediaTransmission,
+    ) -> anyhow::Result<()> {
+        let buf = BINCODE_SERIALIZER.serialize(&ClientToClientMessage::MediaTransmission(
+            media_transmission,
+        ))?;
+
+        self.send(Packet::ClientToClient(
+            0,
+            endpoint.local_device_id().to_owned(),
+            endpoint.remote_device_id().to_owned(),
+            false,
+            buf,
+        ))
+        .await
     }
 }
 
@@ -422,31 +515,37 @@ fn handle_client_to_client_message(
 ) -> anyhow::Result<()> {
     match message {
         ClientToClientMessage::ConnectRequest(req) => {
-            handle_client_to_client_message!(
+            handle_client_to_client_call_message!(
                 endpoint,
                 call_id,
-                client_to_client_handler::connect,
+                client_to_client_handler::handle_connect,
                 req,
                 ClientToClientMessage::ConnectReply
             );
         }
         ClientToClientMessage::KeyExchangeAndVerifyPasswordRequest(req) => {
-            handle_client_to_client_message!(
+            handle_client_to_client_call_message!(
                 endpoint,
                 call_id,
-                client_to_client_handler::key_exchange_and_verify_password,
+                client_to_client_handler::handle_key_exchange_and_verify_password,
                 req,
                 ClientToClientMessage::KeyExchangeAndVerifyPasswordReply
             );
         }
         ClientToClientMessage::StartMediaTransmissionRequest(req) => {
-            handle_client_to_client_message!(
+            handle_client_to_client_call_message!(
                 endpoint,
                 call_id,
-                client_to_client_handler::start_media_transmission,
+                client_to_client_handler::handle_start_media_transmission,
                 req,
                 ClientToClientMessage::StartMediaTransmissionReply
             );
+        }
+        ClientToClientMessage::MediaTransmission(media_transmission) => {
+            RuntimeProvider::current()?.spawn(async move {
+                client_to_client_handler::handle_media_transmission(endpoint, media_transmission)
+                    .await;
+            });
         }
         _ => {
             SocketProvider::current()?.set_client_call_reply(call_id, message);

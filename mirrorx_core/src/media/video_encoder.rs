@@ -16,17 +16,15 @@ use crate::media::{
             imgutils::av_image_get_buffer_size,
             log::{av_log_set_flags, av_log_set_level, AV_LOG_SKIP_REPEATED, AV_LOG_TRACE},
             opt::av_opt_set,
-            pixfmt::{
-                AVCOL_PRI_BT709, AVCOL_RANGE_JPEG, AVCOL_RANGE_MPEG, AVCOL_SPC_BT709,
-                AVCOL_TRC_BT709, AVCOL_TRC_IEC61966_2_1, AV_PIX_FMT_NV12,
-            },
+            pixfmt::*,
             rational::AVRational,
         },
     },
+    frame::CaptureFrame,
     video_packet::VideoPacket,
 };
 use anyhow::{bail, Ok};
-use crossbeam_channel::{bounded, Receiver, Sender};
+use crossbeam::channel::{bounded, Receiver, Sender};
 use std::{ffi::CString, slice::from_raw_parts};
 use tracing::error;
 
@@ -36,8 +34,6 @@ pub struct VideoEncoder {
     frame: *mut AVFrame,
     packet: *mut AVPacket,
     output_tx: Option<Sender<VideoPacket>>,
-    frame_height: i32,
-    frame_width: i32,
 }
 
 unsafe impl Send for VideoEncoder {}
@@ -47,16 +43,14 @@ impl VideoEncoder {
     pub fn new(
         encoder_name: &str,
         fps: i32,
-        frame_width: i32,
-        frame_height: i32,
+        width: i32,
+        height: i32,
     ) -> anyhow::Result<VideoEncoder> {
         let encoder_name_ptr = CString::new(encoder_name.to_string())?;
 
         unsafe {
             av_log_set_level(AV_LOG_TRACE);
             av_log_set_flags(AV_LOG_SKIP_REPEATED);
-
-            let mut ret: i32;
 
             let codec = avcodec_find_encoder_by_name(encoder_name_ptr.as_ptr());
             if codec.is_null() {
@@ -68,8 +62,8 @@ impl VideoEncoder {
                 bail!("alloc codec context failed");
             }
 
-            (*codec_ctx).width = frame_width;
-            (*codec_ctx).height = frame_height;
+            (*codec_ctx).width = width;
+            (*codec_ctx).height = height;
             (*codec_ctx).time_base = AVRational {
                 num: 1,
                 den: fps * 100,
@@ -98,18 +92,8 @@ impl VideoEncoder {
                 frame: std::ptr::null_mut(),
                 packet: std::ptr::null_mut(),
                 output_tx: None,
-                frame_height,
-                frame_width,
             })
         }
-    }
-
-    pub fn frame_height(&self) -> i32 {
-        self.frame_height
-    }
-
-    pub fn frame_width(&self) -> i32 {
-        self.frame_width
     }
 
     pub fn set_opt(&self, key: &str, value: &str, search_flags: i32) -> anyhow::Result<()> {
@@ -155,25 +139,13 @@ impl VideoEncoder {
         }
     }
 
-    pub fn encode(
-        &mut self,
-        width: i32,
-        height: i32,
-        lumina_plane_bytes_address: *const u8,
-        lumina_plane_stride: i32,
-        chrominance_plane_bytes_address: *const u8,
-        chrominance_plane_stride: i32,
-        dts: i64,
-        dts_scale: i32,
-        pts: i64,
-        pts_scale: i32,
-    ) {
+    pub fn encode(&mut self, capture_frame: CaptureFrame) {
         unsafe {
             let mut ret: i32;
 
             if self.frame.is_null()
-                || (*self.frame).width != width
-                || (*self.frame).height != height
+                || (*self.frame).width != capture_frame.width() as i32
+                || (*self.frame).height != capture_frame.height() as i32
             {
                 if !self.frame.is_null() {
                     av_frame_free(&mut self.frame);
@@ -189,8 +161,8 @@ impl VideoEncoder {
                     return;
                 }
 
-                (*frame).width = width;
-                (*frame).height = height;
+                (*frame).width = capture_frame.width() as i32;
+                (*frame).height = capture_frame.height() as i32;
                 (*frame).format = AV_PIX_FMT_NV12;
 
                 ret = av_frame_get_buffer(frame, 1);
@@ -205,7 +177,12 @@ impl VideoEncoder {
                     return;
                 }
 
-                let packet_size = av_image_get_buffer_size((*frame).format, width, height, 32);
+                let packet_size = av_image_get_buffer_size(
+                    (*frame).format,
+                    capture_frame.width() as i32,
+                    capture_frame.height() as i32,
+                    32,
+                );
 
                 ret = av_new_packet(packet, packet_size);
                 if ret < 0 {
@@ -222,15 +199,17 @@ impl VideoEncoder {
                 tracing::error!(ret = ret, "av_frame_make_writable failed");
             }
 
-            (*self.frame).data[0] = lumina_plane_bytes_address as *mut _;
-            (*self.frame).linesize[0] = lumina_plane_stride;
-            (*self.frame).data[1] = chrominance_plane_bytes_address as *mut _;
-            (*self.frame).linesize[1] = chrominance_plane_stride;
-            (*self.frame).time_base.num = 1;
-            (*self.frame).time_base.den = pts_scale;
-            (*self.frame).pts = pts;
+            (*self.frame).data[0] = capture_frame.luminance_buffer().as_ptr() as *mut _;
+            (*self.frame).linesize[0] = capture_frame.luminance_stride() as i32;
+            (*self.frame).data[1] = capture_frame.chrominance_buffer().as_ptr() as *mut _;
+            (*self.frame).linesize[1] = capture_frame.chrominance_stride() as i32;
+            // (*self.frame).time_base.num = 1;
+            // (*self.frame).time_base.den = pts_scale;
+            // (*self.frame).pts = pts;
 
             ret = avcodec_send_frame(self.codec_ctx, self.frame);
+
+            capture_frame.notify_frame_release();
 
             if ret != 0 {
                 if ret == AVERROR(libc::EAGAIN) {

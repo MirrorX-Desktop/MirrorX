@@ -11,6 +11,7 @@ pub enum ClientToClientMessage {
     KeyExchangeAndVerifyPasswordReply(KeyExchangeAndVerifyPasswordReply),
     StartMediaTransmissionRequest(StartMediaTransmissionRequest),
     StartMediaTransmissionReply(StartMediaTransmissionReply),
+    MediaTransmission(MediaTransmission),
 }
 
 impl Display for ClientToClientMessage {
@@ -103,6 +104,22 @@ impl Display for StartMediaTransmissionReply {
             f,
             "StartMediaTransmissionReply {{ os_name: {}, os_version: {}, video_type: {}, audio_type: {} }}",
             self.os_name, self.os_version, self.video_type, self.audio_type
+        )
+    }
+}
+
+#[derive(Serialize, Deserialize, PartialEq, Clone)]
+pub struct MediaTransmission {
+    pub data: Vec<u8>,
+    pub timestamp: u64,
+}
+
+impl Display for MediaTransmission {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "MediaTransmission {{ data: {:02X?}, timestamp: {} }}",
+            self.data, self.timestamp,
         )
     }
 }
