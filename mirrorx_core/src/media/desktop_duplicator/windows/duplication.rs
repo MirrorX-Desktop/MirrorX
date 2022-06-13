@@ -65,10 +65,10 @@ impl Duplication {
                 bail!("Duplication: SetThreadDesktop failed");
             }
 
-            if !SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2).as_bool()
-            {
-                bail!("Duplication:SetProcessDpiAwarenessContext failed");
-            }
+            // if !SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2).as_bool()
+            // {
+            //     bail!("Duplication:SetProcessDpiAwarenessContext failed");
+            // }
 
             let dx = DX::new()?;
             let (output_desc, output_duplication) = init_output_duplication(&dx, output_idx)?;
