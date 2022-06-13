@@ -24,7 +24,6 @@ use crate::media::{
 };
 use anyhow::bail;
 use crossbeam::channel::{bounded, Receiver, Sender};
-use libc::c_void;
 use std::{
     ffi::{CStr, CString},
     ptr,
@@ -219,13 +218,13 @@ impl VideoDecoder {
                     // }
 
                     #[cfg(target_os = "macos")]
-                    let native_frame = CVPixelBufferRetain(
+                    let native_frame = crate::media::bindings::macos::CVPixelBufferRetain(
                         (*self.decode_frame).data[3]
                             as crate::media::bindings::macos::CVPixelBufferRef,
                     );
 
                     #[cfg(target_os = "windows")]
-                    let native_frame = (*self.decode_frame).data[3] as *mut c_void;
+                    let native_frame = (*self.decode_frame).data[3] as *mut libc::c_void;
 
                     if let Some(tx) = &self.output_tx {
                         if let Err(e) = tx.try_send(NativeFrame(native_frame)) {
