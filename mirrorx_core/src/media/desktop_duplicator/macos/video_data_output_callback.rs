@@ -344,6 +344,7 @@ unsafe fn add_method_capture_output_callback(cls: &mut ClassDecl) {
 
             if let Err(err) = capture_frame_tx.send(capture_frame) {
                 error!(?err, "send capture frame failed");
+                return;
             }
 
             if let Err(_) = capture_frame_release_notify_rx.recv() {

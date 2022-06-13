@@ -1,5 +1,4 @@
 use crate::media::{
-    bindings::macos::CVPixelBufferRetain,
     ffmpeg::{
         avcodec::{
             avcodec::{
@@ -25,6 +24,7 @@ use crate::media::{
 };
 use anyhow::bail;
 use crossbeam::channel::{bounded, Receiver, Sender};
+use libc::c_void;
 use std::{
     ffi::{CStr, CString},
     ptr,

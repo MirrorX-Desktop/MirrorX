@@ -2,7 +2,8 @@ use crate::media::frame::CaptureFrame;
 
 use super::{dx::DX, dx_math::VERTICES};
 use anyhow::bail;
-use crossbeam_channel::Sender;
+use crossbeam::channel::{Receiver, Sender};
+use scopeguard::defer;
 use std::{mem::zeroed, ptr::null, sync::Arc};
 use windows::{
     core::Interface,
@@ -37,14 +38,19 @@ pub struct Duplication {
     render_target_view_chrominance: ID3D11RenderTargetView,
 
     // Additional
-    tx: Sender<Arc<CaptureFrame>>,
+    capture_frame_tx: Sender<CaptureFrame>,
+    capture_frame_release_notify_tx: Sender<()>,
+    capture_frame_release_notify_rx: Receiver<()>,
 }
 
-unsafe impl Send for Duplication{}
-unsafe impl Sync for Duplication{}
+unsafe impl Send for Duplication {}
+unsafe impl Sync for Duplication {}
 
 impl Duplication {
-    pub fn new(output_idx: u32, tx: Sender<Arc<CaptureFrame>>) -> anyhow::Result<Duplication> {
+    pub fn new(
+        output_idx: u32,
+        capture_frame_tx: Sender<CaptureFrame>,
+    ) -> anyhow::Result<Duplication> {
         unsafe {
             let current_desktop = OpenInputDesktop(0, false, GENERIC_ALL).map_err(|err| {
                 anyhow::anyhow!(
@@ -185,6 +191,9 @@ impl Duplication {
                 )
             })?;
 
+            let (capture_frame_release_notify_tx, capture_frame_release_notify_rx) =
+                crossbeam::channel::bounded(1);
+
             Ok(Duplication {
                 dx,
                 output_desc,
@@ -198,7 +207,9 @@ impl Duplication {
                 view_port_chrominance,
                 render_target_view_lumina,
                 render_target_view_chrominance,
-                tx,
+                capture_frame_tx,
+                capture_frame_release_notify_tx,
+                capture_frame_release_notify_rx,
             })
         }
     }
@@ -225,6 +236,12 @@ impl Duplication {
                 )
             })?;
 
+            defer! {
+                self.dx
+                .device_context()
+                .Unmap(&self.staging_texture_lumina, 0);
+            }
+
             let mapped_resource_chrominance = self.dx.device_context().Map(&self.staging_texture_chrominance, 0, D3D11_MAP_READ, 0).map_err(|err|{
                 anyhow::anyhow!(
                     r#"Duplication: ID3D11DeviceContext::Map failed {{"resource_name": "{}", "error": "{:?}"}}"#,
@@ -232,6 +249,12 @@ impl Duplication {
                     err.code()
                 )
             })?;
+
+            defer! {
+                self.dx
+                .device_context()
+                .Unmap(&self.staging_texture_chrominance, 0);
+            }
 
             let width = self.output_desc.DesktopCoordinates.right
                 - self.output_desc.DesktopCoordinates.left;
@@ -244,29 +267,26 @@ impl Duplication {
                 (height as u32) / 2 * mapped_resource_chrominance.RowPitch;
 
             let capture_frame = CaptureFrame::new(
-                width,
-                height,
+                width as usize,
+                height as usize,
                 std::slice::from_raw_parts(
                     mapped_resource_lumina.pData as *mut u8,
                     luminance_buffer_size as usize,
                 ),
-                mapped_resource_lumina.RowPitch,
+                mapped_resource_lumina.RowPitch as usize,
                 std::slice::from_raw_parts(
                     mapped_resource_chrominance.pData as *mut u8,
                     chrominance_buffer_size as usize,
                 ),
-                mapped_resource_chrominance.RowPitch,
+                mapped_resource_chrominance.RowPitch as usize,
+                self.capture_frame_release_notify_tx.clone(),
             );
 
-            self.tx.send(capture_frame.clone());
-            capture_frame.wait();
+            if let Err(err) = self.capture_frame_tx.send(capture_frame) {
+                bail!("capture_frame_tx send failed");
+            }
 
-            self.dx
-                .device_context()
-                .Unmap(&self.staging_texture_lumina, 0);
-            self.dx
-                .device_context()
-                .Unmap(&self.staging_texture_chrominance, 0);
+            let _ = self.capture_frame_release_notify_rx.recv();
 
             Ok(())
         }

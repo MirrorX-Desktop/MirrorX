@@ -207,7 +207,7 @@ pub async fn handle_start_media_transmission(
     if cfg!(target_os = "macos") {
         encoder_name = "h264_videotoolbox";
     } else if cfg!(target_os = "windows") {
-        encoder_name = "h264_qsv";
+        encoder_name = "libx264";
     } else {
         panic!("unsupported platform");
     }
