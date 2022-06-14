@@ -1,11 +1,14 @@
 import 'package:adaptive_scrollbar/adaptive_scrollbar.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:mirrorx/model/desktop.dart';
 import 'package:mirrorx/pages/desktop/widgets/desktop_render_box/horizontal_scroll_bar.dart';
 import 'package:mirrorx/pages/desktop/widgets/desktop_render_box/vertical_scroll_bar.dart';
 
 class DesktopRenderBox extends StatefulWidget {
-  const DesktopRenderBox({Key? key}) : super(key: key);
+  const DesktopRenderBox({Key? key, required this.model}) : super(key: key);
+
+  final DesktopModel model;
 
   @override
   _DesktopRenderBoxState createState() => _DesktopRenderBoxState();
@@ -32,6 +35,7 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
                 end: Alignment.bottomRight,
               ),
             ),
+            child: _buildTexture(),
           ),
         ),
         LayoutBuilder(builder: ((context, constraints) {
@@ -57,6 +61,24 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
           );
         })),
       ],
+    );
+  }
+
+  Widget _buildTexture() {
+    return RepaintBoundary(
+      child: Container(
+        color: Colors.black,
+        child: Center(
+          child: AspectRatio(
+            aspectRatio: 16.0 / 9.0,
+            child: Texture(
+              textureId: widget.model.textureID,
+              freeze: true,
+              filterQuality: FilterQuality.none,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

@@ -17,37 +17,36 @@ class DesktopPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DesktopRenderBox();
-    // return model.alreadyPrepared
-    //     ? _buildDesktopSurface()
-    //     : FutureBuilder(
-    //         future: prepare(),
-    //         builder: (context, snapshot) {
-    //           switch (snapshot.connectionState) {
-    //             case ConnectionState.none:
-    //             case ConnectionState.waiting:
-    //             case ConnectionState.active:
-    //               return Center(
-    //                 child: SizedBox(
-    //                   width: 200,
-    //                   height: 100,
-    //                   child: Column(
-    //                     children: [
-    //                       const CircularProgressIndicator(),
-    //                       Padding(
-    //                         padding: const EdgeInsets.only(top: 16),
-    //                         child: Text(Tr.of(context).desktopPagePreparing),
-    //                       )
-    //                     ],
-    //                   ),
-    //                 ),
-    //               );
-    //             case ConnectionState.done:
-    //               model.alreadyPrepared = true;
-    //               return _buildDesktopSurface();
-    //           }
-    //         },
-    //       );
+    return model.alreadyPrepared
+        ? _buildDesktopSurface()
+        : FutureBuilder(
+            future: prepare(),
+            builder: (context, snapshot) {
+              switch (snapshot.connectionState) {
+                case ConnectionState.none:
+                case ConnectionState.waiting:
+                case ConnectionState.active:
+                  return Center(
+                    child: SizedBox(
+                      width: 200,
+                      height: 100,
+                      child: Column(
+                        children: [
+                          const CircularProgressIndicator(),
+                          Padding(
+                            padding: const EdgeInsets.only(top: 16),
+                            child: Text(Tr.of(context).desktopPagePreparing),
+                          )
+                        ],
+                      ),
+                    ),
+                  );
+                case ConnectionState.done:
+                  model.alreadyPrepared = true;
+                  return _buildDesktopSurface();
+              }
+            },
+          );
   }
 
   Future<void> prepare() async {
@@ -68,20 +67,8 @@ class DesktopPage extends StatelessWidget {
           ],
         ),
         Expanded(
-          child: RepaintBoundary(
-            child: Container(
-              color: Colors.black,
-              child: Center(
-                child: AspectRatio(
-                  aspectRatio: 16.0 / 9.0,
-                  child: Texture(
-                    textureId: model.textureID,
-                    freeze: true,
-                    filterQuality: FilterQuality.none,
-                  ),
-                ),
-              ),
-            ),
+          child: DesktopRenderBox(
+            model: model,
           ),
         )
       ],

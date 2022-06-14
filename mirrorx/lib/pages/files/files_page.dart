@@ -6,7 +6,6 @@ class FilesPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // return const Center(child: Text("Files Transfer is comming soon!"));
-    return DesktopRenderBox();
+    return const Center(child: Text("Files Transfer is comming soon!"));
   }
 }
