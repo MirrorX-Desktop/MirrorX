@@ -38,7 +38,7 @@ dependencies:
   cupertino_icons: ^1.0.2
 
   provider: ^6.0.2
-  font_awesome_flutter: ^9.2.0
+  font_awesome_flutter: ^10.1.0
   path_provider: ^2.0.9
   ffi: ^1.1.2
   device_info_plus: ^3.2.3
@@ -46,10 +46,11 @@ dependencies:
   flutter_bloc: ^8.0.1
   equatable: ^2.0.3
   intl: ^0.17.0
+  flutter_rust_bridge: ^1.34.2
+  adaptive_scrollbar: ^2.1.2
 
   texture_render:
     path: ../plugins/texture_render
-  flutter_rust_bridge: ^1.34.2
   
 dev_dependencies:
   flutter_test:
