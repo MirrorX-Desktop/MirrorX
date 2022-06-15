@@ -11,7 +11,7 @@ use crate::{
                 MediaTransmission, StartMediaTransmissionReply, StartMediaTransmissionRequest,
             },
             client_to_server::{ClientToServerMessage, HandshakeRequest, HeartBeatRequest},
-            server_to_client::{HandshakeStatus, ServerToClientMessage},
+            server_to_client::{ErrorReason, HandshakeStatus, ServerToClientMessage},
         },
         packet::Packet,
     },
@@ -370,14 +370,8 @@ fn serve_stream(stream: TcpStream, mut rx: mpsc::Receiver<Vec<u8>>) -> anyhow::R
                     );
                 }
                 Packet::ServerToClient(call_id, message) => {
-                    if call_id == 0 {
-                        // todo
-                    }
-
-                    if let Ok(socket_provider) = SocketProvider::current() {
-                        socket_provider.set_server_call_reply(call_id, message);
-                    } else {
-                        tracing::error!("serve stream socket provider uninitialized");
+                    if let Err(err) =handle_server_to_client_message( call_id, message){
+                        tracing::error!(err = ?err, "handle server to client message failed");
                     }
                 }
                 Packet::ClientToClient(
@@ -552,5 +546,27 @@ fn handle_client_to_client_message(
         }
     };
 
+    Ok(())
+}
+
+fn handle_server_to_client_message(
+    call_id: u16,
+    message: ServerToClientMessage,
+) -> anyhow::Result<()> {
+    if call_id == 0 {
+        match message {
+            ServerToClientMessage::Error(ErrorReason::RemoteEndpointOffline(remote_device_id)) => {
+                tracing::warn!(
+                    remote_device_id = ?remote_device_id,
+                    "remote endpoint offline, local endpoint exit"
+                );
+                EndPointProvider::current()?.remove(&remote_device_id);
+                return Ok(());
+            }
+            _ => {}
+        }
+    }
+
+    SocketProvider::current()?.set_server_call_reply(call_id, message);
     Ok(())
 }

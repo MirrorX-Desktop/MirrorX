@@ -4,9 +4,16 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, PartialEq, Clone)]
 pub enum ServerToClientMessage {
-    Error,
+    Error(ErrorReason),
     HeartBeatReply(HeartBeatReply),
     HandshakeReply(HandshakeReply),
+}
+
+#[derive(Serialize, Deserialize, PartialEq, Clone)]
+pub enum ErrorReason {
+    ServerInternalError,
+    TokenForamtInvalid,
+    RemoteEndpointOffline(String),
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Clone)]

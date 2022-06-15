@@ -73,7 +73,6 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
             aspectRatio: 16.0 / 9.0,
             child: Texture(
               textureId: widget.model.textureID,
-              freeze: true,
               filterQuality: FilterQuality.none,
             ),
           ),
