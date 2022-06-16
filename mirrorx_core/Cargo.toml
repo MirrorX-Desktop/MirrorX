@@ -8,6 +8,7 @@ build = "build.rs"
 [lib]
 crate-type = ["lib", "cdylib", "staticlib"]
 
+
 [dependencies]
 chrono = "0.4.19"
 rand = "0.8.5"
@@ -23,7 +24,7 @@ bincode = "1.3.3"
 ring = "0.16.20"
 once_cell = "1.10.0"
 rsa = "0.6.1"
-dashmap = "5.3.3"
+dashmap = "5.3.4"
 reqwest = { version = "0.11.10", features = ["json"] }
 rustc-hash = "1.1.0"
 crossbeam = "0.8.1"
@@ -31,6 +32,7 @@ libc = "0.2.126"
 tracing = "0.1.34"
 tracing-subscriber = "0.3.11"
 scopeguard = "1.1.0"
+arc-swap = "1.5.0"
 
 [target.x86_64-apple-darwin.dependencies]
 objc = { version = "0.2.7" }
@@ -56,7 +58,7 @@ windows = { version = "0.37.0", features = [
     "Win32_UI_HiDpi",
 ] }
 
-[profile.dev.package.num-bigint-dig]
+[profile.dev]
 opt-level = 3
 
 [profile.release]

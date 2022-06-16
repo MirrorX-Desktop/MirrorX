@@ -1,10 +1,13 @@
+use once_cell::sync::Lazy;
+use tokio::runtime::{Builder, Runtime};
+
 use super::http::device_register;
 use crate::{
     provider::{
-        config::ConfigProvider, endpoint::EndPointProvider, http::HTTPProvider,
-        runtime::RuntimeProvider, socket::SocketProvider,
+        self, endpoint::EndPointProvider, http::HTTPProvider, runtime::RuntimeProvider,
+        signal_a::SocketProvider,
     },
-    socket::message::client_to_client::StartMediaTransmissionReply,
+    socket::endpoint::client_to_client::StartMediaTransmissionReply,
     utility::token::parse_register_token,
 };
 use std::{
@@ -15,7 +18,25 @@ use std::{
 static LOGGER_INIT_ONCE: Once = Once::new();
 static INIT_SUCCESS: AtomicBool = AtomicBool::new(false);
 
-pub fn init(os_name: String, os_version: String, config_dir: String) -> anyhow::Result<()> {
+static rt: Lazy<Runtime> = Lazy::new(|| {
+    Builder::new_multi_thread()
+        .thread_name("MirrorXCoreTokioRuntime")
+        .enable_all()
+        .build()
+        .unwrap()
+});
+
+macro_rules! async_block_on {
+    ($future:expr) => {
+        let (tx, rx) = crossbeam::channel::bounded(1);
+
+        rt.spawn(async move { tx.send($future.await) });
+
+        rx.recv()?
+    };
+}
+
+pub async fn init(os_name: String, os_version: String, config_dir: String) -> anyhow::Result<()> {
     LOGGER_INIT_ONCE.call_once(|| {
         // env_logger::Builder::new()
         //     .filter_level(log::LevelFilter::Info)
@@ -80,56 +101,68 @@ pub fn init(os_name: String, os_version: String, config_dir: String) -> anyhow::
 // Config
 
 pub fn config_read_device_id() -> anyhow::Result<Option<String>> {
-    ConfigProvider::current()?.read_device_id()
+    provider::config::read_device_id()
 }
 
 pub fn config_save_device_id(device_id: String) -> anyhow::Result<()> {
-    ConfigProvider::current()?.save_device_id(&device_id)
+    provider::config::save_device_id(&device_id)
 }
 
 pub fn config_read_device_id_expiration() -> anyhow::Result<Option<u32>> {
-    ConfigProvider::current()?.read_device_id_expiration()
+    provider::config::read_device_id_expiration()
 }
 
 pub fn config_save_device_id_expiration(time_stamp: u32) -> anyhow::Result<()> {
-    ConfigProvider::current()?.save_device_id_expiration(&time_stamp)
+    provider::config::save_device_id_expiration(&time_stamp)
 }
 
 pub fn config_read_device_password() -> anyhow::Result<Option<String>> {
-    ConfigProvider::current()?.read_device_password()
+    provider::config::read_device_password()
 }
 
 pub fn config_save_device_password(device_password: String) -> anyhow::Result<()> {
-    ConfigProvider::current()?.save_device_password(&device_password)
+    provider::config::save_device_password(&device_password)
 }
 
-pub fn desktop_connect(remote_device_id: String) -> anyhow::Result<()> {
-    RuntimeProvider::current()?.block_on(super::socket::desktop_connect(remote_device_id))
+pub fn signaling_handshake(token: String) -> anyhow::Result<()> {
+    async_block_on! {
+        provider::signaling::handshake(token)
+    }
 }
 
-pub fn desktop_key_exchange_and_password_verify(
-    remote_device_id: String,
-    password: String,
-) -> anyhow::Result<bool> {
-    RuntimeProvider::current()?.block_on(super::socket::desktop_key_exchange_and_password_verify(
-        remote_device_id,
-        password,
-    ))
+pub fn signaling_heartbeat() -> anyhow::Result<()> {
+    async_block_on! {
+        provider::signaling::heartbeat()
+    }
 }
 
-pub fn desktop_start_media_transmission(
-    remote_device_id: String,
-    texture_id: i64,
-    video_texture_ptr: i64,
-    update_frame_callback_ptr: i64,
-) -> anyhow::Result<StartMediaTransmissionReply> {
-    RuntimeProvider::current()?.block_on(super::socket::desktop_start_media_transmission(
-        remote_device_id,
-        texture_id,
-        video_texture_ptr,
-        update_frame_callback_ptr,
-    ))
-}
+// pub fn desktop_connect(remote_device_id: String) -> anyhow::Result<()> {
+//     RuntimeProvider::current()?.block_on(super::socket::desktop_connect(remote_device_id))
+// }
+
+// pub fn desktop_key_exchange_and_password_verify(
+//     remote_device_id: String,
+//     password: String,
+// ) -> anyhow::Result<bool> {
+//     RuntimeProvider::current()?.block_on(super::socket::desktop_key_exchange_and_password_verify(
+//         remote_device_id,
+//         password,
+//     ))
+// }
+
+// pub fn desktop_start_media_transmission(
+//     remote_device_id: String,
+//     texture_id: i64,
+//     video_texture_ptr: i64,
+//     update_frame_callback_ptr: i64,
+// ) -> anyhow::Result<StartMediaTransmissionReply> {
+//     RuntimeProvider::current()?.block_on(super::socket::desktop_start_media_transmission(
+//         remote_device_id,
+//         texture_id,
+//         video_texture_ptr,
+//         update_frame_callback_ptr,
+//     ))
+// }
 
 pub fn utility_generate_device_password() -> String {
     crate::utility::rng::generate_device_password()

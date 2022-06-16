@@ -1,12 +1,12 @@
 use crate::provider::config::ConfigProvider;
 use crate::provider::endpoint::EndPointProvider;
-use crate::provider::socket::SocketProvider;
+use crate::provider::signal_a::SocketProvider;
+use crate::socket::endpoint::client_to_client::ConnectRequest;
+use crate::socket::endpoint::client_to_client::KeyExchangeAndVerifyPasswordRequest;
+use crate::socket::endpoint::client_to_client::StartMediaTransmissionReply;
+use crate::socket::endpoint::client_to_client::StartMediaTransmissionRequest;
 use crate::socket::endpoint::CacheKey;
 use crate::socket::endpoint::EndPoint;
-use crate::socket::message::client_to_client::ConnectRequest;
-use crate::socket::message::client_to_client::KeyExchangeAndVerifyPasswordRequest;
-use crate::socket::message::client_to_client::StartMediaTransmissionReply;
-use crate::socket::message::client_to_client::StartMediaTransmissionRequest;
 use anyhow::anyhow;
 use once_cell::sync::Lazy;
 use rand::thread_rng;
@@ -18,10 +18,15 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::Mutex;
 
-pub async fn desktop_connect(remote_device_id: String) -> anyhow::Result<()> {
-    static CONNECT_MUTEX: Lazy<Mutex<()>> = Lazy::new(|| Mutex::new(()));
+static CONNECT_MUTEX: Lazy<Mutex<()>> = Lazy::new(|| Mutex::new(()));
 
+pub async fn desktop_connect(remote_device_id: String) -> anyhow::Result<()> {
     CONNECT_MUTEX.lock().await;
+
+    let endpoint_provider = EndPointProvider::current()?;
+    if endpoint_provider.contains(&remote_device_id) {
+        return Err(anyhow::anyhow!("Already connected to {}", remote_device_id));
+    }
 
     let endpoint = match EndPointProvider::current()?.get(&remote_device_id) {
         Some(endpoint) => endpoint,

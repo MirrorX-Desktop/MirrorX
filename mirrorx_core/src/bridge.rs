@@ -15,7 +15,7 @@ use flutter_rust_bridge::*;
 
 // Section: imports
 
-use crate::socket::message::client_to_client::StartMediaTransmissionReply;
+use crate::socket::endpoint::client_to_client::StartMediaTransmissionReply;
 
 // Section: wire functions
 

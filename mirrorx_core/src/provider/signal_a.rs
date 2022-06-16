@@ -4,14 +4,14 @@ use crate::{
     socket::{
         client_to_client_handler,
         endpoint::EndPoint,
-        message::{
+        endpoint::{
             client_to_client::{
                 ClientToClientMessage, ConnectReply, ConnectRequest,
                 KeyExchangeAndVerifyPasswordReply, KeyExchangeAndVerifyPasswordRequest,
                 MediaTransmission, StartMediaTransmissionReply, StartMediaTransmissionRequest,
             },
-            client_to_server::{ClientToServerMessage, HandshakeRequest, HeartBeatRequest},
-            server_to_client::{ErrorReason, HandshakeStatus, ServerToClientMessage},
+            local_to_signaling::{ClientToServerMessage, HandshakeRequest, HeartBeatRequest},
+            signaling_to_local::{ErrorReason, HandshakeStatus, SignalingToLocalMessage},
         },
         packet::Packet,
     },
@@ -72,7 +72,7 @@ macro_rules! handle_client_to_client_call_message {
 
 pub struct SocketProvider {
     tx: mpsc::Sender<Vec<u8>>,
-    call_server_tx_map: DashMap<u16, mpsc::Sender<ServerToClientMessage>>,
+    call_server_tx_map: DashMap<u16, mpsc::Sender<SignalingToLocalMessage>>,
     call_client_tx_map: DashMap<u16, mpsc::Sender<ClientToClientMessage>>,
     call_id_generator: CallIdGenerator,
 }
@@ -151,7 +151,7 @@ impl SocketProvider {
         &self,
         message: ClientToServerMessage,
         timeout: Duration,
-    ) -> anyhow::Result<ServerToClientMessage> {
+    ) -> anyhow::Result<SignalingToLocalMessage> {
         let call_id = self.call_id_generator.next();
 
         let packet = Packet::ClientToServer(call_id, message);
@@ -201,7 +201,7 @@ impl SocketProvider {
         });
     }
 
-    fn set_server_call_reply(&self, call_id: u16, message: ServerToClientMessage) {
+    fn set_server_call_reply(&self, call_id: u16, message: SignalingToLocalMessage) {
         self.remove_server_call(call_id).map(|tx| {
             if let Err(err) = tx.try_send(message) {
                 tracing::error!(err = %err, "server call reply failed")
@@ -209,13 +209,13 @@ impl SocketProvider {
         });
     }
 
-    fn register_server_call(&self, call_id: u16) -> mpsc::Receiver<ServerToClientMessage> {
+    fn register_server_call(&self, call_id: u16) -> mpsc::Receiver<SignalingToLocalMessage> {
         let (tx, rx) = mpsc::channel(1);
         self.call_server_tx_map.insert(call_id, tx);
         rx
     }
 
-    fn remove_server_call(&self, call_id: u16) -> Option<mpsc::Sender<ServerToClientMessage>> {
+    fn remove_server_call(&self, call_id: u16) -> Option<mpsc::Sender<SignalingToLocalMessage>> {
         self.call_server_tx_map
             .remove(&call_id)
             .map(|entry| entry.1)
@@ -447,7 +447,7 @@ fn handshake(provider: Arc<SocketProvider>, token: &str) -> anyhow::Result<()> {
             )
             .await?;
 
-        if let ServerToClientMessage::HandshakeReply(message) = reply {
+        if let SignalingToLocalMessage::HandshakeReply(message) = reply {
             match message.status {
                 HandshakeStatus::Accepted => Ok(()),
                 HandshakeStatus::Repeated => bail!("handshake: repeated"),
@@ -546,27 +546,5 @@ fn handle_client_to_client_message(
         }
     };
 
-    Ok(())
-}
-
-fn handle_server_to_client_message(
-    call_id: u16,
-    message: ServerToClientMessage,
-) -> anyhow::Result<()> {
-    if call_id == 0 {
-        match message {
-            ServerToClientMessage::Error(ErrorReason::RemoteEndpointOffline(remote_device_id)) => {
-                tracing::warn!(
-                    remote_device_id = ?remote_device_id,
-                    "remote endpoint offline, local endpoint exit"
-                );
-                EndPointProvider::current()?.remove(&remote_device_id);
-                return Ok(());
-            }
-            _ => {}
-        }
-    }
-
-    SocketProvider::current()?.set_server_call_reply(call_id, message);
     Ok(())
 }
