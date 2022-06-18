@@ -1,10 +1,9 @@
-use super::message::{
-    EndPointMessage, MediaFrame, StartMediaTransmissionReply, StartMediaTransmissionRequest,
-};
+use super::message::EndPointMessage;
 use crate::{
-    socket::endpoint::message::EndPointMessagePacket, utility::serializer::BINCODE_SERIALIZER,
+    error::{MirrorXError, MirrorXResult},
+    socket::endpoint::message::EndPointMessagePacket,
+    utility::{nonce_value::NonceValue, serializer::BINCODE_SERIALIZER},
 };
-use anyhow::bail;
 use bincode::Options;
 use bytes::Bytes;
 use dashmap::DashMap;
@@ -13,7 +12,7 @@ use futures::{
     SinkExt, StreamExt,
 };
 use once_cell::sync::OnceCell;
-use ring::aead::{BoundKey, Nonce, NonceSequence, OpeningKey, SealingKey, UnboundKey};
+use ring::aead::{OpeningKey, SealingKey};
 use std::{
     sync::atomic::{AtomicU16, Ordering},
     time::Duration,
@@ -29,8 +28,8 @@ use tracing::error;
 const CALL_TIMEOUT: Duration = Duration::from_secs(5);
 
 pub struct EndPoint {
-    local_device_id: String,
-    remote_device_id: String,
+    active_device_id: String,
+    passive_device_id: String,
     atomic_call_id: AtomicU16,
     call_reply_tx_map: DashMap<u16, Sender<EndPointMessage>>,
     packet_tx: Sender<Vec<u8>>,
@@ -40,18 +39,29 @@ pub struct EndPoint {
 impl EndPoint {
     pub async fn connect<A>(
         addr: A,
-        local_device_id: String,
-        remote_device_id: String,
-        opening_unbound_key: UnboundKey,
-        opening_initial_nonce: u64,
-        sealing_unbound_key: UnboundKey,
-        sealing_initial_nonce: u64,
-    ) -> anyhow::Result<Self>
+        active_device_id: String,
+        passive_device_id: String,
+        opening_key: OpeningKey<NonceValue>,
+        sealing_key: SealingKey<NonceValue>,
+    ) -> MirrorXResult<Self>
     where
         A: ToSocketAddrs,
     {
-        let stream = timeout(Duration::from_secs(10), TcpStream::connect(addr)).await??;
-        stream.set_nodelay(true)?;
+        let stream = timeout(Duration::from_secs(10), TcpStream::connect(addr))
+            .await
+            .map_err(|err| {
+                error!(passive_device_id=?passive_device_id,"EndPoint: connect timeout");
+                MirrorXError::Timeout
+            })?
+            .map_err(|err| {
+                error!(err=?err,passive_device_id=?passive_device_id,"EndPoint: connect error");
+                MirrorXError::Raw(err.to_string())
+            })?;
+
+        stream.set_nodelay(true).map_err(|err| {
+            error!(err=?err,passive_device_id=?passive_device_id,"EndPoint: set connection option nodelay error");
+            MirrorXError::Raw(err.to_string())
+        })?;
 
         let framed_stream = LengthDelimitedCodec::builder()
             .little_endian()
@@ -62,22 +72,12 @@ impl EndPoint {
 
         let (packet_tx, packet_rx) = tokio::sync::mpsc::channel(128);
 
-        let opening_key = ring::aead::OpeningKey::<NonceValue>::new(
-            opening_unbound_key,
-            NonceValue::new(opening_initial_nonce),
-        );
-
-        let sealing_key = ring::aead::SealingKey::<NonceValue>::new(
-            sealing_unbound_key,
-            NonceValue::new(sealing_initial_nonce),
-        );
-
         serve_stream(stream, opening_key);
         serve_sink(packet_rx, sink, sealing_key);
 
         Ok(Self {
-            local_device_id,
-            remote_device_id,
+            active_device_id,
+            passive_device_id,
             atomic_call_id: AtomicU16::new(0),
             call_reply_tx_map: DashMap::new(),
             packet_tx,
@@ -85,77 +85,77 @@ impl EndPoint {
         })
     }
 
-    pub fn remote_device_id(&self) -> &str {
-        self.remote_device_id.as_ref()
-    }
+    // pub fn remote_device_id(&self) -> &str {
+    //     self.passive_device_id.as_ref()
+    // }
 
-    pub fn local_device_id(&self) -> &str {
-        self.local_device_id.as_ref()
-    }
+    // pub fn local_device_id(&self) -> &str {
+    //     self.active_device_id.as_ref()
+    // }
 
-    pub async fn handshake(&self, token: String) -> anyhow::Result<()> {
-        let reply = self
-            .call(
-                LocalToSignalingMessage::HandshakeRequest(HandshakeRequest { token }),
-                CALL_TIMEOUT,
-            )
-            .await?;
+    // pub async fn handshake(&self, token: String) -> anyhow::Result<()> {
+    //     let reply = self
+    //         .call(
+    //             LocalToEndPointMessage::HandshakeRequest(HandshakeRequest { token }),
+    //             CALL_TIMEOUT,
+    //         )
+    //         .await?;
 
-        if let SignalingToLocalMessage::HandshakeReply(message) = reply {
-            match message.status {
-                HandshakeStatus::Accepted => Ok(()),
-                HandshakeStatus::Repeated => bail!("handshake: repeated"),
-            }
-        } else {
-            bail!("handshake: mismatched reply message");
-        }
-    }
+    //     if let SignalingToLocalMessage::HandshakeReply(message) = reply {
+    //         match message.status {
+    //             HandshakeStatus::Accepted => Ok(()),
+    //             HandshakeStatus::Repeated => bail!("handshake: repeated"),
+    //         }
+    //     } else {
+    //         bail!("handshake: mismatched reply message");
+    //     }
+    // }
 
-    pub async fn heartbeat(&self) -> anyhow::Result<()> {
-        let reply = self
-            .call(
-                LocalToSignalingMessage::HeartBeatRequest(HeartBeatRequest {
-                    time_stamp: chrono::Utc::now().timestamp() as u32,
-                }),
-                CALL_TIMEOUT,
-            )
-            .await?;
+    // pub async fn heartbeat(&self) -> anyhow::Result<()> {
+    //     let reply = self
+    //         .call(
+    //             LocalToEndPointMessage::HeartBeatRequest(HeartBeatRequest {
+    //                 time_stamp: chrono::Utc::now().timestamp() as u32,
+    //             }),
+    //             CALL_TIMEOUT,
+    //         )
+    //         .await?;
 
-        if let SignalingToLocalMessage::HeartBeatReply(message) = reply {
-            Ok(())
-        } else {
-            bail!("handshake: mismatched reply message");
-        }
-    }
+    //     if let SignalingToLocalMessage::HeartBeatReply(message) = reply {
+    //         Ok(())
+    //     } else {
+    //         bail!("handshake: mismatched reply message");
+    //     }
+    // }
 
-    pub async fn start_media_transmission(
-        &self,
-        req: StartMediaTransmissionRequest,
-    ) -> anyhow::Result<StartMediaTransmissionReply> {
-        self.call(
-            EndPointMessage::StartMediaTransmissionRequest(req),
-            CALL_TIMEOUT,
-        )
-        .await
-        .and_then(|resp| match resp {
-            EndPointMessage::Error => {
-                bail!("desktop_start_media_transmission: remote error")
-            }
-            EndPointMessage::StartMediaTransmissionReply(message) => Ok(message),
-            _ => bail!(
-                "desktop_start_media_transmission: mismatched reply type, got {:?}",
-                resp
-            ),
-        })
-    }
+    // pub async fn start_media_transmission(
+    //     &self,
+    //     req: StartMediaTransmissionRequest,
+    // ) -> anyhow::Result<StartMediaTransmissionReply> {
+    //     self.call(
+    //         EndPointMessage::StartMediaTransmissionRequest(req),
+    //         CALL_TIMEOUT,
+    //     )
+    //     .await
+    //     .and_then(|resp| match resp {
+    //         EndPointMessage::Error => {
+    //             bail!("desktop_start_media_transmission: remote error")
+    //         }
+    //         EndPointMessage::StartMediaTransmissionReply(message) => Ok(message),
+    //         _ => bail!(
+    //             "desktop_start_media_transmission: mismatched reply type, got {:?}",
+    //             resp
+    //         ),
+    //     })
+    // }
 
-    pub async fn send_media_frame(&self, media_transmission: MediaFrame) -> anyhow::Result<()> {
-        self.send(EndPointMessagePacket::new(
-            None,
-            EndPointMessage::MediaFrame(media_transmission),
-        ))
-        .await
-    }
+    // pub async fn send_media_frame(&self, media_transmission: MediaFrame) -> anyhow::Result<()> {
+    //     self.send(EndPointMessagePacket::new(
+    //         None,
+    //         EndPointMessage::MediaFrame(media_transmission),
+    //     ))
+    //     .await
+    // }
 
     // pub fn start_desktop_render_thread(
     //     &self,
@@ -223,40 +223,62 @@ impl EndPoint {
         &self,
         message: EndPointMessage,
         duration: Duration,
-    ) -> anyhow::Result<EndPointMessage> {
+    ) -> MirrorXResult<EndPointMessage> {
         let call_id = self.atomic_call_id.fetch_add(1, Ordering::SeqCst);
 
-        let packet = EndPointMessagePacket::new(Some(call_id), message);
+        let packet = EndPointMessagePacket {
+            call_id: Some(call_id),
+            message,
+        };
 
         let mut rx = self.register_call(call_id);
 
         timeout(duration, async move {
             if let Err(err) = self.send(packet).await {
                 self.remove_call(call_id);
-                bail!("call: send packet failed: {}", err);
+                return Err(err);
             };
 
-            rx.recv()
-                .await
-                .ok_or(anyhow::anyhow!("call: call tx closed"))
+            rx.recv().await.ok_or(MirrorXError::Timeout)
         })
         .await
         .map_err(|err| {
             self.remove_call(call_id);
-            anyhow::anyhow!("call: timeout")
+            MirrorXError::Timeout
         })?
     }
 
-    async fn send(&self, packet: EndPointMessagePacket) -> anyhow::Result<()> {
-        let buffer = BINCODE_SERIALIZER.serialize(&packet)?;
-        self.packet_tx.send(buffer).await?;
-        Ok(())
+    async fn reply(&self, call_id: u16, message: EndPointMessage) -> MirrorXResult<()> {
+        let packet = EndPointMessagePacket {
+            call_id: Some(call_id),
+            message,
+        };
+
+        self.send(packet).await
+    }
+
+    async fn send(&self, packet: EndPointMessagePacket) -> MirrorXResult<()> {
+        let call_id = packet.call_id;
+
+        let buffer = BINCODE_SERIALIZER.serialize(&packet).map_err(|err| {
+            if let Some(call_id) = call_id {
+                self.remove_call(call_id);
+            }
+
+            error!(err=?err,passive_device_id=?self.passive_device_id,"EndPoint: serialize error");
+            MirrorXError::Raw(err.to_string())
+        })?;
+
+        self.packet_tx.send(buffer).await.map_err(|err| {
+            error!(err=?err,passive_device_id=?self.passive_device_id,"EndPoint: send error");
+            MirrorXError::Raw(err.to_string())
+        })
     }
 
     fn set_call_reply(&self, call_id: u16, message: EndPointMessage) {
         self.remove_call(call_id).map(|tx| {
             if let Err(err) = tx.try_send(message) {
-                tracing::error!(err = %err, "set_call_reply: set reply failed")
+                tracing::error!(err = %err,passive_device_id=?self.passive_device_id,"set_call_reply: set reply failed")
             }
         });
     }
@@ -308,7 +330,7 @@ fn serve_stream(
                 };
 
             tokio::spawn(async move {
-                handle_signaling_to_local_message(packet).await;
+                handle_message(packet).await;
             });
         }
 
@@ -350,7 +372,7 @@ fn serve_sink(
     });
 }
 
-async fn handle_signaling_to_local_message(packet: SignalingToLocalMessagePacket) {
+async fn handle_message(packet: EndPointMessagePacket) {
     // if packet.call_id.is_none() {
     //     match packet.message {
     //         SignalingToLocalMessage::Error(ErrorReason::RemoteEndpointOffline(
@@ -370,22 +392,4 @@ async fn handle_signaling_to_local_message(packet: SignalingToLocalMessagePacket
     // }
 
     // SocketProvider::current()?.set_server_call_reply(call_id, message);
-}
-
-struct NonceValue {
-    n: u128,
-}
-
-impl NonceValue {
-    fn new(n: u64) -> Self {
-        Self { n: n as u128 }
-    }
-}
-
-impl NonceSequence for NonceValue {
-    fn advance(&mut self) -> Result<ring::aead::Nonce, ring::error::Unspecified> {
-        self.n += 1;
-        let m = self.n & 0xFFFFFFFFFFFF;
-        Nonce::try_assume_unique_for_key(&m.to_le_bytes()[..12])
-    }
 }

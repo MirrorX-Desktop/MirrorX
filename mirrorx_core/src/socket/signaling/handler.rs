@@ -1,178 +1,232 @@
-pub async fn handle_connect(
-    endpoint: Arc<EndPoint>,
-    req: ConnectRequest,
-) -> anyhow::Result<ConnectReply> {
-    tracing::trace!(req = %req, "connect");
+use super::message::{
+    ConnectRequest, ConnectResponse, ConnectionKeyExchangeActiveDeviceSecret,
+    ConnectionKeyExchangePassiveDeviceSecret, ConnectionKeyExchangeRequest,
+    ConnectionKeyExchangeResponse,
+};
+use crate::{
+    error::{MirrorXError, MirrorXResult},
+    provider,
+    utility::{nonce_value::NonceValue, serializer::BINCODE_SERIALIZER},
+};
+use bincode::Options;
+use pbkdf2::password_hash::PasswordHasher;
+use rand::RngCore;
+use ring::aead::BoundKey;
+use rsa::{rand_core::OsRng, BigUint, PublicKey};
+use tracing::error;
 
-    let mut rng = rand::thread_rng();
-    let priv_key = RsaPrivateKey::new(&mut rng, 4096)?;
-    let pub_key = RsaPublicKey::from(&priv_key);
-    let pub_key_n = pub_key.n().to_bytes_le();
-    let pub_key_e = pub_key.e().to_bytes_le();
-
-    endpoint
-        .cache()
-        .set(CacheKey::PasswordVerifyPrivateKey, priv_key);
-
-    Ok(ConnectReply {
-        pub_key_n,
-        pub_key_e,
-    })
+pub async fn handle_connect_request(req: ConnectRequest) -> MirrorXResult<ConnectResponse> {
+    Ok(ConnectResponse { allow: true })
 }
 
-pub async fn handle_key_exchange_and_verify_password(
-    endpoint: Arc<EndPoint>,
-    req: KeyExchangeAndVerifyPasswordRequest,
-) -> anyhow::Result<KeyExchangeAndVerifyPasswordReply> {
-    tracing::trace!(req = %req, "key_exchange_and_verify_password");
+pub async fn handle_connection_key_exchange_request(
+    mut req: ConnectionKeyExchangeRequest,
+) -> MirrorXResult<ConnectionKeyExchangeResponse> {
+    let passive_device_id = provider::config::read_device_id()?.ok_or(MirrorXError::Raw(
+        "handle_connection_key_exchange_request: device id is Nonce".to_string(),
+    ))?;
 
-    // todo: check white list
+    let password = provider::config::read_device_password()?.ok_or(MirrorXError::Raw(
+        "handle_connection_key_exchange_request: device password is Nonce".to_string(),
+    ))?;
 
-    let local_password = ConfigProvider::current()?
-        .read_device_password()?
-        .ok_or(anyhow!(
-            "key_exchange_and_verify_password: local password not set, refuse request"
-        ))?;
-
-    let priv_key = endpoint
-        .cache()
-        .take::<RsaPrivateKey>(CacheKey::PasswordVerifyPrivateKey)
-        .ok_or(anyhow::anyhow!(
-            "key_exchange_and_verify_password: no private key found"
-        ))?;
-
-    let req_password = priv_key
-        .decrypt(PaddingScheme::PKCS1v15Encrypt, &req.password_secret)
-        .map_err(|err| {
-            anyhow!(
-                "key_exchange_and_verify_password: decrypt password secret failed: {}",
-                err
-            )
-        })?;
-
-    let req_password = String::from_utf8(req_password).map_err(|err| {
-        anyhow!(
-            "key_exchange_and_verify_password: parse local password bytes to utf8 failed: {}",
-            err
-        )
-    })?;
-
-    if req_password != local_password {
-        return Ok(KeyExchangeAndVerifyPasswordReply {
-            password_correct: false,
-            exchange_pub_key: Vec::default(),
-            exchange_salt: Vec::default(),
-        });
+    if req.secret_nonce.len() != ring::aead::NONCE_LEN {
+        return Err(MirrorXError::Raw(
+            "handle_connection_key_exchange_request: request secret nonce is invalid".to_string(),
+        ));
     }
 
-    // gen key exchange
-    let ephemeral_rng = ring::rand::SystemRandom::new();
-    let local_private_key =
-        ring::agreement::EphemeralPrivateKey::generate(&ring::agreement::X25519, &ephemeral_rng)
+    // try to decrypt secret
+
+    let salt_string = String::from_utf8(req.password_derive_salt).map_err(|err| {
+        error!(err=?err, "handle_connection_key_exchange_request: convert password derive salt to string failed");
+        MirrorXError::Raw(err.to_string())
+    })?;
+
+    let password_derive_salt = pbkdf2::password_hash::SaltString::new(&salt_string).map_err(|err|{
+        error!(err=?err, "handle_connection_key_exchange_request: parse password derive salt failed");
+        MirrorXError::Raw(err.to_string())
+    })?;
+
+    let derived_key = pbkdf2::Pbkdf2
+        .hash_password(password.as_bytes(), &password_derive_salt)
+        .map_err(|err| {
+            error!(err=?err,"handle_connection_key_exchange_request: hash password failed");
+            MirrorXError::Raw(err.to_string())
+        })?
+        .to_string();
+
+    let unbound_key = ring::aead::UnboundKey::new(&ring::aead::AES_256_GCM, derived_key.as_bytes())
+        .map_err(|err| {
+            error!(err=?err,"handle_connection_key_exchange_request: create unbound key failed");
+            MirrorXError::Raw(err.to_string())
+        })?;
+
+    let mut active_device_secret_nonce = [0u8; ring::aead::NONCE_LEN];
+    for i in 0..ring::aead::NONCE_LEN {
+        active_device_secret_nonce[i] = req.secret_nonce[i];
+    }
+
+    let mut active_device_secret_opening_key =
+        ring::aead::OpeningKey::new(unbound_key, NonceValue::new(active_device_secret_nonce));
+
+    active_device_secret_opening_key
+        .open_in_place(ring::aead::Aad::empty(), &mut req.secret)
+        .map_err(|err| {
+            error!(err=?err,"handle_connection_key_exchange_request: open secret failed");
+            MirrorXError::Raw(err.to_string())
+        })?;
+
+    let active_device_secret = BINCODE_SERIALIZER
+        .deserialize::<ConnectionKeyExchangeActiveDeviceSecret>(&req.secret)
+        .map_err(|err| {
+            error!(err=?err,"handle_connection_key_exchange_request: serialize secret failed");
+            MirrorXError::Raw(err.to_string())
+        })?;
+
+    if active_device_secret.active_device_nonce.len() != ring::aead::NONCE_LEN {
+        return Err(MirrorXError::Raw("handle_connection_key_exchange_request: active device provide invalid key exchange nonce".to_string()));
+    }
+
+    let active_device_response_public_key = rsa::RsaPublicKey::new(BigUint::from_bytes_le(&active_device_secret.response_public_key_n),BigUint::from_bytes_le(&active_device_secret.response_public_key_e)).map_err(|err|{
+        error!(err=?err,"handle_connection_key_exchange_request: recover active device response public key failed");
+        MirrorXError::Raw(err.to_string())
+    })?;
+
+    // generate key exchange pair and nonce
+
+    let system_random_rng = ring::rand::SystemRandom::new();
+
+    let passive_device_private_key = ring::agreement::EphemeralPrivateKey::generate(
+        &ring::agreement::X25519,
+        &system_random_rng,
+    )
+    .map_err(|err| {
+        error!(
+            err=?err,
+            "handle_connection_key_exchange_request: generate ephemeral private key failed",
+        );
+        MirrorXError::Raw(err.to_string())
+    })?;
+
+    let passive_device_public_key =
+        passive_device_private_key
+            .compute_public_key()
             .map_err(|err| {
-                anyhow!(
-                    "key_exchange_and_verify_password: generate ephemeral private key failed: {}",
-                    err
-                )
+                error!(
+                    err=?err,
+                    "handle_connection_key_exchange_request: compute public key failed",
+                );
+                MirrorXError::Raw(err.to_string())
             })?;
 
-    let local_public_key = local_private_key.compute_public_key().map_err(|err| {
-        anyhow::anyhow!(
-            "key_exchange_and_verify_password: compute public key failed: {}",
-            err
-        )
-    })?;
+    let mut passive_device_nonce = [0u8; ring::aead::NONCE_LEN];
+    OsRng.fill_bytes(&mut passive_device_nonce);
 
-    let exchange_pub_key = local_public_key.as_ref().to_vec();
+    // key agreement
 
-    let mut exchange_salt = Vec::<u8>::new();
-    exchange_salt.resize(32, 0);
-    ephemeral_rng.fill(&mut exchange_salt).map_err(|err| {
-        anyhow::anyhow!(
-            "key_exchange_and_verify_password: generate exchange salt failed: {}",
-            err
-        )
-    })?;
+    let mut active_device_nonce = [0u8; ring::aead::NONCE_LEN];
+    for i in 0..ring::aead::NONCE_LEN {
+        active_device_nonce[i] = active_device_secret.active_device_nonce[i];
+    }
 
-    let remote_public_key =
-        ring::agreement::UnparsedPublicKey::new(&ring::agreement::X25519, &req.exchange_pub_key);
+    let active_device_public_key = ring::agreement::UnparsedPublicKey::new(
+        &ring::agreement::X25519,
+        active_device_secret.active_device_public_key,
+    );
 
-    let (sealing_key, opening_key) = ring::agreement::agree_ephemeral(
-        local_private_key,
-        &remote_public_key,
+    let (raw_sealing_key, raw_opening_key) = ring::agreement::agree_ephemeral(
+        passive_device_private_key,
+        &active_device_public_key,
         ring::error::Unspecified,
         |key_material| {
-            let send_key = ring::hkdf::Salt::new(ring::hkdf::HKDF_SHA512, &exchange_salt)
+            let sealing_key = ring::hkdf::Salt::new(ring::hkdf::HKDF_SHA512, &passive_device_nonce)
                 .extract(key_material)
-                .expand(&["".as_bytes()], &ring::aead::CHACHA20_POLY1305)
+                .expand(&["".as_bytes()], &ring::aead::AES_256_GCM)
                 .and_then(|orm| {
                     let mut key = Vec::<u8>::new();
-                    key.resize(ring::aead::CHACHA20_POLY1305.key_len(), 0);
+                    key.resize(ring::aead::AES_256_GCM.key_len(), 0);
                     orm.fill(&mut key)?;
                     Ok(key)
                 })?;
 
-            let recv_key = ring::hkdf::Salt::new(ring::hkdf::HKDF_SHA512, &req.exchange_salt)
-                .extract(key_material)
-                .expand(&["".as_bytes()], &ring::aead::CHACHA20_POLY1305)
-                .and_then(|orm| {
-                    let mut key = Vec::<u8>::new();
-                    key.resize(ring::aead::CHACHA20_POLY1305.key_len(), 0);
-                    orm.fill(&mut key)?;
-                    Ok(key)
-                })?;
+            let opening_key = ring::hkdf::Salt::new(
+                ring::hkdf::HKDF_SHA512,
+                &active_device_secret.active_device_nonce,
+            )
+            .extract(key_material)
+            .expand(&["".as_bytes()], &ring::aead::AES_256_GCM)
+            .and_then(|orm| {
+                let mut key = Vec::<u8>::new();
+                key.resize(ring::aead::AES_256_GCM.key_len(), 0);
+                orm.fill(&mut key)?;
+                Ok(key)
+            })?;
 
-            Ok((send_key, recv_key))
+            Ok((sealing_key, opening_key))
         },
     )
     .map_err(|err| {
-        anyhow!(
-            "key_exchange_and_verify_password: agree ephemeral key failed: {:?}",
-            err
-        )
+        error!(err=?err,"handle_connection_key_exchange_request: key agreement failed");
+        MirrorXError::Raw(err.to_string())
     })?;
 
-    // initial endpoint opening(recv) key
-    let unbound_opening_key =
-        ring::aead::UnboundKey::new(&ring::aead::CHACHA20_POLY1305, &opening_key).map_err(
-            |err| {
-                anyhow::anyhow!(
-                    "key_exchange_and_verify_password: create unbounded key for opening failed: {}",
-                    err
-                )
-            },
-        )?;
+    // derive opening and sealing key
 
-    let opening_initial_nonce =
-        unsafe { u64::from_le_bytes(*(exchange_salt[..8].as_ptr() as *const [u8; 8])) };
-
-    endpoint
-        .set_opening_key(unbound_opening_key, opening_initial_nonce)
-        .await;
-
-    // initial endpoint sealing(send) key
     let unbound_sealing_key =
-        ring::aead::UnboundKey::new(&ring::aead::CHACHA20_POLY1305, &sealing_key).map_err(
-            |err| {
-                anyhow::anyhow!(
-                    "key_exchange_and_verify_password: create unbounded key for sealing failed: {}",
-                    err
-                )
-            },
-        )?;
+        ring::aead::UnboundKey::new(&ring::aead::AES_256_GCM, &raw_sealing_key).map_err(|err| {
+            error!(err=?err,"handle_connection_key_exchange_request: create agreemented sealing key failed");
+            MirrorXError::Raw(err.to_string())
+        })?;
 
-    let sealing_initial_nonce =
-        unsafe { u64::from_le_bytes(*(req.exchange_salt[..8].as_ptr() as *const [u8; 8])) };
+    let sealing_key =
+        ring::aead::SealingKey::new(unbound_sealing_key, NonceValue::new(passive_device_nonce));
 
-    endpoint
-        .set_sealing_key(unbound_sealing_key, sealing_initial_nonce)
-        .await;
+    let unbound_opening_key =
+        ring::aead::UnboundKey::new(&ring::aead::AES_256_GCM, &raw_opening_key).map_err(|err| {
+            error!(err=?err,"handle_connection_key_exchange_request: create agreemented opening key failed");
+            MirrorXError::Raw(err.to_string())
+        })?;
 
-    tracing::trace!("key_exchange_and_verify_password success");
+    let opening_key =
+        ring::aead::OpeningKey::new(unbound_opening_key, NonceValue::new(active_device_nonce));
 
-    Ok(KeyExchangeAndVerifyPasswordReply {
-        password_correct: true,
-        exchange_pub_key,
-        exchange_salt,
+    // create endpoint
+
+    provider::endpoint::connect(
+        "192.168.0.101:40001",
+        req.active_device_id,
+        passive_device_id.to_owned(),
+        sealing_key,
+        opening_key,
+    )
+    .await?;
+
+    // encrypt response inner passive device secret
+
+    let passive_device_secret = ConnectionKeyExchangePassiveDeviceSecret {
+        passive_device_public_key: passive_device_public_key.as_ref(),
+        passive_device_nonce: &passive_device_nonce,
+    };
+
+    let passive_secret_buffer = BINCODE_SERIALIZER
+        .serialize(&passive_device_secret)
+        .map_err(|err| {
+            error!(err=?err,"handle_connection_key_exchange_request: serialize secret failed");
+            MirrorXError::Raw(err.to_string())
+        })?;
+
+    let exchange_data = active_device_response_public_key.encrypt(
+        &mut OsRng,
+        rsa::PaddingScheme::PKCS1v15Encrypt,
+        &passive_secret_buffer,
+    ).map_err(|err|{
+        error!(err=?err,"handle_connection_key_exchange_request: encrypt response exchange data failed");
+        MirrorXError::Raw(err.to_string())
+    })?;
+
+    Ok(ConnectionKeyExchangeResponse {
+        passive_device_id,
+        exchange_data,
     })
 }

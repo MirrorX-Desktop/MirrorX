@@ -1,4 +1,7 @@
-use super::{shader, dx_math::{VERTEX_STRIDES, VERTICES}};
+use super::{
+    dx_math::{VERTEX_STRIDES, VERTICES},
+    shader,
+};
 use anyhow::bail;
 use std::{ffi::c_void, mem::zeroed};
 use windows::{
@@ -121,12 +124,14 @@ impl DX {
                     SysMemSlicePitch: 0,
                 };
 
-                let buffer = device.CreateBuffer(&buffer_desc, &subresource_data).map_err(|err| {
-                    anyhow::anyhow!(
-                        r#"Duplication: ID3D11Device::CreateBuffer failed {{"error": "{:?}"}}"#,
-                        err.code()
-                    )
-                })?;
+                let buffer = device
+                    .CreateBuffer(&buffer_desc, &subresource_data)
+                    .map_err(|err| {
+                        anyhow::anyhow!(
+                            r#"Duplication: ID3D11Device::CreateBuffer failed {{"error": "{:?}"}}"#,
+                            err.code()
+                        )
+                    })?;
 
                 device_context.IASetVertexBuffers(0, 1, &Some(buffer.clone()), &VERTEX_STRIDES, &0);
                 device_context.IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);

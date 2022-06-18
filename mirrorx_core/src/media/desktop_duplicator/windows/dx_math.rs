@@ -1,4 +1,3 @@
-
 #[repr(C)]
 pub struct XMFLOAT2 {
     pub x: f32,

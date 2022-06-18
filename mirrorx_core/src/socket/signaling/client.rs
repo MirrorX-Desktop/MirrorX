@@ -1,12 +1,17 @@
-use super::message::{
-    ConnectRemoteRequest, ConnectRemoteResponse, ConnectionKeyExchangeRequest,
-    ConnectionKeyExchangeResponse, HandshakeRequest, HandshakeResponse, HeartBeatRequest,
-    HeartBeatResponse, SignalingMessage, SignalingMessageError, SignalingMessagePacket,
+use super::{
+    handler::{handle_connect_request, handle_connection_key_exchange_request},
+    message::{
+        ConnectRequest, ConnectResponse, ConnectionKeyExchangeRequest,
+        ConnectionKeyExchangeResponse, HandshakeRequest, HandshakeResponse, HeartBeatRequest,
+        HeartBeatResponse, SignalingMessage, SignalingMessageError, SignalingMessagePacket,
+        SignalingMessagePacketType,
+    },
 };
 use crate::{
     error::{MirrorXError, MirrorXResult},
     utility::serializer::BINCODE_SERIALIZER,
 };
+use arc_swap::ArcSwapOption;
 use bincode::Options;
 use bytes::Bytes;
 use dashmap::DashMap;
@@ -28,8 +33,10 @@ use tracing::error;
 
 const CALL_TIMEOUT: Duration = Duration::from_secs(5);
 
+pub static CURRENT_SIGNALING_CLIENT: ArcSwapOption<SignalingClient> = ArcSwapOption::const_empty();
+
 macro_rules! make_signaling_call {
-    ($name:tt,$req_type:ident,$req_message_type:path,$resp_type:ident,$resp_message_type:path) => {
+    ($name:tt, $req_type:ident, $req_message_type:path, $resp_type:ident, $resp_message_type:path) => {
         pub async fn $name(&self, req: $req_type) -> MirrorXResult<$resp_type> {
             let reply = self.call($req_message_type(req), CALL_TIMEOUT).await?;
 
@@ -42,6 +49,32 @@ macro_rules! make_signaling_call {
             }
         }
     };
+}
+
+macro_rules! handle_signaling_call {
+    ($call_id:expr, $req:tt, $resp_type:path, $handler:tt) => {{
+        tokio::spawn(async move {
+            let resp_message = match $handler($req).await {
+                Ok(resp) => $resp_type(resp),
+                Err(_) => SignalingMessage::Error(SignalingMessageError::Internal),
+            };
+
+            match CURRENT_SIGNALING_CLIENT.load().as_ref() {
+                Some(signaling_client) => {
+                    if let Some(call_id) = $call_id {
+                        if let Err(err) =
+                            signaling_client.reply(call_id, resp_message).await
+                        {
+                            error!(err=?err,"handle_message: reply message failed");
+                        }
+                    } else {
+                        error!("handle_message: Signaling Request Message without call_id")
+                    }
+                }
+                None => error!("handle_message: current signaling client not exists"),
+            }
+        });
+    }};
 }
 
 pub struct SignalingClient {
@@ -94,10 +127,11 @@ impl SignalingClient {
         &self,
         message: SignalingMessage,
         duration: Duration,
-    ) -> anyhow::Result<SignalingMessage, MirrorXError> {
+    ) -> MirrorXResult<SignalingMessage> {
         let call_id = self.atomic_call_id.fetch_add(1, Ordering::SeqCst);
 
         let packet = SignalingMessagePacket {
+            typ: SignalingMessagePacketType::Request,
             call_id: Some(call_id),
             message,
         };
@@ -117,6 +151,16 @@ impl SignalingClient {
             self.remove_call(call_id);
             MirrorXError::Timeout
         })?
+    }
+
+    async fn reply(&self, call_id: u8, message: SignalingMessage) -> MirrorXResult<()> {
+        let packet = SignalingMessagePacket {
+            typ: SignalingMessagePacketType::Response,
+            call_id: Some(call_id),
+            message,
+        };
+
+        self.send(packet).await
     }
 
     async fn send(&self, packet: SignalingMessagePacket) -> MirrorXResult<()> {
@@ -173,10 +217,10 @@ impl SignalingClient {
 
     make_signaling_call!(
         connect_remote,
-        ConnectRemoteRequest,
-        SignalingMessage::ConnectRemoteRequest,
-        ConnectRemoteResponse,
-        SignalingMessage::ConnectRemoteResponse
+        ConnectRequest,
+        SignalingMessage::ConnectRequest,
+        ConnectResponse,
+        SignalingMessage::ConnectResponse
     );
 
     make_signaling_call!(
@@ -253,23 +297,36 @@ fn serve_sink(
 }
 
 async fn handle_message(packet: SignalingMessagePacket) {
-    // if packet.call_id.is_none() {
-    //     match packet.message {
-    //         SignalingToLocalMessage::Error(ErrorReason::RemoteEndpointOffline(
-    //             remote_device_id,
-    //         )) => {
-    //             tracing::warn!(
-    //                 remote_device_id = ?remote_device_id,
-    //                 "remote endpoint offline, local endpoint exit"
-    //             );
-
-    //             if let Some(endpoint) = EndPointProvider::current()?.remove(&remote_device_id) {}
-
-    //             return Ok(());
-    //         }
-    //         _ => {}
-    //     }
-    // }
-
-    // SocketProvider::current()?.set_server_call_reply(call_id, message);
+    match packet.typ {
+        SignalingMessagePacketType::Request => match packet.message {
+            SignalingMessage::ConnectRequest(req) => {
+                handle_signaling_call!(
+                    packet.call_id,
+                    req,
+                    SignalingMessage::ConnectResponse,
+                    handle_connect_request
+                )
+            }
+            SignalingMessage::ConnectionKeyExchangeRequest(req) => {
+                handle_signaling_call!(
+                    packet.call_id,
+                    req,
+                    SignalingMessage::ConnectionKeyExchangeResponse,
+                    handle_connection_key_exchange_request
+                )
+            }
+            _ => error!("handle_message: received unexpected Signaling Request Message"),
+        },
+        SignalingMessagePacketType::Response => match CURRENT_SIGNALING_CLIENT.load().as_ref() {
+            Some(signaling_client) => {
+                if let Some(call_id) = packet.call_id {
+                    signaling_client.set_call_reply(call_id, packet.message)
+                } else {
+                    error!("handle_message: Signaling Response Message without call_id")
+                }
+            }
+            None => error!("handle_message: current signaling client not exists"),
+        },
+        SignalingMessagePacketType::Push => {}
+    }
 }

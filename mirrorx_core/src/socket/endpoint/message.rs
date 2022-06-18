@@ -2,8 +2,8 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct EndPointMessagePacket {
-    call_id: Option<u16>,
-    message: EndPointMessage,
+    pub call_id: Option<u16>,
+    pub message: EndPointMessage,
 }
 
 impl EndPointMessagePacket {
@@ -15,34 +15,20 @@ impl EndPointMessagePacket {
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub enum EndPointMessage {
     Error,
-
+    HandshakeRequest(HandshakeRequest),
+    HandshakeResponse(HandshakeResponse),
     StartMediaTransmissionRequest(StartMediaTransmissionRequest),
     StartMediaTransmissionReply(StartMediaTransmissionReply),
     MediaFrame(MediaFrame),
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-pub struct ConnectRequest {}
-
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-pub struct ConnectReply {
-    pub pub_key_n: Vec<u8>,
-    pub pub_key_e: Vec<u8>,
+pub struct HandshakeRequest {
+    pub device_id: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-pub struct KeyExchangeAndVerifyPasswordRequest {
-    pub password_secret: Vec<u8>,
-    pub exchange_pub_key: Vec<u8>,
-    pub exchange_salt: Vec<u8>,
-}
-
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-pub struct KeyExchangeAndVerifyPasswordReply {
-    pub password_correct: bool,
-    pub exchange_pub_key: Vec<u8>,
-    pub exchange_salt: Vec<u8>,
-}
+pub struct HandshakeResponse {}
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct StartMediaTransmissionRequest {
