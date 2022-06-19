@@ -4,10 +4,11 @@ use super::message::{
     ConnectionKeyExchangeResponse,
 };
 use crate::{
-    error::{MirrorXError, MirrorXResult},
+    error::MirrorXError,
     provider,
     utility::{nonce_value::NonceValue, serializer::BINCODE_SERIALIZER},
 };
+use anyhow::anyhow;
 use bincode::Options;
 use pbkdf2::password_hash::PasswordHasher;
 use rand::RngCore;
@@ -15,38 +16,28 @@ use ring::aead::BoundKey;
 use rsa::{rand_core::OsRng, BigUint, PublicKey};
 use tracing::error;
 
-pub async fn handle_connect_request(req: ConnectRequest) -> MirrorXResult<ConnectResponse> {
+pub async fn handle_connect_request(req: ConnectRequest) -> Result<ConnectResponse, MirrorXError> {
     Ok(ConnectResponse { allow: true })
 }
 
 pub async fn handle_connection_key_exchange_request(
     mut req: ConnectionKeyExchangeRequest,
-) -> MirrorXResult<ConnectionKeyExchangeResponse> {
-    let passive_device_id = provider::config::read_device_id()?.ok_or(MirrorXError::Raw(
-        "handle_connection_key_exchange_request: device id is Nonce".to_string(),
-    ))?;
+) -> Result<ConnectionKeyExchangeResponse, MirrorXError> {
+    let passive_device_id = provider::config::read_device_id()?;
 
-    let password = provider::config::read_device_password()?.ok_or(MirrorXError::Raw(
-        "handle_connection_key_exchange_request: device password is Nonce".to_string(),
-    ))?;
+    let password = provider::config::read_device_password()?;
 
     if req.secret_nonce.len() != ring::aead::NONCE_LEN {
-        return Err(MirrorXError::Raw(
-            "handle_connection_key_exchange_request: request secret nonce is invalid".to_string(),
-        ));
+        return Err(MirrorXError::CipherNonceInvalid);
     }
 
     // try to decrypt secret
 
-    let salt_string = String::from_utf8(req.password_derive_salt).map_err(|err| {
-        error!(err=?err, "handle_connection_key_exchange_request: convert password derive salt to string failed");
-        MirrorXError::Raw(err.to_string())
-    })?;
+    let salt_string = String::from_utf8(req.password_derive_salt)
+        .map_err(|err| MirrorXError::Other(anyhow!(err)))?;
 
-    let password_derive_salt = pbkdf2::password_hash::SaltString::new(&salt_string).map_err(|err|{
-        error!(err=?err, "handle_connection_key_exchange_request: parse password derive salt failed");
-        MirrorXError::Raw(err.to_string())
-    })?;
+    let password_derive_salt = pbkdf2::password_hash::SaltString::new(&salt_string)
+        .map_err(|err| MirrorXError::Other(anyhow!(err)))?;
 
     let derived_key = pbkdf2::Pbkdf2
         .hash_password(password.as_bytes(), &password_derive_salt)
@@ -193,14 +184,21 @@ pub async fn handle_connection_key_exchange_request(
 
     // create endpoint
 
-    provider::endpoint::connect(
-        "192.168.0.101:40001",
-        req.active_device_id,
-        passive_device_id.to_owned(),
-        sealing_key,
-        opening_key,
-    )
-    .await?;
+    let endpoint_active_device_id = req.active_device_id.clone();
+    let endpoint_passive_device_id = passive_device_id.clone();
+
+    tokio::spawn(async move {
+        if let Err(err) = provider::endpoint::connect(
+            endpoint_active_device_id.clone(),
+            endpoint_passive_device_id,
+            sealing_key,
+            opening_key,
+        )
+        .await
+        {
+            error!(err=?err,active_device_id=?endpoint_active_device_id,"handle_connection_key_exchange_request: create endpoint failed");
+        }
+    });
 
     // encrypt response inner passive device secret
 

@@ -1,5 +1,5 @@
 use crate::{
-    error::{MirrorXError, MirrorXResult},
+    error::{anyhow::Result, MirrorXError},
     socket::signaling::{
         client::{SignalingClient, CURRENT_SIGNALING_CLIENT},
         message::{
@@ -21,7 +21,7 @@ use std::sync::Arc;
 use tokio::net::ToSocketAddrs;
 use tracing::error;
 
-pub async fn init<A>(addr: A) -> MirrorXResult<()>
+pub async fn init<A>(addr: A) -> anyhow::Result<()>
 where
     A: ToSocketAddrs,
 {
@@ -30,7 +30,7 @@ where
     Ok(())
 }
 
-pub async fn heartbeat() -> MirrorXResult<()> {
+pub async fn heartbeat() -> anyhow::Result<()> {
     let _ = CURRENT_SIGNALING_CLIENT
         .load()
         .as_ref()
@@ -43,7 +43,7 @@ pub async fn heartbeat() -> MirrorXResult<()> {
     Ok(())
 }
 
-pub async fn handshake() -> MirrorXResult<()> {
+pub async fn handshake() -> anyhow::Result<()> {
     let device_id = crate::provider::config::read_device_id()?;
     let unique_id = crate::provider::config::read_unique_id()?;
     let device_native_id = machine_uid::get().map_err(|err| MirrorXError::Raw(err.to_string()))?;
@@ -83,7 +83,7 @@ pub async fn handshake() -> MirrorXResult<()> {
     Ok(())
 }
 
-pub async fn connect(remote_device_id: String) -> MirrorXResult<bool> {
+pub async fn connect(remote_device_id: String) -> anyhow::Result<bool> {
     let resp = CURRENT_SIGNALING_CLIENT
         .load()
         .as_ref()
@@ -98,7 +98,7 @@ pub async fn connection_key_exchange(
     active_device_id: String,
     passive_device_id: String,
     password: String,
-) -> MirrorXResult<(OpeningKey<NonceValue>, SealingKey<NonceValue>)> {
+) -> anyhow::Result<(OpeningKey<NonceValue>, SealingKey<NonceValue>)> {
     // generate rsa key pair for remote device reply
     let response_private_key = rsa::RsaPrivateKey::new(&mut OsRng, 4096).map_err(|err| {
         error!(err=?err,"connection_key_exchange: generate response private key failed");
@@ -279,7 +279,7 @@ pub async fn connection_key_exchange(
 
     let unbound_sealing_key =
         ring::aead::UnboundKey::new(&ring::aead::AES_256_GCM, &raw_sealing_key).map_err(|err| {
-            error!(err=?err,"connection_key_exchange: create agreemented sealing key failed");
+            error!(err=?err,"connection_key_exchange: create agreement sealing key failed");
             MirrorXError::Raw(err.to_string())
         })?;
 
@@ -288,7 +288,7 @@ pub async fn connection_key_exchange(
 
     let unbound_opening_key =
         ring::aead::UnboundKey::new(&ring::aead::AES_256_GCM, &raw_opening_key).map_err(|err| {
-            error!(err=?err,"connection_key_exchange: create agreemented opening key failed");
+            error!(err=?err,"connection_key_exchange: create agreement opening key failed");
             MirrorXError::Raw(err.to_string())
         })?;
 

@@ -8,7 +8,7 @@ use super::{
     },
 };
 use crate::{
-    error::{MirrorXError, MirrorXResult},
+    error::{anyhow::Result, MirrorXError},
     utility::serializer::BINCODE_SERIALIZER,
 };
 use arc_swap::ArcSwapOption;
@@ -19,6 +19,7 @@ use futures::{
     stream::{SplitSink, SplitStream},
     SinkExt, StreamExt,
 };
+use scopeguard::defer;
 use std::{
     sync::atomic::{AtomicU8, Ordering},
     time::Duration,
@@ -29,7 +30,7 @@ use tokio::{
     time::timeout,
 };
 use tokio_util::codec::{Framed, LengthDelimitedCodec};
-use tracing::error;
+use tracing::{error, info};
 
 const CALL_TIMEOUT: Duration = Duration::from_secs(5);
 
@@ -37,15 +38,15 @@ pub static CURRENT_SIGNALING_CLIENT: ArcSwapOption<SignalingClient> = ArcSwapOpt
 
 macro_rules! make_signaling_call {
     ($name:tt, $req_type:ident, $req_message_type:path, $resp_type:ident, $resp_message_type:path) => {
-        pub async fn $name(&self, req: $req_type) -> MirrorXResult<$resp_type> {
+        pub async fn $name(&self, req: $req_type) -> Result<$resp_type, MirrorXError> {
             let reply = self.call($req_message_type(req), CALL_TIMEOUT).await?;
 
             if let $resp_message_type(message) = reply {
                 Ok(message)
-            } else if let SignalingMessage::Error(error_message) = reply {
-                Err(MirrorXError::Signaling(error_message))
+            } else if let SignalingMessage::Error(remote_error) = reply {
+                Err(remote_error)
             } else {
-                Err(MirrorXError::Signaling(SignalingMessageError::Mismatched))
+                Err(MirrorXError::SignalingCallResponseMismatched)
             }
         }
     };
@@ -84,20 +85,14 @@ pub struct SignalingClient {
 }
 
 impl SignalingClient {
-    pub async fn connect<A>(addr: A) -> MirrorXResult<Self>
+    pub async fn connect<A>(addr: A) -> Result<Self, MirrorXError>
     where
         A: ToSocketAddrs,
     {
         let stream = timeout(Duration::from_secs(10), TcpStream::connect(addr))
             .await
-            .map_err(|err| {
-                error!("SignalingClient: connect timeout");
-                MirrorXError::Timeout
-            })?
-            .map_err(|err| {
-                error!(err=?err,"SignalingClient: connect error");
-                MirrorXError::Raw(err.to_string())
-            })?;
+            .map_err(|err| MirrorXError::Timeout)?
+            .map_err(|err| MirrorXError::IO(err))?;
 
         stream.set_nodelay(true).map_err(|err| {
             error!(err=?err,"SignalingClient: set connection option nodelay error");
@@ -127,7 +122,7 @@ impl SignalingClient {
         &self,
         message: SignalingMessage,
         duration: Duration,
-    ) -> MirrorXResult<SignalingMessage> {
+    ) -> Result<SignalingMessage, MirrorXError> {
         let call_id = self.atomic_call_id.fetch_add(1, Ordering::SeqCst);
 
         let packet = SignalingMessagePacket {
@@ -137,23 +132,22 @@ impl SignalingClient {
         };
 
         let mut rx = self.register_call(call_id);
+        defer! {
+            self.remove_call(call_id);
+        }
 
         timeout(duration, async move {
             if let Err(err) = self.send(packet).await {
-                self.remove_call(call_id);
                 return Err(err);
-            };
+            }
 
             rx.recv().await.ok_or(MirrorXError::Timeout)
         })
         .await
-        .map_err(|err| {
-            self.remove_call(call_id);
-            MirrorXError::Timeout
-        })?
+        .map_err(|err| MirrorXError::Timeout)?
     }
 
-    async fn reply(&self, call_id: u8, message: SignalingMessage) -> MirrorXResult<()> {
+    async fn reply(&self, call_id: u8, message: SignalingMessage) -> Result<(), MirrorXError> {
         let packet = SignalingMessagePacket {
             typ: SignalingMessagePacketType::Response,
             call_id: Some(call_id),
@@ -163,28 +157,20 @@ impl SignalingClient {
         self.send(packet).await
     }
 
-    async fn send(&self, packet: SignalingMessagePacket) -> MirrorXResult<()> {
-        let call_id = packet.call_id;
+    async fn send(&self, packet: SignalingMessagePacket) -> Result<(), MirrorXError> {
+        let buffer = BINCODE_SERIALIZER
+            .serialize(&packet)
+            .map_err(|err| MirrorXError::SerializeFailed(err))?;
 
-        let buffer = BINCODE_SERIALIZER.serialize(&packet).map_err(|err| {
-            if let Some(call_id) = call_id {
-                self.remove_call(call_id);
-            }
-
-            error!(err=?err,"SignalingClient: serialize error");
-            MirrorXError::Raw(err.to_string())
-        })?;
-
-        self.packet_tx.send(buffer).await.map_err(|err| {
-            error!(err=?err,"SignalingClient: send error");
-            MirrorXError::Raw(err.to_string())
-        })
+        self.packet_tx
+            .try_send(buffer)
+            .map_err(|err| MirrorXError::Other(err))
     }
 
     fn set_call_reply(&self, call_id: u8, message: SignalingMessage) {
         self.remove_call(call_id).map(|tx| {
             if let Err(err) = tx.try_send(message) {
-                tracing::error!(err = %err, "set_call_reply: set reply failed")
+                error!(err = %err, "set_call_reply: set reply failed")
             }
         });
     }
@@ -232,54 +218,51 @@ impl SignalingClient {
     );
 }
 
-fn serve_stream(stream: SplitStream<Framed<TcpStream, LengthDelimitedCodec>>) {
+fn serve_stream(mut stream: SplitStream<Framed<TcpStream, LengthDelimitedCodec>>) {
     tokio::spawn(async move {
         loop {
             let packet_bytes = match stream.next().await {
                 Some(res) => match res {
                     Ok(packet_bytes) => packet_bytes,
                     Err(err) => {
-                        tracing::error!(err = ?err, "signaling_serve_stream: read failed");
+                        error!(err = ?err, "signaling_serve_stream: read failed");
                         break;
                     }
                 },
                 None => {
-                    tracing::info!("signaling_serve_stream: stream closed, going to exit");
+                    info!("signaling_serve_stream: stream closed, going to exit");
                     break;
                 }
             };
 
-            let packet = match BINCODE_SERIALIZER
-                .deserialize::<SignalingMessagePacket>(&packet_bytes)
-            {
-                Ok(packet) => packet,
-                Err(err) => {
-                    tracing::error!(err = ?err, "signaling_serve_stream: deserialize packet failed");
-                    break;
-                }
-            };
+            let packet =
+                match BINCODE_SERIALIZER.deserialize::<SignalingMessagePacket>(&packet_bytes) {
+                    Ok(packet) => packet,
+                    Err(err) => {
+                        error!(err = ?err, "signaling_serve_stream: deserialize packet failed");
+                        break;
+                    }
+                };
 
             tokio::spawn(async move {
                 handle_message(packet).await;
             });
         }
 
-        tracing::info!("serve stream read loop exit");
+        info!("serve stream read loop exit");
     });
 }
 
 fn serve_sink(
-    packet_rx: Receiver<Vec<u8>>,
-    sink: SplitSink<Framed<TcpStream, LengthDelimitedCodec>, Bytes>,
+    mut packet_rx: Receiver<Vec<u8>>,
+    mut sink: SplitSink<Framed<TcpStream, LengthDelimitedCodec>, Bytes>,
 ) {
     tokio::spawn(async move {
         loop {
             let buffer = match packet_rx.recv().await {
                 Some(buffer) => buffer,
                 None => {
-                    tracing::info!(
-                        "signaling_serve_sink: packet_rx all sender has dropped, going to exit"
-                    );
+                    info!("signaling_serve_sink: packet_rx all sender has dropped, going to exit");
                     break;
                 }
             };
@@ -287,12 +270,12 @@ fn serve_sink(
             tracing::trace!(buffer = ?format!("{:02X?}", buffer), "signaling_serve_sink: send");
 
             if let Err(err) = sink.send(Bytes::from(buffer)).await {
-                tracing::error!(err = ?err, "signaling_serve_sink: send failed, going to exit");
+                error!(err = ?err, "signaling_serve_sink: send failed, going to exit");
                 break;
             }
         }
 
-        tracing::info!("signaling_serve_sink: exit");
+        info!("signaling_serve_sink: exit");
     });
 }
 

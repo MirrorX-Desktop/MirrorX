@@ -1,29 +1,36 @@
-use crate::media::{
-    ffmpeg::{
-        avcodec::{
+use crate::media::ffmpeg::avcodec::avcodec::avcodec_free_context;
+use crate::{
+    error::MirrorXError,
+    media::{
+        ffmpeg::{
             avcodec::{
-                avcodec_alloc_context3, avcodec_open2, avcodec_receive_packet, avcodec_send_frame,
-                AVCodecContext, AV_CODEC_FLAG2_LOCAL_HEADER,
+                avcodec::{
+                    avcodec_alloc_context3, avcodec_open2, avcodec_receive_packet,
+                    avcodec_send_frame, AVCodecContext, AV_CODEC_FLAG2_LOCAL_HEADER,
+                },
+                codec::{avcodec_find_encoder_by_name, AVCodec},
+                packet::{
+                    av_new_packet, av_packet_alloc, av_packet_free, av_packet_unref, AVPacket,
+                },
             },
-            codec::{avcodec_find_encoder_by_name, AVCodec},
-            packet::{av_new_packet, av_packet_alloc, av_packet_free, av_packet_unref, AVPacket},
-        },
-        avutil::{
-            error::{AVERROR, AVERROR_EOF, AVERROR_OPTION_NOT_FOUND},
-            frame::{
-                av_frame_alloc, av_frame_free, av_frame_get_buffer, av_frame_make_writable, AVFrame,
+            avutil::{
+                error::{AVERROR, AVERROR_EOF, AVERROR_OPTION_NOT_FOUND},
+                frame::{
+                    av_frame_alloc, av_frame_free, av_frame_get_buffer, av_frame_make_writable,
+                    AVFrame,
+                },
+                imgutils::av_image_get_buffer_size,
+                log::{av_log_set_flags, av_log_set_level, AV_LOG_SKIP_REPEATED, AV_LOG_TRACE},
+                opt::av_opt_set,
+                pixfmt::*,
+                rational::AVRational,
             },
-            imgutils::av_image_get_buffer_size,
-            log::{av_log_set_flags, av_log_set_level, AV_LOG_SKIP_REPEATED, AV_LOG_TRACE},
-            opt::av_opt_set,
-            pixfmt::*,
-            rational::AVRational,
         },
+        frame::CaptureFrame,
+        video_packet::VideoPacket,
     },
-    frame::CaptureFrame,
-    video_packet::VideoPacket,
 };
-use anyhow::{bail, Ok};
+use anyhow::anyhow;
 use crossbeam::channel::{bounded, Receiver, Sender};
 use std::{ffi::CString, slice::from_raw_parts};
 use tracing::error;
@@ -45,8 +52,9 @@ impl VideoEncoder {
         fps: i32,
         width: i32,
         height: i32,
-    ) -> anyhow::Result<VideoEncoder> {
-        let encoder_name_ptr = CString::new(encoder_name.to_string())?;
+    ) -> Result<VideoEncoder, MirrorXError> {
+        let encoder_name_ptr = CString::new(encoder_name.to_string())
+            .map_err(|err| MirrorXError::Other(anyhow!(err)))?;
 
         unsafe {
             av_log_set_level(AV_LOG_TRACE);
@@ -54,12 +62,14 @@ impl VideoEncoder {
 
             let codec = avcodec_find_encoder_by_name(encoder_name_ptr.as_ptr());
             if codec.is_null() {
-                bail!("find encoder failed");
+                return Err(MirrorXError::MediaVideoEncoderNotFound(
+                    encoder_name.to_string(),
+                ));
             }
 
             let codec_ctx = avcodec_alloc_context3(codec);
             if codec_ctx.is_null() {
-                bail!("alloc codec context failed");
+                return Err(MirrorXError::MediaVideoEncoderAllocContextFailed);
             }
 
             (*codec_ctx).width = width;
@@ -96,9 +106,11 @@ impl VideoEncoder {
         }
     }
 
-    pub fn set_opt(&self, key: &str, value: &str, search_flags: i32) -> anyhow::Result<()> {
-        let opt_name = CString::new(key.to_string())?;
-        let opt_value = CString::new(value.to_string())?;
+    pub fn set_opt(&self, key: &str, value: &str, search_flags: i32) -> Result<(), MirrorXError> {
+        let opt_name =
+            CString::new(key.to_string()).map_err(|err| MirrorXError::Other(anyhow!(err)))?;
+        let opt_value =
+            CString::new(value.to_string()).map_err(|err| MirrorXError::Other(anyhow!(err)))?;
 
         unsafe {
             let ret = av_opt_set(
@@ -109,28 +121,40 @@ impl VideoEncoder {
             );
 
             if ret == AVERROR_OPTION_NOT_FOUND {
-                bail!("option not found key={} value={}", key, value);
+                return Err(MirrorXError::MediaVideoEncoderOptionNotFound(
+                    key.to_string(),
+                ));
             } else if ret == AVERROR(libc::ERANGE) {
-                bail!("option value out of range")
+                return Err(MirrorXError::MediaVideoEncoderOptionValueOutOfRange {
+                    key: key.to_string(),
+                    value: value.to_string(),
+                });
             } else if ret == AVERROR(libc::EINVAL) {
-                bail!("option value is invalid")
+                return Err(MirrorXError::MediaVideoEncoderOptionValueInvalid {
+                    key: key.to_string(),
+                    value: value.to_string(),
+                });
             } else if ret != 0 {
-                bail!("set option failed ret={}", ret)
+                return Err(MirrorXError::MediaVideoEncoderOptionSetFailed {
+                    key: key.to_string(),
+                    value: value.to_string(),
+                    error_code: ret,
+                });
             } else {
                 Ok(())
             }
         }
     }
 
-    pub fn open(&mut self) -> anyhow::Result<Receiver<VideoPacket>> {
+    pub fn open(&mut self) -> Result<Receiver<VideoPacket>, MirrorXError> {
         if self.output_tx.is_some() {
-            bail!("video encoder already opened");
+            return Err(MirrorXError::MediaVideoEncoderAlreadyOpened);
         }
 
         unsafe {
             let ret = avcodec_open2(self.codec_ctx, self.codec, std::ptr::null_mut());
             if ret != 0 {
-                bail!("open encoder failed ret={}", ret)
+                return Err(MirrorXError::MediaVideoEncoderOpenFailed(ret));
             }
 
             let (tx, rx) = bounded::<VideoPacket>(600);
@@ -139,7 +163,7 @@ impl VideoEncoder {
         }
     }
 
-    pub fn encode(&mut self, capture_frame: CaptureFrame) {
+    pub fn encode(&mut self, capture_frame: CaptureFrame) -> Result<(), MirrorXError> {
         unsafe {
             let mut ret: i32;
 
@@ -157,8 +181,7 @@ impl VideoEncoder {
 
                 let frame = av_frame_alloc();
                 if frame.is_null() {
-                    error!("av frame alloc failed");
-                    return;
+                    return Err(MirrorXError::MediaVideoEncoderAVFrameAllocFailed);
                 }
 
                 (*frame).width = capture_frame.width() as i32;
@@ -167,14 +190,12 @@ impl VideoEncoder {
 
                 ret = av_frame_get_buffer(frame, 1);
                 if ret < 0 {
-                    error!(ret = ret, "av_frame_get_buffer failed");
-                    return;
+                    return Err(MirrorXError::MediaVideoEncoderAVFrameGetBufferFailed(ret));
                 }
 
                 let packet = av_packet_alloc();
                 if packet.is_null() {
-                    error!("av_packet_alloc failed");
-                    return;
+                    return Err(MirrorXError::MediaVideoEncoderAVPacketAllocFailed);
                 }
 
                 let packet_size = av_image_get_buffer_size(
@@ -186,8 +207,7 @@ impl VideoEncoder {
 
                 ret = av_new_packet(packet, packet_size);
                 if ret < 0 {
-                    error!(ret = ret, "av_new_packet failed");
-                    return;
+                    return Err(MirrorXError::MediaVideoEncoderAVPacketCreateFailed(ret));
                 }
 
                 self.frame = frame;
@@ -196,7 +216,9 @@ impl VideoEncoder {
 
             ret = av_frame_make_writable(self.frame);
             if ret < 0 {
-                tracing::error!(ret = ret, "av_frame_make_writable failed");
+                return Err(MirrorXError::MediaVideoEncoderAVFrameMakeWritableFailed(
+                    ret,
+                ));
             }
 
             (*self.frame).data[0] = capture_frame.luminance_buffer().as_ptr() as *mut _;
@@ -213,33 +235,31 @@ impl VideoEncoder {
 
             if ret != 0 {
                 if ret == AVERROR(libc::EAGAIN) {
-                    tracing::error!("can not send more frame to encoder");
+                    return Err(MirrorXError::MediaVideoEncoderFrameUnacceptable);
                 } else if ret == AVERROR_EOF {
-                    tracing::error!("encoder closed");
-                } else {
-                    tracing::error!(ret = ret, "avcodec_send_frame failed");
+                    return Err(MirrorXError::MediaVideoEncoderClosed);
                 }
-                return;
+                return Err(MirrorXError::MediaVideoEncoderSendFrameFailed(ret));
             }
 
             loop {
                 ret = avcodec_receive_packet(self.codec_ctx, self.packet);
 
                 if ret == AVERROR(libc::EAGAIN) || ret == AVERROR_EOF {
-                    return;
+                    return Ok(());
                 } else if ret < 0 {
-                    tracing::error!(ret = ret, "avcodec_receive_packet failed");
-                    return;
+                    return Err(MirrorXError::MediaVideoEncoderReceivePacketFailed(ret));
                 }
 
                 if let Some(tx) = &self.output_tx {
-                    if let Err(err) = tx.try_send(VideoPacket {
+                    if let Err(_) = tx.try_send(VideoPacket {
                         data: from_raw_parts((*self.packet).data, (*self.packet).size as usize)
                             .to_vec(),
                         dts: (*self.packet).dts,
                         pts: (*self.packet).pts,
                     }) {
-                        tracing::error!(err = ?err, "send encoded video packet failed");
+                        av_packet_unref(self.packet);
+                        return Err(MirrorXError::MediaVideoEncoderOutputTxSendFailed);
                     }
                 }
 
@@ -252,7 +272,18 @@ impl VideoEncoder {
 impl Drop for VideoEncoder {
     fn drop(&mut self) {
         unsafe {
-            avcodec_send_frame(self.codec_ctx, std::ptr::null_mut());
+            if !self.codec_ctx.is_null() {
+                avcodec_send_frame(self.codec_ctx, std::ptr::null_mut());
+                avcodec_free_context(&mut self.codec_ctx);
+            }
+
+            if !self.frame.is_null() {
+                av_frame_free(&mut self.frame);
+            }
+
+            if !self.packet.is_null() {
+                av_packet_free(&mut self.packet);
+            }
         }
     }
 }

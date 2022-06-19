@@ -1,3 +1,4 @@
+use crate::error::MirrorXError;
 use crate::media::{
     ffmpeg::{
         avcodec::{
@@ -22,12 +23,14 @@ use crate::media::{
     },
     frame::NativeFrame,
 };
-use anyhow::bail;
+use anyhow::{anyhow, bail};
 use crossbeam::channel::{bounded, Receiver, Sender};
+use scopeguard::defer;
 use std::{
     ffi::{CStr, CString},
     ptr,
 };
+use tracing::{info, warn};
 
 pub struct VideoDecoder {
     codec: *const AVCodec,
@@ -43,8 +46,9 @@ unsafe impl Send for VideoDecoder {}
 unsafe impl Sync for VideoDecoder {}
 
 impl VideoDecoder {
-    pub fn new(decoder_name: &str) -> anyhow::Result<VideoDecoder> {
-        let decoder_name_ptr = CString::new(decoder_name)?;
+    pub fn new(decoder_name: &str) -> Result<VideoDecoder, MirrorXError> {
+        let decoder_name_ptr =
+            CString::new(decoder_name).map_err(|err| MirrorXError::Other(anyhow!(err)))?;
 
         unsafe {
             av_log_set_level(AV_LOG_TRACE);
@@ -68,20 +72,22 @@ impl VideoDecoder {
                 }
 
                 let support_hw_device_name = av_hwdevice_get_type_name(support_hw_device_type);
-                tracing::info!(
-                    device_name = CStr::from_ptr(support_hw_device_name).to_str()?,
-                    "support hw device name"
-                );
+                match CStr::from_ptr(support_hw_device_name).to_str() {
+                    Ok(name) => info!(device=?name,"support hw device name"),
+                    Err(err) => warn!(err=?err,"convert hw device name from C str failed"),
+                }
             }
 
             decoder.codec = avcodec_find_decoder_by_name(decoder_name_ptr.as_ptr());
             if decoder.codec.is_null() {
-                bail!("find decoder failed");
+                return Err(MirrorXError::MediaVideoDecoderNotFound(
+                    decoder_name.to_string(),
+                ));
             }
 
             decoder.codec_ctx = avcodec_alloc_context3(decoder.codec);
             if decoder.codec_ctx.is_null() {
-                bail!("alloc codec context failed");
+                return Err(MirrorXError::MediaVideoDecoderAllocContextFailed);
             }
 
             (*decoder.codec_ctx).width = 1920;
@@ -95,19 +101,19 @@ impl VideoDecoder {
 
             decoder.packet = av_packet_alloc();
             if decoder.packet.is_null() {
-                bail!("alloc packet failed");
+                return Err(MirrorXError::MediaVideoDecoderAVPacketAllocFailed);
             }
 
             decoder.decode_frame = av_frame_alloc();
             if decoder.decode_frame.is_null() {
-                bail!("alloc decode frame failed");
+                return Err(MirrorXError::MediaVideoDecoderAVFrameAllocFailed);
             }
 
             let hw_config = avcodec_get_hw_config(decoder.codec, 0);
             if hw_config.is_null() {
                 decoder.parser_ctx = av_parser_init((*decoder.codec).id);
                 if decoder.parser_ctx.is_null() {
-                    bail!("init parser failed");
+                    return Err(MirrorXError::MediaVideoDecoderParserInitFailed);
                 }
             } else {
                 let mut hwdevice_ctx = ptr::null_mut();
@@ -121,14 +127,14 @@ impl VideoDecoder {
                 );
 
                 if ret < 0 {
-                    bail!("create hw device context failed");
+                    return Err(MirrorXError::MediaVideoDecoderHWDeviceCreateFailed(ret));
                 }
 
                 (*decoder.codec_ctx).hw_device_ctx = hwdevice_ctx;
 
                 decoder.hw_decode_frame = av_frame_alloc();
                 if decoder.hw_decode_frame.is_null() {
-                    bail!("alloc hw decode frame failed");
+                    return Err(MirrorXError::MediaVideoDecoderHWAVFrameAllocFailed);
                 }
             }
 
@@ -136,15 +142,15 @@ impl VideoDecoder {
         }
     }
 
-    pub fn open(&mut self) -> anyhow::Result<Receiver<NativeFrame>> {
+    pub fn open(&mut self) -> Result<Receiver<NativeFrame>, MirrorXError> {
         if self.output_tx.is_some() {
-            bail!("video decoder already opened");
+            return Err(MirrorXError::MediaVideoDecoderAlreadyOpened);
         }
 
         unsafe {
             let ret = avcodec_open2(self.codec_ctx, self.codec, ptr::null_mut());
             if ret != 0 {
-                bail!("open decoder failed ret={}", ret)
+                return Err(MirrorXError::MediaVideoDecoderOpenFailed(ret));
             }
 
             let (tx, rx) = bounded::<NativeFrame>(600);
@@ -153,7 +159,13 @@ impl VideoDecoder {
         }
     }
 
-    pub fn decode(&self, data: *const u8, data_size: i32, dts: i64, pts: i64) {
+    pub fn decode(
+        &self,
+        data: *const u8,
+        data_size: i32,
+        dts: i64,
+        pts: i64,
+    ) -> Result<(), MirrorXError> {
         unsafe {
             if !self.parser_ctx.is_null() {
                 let ret = av_parser_parse2(
@@ -169,8 +181,7 @@ impl VideoDecoder {
                 );
 
                 if ret < 0 {
-                    tracing::error!(ret = ret, "av_parser_parse2 failed");
-                    return;
+                    return Err(MirrorXError::MediaVideoDecoderParser2Failed(ret));
                 }
             } else {
                 (*self.packet).data = data as *mut u8;
@@ -182,14 +193,15 @@ impl VideoDecoder {
             let mut ret = avcodec_send_packet(self.codec_ctx, self.packet);
 
             if ret == AVERROR(libc::EAGAIN) {
-                tracing::error!("can not send more packet to decoder");
-                return;
+                return Err(MirrorXError::MediaVideoDecoderPacketUnacceptable);
             } else if ret == AVERROR_EOF {
-                tracing::error!("decoder closed");
-                return;
+                return Err(MirrorXError::MediaVideoDecoderClosed);
             } else if ret < 0 {
-                tracing::error!(ret = ret, "avcodec_send_packet failed");
-                return;
+                return Err(MirrorXError::MediaVideoDecoderSendPacketFailed(ret));
+            }
+
+            defer! {
+                av_packet_unref((*self).packet);
             }
 
             let mut tmp_frame: *mut AVFrame = ptr::null_mut();
@@ -198,13 +210,11 @@ impl VideoDecoder {
                 ret = avcodec_receive_frame(self.codec_ctx, self.decode_frame);
 
                 if ret == AVERROR(libc::EAGAIN) {
-                    break;
+                    return Ok(());
                 } else if ret == AVERROR_EOF {
-                    tracing::error!("decoder closed");
-                    break;
+                    return Ok(());
                 } else if ret < 0 {
-                    tracing::error!(ret = ret, "avcodec_receive_frame failed");
-                    break;
+                    return Err(MirrorXError::MediaVideoDecoderReceiveFrameFailed(ret));
                 }
 
                 if !self.parser_ctx.is_null() {
@@ -227,14 +237,12 @@ impl VideoDecoder {
                     let native_frame = (*self.decode_frame).data[3] as *mut libc::c_void;
 
                     if let Some(tx) = &self.output_tx {
-                        if let Err(e) = tx.send(NativeFrame(native_frame)) {
-                            tracing::error!(e = ?e, "send video frame failed");
+                        if let Err(err) = tx.try_send(NativeFrame(native_frame)) {
+                            return Err(MirrorXError::MediaVideoDecoderOutputTxSendFailed);
                         }
                     }
                 }
             }
-
-            av_packet_unref((*self).packet);
         }
     }
 }
@@ -243,7 +251,6 @@ impl Drop for VideoDecoder {
     fn drop(&mut self) {
         unsafe {
             if self.output_tx.is_some() {
-                // inner codec had opened
                 avcodec_send_packet(self.codec_ctx, ptr::null());
             }
 
@@ -264,7 +271,6 @@ impl Drop for VideoDecoder {
             }
 
             if !self.codec_ctx.is_null() {
-                // av_buffer_unref(self.codec_ctx.hw_device_ctx)
                 avcodec_free_context(&mut self.codec_ctx);
             }
         }

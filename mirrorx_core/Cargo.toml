@@ -36,6 +36,7 @@ sha2 = "0.10.2"
 rsa = "0.6.1"
 ring = "0.16.20"
 pbkdf2 = "0.11"
+thiserror = "1.0.31"
 
 [target.x86_64-apple-darwin.dependencies]
 objc = { version = "0.2.7" }

@@ -1,26 +1,35 @@
+use crate::error::MirrorXError;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+pub enum EndPointMessagePacketType {
+    Request,
+    Response,
+    Push,
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct EndPointMessagePacket {
+    pub typ: EndPointMessagePacketType,
     pub call_id: Option<u16>,
     pub message: EndPointMessage,
 }
 
-impl EndPointMessagePacket {
-    pub fn new(call_id: Option<u16>, message: EndPointMessage) -> Self {
-        Self { call_id, message }
-    }
-}
-
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub enum EndPointMessage {
-    Error,
+    Error(MirrorXError),
     HandshakeRequest(HandshakeRequest),
     HandshakeResponse(HandshakeResponse),
     StartMediaTransmissionRequest(StartMediaTransmissionRequest),
-    StartMediaTransmissionReply(StartMediaTransmissionReply),
+    StartMediaTransmissionResponse(StartMediaTransmissionResponse),
     MediaFrame(MediaFrame),
 }
+//
+// #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+// pub enum EndPointMessageError {
+//     Mismatched,
+//     Internal,
+// }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct HandshakeRequest {
@@ -36,7 +45,7 @@ pub struct StartMediaTransmissionRequest {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-pub struct StartMediaTransmissionReply {
+pub struct StartMediaTransmissionResponse {
     pub os_name: String,
     pub os_version: String,
     pub video_type: String,
