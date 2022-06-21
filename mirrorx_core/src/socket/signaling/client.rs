@@ -7,10 +7,8 @@ use super::{
         SignalingMessagePacketType,
     },
 };
-use crate::{
-    error::{anyhow::Result, MirrorXError},
-    utility::serializer::BINCODE_SERIALIZER,
-};
+use crate::{error::MirrorXError, utility::serializer::BINCODE_SERIALIZER};
+use anyhow::anyhow;
 use arc_swap::ArcSwapOption;
 use bincode::Options;
 use bytes::Bytes;
@@ -43,10 +41,8 @@ macro_rules! make_signaling_call {
 
             if let $resp_message_type(message) = reply {
                 Ok(message)
-            } else if let SignalingMessage::Error(remote_error) = reply {
-                Err(remote_error)
             } else {
-                Err(MirrorXError::SignalingCallResponseMismatched)
+                Err(MirrorXError::SignalingError)
             }
         }
     };
@@ -94,10 +90,9 @@ impl SignalingClient {
             .map_err(|err| MirrorXError::Timeout)?
             .map_err(|err| MirrorXError::IO(err))?;
 
-        stream.set_nodelay(true).map_err(|err| {
-            error!(err=?err,"SignalingClient: set connection option nodelay error");
-            MirrorXError::Raw(err.to_string())
-        })?;
+        stream
+            .set_nodelay(true)
+            .map_err(|err| MirrorXError::IO(err))?;
 
         let framed_stream = LengthDelimitedCodec::builder()
             .little_endian()
@@ -164,7 +159,7 @@ impl SignalingClient {
 
         self.packet_tx
             .try_send(buffer)
-            .map_err(|err| MirrorXError::Other(err))
+            .map_err(|err| MirrorXError::Other(anyhow!(err)))
     }
 
     fn set_call_reply(&self, call_id: u8, message: SignalingMessage) {

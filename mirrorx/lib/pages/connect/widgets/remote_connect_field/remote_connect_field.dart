@@ -168,7 +168,7 @@ class _RemoteConnectFieldState extends State<RemoteConnectField> {
 
       // handshake with remote device
       await MirrorXCoreSDK.instance
-          .desktopConnect(remoteDeviceId: remoteDeviceID);
+          .signalingConnect(remoteDeviceId: remoteDeviceID);
 
       final password = await _popupInputPasswordDialog();
       if (password == null || password.isEmpty) {
@@ -176,7 +176,7 @@ class _RemoteConnectFieldState extends State<RemoteConnectField> {
       }
 
       // auth password
-      await MirrorXCoreSDK.instance.desktopKeyExchangeAndPasswordVerify(
+      await MirrorXCoreSDK.instance.signalingConnectionKeyExchange(
           remoteDeviceId: remoteDeviceID, password: password);
 
       // switch to desktop page

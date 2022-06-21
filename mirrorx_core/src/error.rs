@@ -15,12 +15,23 @@ pub enum MirrorXError {
     SerializeFailed(bincode::Error),
     #[error("deserialize failed ({0:?})")]
     DeserializeFailed(bincode::Error),
-    #[error("signaling call returns mismatched response message")]
-    SignalingCallResponseMismatched,
-    #[error("endpoint '{0}' call returns mismatched response message")]
-    EndPointCallResponseMismatched(String),
-    #[error("cipher nonce is invalid")]
-    CipherNonceInvalid,
+    #[error("signaling returns error")]
+    SignalingError,
+    #[error("endpoint '{0}' returns error")]
+    EndPointError(String),
+    #[error("local device id is empty or invalid")]
+    LocalDeviceIDInvalid,
+    #[error("local device password is empty or invalid")]
+    LocalDevicePasswordInvalid,
+    // endpoint
+    #[error("endpoint '{0}' not found")]
+    EndPointNotFound(String),
+    #[error("endpoint '{0}' texture_id already set")]
+    EndPointTextureIDAlreadySet(String),
+    #[error("endpoint '{0}' video_texture_ptr already set")]
+    EndPointVideoTexturePtrAlreadySet(String),
+    #[error("endpoint '{0}' update_frame_callback_ptr already set")]
+    EndPointUpdateFrameCallbackPtrAlreadySet(String),
     // media video encoder
     #[error("media video encoder can't find encoder by name '{0}'")]
     MediaVideoEncoderNotFound(String),

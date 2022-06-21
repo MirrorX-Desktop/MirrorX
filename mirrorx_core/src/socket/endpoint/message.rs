@@ -1,4 +1,3 @@
-use crate::error::MirrorXError;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
@@ -17,7 +16,7 @@ pub struct EndPointMessagePacket {
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub enum EndPointMessage {
-    Error(MirrorXError),
+    Error,
     HandshakeRequest(HandshakeRequest),
     HandshakeResponse(HandshakeResponse),
     StartMediaTransmissionRequest(StartMediaTransmissionRequest),

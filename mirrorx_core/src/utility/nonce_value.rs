@@ -6,7 +6,7 @@ pub struct NonceValue(u128);
 
 impl NonceValue {
     pub fn new(initial_nonce: [u8; ring::aead::NONCE_LEN]) -> Self {
-        let u128_bytes = [0u8; 16];
+        let mut u128_bytes = [0u8; 16];
 
         for i in 0..ring::aead::NONCE_LEN {
             u128_bytes[i] = initial_nonce[i];
@@ -24,10 +24,13 @@ impl NonceSequence for NonceValue {
         }
 
         unsafe {
-            let v: [u8; ring::aead::NONCE_LEN] =
-                std::mem::transmute(&self.0 as *const _ as *const u8);
+            let v: &[u8] = std::slice::from_raw_parts(&self.0 as *const _ as *const u8, 16);
+            let arr: &[u8; 12] = match v.try_into() {
+                Ok(res) => res,
+                Err(err) => return Err(ring::error::Unspecified::from(err)),
+            };
 
-            Ok(ring::aead::Nonce::assume_unique_for_key(v))
+            Ok(ring::aead::Nonce::assume_unique_for_key(*arr))
         }
     }
 }

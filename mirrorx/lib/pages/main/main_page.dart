@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:developer';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:mirrorx/env/sdk/mirrorx_core_sdk.dart';
 import 'package:mirrorx/pages/connect/connect_page.dart';
 import 'package:mirrorx/pages/desktop/desktop_page.dart';
 import 'package:mirrorx/pages/files/files_page.dart';
@@ -20,6 +22,15 @@ class MainPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    Timer.periodic(const Duration(seconds: 20), (timer) async {
+      try {
+        await MirrorXCoreSDK.instance.signalingHeartbeat();
+      } catch (err) {
+        // todo: handle error
+        log('Error: $err');
+      }
+    });
+
     return MultiBlocProvider(
       providers: [
         BlocProvider(create: (context) => ProfileStateCubit()),

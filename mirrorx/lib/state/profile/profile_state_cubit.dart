@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mirrorx/env/sdk/mirrorx_core_sdk.dart';
+import 'package:mirrorx/env/utility/rng.dart';
 
 part 'profile_state.dart';
 
@@ -50,8 +51,7 @@ class ProfileStateCubit extends Cubit<ProfileState> {
 
   Future<void> updateDevicePassword(String? newPassword) async {
     try {
-      newPassword ??=
-          await MirrorXCoreSDK.instance.utilityGenerateDevicePassword();
+      newPassword ??= generatePassword();
 
       await MirrorXCoreSDK.instance
           .configSaveDevicePassword(devicePassword: newPassword);

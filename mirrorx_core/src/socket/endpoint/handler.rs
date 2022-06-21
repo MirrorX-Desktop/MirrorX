@@ -1,33 +1,16 @@
 use super::{
     endpoint::EndPoint,
-    endpoint::{
-        client_to_client::{
-            ConnectReply, ConnectRequest, KeyExchangeAndVerifyPasswordReply,
-            KeyExchangeAndVerifyPasswordRequest, MediaTransmission, StartMediaTransmissionReply,
-            StartMediaTransmissionRequest,
-        },
-        ENDPOINTS,
-    },
+    message::{MediaFrame, StartMediaTransmissionResponse},
 };
-use crate::error::MirrorXError;
-use crate::{
-    error::anyhow::Result,
-    media::{desktop_duplicator::DesktopDuplicator, video_encoder::VideoEncoder},
-    provider::{config::ConfigProvider, runtime::RuntimeProvider, signal_a::SocketProvider},
-    socket::endpoint::message::StartMediaTransmissionRequest,
-    socket::endpoint::CacheKey,
-};
-use anyhow::anyhow;
-use ring::rand::SecureRandom;
-use rsa::{PaddingScheme, PublicKeyParts, RsaPrivateKey, RsaPublicKey};
-use std::{sync::Arc, time::Duration};
-use tracing::{error, info};
+use crate::{error::MirrorXError, socket::endpoint::message::StartMediaTransmissionRequest};
 
 pub async fn handle_start_media_transmission_request(
     endpoint: &EndPoint,
     req: StartMediaTransmissionRequest,
-) -> Result<StartMediaTransmissionReply, MirrorXError> {
-    let reply = StartMediaTransmissionReply {
+) -> Result<StartMediaTransmissionResponse, MirrorXError> {
+    endpoint.begin_screen_capture()?;
+
+    let reply = StartMediaTransmissionResponse {
         os_name: crate::constants::OS_NAME
             .get()
             .map(|v| v.clone())
@@ -45,8 +28,8 @@ pub async fn handle_start_media_transmission_request(
 
 pub async fn handle_media_transmission(
     remove_device_id: String,
-    media_transmission: MediaTransmission,
-) -> anyhow::Result<()> {
+    media_transmission: MediaFrame,
+) -> Result<(), MirrorXError> {
     // info!(
     //     "receive media transmission, length: {}",
     //     media_transmission.data.len()

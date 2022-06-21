@@ -1,14 +1,18 @@
 use super::{
     handler::{handle_media_transmission, handle_start_media_transmission_request},
-    message::{EndPointMessage, EndPointMessagePacketType, HandshakeRequest, HandshakeResponse},
+    message::{
+        EndPointMessage, EndPointMessagePacket, EndPointMessagePacketType, HandshakeRequest,
+        HandshakeResponse, MediaFrame, StartMediaTransmissionRequest,
+        StartMediaTransmissionResponse,
+    },
 };
 use crate::media::desktop_duplicator::DesktopDuplicator;
 use crate::{
-    error::{anyhow::Result, MirrorXError},
+    error::MirrorXError,
     media::video_encoder::VideoEncoder,
-    socket::endpoint::message::EndPointMessagePacket,
     utility::{nonce_value::NonceValue, serializer::BINCODE_SERIALIZER},
 };
+use anyhow::anyhow;
 use bincode::Options;
 use bytes::Bytes;
 use dashmap::DashMap;
@@ -16,7 +20,7 @@ use futures::{
     stream::{SplitSink, SplitStream},
     SinkExt, StreamExt,
 };
-use once_cell::sync::OnceCell;
+use once_cell::sync::{Lazy, OnceCell};
 use ring::aead::{OpeningKey, SealingKey};
 use scopeguard::defer;
 use std::{
@@ -33,7 +37,7 @@ use tracing::{error, info, trace};
 
 const CALL_TIMEOUT: Duration = Duration::from_secs(5);
 
-pub static ENDPOINTS: DashMap<String, EndPoint> = DashMap::new();
+pub static ENDPOINTS: Lazy<DashMap<String, EndPoint>> = Lazy::new(|| DashMap::new());
 
 macro_rules! make_endpoint_call {
     ($name:tt, $req_type:ident, $req_message_type:path, $resp_type:ident, $resp_message_type:path) => {
@@ -42,12 +46,8 @@ macro_rules! make_endpoint_call {
 
             if let $resp_message_type(message) = reply {
                 Ok(message)
-            } else if let MirrorXError::Error(remote_error) = reply {
-                Err(error_message)
             } else {
-                Err(MirrorXError::EndPointCallResponseMismatched(
-                    self.remote_device_id.clone(),
-                ))
+                Err(MirrorXError::EndPointError(self.remote_device_id.clone()))
             }
         }
     };
@@ -57,13 +57,16 @@ macro_rules! handle_endpoint_call {
     ($remote_device_id:expr, $call_id:expr, $req:tt, $resp_type:path, $handler:tt) => {{
         tokio::spawn(async move {
             if let Some(call_id) = $call_id {
-                if let Some(endpoint) = ENDPOINTS.get(&remote_device_id) {
-                    let resp_message = match $handler(endpoint.value, $req).await {
+                if let Some(endpoint) = ENDPOINTS.get(&$remote_device_id) {
+                    let resp_message = match $handler(endpoint.value(), $req).await {
                         Ok(resp) => $resp_type(resp),
-                        Err(_) => EndPointMessage::Error(EndPointMessageError::Internal),
+                        Err(err) => {
+                            error!(err=?err,"handle_endpoint_call returns error");
+                            EndPointMessage::Error
+                        }
                     };
 
-                    if let Err(err) = endpoint.reply(call_id,resp_message){
+                    if let Err(err) = endpoint.reply(call_id,resp_message).await{
                         error!(err=?err,remote_device_id=?$remote_device_id,"handle_message: reply message failed");
                     }
                 }else{
@@ -79,8 +82,8 @@ macro_rules! handle_endpoint_call {
 macro_rules! handle_endpoint_push {
     ($remote_device_id:expr, $req:tt, $handler:tt) => {{
         tokio::spawn(async move {
-            if let Err(err) = $handler($remote_device_id, $req).await {
-                error!(remote_device_id=?$remote_device_id,"handle_message: handle push message failed")
+            if let Err(err) = $handler($remote_device_id.clone(), $req).await {
+                error!(err=?err,remote_device_id=?$remote_device_id,"handle_message: handle push message failed")
             }
         });
     }};
@@ -93,6 +96,9 @@ pub struct EndPoint {
     call_reply_tx_map: DashMap<u16, Sender<EndPointMessage>>,
     packet_tx: Sender<EndPointMessagePacket>,
     video_decoder_tx: OnceCell<Sender<Vec<u8>>>,
+    texture_id: OnceCell<i64>,
+    video_texture_ptr: OnceCell<i64>,
+    update_frame_callback_ptr: OnceCell<i64>,
 }
 
 impl EndPoint {
@@ -134,7 +140,37 @@ impl EndPoint {
             call_reply_tx_map: DashMap::new(),
             packet_tx,
             video_decoder_tx: OnceCell::new(),
+            texture_id: OnceCell::new(),
+            video_texture_ptr: OnceCell::new(),
+            update_frame_callback_ptr: OnceCell::new(),
         })
+    }
+
+    pub fn set_texture_id(&self, texture_id: i64) -> Result<(), MirrorXError> {
+        self.texture_id
+            .set(texture_id)
+            .map_err(|err| MirrorXError::EndPointTextureIDAlreadySet(self.remote_device_id.clone()))
+    }
+
+    pub fn set_video_texture_ptr(&self, video_texture_ptr: i64) -> Result<(), MirrorXError> {
+        self.video_texture_ptr
+            .set(video_texture_ptr)
+            .map_err(|err| {
+                MirrorXError::EndPointVideoTexturePtrAlreadySet(self.remote_device_id.clone())
+            })
+    }
+
+    pub fn set_update_frame_callback_ptr(
+        &self,
+        update_frame_callback_ptr: i64,
+    ) -> Result<(), MirrorXError> {
+        self.update_frame_callback_ptr
+            .set(update_frame_callback_ptr)
+            .map_err(|err| {
+                MirrorXError::EndPointUpdateFrameCallbackPtrAlreadySet(
+                    self.remote_device_id.clone(),
+                )
+            })
     }
 
     async fn call(
@@ -179,7 +215,7 @@ impl EndPoint {
     async fn send(&self, packet: EndPointMessagePacket) -> Result<(), MirrorXError> {
         self.packet_tx
             .try_send(packet)
-            .map_err(|err| MirrorXError::Other(err))
+            .map_err(|err| MirrorXError::Other(anyhow!(err)))
     }
 
     fn set_call_reply(&self, call_id: u16, message: EndPointMessage) {
@@ -200,7 +236,7 @@ impl EndPoint {
         self.call_reply_tx_map.remove(&call_id).map(|entry| entry.1)
     }
 
-    pub async fn begin_screen_capture() -> anyhow::Result<()> {
+    pub fn begin_screen_capture(&self) -> Result<(), MirrorXError> {
         let encoder_name: &str;
 
         if cfg!(target_os = "macos") {
@@ -253,18 +289,19 @@ impl EndPoint {
             desktop_duplicator.stop();
         });
 
+        let sender = self.packet_tx.clone();
+
         std::thread::spawn(move || loop {
             match packet_rx.recv() {
                 Ok(packet) => {
-                    if let Err(err) =
-                        runtime_provider.block_on(socket_provider.desktop_media_transmission(
-                            endpoint.clone(),
-                            MediaTransmission {
-                                data: packet.data,
-                                timestamp: 0,
-                            },
-                        ))
-                    {
+                    if let Err(err) = sender.blocking_send(EndPointMessagePacket {
+                        typ: EndPointMessagePacketType::Push,
+                        call_id: None,
+                        message: EndPointMessage::MediaFrame(MediaFrame {
+                            data: packet.data,
+                            timestamp: 0,
+                        }),
+                    }) {
                         error!(?err, "desktop_media_transmission failed");
                     }
                 }
@@ -274,6 +311,8 @@ impl EndPoint {
                 }
             };
         });
+
+        Ok(())
     }
 
     make_endpoint_call!(
@@ -282,6 +321,14 @@ impl EndPoint {
         EndPointMessage::HandshakeRequest,
         HandshakeResponse,
         EndPointMessage::HandshakeResponse
+    );
+
+    make_endpoint_call!(
+        start_media_transmission,
+        StartMediaTransmissionRequest,
+        EndPointMessage::StartMediaTransmissionRequest,
+        StartMediaTransmissionResponse,
+        EndPointMessage::StartMediaTransmissionResponse
     );
 }
 
@@ -321,8 +368,10 @@ fn serve_stream(
                     }
                 };
 
+            let remote_device_id = remote_device_id.clone();
+
             tokio::spawn(async move {
-                handle_message(remote_device_id.clone(), packet).await;
+                handle_message(remote_device_id, packet).await;
             });
         }
 
@@ -391,7 +440,7 @@ async fn handle_message(remote_device_id: String, packet: EndPointMessagePacket)
         EndPointMessagePacketType::Response => {
             if let Some(call_id) = packet.call_id {
                 if let Some(endpoint) = ENDPOINTS.get(&remote_device_id) {
-                    endpoint.set_call_reply(call_id, req);
+                    endpoint.set_call_reply(call_id, packet.message);
                 }
             } else {
                 error!("handle_message: EndPoint Response Message without call_id")

@@ -32,28 +32,30 @@ abstract class MirrorXCore {
   Future<void> configSaveDevicePassword(
       {required String devicePassword, dynamic hint});
 
-  Future<void> desktopConnect({required String remoteDeviceId, dynamic hint});
+  Future<void> signalingHandshake({dynamic hint});
 
-  Future<bool> desktopKeyExchangeAndPasswordVerify(
+  Future<void> signalingHeartbeat({dynamic hint});
+
+  Future<bool> signalingConnect({required String remoteDeviceId, dynamic hint});
+
+  Future<void> signalingConnectionKeyExchange(
       {required String remoteDeviceId, required String password, dynamic hint});
 
-  Future<StartMediaTransmissionReply> desktopStartMediaTransmission(
+  Future<StartMediaTransmissionResponse> endpointStartMediaTransmission(
       {required String remoteDeviceId,
       required int textureId,
       required int videoTexturePtr,
       required int updateFrameCallbackPtr,
       dynamic hint});
-
-  Future<String> utilityGenerateDevicePassword({dynamic hint});
 }
 
-class StartMediaTransmissionReply {
+class StartMediaTransmissionResponse {
   final String osName;
   final String osVersion;
   final String videoType;
   final String audioType;
 
-  StartMediaTransmissionReply({
+  StartMediaTransmissionResponse({
     required this.osName,
     required this.osVersion,
     required this.videoType,
@@ -162,53 +164,76 @@ class MirrorXCoreImpl extends FlutterRustBridgeBase<MirrorXCoreWire>
         hint: hint,
       ));
 
-  Future<void> desktopConnect({required String remoteDeviceId, dynamic hint}) =>
+  Future<void> signalingHandshake({dynamic hint}) =>
       executeNormal(FlutterRustBridgeTask(
-        callFfi: (port_) =>
-            inner.wire_desktop_connect(port_, _api2wire_String(remoteDeviceId)),
+        callFfi: (port_) => inner.wire_signaling_handshake(port_),
         parseSuccessData: _wire2api_unit,
         constMeta: const FlutterRustBridgeTaskConstMeta(
-          debugName: "desktop_connect",
+          debugName: "signaling_handshake",
+          argNames: [],
+        ),
+        argValues: [],
+        hint: hint,
+      ));
+
+  Future<void> signalingHeartbeat({dynamic hint}) =>
+      executeNormal(FlutterRustBridgeTask(
+        callFfi: (port_) => inner.wire_signaling_heartbeat(port_),
+        parseSuccessData: _wire2api_unit,
+        constMeta: const FlutterRustBridgeTaskConstMeta(
+          debugName: "signaling_heartbeat",
+          argNames: [],
+        ),
+        argValues: [],
+        hint: hint,
+      ));
+
+  Future<bool> signalingConnect(
+          {required String remoteDeviceId, dynamic hint}) =>
+      executeNormal(FlutterRustBridgeTask(
+        callFfi: (port_) => inner.wire_signaling_connect(
+            port_, _api2wire_String(remoteDeviceId)),
+        parseSuccessData: _wire2api_bool,
+        constMeta: const FlutterRustBridgeTaskConstMeta(
+          debugName: "signaling_connect",
           argNames: ["remoteDeviceId"],
         ),
         argValues: [remoteDeviceId],
         hint: hint,
       ));
 
-  Future<bool> desktopKeyExchangeAndPasswordVerify(
+  Future<void> signalingConnectionKeyExchange(
           {required String remoteDeviceId,
           required String password,
           dynamic hint}) =>
       executeNormal(FlutterRustBridgeTask(
-        callFfi: (port_) => inner.wire_desktop_key_exchange_and_password_verify(
-            port_,
-            _api2wire_String(remoteDeviceId),
-            _api2wire_String(password)),
-        parseSuccessData: _wire2api_bool,
+        callFfi: (port_) => inner.wire_signaling_connection_key_exchange(port_,
+            _api2wire_String(remoteDeviceId), _api2wire_String(password)),
+        parseSuccessData: _wire2api_unit,
         constMeta: const FlutterRustBridgeTaskConstMeta(
-          debugName: "desktop_key_exchange_and_password_verify",
+          debugName: "signaling_connection_key_exchange",
           argNames: ["remoteDeviceId", "password"],
         ),
         argValues: [remoteDeviceId, password],
         hint: hint,
       ));
 
-  Future<StartMediaTransmissionReply> desktopStartMediaTransmission(
+  Future<StartMediaTransmissionResponse> endpointStartMediaTransmission(
           {required String remoteDeviceId,
           required int textureId,
           required int videoTexturePtr,
           required int updateFrameCallbackPtr,
           dynamic hint}) =>
       executeNormal(FlutterRustBridgeTask(
-        callFfi: (port_) => inner.wire_desktop_start_media_transmission(
+        callFfi: (port_) => inner.wire_endpoint_start_media_transmission(
             port_,
             _api2wire_String(remoteDeviceId),
             _api2wire_i64(textureId),
             _api2wire_i64(videoTexturePtr),
             _api2wire_i64(updateFrameCallbackPtr)),
-        parseSuccessData: _wire2api_start_media_transmission_reply,
+        parseSuccessData: _wire2api_start_media_transmission_response,
         constMeta: const FlutterRustBridgeTaskConstMeta(
-          debugName: "desktop_start_media_transmission",
+          debugName: "endpoint_start_media_transmission",
           argNames: [
             "remoteDeviceId",
             "textureId",
@@ -222,18 +247,6 @@ class MirrorXCoreImpl extends FlutterRustBridgeBase<MirrorXCoreWire>
           videoTexturePtr,
           updateFrameCallbackPtr
         ],
-        hint: hint,
-      ));
-
-  Future<String> utilityGenerateDevicePassword({dynamic hint}) =>
-      executeNormal(FlutterRustBridgeTask(
-        callFfi: (port_) => inner.wire_utility_generate_device_password(port_),
-        parseSuccessData: _wire2api_String,
-        constMeta: const FlutterRustBridgeTaskConstMeta(
-          debugName: "utility_generate_device_password",
-          argNames: [],
-        ),
-        argValues: [],
         hint: hint,
       ));
 
@@ -285,12 +298,12 @@ int? _wire2api_opt_box_autoadd_u32(dynamic raw) {
   return raw == null ? null : _wire2api_box_autoadd_u32(raw);
 }
 
-StartMediaTransmissionReply _wire2api_start_media_transmission_reply(
+StartMediaTransmissionResponse _wire2api_start_media_transmission_response(
     dynamic raw) {
   final arr = raw as List<dynamic>;
   if (arr.length != 4)
     throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
-  return StartMediaTransmissionReply(
+  return StartMediaTransmissionResponse(
     osName: _wire2api_String(arr[0]),
     osVersion: _wire2api_String(arr[1]),
     videoType: _wire2api_String(arr[2]),
@@ -456,53 +469,81 @@ class MirrorXCoreWire implements FlutterRustBridgeWireBase {
       _wire_config_save_device_passwordPtr
           .asFunction<void Function(int, ffi.Pointer<wire_uint_8_list>)>();
 
-  void wire_desktop_connect(
+  void wire_signaling_handshake(
+    int port_,
+  ) {
+    return _wire_signaling_handshake(
+      port_,
+    );
+  }
+
+  late final _wire_signaling_handshakePtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
+          'wire_signaling_handshake');
+  late final _wire_signaling_handshake =
+      _wire_signaling_handshakePtr.asFunction<void Function(int)>();
+
+  void wire_signaling_heartbeat(
+    int port_,
+  ) {
+    return _wire_signaling_heartbeat(
+      port_,
+    );
+  }
+
+  late final _wire_signaling_heartbeatPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
+          'wire_signaling_heartbeat');
+  late final _wire_signaling_heartbeat =
+      _wire_signaling_heartbeatPtr.asFunction<void Function(int)>();
+
+  void wire_signaling_connect(
     int port_,
     ffi.Pointer<wire_uint_8_list> remote_device_id,
   ) {
-    return _wire_desktop_connect(
+    return _wire_signaling_connect(
       port_,
       remote_device_id,
     );
   }
 
-  late final _wire_desktop_connectPtr = _lookup<
+  late final _wire_signaling_connectPtr = _lookup<
       ffi.NativeFunction<
           ffi.Void Function(ffi.Int64,
-              ffi.Pointer<wire_uint_8_list>)>>('wire_desktop_connect');
-  late final _wire_desktop_connect = _wire_desktop_connectPtr
+              ffi.Pointer<wire_uint_8_list>)>>('wire_signaling_connect');
+  late final _wire_signaling_connect = _wire_signaling_connectPtr
       .asFunction<void Function(int, ffi.Pointer<wire_uint_8_list>)>();
 
-  void wire_desktop_key_exchange_and_password_verify(
+  void wire_signaling_connection_key_exchange(
     int port_,
     ffi.Pointer<wire_uint_8_list> remote_device_id,
     ffi.Pointer<wire_uint_8_list> password,
   ) {
-    return _wire_desktop_key_exchange_and_password_verify(
+    return _wire_signaling_connection_key_exchange(
       port_,
       remote_device_id,
       password,
     );
   }
 
-  late final _wire_desktop_key_exchange_and_password_verifyPtr = _lookup<
+  late final _wire_signaling_connection_key_exchangePtr = _lookup<
           ffi.NativeFunction<
               ffi.Void Function(ffi.Int64, ffi.Pointer<wire_uint_8_list>,
                   ffi.Pointer<wire_uint_8_list>)>>(
-      'wire_desktop_key_exchange_and_password_verify');
-  late final _wire_desktop_key_exchange_and_password_verify =
-      _wire_desktop_key_exchange_and_password_verifyPtr.asFunction<
+      'wire_signaling_connection_key_exchange');
+  late final _wire_signaling_connection_key_exchange =
+      _wire_signaling_connection_key_exchangePtr.asFunction<
           void Function(int, ffi.Pointer<wire_uint_8_list>,
               ffi.Pointer<wire_uint_8_list>)>();
 
-  void wire_desktop_start_media_transmission(
+  void wire_endpoint_start_media_transmission(
     int port_,
     ffi.Pointer<wire_uint_8_list> remote_device_id,
     int texture_id,
     int video_texture_ptr,
     int update_frame_callback_ptr,
   ) {
-    return _wire_desktop_start_media_transmission(
+    return _wire_endpoint_start_media_transmission(
       port_,
       remote_device_id,
       texture_id,
@@ -511,28 +552,13 @@ class MirrorXCoreWire implements FlutterRustBridgeWireBase {
     );
   }
 
-  late final _wire_desktop_start_media_transmissionPtr = _lookup<
+  late final _wire_endpoint_start_media_transmissionPtr = _lookup<
       ffi.NativeFunction<
           ffi.Void Function(ffi.Int64, ffi.Pointer<wire_uint_8_list>, ffi.Int64,
-              ffi.Int64, ffi.Int64)>>('wire_desktop_start_media_transmission');
-  late final _wire_desktop_start_media_transmission =
-      _wire_desktop_start_media_transmissionPtr.asFunction<
+              ffi.Int64, ffi.Int64)>>('wire_endpoint_start_media_transmission');
+  late final _wire_endpoint_start_media_transmission =
+      _wire_endpoint_start_media_transmissionPtr.asFunction<
           void Function(int, ffi.Pointer<wire_uint_8_list>, int, int, int)>();
-
-  void wire_utility_generate_device_password(
-    int port_,
-  ) {
-    return _wire_utility_generate_device_password(
-      port_,
-    );
-  }
-
-  late final _wire_utility_generate_device_passwordPtr =
-      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
-          'wire_utility_generate_device_password');
-  late final _wire_utility_generate_device_password =
-      _wire_utility_generate_device_passwordPtr
-          .asFunction<void Function(int)>();
 
   ffi.Pointer<wire_uint_8_list> new_uint_8_list(
     int len,
