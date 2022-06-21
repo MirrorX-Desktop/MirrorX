@@ -68,7 +68,7 @@ pub fn init(os_name: String, os_version: String, config_dir: String) -> anyhow::
     crate::constants::OS_VERSION.get_or_init(|| os_version);
 
     provider::config::init(Path::new(&config_dir))?;
-    async_block_on!(provider::signaling::init("192.168.0.101:40000"))?;
+    async_block_on!(provider::signaling::init("192.168.0.101:28000"))?;
 
     INIT_SUCCESS.store(true, std::sync::atomic::Ordering::SeqCst);
 
