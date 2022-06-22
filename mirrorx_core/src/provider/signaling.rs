@@ -12,12 +12,10 @@ use crate::{
 };
 use anyhow::anyhow;
 use bincode::Options;
-use hmac::Mac;
 use pbkdf2::password_hash::PasswordHasher;
 use rand::{rngs::OsRng, RngCore};
-use ring::aead::{BoundKey, OpeningKey, SealingKey};
+use ring::aead::BoundKey;
 use rsa::PublicKeyParts;
-use sha2::Sha512;
 use std::sync::Arc;
 use tokio::net::ToSocketAddrs;
 
@@ -35,9 +33,12 @@ pub async fn heartbeat() -> Result<(), MirrorXError> {
         .load()
         .as_ref()
         .ok_or(MirrorXError::ComponentUninitialized)?
-        .heartbeat(HeartBeatRequest {
-            time_stamp: chrono::Utc::now().timestamp() as u32,
-        })
+        .heartbeat(
+            None,
+            HeartBeatRequest {
+                time_stamp: chrono::Utc::now().timestamp() as u32,
+            },
+        )
         .await?;
 
     Ok(())
@@ -45,39 +46,37 @@ pub async fn heartbeat() -> Result<(), MirrorXError> {
 
 pub async fn handshake() -> Result<(), MirrorXError> {
     let device_id = crate::provider::config::read_device_id()?;
-    let unique_id = crate::provider::config::read_unique_id()?;
-    let device_native_id =
-        machine_uid::get().map_err(|err| MirrorXError::Other(anyhow!(err.to_string())))?;
-
-    let device_token = if device_id.is_some() && unique_id.is_some() {
-        Some((device_id.unwrap(), unique_id.unwrap()))
-    } else {
-        None
+    let device_hash = match crate::provider::config::read_device_hash()? {
+        Some(v) => v,
+        None => {
+            let mut device_hash = [0u8; 512];
+            OsRng.fill_bytes(&mut device_hash);
+            hex::encode_upper(device_hash)
+        }
     };
-
-    let mut salt = [0u8; 256];
-    OsRng.fill_bytes(&mut salt);
-
-    let mut mac = hmac::Hmac::<Sha512>::new_from_slice(&salt)
-        .map_err(|err| MirrorXError::Other(anyhow!(err)))?;
-
-    mac.update(device_native_id.as_ref());
-    let device_native_id_salt = mac.finalize().into_bytes().to_vec();
 
     let resp = CURRENT_SIGNALING_CLIENT
         .load()
         .as_ref()
         .ok_or(MirrorXError::ComponentUninitialized)?
-        .handshake(HandshakeRequest {
-            device_token,
-            device_native_id,
-            device_native_id_salt,
-        })
+        .handshake(
+            None,
+            HandshakeRequest {
+                device_id: device_id.clone(),
+                device_hash: device_hash.clone(),
+            },
+        )
         .await?;
 
     crate::provider::config::save_device_id(&resp.device_id)?;
-    crate::provider::config::save_device_id_expiration(&resp.device_id_expiration)?;
-    crate::provider::config::save_unique_id(&resp.unique_id)?;
+    crate::provider::config::save_device_hash(&device_hash)?;
+    crate::provider::config::save_device_id_expiration(&resp.expire)?;
+
+    CURRENT_SIGNALING_CLIENT
+        .load()
+        .as_ref()
+        .ok_or(MirrorXError::ComponentUninitialized)?
+        .set_device_id(resp.device_id);
 
     Ok(())
 }
@@ -87,7 +86,7 @@ pub async fn connect(remote_device_id: String) -> Result<bool, MirrorXError> {
         .load()
         .as_ref()
         .ok_or(MirrorXError::ComponentUninitialized)?
-        .connect_remote(ConnectRequest { remote_device_id })
+        .connect_remote(Some(remote_device_id), ConnectRequest {})
         .await?;
 
     Ok(resp.allow)
@@ -165,12 +164,15 @@ pub async fn connection_key_exchange(
         .load()
         .as_ref()
         .ok_or(MirrorXError::ComponentUninitialized)?
-        .connection_key_exchange(ConnectionKeyExchangeRequest {
-            active_device_id: local_device_id.clone(),
-            password_derive_salt: password_derive_salt.as_bytes().to_vec(),
-            secret: active_device_secret_buffer,
-            secret_nonce: secret_nonce.to_vec(),
-        })
+        .connection_key_exchange(
+            Some(remote_device_id.clone()),
+            ConnectionKeyExchangeRequest {
+                active_device_id: local_device_id.clone(),
+                password_derive_salt: password_derive_salt.as_bytes().to_vec(),
+                secret: active_device_secret_buffer,
+                secret_nonce: secret_nonce.to_vec(),
+            },
+        )
         .await?;
 
     if resp.passive_device_id != remote_device_id {

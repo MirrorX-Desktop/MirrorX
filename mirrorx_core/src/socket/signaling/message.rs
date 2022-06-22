@@ -4,13 +4,13 @@ use serde::{Deserialize, Serialize};
 pub enum SignalingMessagePacketType {
     Request,
     Response,
-    Push,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct SignalingMessagePacket {
+    pub direction: Option<(String, String)>, // (from_device, to_device)
     pub typ: SignalingMessagePacketType,
-    pub call_id: Option<u8>,
+    pub call_id: u8,
     pub message: SignalingMessage,
 }
 
@@ -30,7 +30,8 @@ pub enum SignalingMessage {
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub enum SignalingMessageError {
     Internal,
-    Mismatched,
+    Invalid,
+    RemoteDeviceOffline,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
@@ -45,24 +46,18 @@ pub struct HeartBeatResponse {
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct HandshakeRequest {
-    pub device_token: Option<(String, String)>, // (device_id, unique_id)
-    pub device_native_id: String,
-
-    #[serde(with = "serde_bytes")]
-    pub device_native_id_salt: Vec<u8>,
+    pub device_id: Option<String>,
+    pub device_hash: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct HandshakeResponse {
     pub device_id: String,
-    pub unique_id: String,
-    pub device_id_expiration: u32,
+    pub expire: i32,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-pub struct ConnectRequest {
-    pub remote_device_id: String,
-}
+pub struct ConnectRequest {}
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct ConnectResponse {

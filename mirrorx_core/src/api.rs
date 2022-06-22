@@ -89,7 +89,7 @@ pub fn config_read_device_id_expiration() -> anyhow::Result<Option<u32>> {
     provider::config::read_device_id_expiration().map_err(|err| anyhow::anyhow!(err))
 }
 
-pub fn config_save_device_id_expiration(time_stamp: u32) -> anyhow::Result<()> {
+pub fn config_save_device_id_expiration(time_stamp: i32) -> anyhow::Result<()> {
     provider::config::save_device_id_expiration(&time_stamp).map_err(|err| anyhow::anyhow!(err))
 }
 

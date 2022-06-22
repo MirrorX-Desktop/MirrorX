@@ -81,7 +81,7 @@ pub extern "C" fn wire_config_read_device_id_expiration(port_: i64) {
 }
 
 #[no_mangle]
-pub extern "C" fn wire_config_save_device_id_expiration(port_: i64, time_stamp: u32) {
+pub extern "C" fn wire_config_save_device_id_expiration(port_: i64, time_stamp: i32) {
     FLUTTER_RUST_BRIDGE_HANDLER.wrap(
         WrapInfo {
             debug_name: "config_save_device_id_expiration",
@@ -267,14 +267,14 @@ impl Wire2Api<String> for *mut wire_uint_8_list {
     }
 }
 
-impl Wire2Api<i64> for i64 {
-    fn wire2api(self) -> i64 {
+impl Wire2Api<i32> for i32 {
+    fn wire2api(self) -> i32 {
         self
     }
 }
 
-impl Wire2Api<u32> for u32 {
-    fn wire2api(self) -> u32 {
+impl Wire2Api<i64> for i64 {
+    fn wire2api(self) -> i64 {
         self
     }
 }

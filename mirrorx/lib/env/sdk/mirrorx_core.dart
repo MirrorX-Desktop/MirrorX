@@ -128,7 +128,7 @@ class MirrorXCoreImpl extends FlutterRustBridgeBase<MirrorXCoreWire>
           {required int timeStamp, dynamic hint}) =>
       executeNormal(FlutterRustBridgeTask(
         callFfi: (port_) => inner.wire_config_save_device_id_expiration(
-            port_, _api2wire_u32(timeStamp)),
+            port_, _api2wire_i32(timeStamp)),
         parseSuccessData: _wire2api_unit,
         constMeta: const FlutterRustBridgeTaskConstMeta(
           debugName: "config_save_device_id_expiration",
@@ -255,11 +255,11 @@ class MirrorXCoreImpl extends FlutterRustBridgeBase<MirrorXCoreWire>
     return _api2wire_uint_8_list(utf8.encoder.convert(raw));
   }
 
-  int _api2wire_i64(int raw) {
+  int _api2wire_i32(int raw) {
     return raw;
   }
 
-  int _api2wire_u32(int raw) {
+  int _api2wire_i64(int raw) {
     return raw;
   }
 
@@ -431,7 +431,7 @@ class MirrorXCoreWire implements FlutterRustBridgeWireBase {
   }
 
   late final _wire_config_save_device_id_expirationPtr =
-      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64, ffi.Uint32)>>(
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64, ffi.Int32)>>(
           'wire_config_save_device_id_expiration');
   late final _wire_config_save_device_id_expiration =
       _wire_config_save_device_id_expirationPtr

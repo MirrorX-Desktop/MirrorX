@@ -5,7 +5,6 @@ use std::{
     path::{Path, PathBuf},
     sync::atomic::{AtomicPtr, Ordering},
 };
-use tracing::error;
 
 static CURRENT_CONFIG_DB_PATH: AtomicPtr<PathBuf> = AtomicPtr::new(std::ptr::null_mut());
 
@@ -26,13 +25,13 @@ pub fn save_device_id(device_id: &str) -> Result<(), MirrorXError> {
 }
 
 #[inline(always)]
-pub fn read_unique_id() -> Result<Option<String>, MirrorXError> {
-    read_item("unique_id")
+pub fn read_device_hash() -> Result<Option<String>, MirrorXError> {
+    read_item("device_hash")
 }
 
 #[inline(always)]
-pub fn save_unique_id(unique_id: &str) -> Result<(), MirrorXError> {
-    save_item("unique_id", unique_id)
+pub fn save_device_hash(device_hash: &str) -> Result<(), MirrorXError> {
+    save_item("device_hash", device_hash)
 }
 
 #[inline(always)]
@@ -47,7 +46,7 @@ pub fn read_device_id_expiration() -> Result<Option<u32>, MirrorXError> {
 }
 
 #[inline(always)]
-pub fn save_device_id_expiration(time_stamp: &u32) -> Result<(), MirrorXError> {
+pub fn save_device_id_expiration(time_stamp: &i32) -> Result<(), MirrorXError> {
     save_item("device_id_expiration", &time_stamp.to_string())
 }
 

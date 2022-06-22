@@ -28,7 +28,7 @@ void wire_config_save_device_id(int64_t port_, struct wire_uint_8_list *device_i
 
 void wire_config_read_device_id_expiration(int64_t port_);
 
-void wire_config_save_device_id_expiration(int64_t port_, uint32_t time_stamp);
+void wire_config_save_device_id_expiration(int64_t port_, int32_t time_stamp);
 
 void wire_config_read_device_password(int64_t port_);
 

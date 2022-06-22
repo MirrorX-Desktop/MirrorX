@@ -8,7 +8,6 @@ build = "build.rs"
 [lib]
 crate-type = ["lib", "cdylib", "staticlib"]
 
-
 [dependencies]
 chrono = "0.4.19"
 rand = "0.8.5"
@@ -37,6 +36,7 @@ rsa = "0.6.1"
 ring = "0.16.20"
 pbkdf2 = "0.11"
 thiserror = "1.0.31"
+hex = "0.4.3"
 
 [target.x86_64-apple-darwin.dependencies]
 objc = { version = "0.2.7" }

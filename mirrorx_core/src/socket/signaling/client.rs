@@ -17,6 +17,7 @@ use futures::{
     stream::{SplitSink, SplitStream},
     SinkExt, StreamExt,
 };
+use once_cell::sync::OnceCell;
 use scopeguard::defer;
 use std::{
     sync::atomic::{AtomicU8, Ordering},
@@ -30,14 +31,20 @@ use tokio::{
 use tokio_util::codec::{Framed, LengthDelimitedCodec};
 use tracing::{error, info};
 
-const CALL_TIMEOUT: Duration = Duration::from_secs(5);
+const CALL_TIMEOUT: Duration = Duration::from_secs(60);
 
 pub static CURRENT_SIGNALING_CLIENT: ArcSwapOption<SignalingClient> = ArcSwapOption::const_empty();
 
 macro_rules! make_signaling_call {
     ($name:tt, $req_type:ident, $req_message_type:path, $resp_type:ident, $resp_message_type:path) => {
-        pub async fn $name(&self, req: $req_type) -> Result<$resp_type, MirrorXError> {
-            let reply = self.call($req_message_type(req), CALL_TIMEOUT).await?;
+        pub async fn $name(
+            &self,
+            remote_device_id: Option<String>,
+            req: $req_type,
+        ) -> Result<$resp_type, MirrorXError> {
+            let reply = self
+                .call(remote_device_id, $req_message_type(req), CALL_TIMEOUT)
+                .await?;
 
             if let $resp_message_type(message) = reply {
                 Ok(message)
@@ -58,14 +65,10 @@ macro_rules! handle_signaling_call {
 
             match CURRENT_SIGNALING_CLIENT.load().as_ref() {
                 Some(signaling_client) => {
-                    if let Some(call_id) = $call_id {
-                        if let Err(err) =
-                            signaling_client.reply(call_id, resp_message).await
-                        {
-                            error!(err=?err,"handle_message: reply message failed");
-                        }
-                    } else {
-                        error!("handle_message: Signaling Request Message without call_id")
+                    if let Err(err) =
+                        signaling_client.reply($call_id, resp_message).await
+                    {
+                        error!(err=?err,"handle_message: reply message failed");
                     }
                 }
                 None => error!("handle_message: current signaling client not exists"),
@@ -75,6 +78,7 @@ macro_rules! handle_signaling_call {
 }
 
 pub struct SignalingClient {
+    device_id: OnceCell<String>,
     packet_tx: Sender<Vec<u8>>,
     atomic_call_id: AtomicU8,
     call_reply_tx_map: DashMap<u8, Sender<SignalingMessage>>,
@@ -87,7 +91,7 @@ impl SignalingClient {
     {
         let stream = timeout(Duration::from_secs(10), TcpStream::connect(addr))
             .await
-            .map_err(|err| MirrorXError::Timeout)?
+            .map_err(|_| MirrorXError::Timeout)?
             .map_err(|err| MirrorXError::IO(err))?;
 
         stream
@@ -107,22 +111,38 @@ impl SignalingClient {
         serve_sink(packet_rx, sink);
 
         Ok(Self {
+            device_id: OnceCell::new(),
             packet_tx,
             atomic_call_id: AtomicU8::new(0),
             call_reply_tx_map: DashMap::new(),
         })
     }
 
+    pub fn set_device_id(&self, device_id: String) {
+        let _ = self.device_id.set(device_id);
+    }
+
     async fn call(
         &self,
+        remote_device_id: Option<String>,
         message: SignalingMessage,
         duration: Duration,
     ) -> Result<SignalingMessage, MirrorXError> {
+        let direction = if let Some(remote_device_id) = remote_device_id {
+            match self.device_id.get() {
+                Some(local_device_id) => Some((local_device_id.clone(), remote_device_id)),
+                None => return Err(MirrorXError::ComponentUninitialized),
+            }
+        } else {
+            None
+        };
+
         let call_id = self.atomic_call_id.fetch_add(1, Ordering::SeqCst);
 
         let packet = SignalingMessagePacket {
+            direction,
             typ: SignalingMessagePacketType::Request,
-            call_id: Some(call_id),
+            call_id,
             message,
         };
 
@@ -139,13 +159,14 @@ impl SignalingClient {
             rx.recv().await.ok_or(MirrorXError::Timeout)
         })
         .await
-        .map_err(|err| MirrorXError::Timeout)?
+        .map_err(|_| MirrorXError::Timeout)?
     }
 
     async fn reply(&self, call_id: u8, message: SignalingMessage) -> Result<(), MirrorXError> {
         let packet = SignalingMessagePacket {
+            direction: None,
             typ: SignalingMessagePacketType::Response,
-            call_id: Some(call_id),
+            call_id,
             message,
         };
 
@@ -297,14 +318,9 @@ async fn handle_message(packet: SignalingMessagePacket) {
         },
         SignalingMessagePacketType::Response => match CURRENT_SIGNALING_CLIENT.load().as_ref() {
             Some(signaling_client) => {
-                if let Some(call_id) = packet.call_id {
-                    signaling_client.set_call_reply(call_id, packet.message)
-                } else {
-                    error!("handle_message: Signaling Response Message without call_id")
-                }
+                signaling_client.set_call_reply(packet.call_id, packet.message)
             }
             None => error!("handle_message: current signaling client not exists"),
         },
-        SignalingMessagePacketType::Push => {}
     }
 }
