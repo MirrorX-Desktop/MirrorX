@@ -32,10 +32,6 @@ abstract class MirrorXCore {
   Future<void> configSaveDevicePassword(
       {required String devicePassword, dynamic hint});
 
-  Future<void> signalingHandshake({dynamic hint});
-
-  Future<void> signalingHeartbeat({dynamic hint});
-
   Future<bool> signalingConnect({required String remoteDeviceId, dynamic hint});
 
   Future<void> signalingConnectionKeyExchange(
@@ -161,30 +157,6 @@ class MirrorXCoreImpl extends FlutterRustBridgeBase<MirrorXCoreWire>
           argNames: ["devicePassword"],
         ),
         argValues: [devicePassword],
-        hint: hint,
-      ));
-
-  Future<void> signalingHandshake({dynamic hint}) =>
-      executeNormal(FlutterRustBridgeTask(
-        callFfi: (port_) => inner.wire_signaling_handshake(port_),
-        parseSuccessData: _wire2api_unit,
-        constMeta: const FlutterRustBridgeTaskConstMeta(
-          debugName: "signaling_handshake",
-          argNames: [],
-        ),
-        argValues: [],
-        hint: hint,
-      ));
-
-  Future<void> signalingHeartbeat({dynamic hint}) =>
-      executeNormal(FlutterRustBridgeTask(
-        callFfi: (port_) => inner.wire_signaling_heartbeat(port_),
-        parseSuccessData: _wire2api_unit,
-        constMeta: const FlutterRustBridgeTaskConstMeta(
-          debugName: "signaling_heartbeat",
-          argNames: [],
-        ),
-        argValues: [],
         hint: hint,
       ));
 
@@ -468,34 +440,6 @@ class MirrorXCoreWire implements FlutterRustBridgeWireBase {
   late final _wire_config_save_device_password =
       _wire_config_save_device_passwordPtr
           .asFunction<void Function(int, ffi.Pointer<wire_uint_8_list>)>();
-
-  void wire_signaling_handshake(
-    int port_,
-  ) {
-    return _wire_signaling_handshake(
-      port_,
-    );
-  }
-
-  late final _wire_signaling_handshakePtr =
-      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
-          'wire_signaling_handshake');
-  late final _wire_signaling_handshake =
-      _wire_signaling_handshakePtr.asFunction<void Function(int)>();
-
-  void wire_signaling_heartbeat(
-    int port_,
-  ) {
-    return _wire_signaling_heartbeat(
-      port_,
-    );
-  }
-
-  late final _wire_signaling_heartbeatPtr =
-      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
-          'wire_signaling_heartbeat');
-  late final _wire_signaling_heartbeat =
-      _wire_signaling_heartbeatPtr.asFunction<void Function(int)>();
 
   void wire_signaling_connect(
     int port_,

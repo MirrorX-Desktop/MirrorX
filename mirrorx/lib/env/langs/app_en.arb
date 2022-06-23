@@ -21,6 +21,16 @@
     "connectPagePasswordButtonRandomGenerateTooltip": "Generate and Save Random Password",
     "connectPagePasswordVisibilityToggleHideTooltip": "Hide Password",
     "connectPagePasswordVisibilityToggleShowTooltip": "Show Password",
+    "connectPagePasswordValidationErrorLength": "At least 8 characters",
+    "connectPagePasswordValidationErrorUpper": "At least 1 upper character",
+    "connectPagePasswordValidationErrorSpecial": "At least 1 special character ({special_characters})",
+    "@connectPagePasswordValidationErrorSpecial": {
+        "placeholders": {
+            "special_characters": {
+                "type": "String"
+            }
+        }
+    },
     "connectPageConnectRemoteTitle": "Connect Remote",
     "connectPageConnectRemoteButtonConnectTooltip": "Connect to Remote",
     "intranetPageTitle": "Intranet",

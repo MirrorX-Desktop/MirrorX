@@ -7,7 +7,10 @@ use super::{
         SignalingMessagePacketType,
     },
 };
-use crate::{error::MirrorXError, utility::serializer::BINCODE_SERIALIZER};
+use crate::{
+    error::MirrorXError,
+    utility::{serializer::BINCODE_SERIALIZER, tokio_runtime::TOKIO_RUNTIME},
+};
 use anyhow::anyhow;
 use arc_swap::ArcSwapOption;
 use bincode::Options;
@@ -57,7 +60,7 @@ macro_rules! make_signaling_call {
 
 macro_rules! handle_signaling_call {
     ($call_id:expr, $req:tt, $resp_type:path, $handler:tt) => {{
-        tokio::spawn(async move {
+        TOKIO_RUNTIME.spawn(async move {
             let resp_message = match $handler($req).await {
                 Ok(resp) => $resp_type(resp),
                 Err(_) => SignalingMessage::Error(SignalingMessageError::Internal),
@@ -235,7 +238,7 @@ impl SignalingClient {
 }
 
 fn serve_stream(mut stream: SplitStream<Framed<TcpStream, LengthDelimitedCodec>>) {
-    tokio::spawn(async move {
+    TOKIO_RUNTIME.spawn(async move {
         loop {
             let packet_bytes = match stream.next().await {
                 Some(res) => match res {
@@ -260,7 +263,7 @@ fn serve_stream(mut stream: SplitStream<Framed<TcpStream, LengthDelimitedCodec>>
                     }
                 };
 
-            tokio::spawn(async move {
+            TOKIO_RUNTIME.spawn(async move {
                 handle_message(packet).await;
             });
         }
@@ -273,7 +276,7 @@ fn serve_sink(
     mut packet_rx: Receiver<Vec<u8>>,
     mut sink: SplitSink<Framed<TcpStream, LengthDelimitedCodec>, Bytes>,
 ) {
-    tokio::spawn(async move {
+    TOKIO_RUNTIME.spawn(async move {
         loop {
             let buffer = match packet_rx.recv().await {
                 Some(buffer) => buffer,

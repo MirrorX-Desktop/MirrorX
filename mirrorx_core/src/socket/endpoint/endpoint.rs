@@ -6,11 +6,12 @@ use super::{
         StartMediaTransmissionResponse,
     },
 };
-use crate::media::desktop_duplicator::DesktopDuplicator;
 use crate::{
     error::MirrorXError,
-    media::video_encoder::VideoEncoder,
-    utility::{nonce_value::NonceValue, serializer::BINCODE_SERIALIZER},
+    media::{desktop_duplicator::DesktopDuplicator, video_encoder::VideoEncoder},
+    utility::{
+        nonce_value::NonceValue, serializer::BINCODE_SERIALIZER, tokio_runtime::TOKIO_RUNTIME,
+    },
 };
 use anyhow::anyhow;
 use bincode::Options;
@@ -55,7 +56,7 @@ macro_rules! make_endpoint_call {
 
 macro_rules! handle_endpoint_call {
     ($remote_device_id:expr, $call_id:expr, $req:tt, $resp_type:path, $handler:tt) => {{
-        tokio::spawn(async move {
+        TOKIO_RUNTIME.spawn(async move {
             if let Some(call_id) = $call_id {
                 if let Some(endpoint) = ENDPOINTS.get(&$remote_device_id) {
                     let resp_message = match $handler(endpoint.value(), $req).await {
@@ -81,7 +82,7 @@ macro_rules! handle_endpoint_call {
 
 macro_rules! handle_endpoint_push {
     ($remote_device_id:expr, $req:tt, $handler:tt) => {{
-        tokio::spawn(async move {
+        TOKIO_RUNTIME.spawn(async move {
             if let Err(err) = $handler($remote_device_id.clone(), $req).await {
                 error!(err=?err,remote_device_id=?$remote_device_id,"handle_message: handle push message failed")
             }
@@ -337,7 +338,7 @@ fn serve_stream(
     mut stream: SplitStream<Framed<TcpStream, LengthDelimitedCodec>>,
     mut opening_key: OpeningKey<NonceValue>,
 ) {
-    tokio::spawn(async move {
+    TOKIO_RUNTIME.spawn(async move {
         loop {
             let mut packet_bytes = match stream.next().await {
                 Some(res) => match res {
@@ -370,7 +371,7 @@ fn serve_stream(
 
             let remote_device_id = remote_device_id.clone();
 
-            tokio::spawn(async move {
+            TOKIO_RUNTIME.spawn(async move {
                 handle_message(remote_device_id, packet).await;
             });
         }
@@ -384,7 +385,7 @@ fn serve_sink(
     mut sink: SplitSink<Framed<TcpStream, LengthDelimitedCodec>, Bytes>,
     mut sealing_key: SealingKey<NonceValue>,
 ) {
-    tokio::spawn(async move {
+    TOKIO_RUNTIME.spawn(async move {
         loop {
             let packet = match packet_rx.recv().await {
                 Some(buffer) => buffer,

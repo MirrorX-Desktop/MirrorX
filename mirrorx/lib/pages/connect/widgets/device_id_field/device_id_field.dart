@@ -60,10 +60,13 @@ class DeviceIdField extends StatelessWidget {
                     case ConnectionState.done:
                       if (snapshot.hasError) {
                         log("Error: ${snapshot.error}");
-                        return const Icon(Icons.report, color: Colors.red);
+                        return const Center(
+                            child: Icon(Icons.report, color: Colors.red));
                       } else {
+                        final id = snapshot.data.toString().padLeft(10, '0');
+
                         return Text(
-                          snapshot.data.toString(),
+                          "${id.substring(0, 2)}-${id.substring(2, 6)}-${id.substring(6, 10)}",
                           style: const TextStyle(fontSize: 45),
                         );
                       }

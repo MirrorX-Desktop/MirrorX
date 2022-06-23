@@ -6,7 +6,9 @@ use super::message::{
 use crate::{
     error::MirrorXError,
     provider,
-    utility::{nonce_value::NonceValue, serializer::BINCODE_SERIALIZER},
+    utility::{
+        nonce_value::NonceValue, serializer::BINCODE_SERIALIZER, tokio_runtime::TOKIO_RUNTIME,
+    },
 };
 use anyhow::anyhow;
 use bincode::Options;
@@ -164,7 +166,7 @@ pub async fn handle_connection_key_exchange_request(
     // create endpoint
     let local_device_id = passive_device_id.clone();
 
-    tokio::spawn(async move {
+    TOKIO_RUNTIME.spawn(async move {
         if let Err(err) = provider::endpoint::connect(
             local_device_id,
             req.active_device_id.clone(),

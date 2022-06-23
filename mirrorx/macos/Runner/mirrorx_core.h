@@ -34,10 +34,6 @@ void wire_config_read_device_password(int64_t port_);
 
 void wire_config_save_device_password(int64_t port_, struct wire_uint_8_list *device_password);
 
-void wire_signaling_handshake(int64_t port_);
-
-void wire_signaling_heartbeat(int64_t port_);
-
 void wire_signaling_connect(int64_t port_, struct wire_uint_8_list *remote_device_id);
 
 void wire_signaling_connection_key_exchange(int64_t port_,
@@ -65,8 +61,6 @@ static int64_t dummy_method_to_enforce_bundling(void) {
     dummy_var ^= ((int64_t) (void*) wire_config_save_device_id_expiration);
     dummy_var ^= ((int64_t) (void*) wire_config_read_device_password);
     dummy_var ^= ((int64_t) (void*) wire_config_save_device_password);
-    dummy_var ^= ((int64_t) (void*) wire_signaling_handshake);
-    dummy_var ^= ((int64_t) (void*) wire_signaling_heartbeat);
     dummy_var ^= ((int64_t) (void*) wire_signaling_connect);
     dummy_var ^= ((int64_t) (void*) wire_signaling_connection_key_exchange);
     dummy_var ^= ((int64_t) (void*) wire_endpoint_start_media_transmission);

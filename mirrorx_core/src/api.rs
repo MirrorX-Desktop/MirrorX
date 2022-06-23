@@ -1,28 +1,16 @@
+use crate::utility::tokio_runtime::TOKIO_RUNTIME;
 use crate::{provider, socket::endpoint::message::StartMediaTransmissionResponse};
-use once_cell::sync::Lazy;
-use std::{
-    path::Path,
-    sync::{atomic::AtomicBool, Once},
-};
-use tokio::runtime::{Builder, Runtime};
+use std::sync::{atomic::AtomicBool, Once};
 use tracing::trace;
 
 static LOGGER_INIT_ONCE: Once = Once::new();
 static INIT_SUCCESS: AtomicBool = AtomicBool::new(false);
 
-static RT: Lazy<Runtime> = Lazy::new(|| {
-    Builder::new_multi_thread()
-        .thread_name("MirrorXCoreTokioRuntime")
-        .enable_all()
-        .build()
-        .unwrap()
-});
-
 macro_rules! async_block_on {
     ($future:expr) => {{
         let (tx, rx) = crossbeam::channel::bounded(1);
 
-        RT.spawn(async move { tx.send($future.await) });
+        TOKIO_RUNTIME.spawn(async move { tx.try_send($future.await) });
 
         rx.recv()
             .map_err(|err| {
@@ -67,8 +55,10 @@ pub fn init(os_name: String, os_version: String, config_dir: String) -> anyhow::
     crate::constants::OS_NAME.get_or_init(|| os_name);
     crate::constants::OS_VERSION.get_or_init(|| os_version);
 
-    provider::config::init(Path::new(&config_dir))?;
+    provider::config::init(config_dir)?;
     async_block_on!(provider::signaling::init("192.168.0.101:28000"))?;
+    async_block_on!(provider::signaling::handshake())?;
+    provider::signaling::begin_heartbeat();
 
     INIT_SUCCESS.store(true, std::sync::atomic::Ordering::SeqCst);
 
@@ -99,18 +89,6 @@ pub fn config_read_device_password() -> anyhow::Result<Option<String>> {
 
 pub fn config_save_device_password(device_password: String) -> anyhow::Result<()> {
     provider::config::save_device_password(&device_password).map_err(|err| anyhow::anyhow!(err))
-}
-
-pub fn signaling_handshake() -> anyhow::Result<()> {
-    async_block_on! {
-        provider::signaling::handshake()
-    }
-}
-
-pub fn signaling_heartbeat() -> anyhow::Result<()> {
-    async_block_on! {
-        provider::signaling::heartbeat()
-    }
 }
 
 pub fn signaling_connect(remote_device_id: String) -> anyhow::Result<bool> {

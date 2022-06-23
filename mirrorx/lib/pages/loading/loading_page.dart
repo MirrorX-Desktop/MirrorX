@@ -41,8 +41,6 @@ class LoadingPage extends StatelessWidget {
         osVersion: Platform.operatingSystemVersion,
         configDir: applicationSupportDir.path,
       );
-
-      await MirrorXCoreSDK.instance.signalingHandshake();
     } catch (error) {
       return Future.error(error);
     }

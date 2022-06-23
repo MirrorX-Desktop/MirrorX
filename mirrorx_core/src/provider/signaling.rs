@@ -8,7 +8,9 @@ use crate::{
             HandshakeRequest, HeartBeatRequest,
         },
     },
-    utility::{nonce_value::NonceValue, serializer::BINCODE_SERIALIZER},
+    utility::{
+        nonce_value::NonceValue, serializer::BINCODE_SERIALIZER, tokio_runtime::TOKIO_RUNTIME,
+    },
 };
 use anyhow::anyhow;
 use bincode::Options;
@@ -16,8 +18,9 @@ use pbkdf2::password_hash::PasswordHasher;
 use rand::{rngs::OsRng, RngCore};
 use ring::aead::BoundKey;
 use rsa::PublicKeyParts;
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 use tokio::net::ToSocketAddrs;
+use tracing::error;
 
 pub async fn init<A>(addr: A) -> Result<(), MirrorXError>
 where
@@ -28,20 +31,37 @@ where
     Ok(())
 }
 
-pub async fn heartbeat() -> Result<(), MirrorXError> {
-    let _ = CURRENT_SIGNALING_CLIENT
-        .load()
-        .as_ref()
-        .ok_or(MirrorXError::ComponentUninitialized)?
-        .heartbeat(
-            None,
-            HeartBeatRequest {
-                time_stamp: chrono::Utc::now().timestamp() as u32,
-            },
-        )
-        .await?;
+pub fn begin_heartbeat() {
+    TOKIO_RUNTIME.spawn(async move {
+        let mut failures = 0;
+        let mut interval = tokio::time::interval(Duration::from_secs(20));
+        loop {
+            interval.tick().await;
 
-    Ok(())
+            if let Some(client) = CURRENT_SIGNALING_CLIENT.load().as_ref() {
+                match client
+                    .heartbeat(
+                        None,
+                        HeartBeatRequest {
+                            time_stamp: chrono::Utc::now().timestamp() as u32,
+                        },
+                    )
+                    .await
+                {
+                    Ok(_) => failures = 0,
+                    Err(_) => {
+                        failures += 1;
+                        if failures == 5 {
+                            break;
+                        }
+                    }
+                };
+            } else {
+                break;
+            }
+        }
+        error!("too many failures while heart beat");
+    });
 }
 
 pub async fn handshake() -> Result<(), MirrorXError> {

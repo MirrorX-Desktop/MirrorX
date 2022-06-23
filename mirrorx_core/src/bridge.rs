@@ -126,30 +126,6 @@ pub extern "C" fn wire_config_save_device_password(
 }
 
 #[no_mangle]
-pub extern "C" fn wire_signaling_handshake(port_: i64) {
-    FLUTTER_RUST_BRIDGE_HANDLER.wrap(
-        WrapInfo {
-            debug_name: "signaling_handshake",
-            port: Some(port_),
-            mode: FfiCallMode::Normal,
-        },
-        move || move |task_callback| signaling_handshake(),
-    )
-}
-
-#[no_mangle]
-pub extern "C" fn wire_signaling_heartbeat(port_: i64) {
-    FLUTTER_RUST_BRIDGE_HANDLER.wrap(
-        WrapInfo {
-            debug_name: "signaling_heartbeat",
-            port: Some(port_),
-            mode: FfiCallMode::Normal,
-        },
-        move || move |task_callback| signaling_heartbeat(),
-    )
-}
-
-#[no_mangle]
 pub extern "C" fn wire_signaling_connect(port_: i64, remote_device_id: *mut wire_uint_8_list) {
     FLUTTER_RUST_BRIDGE_HANDLER.wrap(
         WrapInfo {

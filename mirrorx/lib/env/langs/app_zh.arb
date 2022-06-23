@@ -21,6 +21,16 @@
     "connectPagePasswordButtonRandomGenerateTooltip": "生成并保存随机密码",
     "connectPagePasswordVisibilityToggleHideTooltip": "隐藏密码",
     "connectPagePasswordVisibilityToggleShowTooltip": "显示密码",
+    "connectPagePasswordValidationErrorLength": "至少 8 个字符",
+    "connectPagePasswordValidationErrorUpper": "至少 1 个大写字母",
+    "connectPagePasswordValidationErrorSpecial": "至少 1 个特殊字符 ({special_characters})",
+    "@connectPagePasswordValidationErrorSpecial": {
+        "placeholders": {
+            "special_characters": {
+                "type": "String"
+            }
+        }
+    },
     "connectPageConnectRemoteTitle": "连接远程设备",
     "connectPageConnectRemoteButtonConnectTooltip": "连接到远程设备",
     "intranetPageTitle": "局域网",

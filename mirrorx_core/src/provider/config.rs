@@ -1,17 +1,16 @@
 use crate::error::MirrorXError;
 use anyhow::anyhow;
+use once_cell::sync::OnceCell;
 use rusqlite::{params, Connection, OptionalExtension};
-use std::{
-    path::{Path, PathBuf},
-    sync::atomic::{AtomicPtr, Ordering},
-};
+use std::path::PathBuf;
 
-static CURRENT_CONFIG_DB_PATH: AtomicPtr<PathBuf> = AtomicPtr::new(std::ptr::null_mut());
+static CURRENT_CONFIG_DB_PATH: OnceCell<PathBuf> = OnceCell::new();
 
 #[inline(always)]
-pub fn init(config_db_path: &Path) -> Result<(), MirrorXError> {
-    CURRENT_CONFIG_DB_PATH.swap(&mut config_db_path.to_path_buf(), Ordering::SeqCst);
-    Ok(())
+pub fn init(config_db_path: String) -> Result<(), MirrorXError> {
+    CURRENT_CONFIG_DB_PATH
+        .set(PathBuf::from(config_db_path).join("config.db"))
+        .map_err(|_| MirrorXError::ComponentUninitialized)
 }
 
 #[inline(always)]
@@ -61,12 +60,11 @@ pub fn save_device_password(device_password: &str) -> Result<(), MirrorXError> {
 }
 
 fn open_connection() -> Result<Connection, MirrorXError> {
-    let path = CURRENT_CONFIG_DB_PATH.load(Ordering::SeqCst);
+    let path = CURRENT_CONFIG_DB_PATH
+        .get()
+        .ok_or(MirrorXError::ComponentUninitialized)?;
 
-    unsafe {
-        let config_db_path = path.as_ref().ok_or(MirrorXError::ComponentUninitialized)?;
-        Connection::open(config_db_path).map_err(|err| MirrorXError::Other(anyhow!(err)))
-    }
+    Connection::open(path).map_err(|err| MirrorXError::Other(anyhow!(err)))
 }
 
 fn ensure_db_exist(conn: &Connection) -> Result<(), MirrorXError> {

@@ -34,11 +34,13 @@ class ProfileStateCubit extends Cubit<ProfileState> {
     }
 
     try {
-      final devicePassword =
+      var devicePassword =
           await MirrorXCoreSDK.instance.configReadDevicePassword();
 
       if (devicePassword == null) {
-        return Future.error("device password is null");
+        devicePassword = generatePassword();
+        await MirrorXCoreSDK.instance
+            .configSaveDevicePassword(devicePassword: devicePassword);
       }
 
       emit(state.copyWith(devicePassword: devicePassword));

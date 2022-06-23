@@ -47,7 +47,7 @@ class _DevicePasswordFieldState extends State<DevicePasswordField> {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _buildDevicePasswordField(),
+                  Expanded(child: _buildDevicePasswordField()),
                   _buildBottomButton(),
                 ],
               ),
@@ -61,45 +61,8 @@ class _DevicePasswordFieldState extends State<DevicePasswordField> {
   Widget _buildDevicePasswordField() {
     return BlocBuilder<ProfileStateCubit, ProfileState>(
       builder: (context, state) {
-        if (_isEditing) {
-          _controller.text = state.devicePassword!;
-          return SizedBox(
-            width: 300,
-            child: CupertinoTextField(
-              controller: _controller,
-              cursorColor: Colors.yellow,
-              decoration: const BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(
-                    color: Colors.black,
-                    width: 2,
-                  ),
-                ),
-              ),
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9]')),
-              ],
-              keyboardType: TextInputType.visiblePassword,
-              textInputAction: TextInputAction.next,
-              textAlign: TextAlign.center,
-              textAlignVertical: TextAlignVertical.center,
-              style: const TextStyle(fontSize: 36),
-              enableSuggestions: false,
-              maxLength: 8,
-              maxLines: 1,
-              autocorrect: false,
-            ),
-          );
-        } else {
-          if (_isVisible) {
-            if (state.devicePassword != null) {
-              return Text(
-                state.devicePassword!,
-                style: const TextStyle(fontSize: 45),
-              );
-            }
-
-            return FutureBuilder(
+        if (state.devicePassword == null) {
+          return FutureBuilder(
               future: context.read<ProfileStateCubit>().getDevicePassword(),
               builder: (context, snapshot) {
                 switch (snapshot.connectionState) {
@@ -110,15 +73,71 @@ class _DevicePasswordFieldState extends State<DevicePasswordField> {
                   case ConnectionState.done:
                     if (snapshot.hasError) {
                       log("Error: ${snapshot.error}");
-                      return const Icon(Icons.report, color: Colors.red);
+                      return const Center(
+                          child: Icon(Icons.report, color: Colors.red));
                     } else {
-                      return Text(
-                        snapshot.data.toString(),
-                        style: const TextStyle(fontSize: 45),
+                      return const Text(
+                        "＊＊＊＊＊＊",
+                        style: TextStyle(fontSize: 45),
                       );
                     }
                 }
-              },
+              });
+        }
+
+        if (_isEditing) {
+          _controller.text = state.devicePassword!;
+          return TextFormField(
+            controller: _controller,
+            cursorColor: Colors.yellow,
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(
+                  RegExp(r'[a-zA-Z0-9@#$%^*?!=+<>(){}]')),
+            ],
+            decoration: const InputDecoration(
+              isDense: true,
+              focusedBorder: UnderlineInputBorder(
+                borderSide: BorderSide(width: 2, color: Colors.yellow),
+              ),
+            ),
+            style: const TextStyle(fontSize: 18),
+            keyboardType: TextInputType.visiblePassword,
+            textInputAction: TextInputAction.next,
+            textAlign: TextAlign.center,
+            textAlignVertical: TextAlignVertical.center,
+            enableSuggestions: false,
+            maxLength: 24,
+            maxLines: 1,
+            autocorrect: false,
+            autovalidateMode: AutovalidateMode.always,
+            validator: (text) {
+              if (text == null || text.isEmpty || text.length < 8) {
+                return Tr.of(context).connectPagePasswordValidationErrorLength;
+              }
+
+              if (!RegExp(r'[A-Z]').hasMatch(text)) {
+                return Tr.of(context).connectPagePasswordValidationErrorUpper;
+              }
+
+              if (!RegExp(r'[@#$%^*?!=+<>(){}]').hasMatch(text)) {
+                return Tr.of(context).connectPagePasswordValidationErrorSpecial(
+                  r'@#$%^*?!=+<>(){}',
+                );
+              }
+
+              return null;
+            },
+          );
+        } else {
+          if (_isVisible) {
+            return FittedBox(
+              fit: BoxFit.fitWidth,
+              child: SelectableText(
+                state.devicePassword!,
+                maxLines: 1,
+                minLines: 1,
+                scrollPhysics: const NeverScrollableScrollPhysics(),
+              ),
             );
           } else {
             return const Text(
