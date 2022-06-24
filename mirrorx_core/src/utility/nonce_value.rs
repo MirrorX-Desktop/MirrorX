@@ -1,4 +1,5 @@
 use ring::aead::NonceSequence;
+use tracing::error;
 
 const NONCE_MAX: u128 = (1 << 96) - 1;
 
@@ -24,13 +25,18 @@ impl NonceSequence for NonceValue {
         }
 
         unsafe {
-            let v: &[u8] = std::slice::from_raw_parts(&self.0 as *const _ as *const u8, 16);
-            let arr: &[u8; 12] = match v.try_into() {
-                Ok(res) => res,
-                Err(err) => return Err(ring::error::Unspecified::from(err)),
-            };
+            let nonce_bytes = self.0.to_le_bytes();
+            let nonce_bytes_ref: &[u8] = nonce_bytes.as_ref(); //std::slice::from_raw_parts(&self.0 as *const _ as *const u8, 16);
+            let nonce_array: [u8; ring::aead::NONCE_LEN] =
+                match std::slice::from_raw_parts(nonce_bytes_ref.as_ptr(), 12).try_into() {
+                    Ok(v) => v,
+                    Err(err) => {
+                        error!("parse nonce from slice failed ({})", err);
+                        return Err(ring::error::Unspecified::from(err));
+                    }
+                };
 
-            Ok(ring::aead::Nonce::assume_unique_for_key(*arr))
+            Ok(ring::aead::Nonce::assume_unique_for_key(nonce_array))
         }
     }
 }
