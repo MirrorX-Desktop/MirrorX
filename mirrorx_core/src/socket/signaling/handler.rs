@@ -168,6 +168,7 @@ pub async fn handle_connection_key_exchange_request(
 
     TOKIO_RUNTIME.spawn(async move {
         if let Err(err) = provider::endpoint::connect(
+            false,
             local_device_id,
             req.active_device_id.clone(),
             sealing_key,

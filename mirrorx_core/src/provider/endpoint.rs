@@ -9,6 +9,7 @@ use crate::{
 use ring::aead::{OpeningKey, SealingKey};
 
 pub async fn connect(
+    is_active_side: bool,
     local_device_id: String,
     remote_device_id: String,
     sealing_key: SealingKey<NonceValue>,
@@ -16,6 +17,7 @@ pub async fn connect(
 ) -> Result<(), MirrorXError> {
     let endpoint = EndPoint::connect(
         "192.168.0.101:28001",
+        is_active_side,
         local_device_id,
         remote_device_id.clone(),
         opening_key,

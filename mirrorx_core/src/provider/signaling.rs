@@ -279,8 +279,14 @@ pub async fn connection_key_exchange(
     let opening_key =
         ring::aead::OpeningKey::new(unbound_opening_key, NonceValue::new(active_device_nonce));
 
-    crate::provider::endpoint::connect(local_device_id, remote_device_id, sealing_key, opening_key)
-        .await?;
+    crate::provider::endpoint::connect(
+        true,
+        local_device_id,
+        remote_device_id,
+        sealing_key,
+        opening_key,
+    )
+    .await?;
 
     Ok(())
 }

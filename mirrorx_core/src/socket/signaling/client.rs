@@ -109,6 +109,7 @@ impl SignalingClient {
         let (sink, stream) = framed_stream.split();
 
         let (packet_tx, packet_rx) = tokio::sync::mpsc::channel(128);
+        // todo: servce_sink should exit
 
         serve_stream(stream);
         serve_sink(packet_rx, sink);

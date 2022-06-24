@@ -1,9 +1,8 @@
 use super::{
     handler::{handle_media_transmission, handle_start_media_transmission_request},
     message::{
-        EndPointMessage, EndPointMessagePacket, EndPointMessagePacketType, HandshakeRequest,
-        HandshakeResponse, MediaFrame, StartMediaTransmissionRequest,
-        StartMediaTransmissionResponse,
+        EndPointMessage, EndPointMessagePacket, EndPointMessagePacketType, MediaFrame,
+        StartMediaTransmissionRequest, StartMediaTransmissionResponse,
     },
 };
 use crate::{
@@ -29,6 +28,7 @@ use std::{
     time::Duration,
 };
 use tokio::{
+    io::{AsyncReadExt, AsyncWriteExt},
     net::{TcpStream, ToSocketAddrs},
     sync::mpsc::{Receiver, Sender},
     time::timeout,
@@ -91,6 +91,7 @@ macro_rules! handle_endpoint_push {
 }
 
 pub struct EndPoint {
+    is_active_side: bool,
     local_device_id: String,
     remote_device_id: String,
     atomic_call_id: AtomicU16,
@@ -105,6 +106,7 @@ pub struct EndPoint {
 impl EndPoint {
     pub async fn connect<A>(
         addr: A,
+        is_active_side: bool,
         local_device_id: String,
         remote_device_id: String,
         opening_key: OpeningKey<NonceValue>,
@@ -113,7 +115,7 @@ impl EndPoint {
     where
         A: ToSocketAddrs,
     {
-        let stream = timeout(Duration::from_secs(10), TcpStream::connect(addr))
+        let mut stream = timeout(Duration::from_secs(10), TcpStream::connect(addr))
             .await
             .map_err(|err| MirrorXError::Timeout)?
             .map_err(|err| MirrorXError::IO(err))?;
@@ -121,6 +123,58 @@ impl EndPoint {
         stream
             .set_nodelay(true)
             .map_err(|err| MirrorXError::IO(err))?;
+
+        // handshake for endpoint
+
+        let (active_device_id, passive_device_id) = if is_active_side {
+            (
+                format!("{:0>10}", local_device_id),
+                format!("{:0>10}", remote_device_id),
+            )
+        } else {
+            (
+                format!("{:0>10}", remote_device_id),
+                format!("{:0>10}", local_device_id),
+            )
+        };
+
+        let active_device_id_buf = active_device_id.as_bytes();
+        if active_device_id_buf.len() != 10 {
+            return Err(MirrorXError::Other(anyhow::anyhow!(
+                "active device id bytes length is not 10"
+            )));
+        }
+
+        let passive_device_id_buf = passive_device_id.as_bytes();
+        if passive_device_id_buf.len() != 10 {
+            return Err(MirrorXError::Other(anyhow::anyhow!(
+                "active device id bytes length is not 10"
+            )));
+        }
+
+        stream
+            .write(active_device_id_buf)
+            .await
+            .map_err(|err| MirrorXError::IO(err))?;
+        stream
+            .write(passive_device_id_buf)
+            .await
+            .map_err(|err| MirrorXError::IO(err))?;
+
+        let mut handshake_response_buf = [0u8; 1];
+        timeout(
+            Duration::from_secs(60),
+            stream.read_exact(&mut handshake_response_buf),
+        )
+        .await
+        .map_err(|_| MirrorXError::Timeout)?
+        .map_err(|err| MirrorXError::IO(err))?;
+
+        if handshake_response_buf[0] != 1 {
+            return Err(MirrorXError::EndPointError(String::from(
+                "endpoint handshake failed",
+            )));
+        }
 
         let framed_stream = LengthDelimitedCodec::builder()
             .little_endian()
@@ -135,6 +189,7 @@ impl EndPoint {
         serve_sink(packet_rx, sink, sealing_key);
 
         Ok(Self {
+            is_active_side,
             local_device_id,
             remote_device_id,
             atomic_call_id: AtomicU16::new(0),
@@ -200,7 +255,7 @@ impl EndPoint {
             rx.recv().await.ok_or(MirrorXError::Timeout)
         })
         .await
-        .map_err(|err| MirrorXError::Timeout)?
+        .map_err(|_| MirrorXError::Timeout)?
     }
 
     async fn reply(&self, call_id: u16, message: EndPointMessage) -> Result<(), MirrorXError> {
@@ -317,14 +372,6 @@ impl EndPoint {
     }
 
     make_endpoint_call!(
-        handshake,
-        HandshakeRequest,
-        EndPointMessage::HandshakeRequest,
-        HandshakeResponse,
-        EndPointMessage::HandshakeResponse
-    );
-
-    make_endpoint_call!(
         start_media_transmission,
         StartMediaTransmissionRequest,
         EndPointMessage::StartMediaTransmissionRequest,
@@ -405,13 +452,11 @@ fn serve_sink(
                 }
             };
 
-            if matches!(packet.message, EndPointMessage::HandshakeRequest(_)) {
-                if let Err(err) =
-                    sealing_key.seal_in_place_append_tag(ring::aead::Aad::empty(), &mut buffer)
-                {
-                    error!(err = ?err, "serve_sink: crypt buffer failed");
-                    break;
-                }
+            if let Err(err) =
+                sealing_key.seal_in_place_append_tag(ring::aead::Aad::empty(), &mut buffer)
+            {
+                error!(err = ?err, "serve_sink: crypt buffer failed");
+                break;
             }
 
             if let Err(err) = sink.send(Bytes::from(buffer)).await {

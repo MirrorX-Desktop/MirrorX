@@ -17,8 +17,6 @@ pub struct EndPointMessagePacket {
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub enum EndPointMessage {
     Error,
-    HandshakeRequest(HandshakeRequest),
-    HandshakeResponse(HandshakeResponse),
     StartMediaTransmissionRequest(StartMediaTransmissionRequest),
     StartMediaTransmissionResponse(StartMediaTransmissionResponse),
     MediaFrame(MediaFrame),
@@ -29,14 +27,6 @@ pub enum EndPointMessage {
 //     Mismatched,
 //     Internal,
 // }
-
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-pub struct HandshakeRequest {
-    pub device_id: String,
-}
-
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-pub struct HandshakeResponse {}
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct StartMediaTransmissionRequest {

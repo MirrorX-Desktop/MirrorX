@@ -1,3 +1,5 @@
+use tracing::info;
+
 use super::{
     endpoint::EndPoint,
     message::{MediaFrame, StartMediaTransmissionResponse},
@@ -35,5 +37,6 @@ pub async fn handle_media_transmission(
     //     media_transmission.data.len()
     // );
     // endpoint.transfer_desktop_video_frame(media_transmission.data);
+    info!("receive media");
     Ok(())
 }
