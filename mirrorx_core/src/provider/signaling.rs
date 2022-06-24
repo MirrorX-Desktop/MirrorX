@@ -219,7 +219,7 @@ pub async fn connection_key_exchange(
 
     if resp.passive_device_id != remote_device_id {
         return Err(MirrorXError::Other(anyhow!(
-            "connection_key_exchange: key exchang responsed device is not aimed device"
+            "key exchang responsed device is not aimed device"
         )));
     }
 
@@ -240,7 +240,7 @@ pub async fn connection_key_exchange(
 
     if passive_device_secret.passive_device_nonce.len() != ring::aead::NONCE_LEN {
         return Err(MirrorXError::Other(anyhow!(
-            "connection_key_exchange: passive device provide invalid key exchange nonce"
+            "passive device provide invalid key exchange nonce"
         )));
     }
 

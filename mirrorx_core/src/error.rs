@@ -1,6 +1,8 @@
 use std::io;
 use thiserror::Error;
 
+use crate::socket::signaling::message::SignalingMessage;
+
 #[derive(Error, Debug)]
 pub enum MirrorXError {
     #[error(transparent)]
@@ -15,8 +17,8 @@ pub enum MirrorXError {
     SerializeFailed(bincode::Error),
     #[error("deserialize failed ({0:?})")]
     DeserializeFailed(bincode::Error),
-    #[error("signaling returns error")]
-    SignalingError,
+    #[error("signaling returns unexcepted message {0:?}")]
+    SignalingError(SignalingMessage),
     #[error("endpoint '{0}' returns error")]
     EndPointError(String),
     #[error("local device id is empty or invalid")]

@@ -53,8 +53,10 @@ pub async fn handle_connection_key_exchange_request(
         &mut derived_key,
     );
 
-    let unbound_key = ring::aead::UnboundKey::new(&ring::aead::AES_256_GCM, &derived_key)
-        .map_err(|err| MirrorXError::Other(anyhow!(err)))?;
+    let unbound_key =
+        ring::aead::UnboundKey::new(&ring::aead::AES_256_GCM, &derived_key).map_err(|err| {
+            MirrorXError::Other(anyhow!("create unbound key from request failed ({})", err))
+        })?;
 
     let mut active_device_secret_nonce = [0u8; ring::aead::NONCE_LEN];
     for i in 0..ring::aead::NONCE_LEN {
@@ -66,11 +68,16 @@ pub async fn handle_connection_key_exchange_request(
 
     active_device_secret_opening_key
         .open_in_place(ring::aead::Aad::empty(), &mut req.secret)
-        .map_err(|err| MirrorXError::Other(anyhow!(err)))?;
+        .map_err(|err| {
+            MirrorXError::Other(anyhow!(
+                "opening key exchange request message failed ({})",
+                err
+            ))
+        })?;
 
     let active_device_secret = BINCODE_SERIALIZER
         .deserialize::<ConnectionKeyExchangeActiveDeviceSecret>(&req.secret)
-        .map_err(|err| MirrorXError::Other(anyhow!(err)))?;
+        .map_err(|err| MirrorXError::DeserializeFailed(err))?;
 
     if active_device_secret.active_device_nonce.len() != ring::aead::NONCE_LEN {
         return Err(MirrorXError::Other(anyhow!(
@@ -82,7 +89,12 @@ pub async fn handle_connection_key_exchange_request(
         BigUint::from_bytes_le(&active_device_secret.response_public_key_n),
         BigUint::from_bytes_le(&active_device_secret.response_public_key_e),
     )
-    .map_err(|err| MirrorXError::Other(anyhow!(err)))?;
+    .map_err(|err| {
+        MirrorXError::Other(anyhow!(
+            "create response public key from request failed ({})",
+            err
+        ))
+    })?;
 
     // generate key exchange pair and nonce
 
@@ -92,11 +104,19 @@ pub async fn handle_connection_key_exchange_request(
         &ring::agreement::X25519,
         &system_random_rng,
     )
-    .map_err(|err| MirrorXError::Other(anyhow!(err)))?;
+    .map_err(|err| {
+        MirrorXError::Other(anyhow!(
+            "generate key exchange private key failed ({})",
+            err
+        ))
+    })?;
 
-    let passive_device_public_key = passive_device_private_key
-        .compute_public_key()
-        .map_err(|err| MirrorXError::Other(anyhow!(err)))?;
+    let passive_device_public_key =
+        passive_device_private_key
+            .compute_public_key()
+            .map_err(|err| {
+                MirrorXError::Other(anyhow!("generate key exchange public key failed ({})", err))
+            })?;
 
     let mut passive_device_nonce = [0u8; ring::aead::NONCE_LEN];
     OsRng.fill_bytes(&mut passive_device_nonce);
@@ -144,20 +164,22 @@ pub async fn handle_connection_key_exchange_request(
             Ok((sealing_key, opening_key))
         },
     )
-    .map_err(|err| MirrorXError::Other(anyhow!(err)))?;
+    .map_err(|err| MirrorXError::Other(anyhow!("key exchange agree ephemeral failed ({})", err)))?;
 
     // derive opening and sealing key
 
     let unbound_sealing_key =
-        ring::aead::UnboundKey::new(&ring::aead::AES_256_GCM, &raw_sealing_key)
-            .map_err(|err| MirrorXError::Other(anyhow!(err)))?;
+        ring::aead::UnboundKey::new(&ring::aead::AES_256_GCM, &raw_sealing_key).map_err(|err| {
+            MirrorXError::Other(anyhow!("generate unbound sealing key failed ({})", err))
+        })?;
 
     let sealing_key =
         ring::aead::SealingKey::new(unbound_sealing_key, NonceValue::new(passive_device_nonce));
 
     let unbound_opening_key =
-        ring::aead::UnboundKey::new(&ring::aead::AES_256_GCM, &raw_opening_key)
-            .map_err(|err| MirrorXError::Other(anyhow!(err)))?;
+        ring::aead::UnboundKey::new(&ring::aead::AES_256_GCM, &raw_opening_key).map_err(|err| {
+            MirrorXError::Other(anyhow!("generate unbound opening key failed ({})", err))
+        })?;
 
     let opening_key =
         ring::aead::OpeningKey::new(unbound_opening_key, NonceValue::new(active_device_nonce));
@@ -188,7 +210,7 @@ pub async fn handle_connection_key_exchange_request(
 
     let passive_secret_buffer = BINCODE_SERIALIZER
         .serialize(&passive_device_secret)
-        .map_err(|err| MirrorXError::Other(anyhow!(err)))?;
+        .map_err(|err| MirrorXError::SerializeFailed(err))?;
 
     let exchange_data = active_device_response_public_key
         .encrypt(
@@ -196,7 +218,12 @@ pub async fn handle_connection_key_exchange_request(
             rsa::PaddingScheme::PKCS1v15Encrypt,
             &passive_secret_buffer,
         )
-        .map_err(|err| MirrorXError::Other(anyhow!(err)))?;
+        .map_err(|err| {
+            MirrorXError::Other(anyhow!(
+                "encrypt key exchange response message packet failed ({})",
+                err
+            ))
+        })?;
 
     Ok(ConnectionKeyExchangeResponse {
         passive_device_id,

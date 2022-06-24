@@ -45,14 +45,26 @@ macro_rules! make_signaling_call {
             remote_device_id: Option<String>,
             req: $req_type,
         ) -> Result<$resp_type, MirrorXError> {
-            let reply = self
-                .call(remote_device_id, $req_message_type(req), CALL_TIMEOUT)
-                .await?;
-
-            if let $resp_message_type(message) = reply {
-                Ok(message)
-            } else {
-                Err(MirrorXError::SignalingError)
+            match self
+                .call(
+                    remote_device_id.clone(),
+                    $req_message_type(req),
+                    CALL_TIMEOUT,
+                )
+                .await
+            {
+                Ok(reply) => {
+                    if let $resp_message_type(message) = reply {
+                        Ok(message)
+                    } else {
+                        Err(MirrorXError::SignalingError(reply))
+                    }
+                }
+                Err(err) => {
+                    let fn_name = stringify!($name);
+                    error!(remote_device_id=?remote_device_id,call_fn=fn_name,err=?err, "signaling call failed");
+                    return Err(err);
+                }
             }
         }
     };
@@ -63,7 +75,11 @@ macro_rules! handle_signaling_call {
         TOKIO_RUNTIME.spawn(async move {
             let resp_message = match $handler($req).await {
                 Ok(resp) => $resp_type(resp),
-                Err(_) => SignalingMessage::Error(SignalingMessageError::Internal),
+                Err(err) => {
+                    let fn_name = stringify!($handler);
+                    error!(handler=fn_name,err=?err, "handle signaling call failed");
+                    SignalingMessage::Error(SignalingMessageError::Internal)
+                }
             };
 
             match CURRENT_SIGNALING_CLIENT.load().as_ref() {
