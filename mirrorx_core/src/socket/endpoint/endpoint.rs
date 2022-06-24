@@ -401,20 +401,24 @@ fn serve_stream(
                 }
             };
 
-            if let Err(err) = opening_key.open_in_place(ring::aead::Aad::empty(), &mut packet_bytes)
-            {
-                error!(err = ?err, "serve_stream: decrypt buffer failed");
-                break;
-            }
-
-            let packet =
-                match BINCODE_SERIALIZER.deserialize::<EndPointMessagePacket>(&packet_bytes) {
-                    Ok(packet) => packet,
+            let opened_packet_bytes =
+                match opening_key.open_in_place(ring::aead::Aad::empty(), &mut packet_bytes) {
+                    Ok(v) => v,
                     Err(err) => {
-                        error!(err = ?err, "serve_stream: deserialize packet failed");
+                        error!(err = ?err, "serve_stream: decrypt buffer failed");
                         break;
                     }
                 };
+
+            let packet = match BINCODE_SERIALIZER
+                .deserialize::<EndPointMessagePacket>(&opened_packet_bytes)
+            {
+                Ok(packet) => packet,
+                Err(err) => {
+                    error!(err = ?err, "serve_stream: deserialize packet failed");
+                    break;
+                }
+            };
 
             let remote_device_id = remote_device_id.clone();
 
