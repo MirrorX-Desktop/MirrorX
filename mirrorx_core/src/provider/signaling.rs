@@ -14,10 +14,12 @@ use crate::{
 };
 use anyhow::anyhow;
 use bincode::Options;
+use hmac::Hmac;
 use pbkdf2::password_hash::PasswordHasher;
 use rand::{rngs::OsRng, RngCore};
 use ring::aead::BoundKey;
 use rsa::PublicKeyParts;
+use sha2::Sha256;
 use std::{sync::Arc, time::Duration};
 use tokio::net::ToSocketAddrs;
 use tracing::error;
@@ -122,8 +124,9 @@ pub async fn connection_key_exchange(
     };
 
     // generate rsa key pair for remote device reply
-    let response_private_key = rsa::RsaPrivateKey::new(&mut OsRng, 4096)
-        .map_err(|err| MirrorXError::Other(anyhow!(err)))?;
+    let response_private_key = rsa::RsaPrivateKey::new(&mut OsRng, 4096).map_err(|err| {
+        MirrorXError::Other(anyhow!("generate response private key failed ({})", err))
+    })?;
 
     let response_public_key = rsa::RsaPublicKey::from(&response_private_key);
 
@@ -135,23 +138,35 @@ pub async fn connection_key_exchange(
         &ring::agreement::X25519,
         &system_random_rng,
     )
-    .map_err(|err| MirrorXError::Other(anyhow!(err)))?;
+    .map_err(|err| {
+        MirrorXError::Other(anyhow!(
+            "generate key exchange private key failed ({})",
+            err
+        ))
+    })?;
 
-    let active_device_public_key = active_device_private_key
-        .compute_public_key()
-        .map_err(|err| MirrorXError::Other(anyhow!(err)))?;
+    let active_device_public_key =
+        active_device_private_key
+            .compute_public_key()
+            .map_err(|err| {
+                MirrorXError::Other(anyhow!("generate key exchange public key failed ({})", err))
+            })?;
 
     let mut active_device_nonce = [0u8; ring::aead::NONCE_LEN];
     OsRng.fill_bytes(&mut active_device_nonce);
 
     // derive aes-256-gcm key from password
 
-    let password_derive_salt = pbkdf2::password_hash::SaltString::generate(&mut OsRng);
+    let mut password_derive_salt = [0u8; 16];
+    OsRng.fill_bytes(&mut password_derive_salt);
 
-    let derived_key = pbkdf2::Pbkdf2
-        .hash_password(password.as_bytes(), &password_derive_salt)
-        .map_err(|err| MirrorXError::Other(anyhow!(err)))?
-        .to_string();
+    let mut derived_key = [0u8; 32];
+    pbkdf2::pbkdf2::<Hmac<Sha256>>(
+        password.as_bytes(),
+        &password_derive_salt,
+        pbkdf2::Params::default().rounds,
+        &mut derived_key,
+    );
 
     // build secret
 
@@ -167,18 +182,25 @@ pub async fn connection_key_exchange(
 
     let mut active_device_secret_buffer = BINCODE_SERIALIZER
         .serialize(&active_device_secret)
-        .map_err(|err| MirrorXError::Other(anyhow!(err)))?;
+        .map_err(|err| MirrorXError::SerializeFailed(err))?;
 
     // sealing packet and call key-exchange
 
-    let unbound_key = ring::aead::UnboundKey::new(&ring::aead::AES_256_GCM, derived_key.as_bytes())
-        .map_err(|err| MirrorXError::Other(anyhow!(err)))?;
+    let unbound_key =
+        ring::aead::UnboundKey::new(&ring::aead::AES_256_GCM, &derived_key).map_err(|err| {
+            MirrorXError::Other(anyhow!(
+                "generate request message packet sealing key failed ({})",
+                err
+            ))
+        })?;
 
     let mut sealing_key = ring::aead::SealingKey::new(unbound_key, NonceValue::new(secret_nonce));
 
     sealing_key
         .seal_in_place_append_tag(ring::aead::Aad::empty(), &mut active_device_secret_buffer)
-        .map_err(|err| MirrorXError::Other(anyhow!(err)))?;
+        .map_err(|err| {
+            MirrorXError::Other(anyhow!("sealing request message packet failed ({})", err))
+        })?;
 
     let resp = CURRENT_SIGNALING_CLIENT
         .load()
@@ -188,7 +210,7 @@ pub async fn connection_key_exchange(
             Some(remote_device_id.clone()),
             ConnectionKeyExchangeRequest {
                 active_device_id: local_device_id.clone(),
-                password_derive_salt: password_derive_salt.as_bytes().to_vec(),
+                password_derive_salt: password_derive_salt.to_vec(),
                 secret: active_device_secret_buffer,
                 secret_nonce: secret_nonce.to_vec(),
             },
@@ -208,11 +230,13 @@ pub async fn connection_key_exchange(
             rsa::PaddingScheme::PKCS1v15Encrypt,
             resp.exchange_data.as_ref(),
         )
-        .map_err(|err| MirrorXError::Other(anyhow!(err)))?;
+        .map_err(|err| {
+            MirrorXError::Other(anyhow!("decrypt key exchange data failed ({})", err))
+        })?;
 
     let passive_device_secret = BINCODE_SERIALIZER
         .deserialize::<ConnectionKeyExchangePassiveDeviceSecret>(&passive_device_secret_buffer)
-        .map_err(|err| MirrorXError::Other(anyhow!(err)))?;
+        .map_err(|err| MirrorXError::DeserializeFailed(err))?;
 
     if passive_device_secret.passive_device_nonce.len() != ring::aead::NONCE_LEN {
         return Err(MirrorXError::Other(anyhow!(
@@ -256,7 +280,7 @@ pub async fn connection_key_exchange(
             Ok((sealing_key, opening_key))
         },
     )
-    .map_err(|err| MirrorXError::Other(anyhow!(err)))?;
+    .map_err(|err| MirrorXError::Other(anyhow!("key exchange agree ephemeral failed ({})", err)))?;
 
     let mut passive_device_nonce = [0u8; ring::aead::NONCE_LEN];
     for i in 0..ring::aead::NONCE_LEN {
@@ -266,15 +290,17 @@ pub async fn connection_key_exchange(
     // derive opening and sealing key
 
     let unbound_sealing_key =
-        ring::aead::UnboundKey::new(&ring::aead::AES_256_GCM, &raw_sealing_key)
-            .map_err(|err| MirrorXError::Other(anyhow!(err)))?;
+        ring::aead::UnboundKey::new(&ring::aead::AES_256_GCM, &raw_sealing_key).map_err(|err| {
+            MirrorXError::Other(anyhow!("generate unbound sealing key failed ({})", err))
+        })?;
 
     let sealing_key =
         ring::aead::SealingKey::new(unbound_sealing_key, NonceValue::new(passive_device_nonce));
 
     let unbound_opening_key =
-        ring::aead::UnboundKey::new(&ring::aead::AES_256_GCM, &raw_opening_key)
-            .map_err(|err| MirrorXError::Other(anyhow!(err)))?;
+        ring::aead::UnboundKey::new(&ring::aead::AES_256_GCM, &raw_opening_key).map_err(|err| {
+            MirrorXError::Other(anyhow!("generate unbound opening key failed ({})", err))
+        })?;
 
     let opening_key =
         ring::aead::OpeningKey::new(unbound_opening_key, NonceValue::new(active_device_nonce));

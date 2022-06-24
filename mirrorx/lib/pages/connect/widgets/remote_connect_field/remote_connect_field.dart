@@ -158,11 +158,8 @@ class _RemoteConnectFieldState extends State<RemoteConnectField> {
   ) async {
     // 6034116984
     try {
-      var chars = _textControllers.map((e) => e.text).toList();
-      chars.insert(2, "-");
-      chars.insert(7, "-");
-
-      final remoteDeviceID = chars.join();
+      final remoteDeviceID =
+          _textControllers.map((e) => e.text).toList().join();
 
       log("remote device id: $remoteDeviceID");
 

@@ -12,10 +12,12 @@ use crate::{
 };
 use anyhow::anyhow;
 use bincode::Options;
+use hmac::Hmac;
 use pbkdf2::password_hash::PasswordHasher;
 use rand::RngCore;
 use ring::aead::BoundKey;
 use rsa::{rand_core::OsRng, BigUint, PublicKey};
+use sha2::Sha256;
 use tracing::error;
 
 pub async fn handle_connect_request(req: ConnectRequest) -> Result<ConnectResponse, MirrorXError> {
@@ -43,18 +45,15 @@ pub async fn handle_connection_key_exchange_request(
 
     // try to decrypt secret
 
-    let salt_string = String::from_utf8(req.password_derive_salt)
-        .map_err(|err| MirrorXError::Other(anyhow!(err)))?;
+    let mut derived_key = [0u8; 32];
+    pbkdf2::pbkdf2::<Hmac<Sha256>>(
+        password.as_bytes(),
+        &req.password_derive_salt,
+        pbkdf2::Params::default().rounds,
+        &mut derived_key,
+    );
 
-    let password_derive_salt = pbkdf2::password_hash::SaltString::new(&salt_string)
-        .map_err(|err| MirrorXError::Other(anyhow!(err)))?;
-
-    let derived_key = pbkdf2::Pbkdf2
-        .hash_password(password.as_bytes(), &password_derive_salt)
-        .map_err(|err| MirrorXError::Other(anyhow!(err)))?
-        .to_string();
-
-    let unbound_key = ring::aead::UnboundKey::new(&ring::aead::AES_256_GCM, derived_key.as_bytes())
+    let unbound_key = ring::aead::UnboundKey::new(&ring::aead::AES_256_GCM, &derived_key)
         .map_err(|err| MirrorXError::Other(anyhow!(err)))?;
 
     let mut active_device_secret_nonce = [0u8; ring::aead::NONCE_LEN];
