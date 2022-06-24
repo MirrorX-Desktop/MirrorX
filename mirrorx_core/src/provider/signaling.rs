@@ -22,7 +22,7 @@ use rsa::PublicKeyParts;
 use sha2::Sha256;
 use std::{sync::Arc, time::Duration};
 use tokio::net::ToSocketAddrs;
-use tracing::error;
+use tracing::{error, info};
 
 pub async fn init<A>(addr: A) -> Result<(), MirrorXError>
 where
@@ -183,6 +183,8 @@ pub async fn connection_key_exchange(
     let mut active_device_secret_buffer = BINCODE_SERIALIZER
         .serialize(&active_device_secret)
         .map_err(|err| MirrorXError::SerializeFailed(err))?;
+
+    info!("{:X?}", &active_device_secret_buffer);
 
     // sealing packet and call key-exchange
 

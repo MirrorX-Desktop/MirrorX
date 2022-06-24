@@ -66,7 +66,7 @@ pub async fn handle_connection_key_exchange_request(
     let mut active_device_secret_opening_key =
         ring::aead::OpeningKey::new(unbound_key, NonceValue::new(active_device_secret_nonce));
 
-    active_device_secret_opening_key
+    let active_device_secret_buf = active_device_secret_opening_key
         .open_in_place(ring::aead::Aad::empty(), &mut req.secret)
         .map_err(|err| {
             MirrorXError::Other(anyhow!(
@@ -76,7 +76,7 @@ pub async fn handle_connection_key_exchange_request(
         })?;
 
     let active_device_secret = BINCODE_SERIALIZER
-        .deserialize::<ConnectionKeyExchangeActiveDeviceSecret>(&req.secret)
+        .deserialize::<ConnectionKeyExchangeActiveDeviceSecret>(&active_device_secret_buf)
         .map_err(|err| MirrorXError::DeserializeFailed(err))?;
 
     if active_device_secret.active_device_nonce.len() != ring::aead::NONCE_LEN {
