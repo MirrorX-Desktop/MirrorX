@@ -75,7 +75,7 @@ pub async fn handle_connection_key_exchange_request(
             ))
         })?;
 
-    info!("{:X?}", &req.secret);
+    info!("{:X?}", &active_device_secret_buf);
 
     let active_device_secret = BINCODE_SERIALIZER
         .deserialize::<ConnectionKeyExchangeActiveDeviceSecret>(&active_device_secret_buf)
