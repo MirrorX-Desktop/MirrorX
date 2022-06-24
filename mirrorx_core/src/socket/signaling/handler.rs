@@ -18,7 +18,7 @@ use rand::RngCore;
 use ring::aead::BoundKey;
 use rsa::{rand_core::OsRng, BigUint, PublicKey};
 use sha2::Sha256;
-use tracing::error;
+use tracing::{error, info};
 
 pub async fn handle_connect_request(req: ConnectRequest) -> Result<ConnectResponse, MirrorXError> {
     Ok(ConnectResponse { allow: true })
@@ -74,6 +74,8 @@ pub async fn handle_connection_key_exchange_request(
                 err
             ))
         })?;
+
+    info!("{:X?}", &req.secret);
 
     let active_device_secret = BINCODE_SERIALIZER
         .deserialize::<ConnectionKeyExchangeActiveDeviceSecret>(&active_device_secret_buf)
