@@ -176,7 +176,7 @@ pub async fn handle_connection_key_exchange_request(
         })?;
 
     let sealing_key =
-        ring::aead::SealingKey::new(unbound_sealing_key, NonceValue::new(passive_device_nonce));
+        ring::aead::SealingKey::new(unbound_sealing_key, NonceValue::new(active_device_nonce));
 
     let unbound_opening_key =
         ring::aead::UnboundKey::new(&ring::aead::AES_256_GCM, &raw_opening_key).map_err(|err| {
@@ -184,7 +184,7 @@ pub async fn handle_connection_key_exchange_request(
         })?;
 
     let opening_key =
-        ring::aead::OpeningKey::new(unbound_opening_key, NonceValue::new(active_device_nonce));
+        ring::aead::OpeningKey::new(unbound_opening_key, NonceValue::new(passive_device_nonce));
 
     // create endpoint
     let local_device_id = passive_device_id.clone();
