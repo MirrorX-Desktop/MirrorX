@@ -13,7 +13,6 @@ use crate::{
 use anyhow::anyhow;
 use bincode::Options;
 use hmac::Hmac;
-use pbkdf2::password_hash::PasswordHasher;
 use rand::RngCore;
 use ring::aead::BoundKey;
 use rsa::{rand_core::OsRng, BigUint, PublicKey};
