@@ -24,6 +24,7 @@ use once_cell::sync::{Lazy, OnceCell};
 use ring::aead::{OpeningKey, SealingKey};
 use scopeguard::defer;
 use std::{
+    os::raw::c_void,
     sync::atomic::{AtomicU16, Ordering},
     time::Duration,
 };
@@ -97,10 +98,10 @@ pub struct EndPoint {
     atomic_call_id: AtomicU16,
     call_reply_tx_map: DashMap<u16, Sender<EndPointMessage>>,
     packet_tx: Sender<EndPointMessagePacket>,
-    video_decoder_tx: OnceCell<Sender<Vec<u8>>>,
-    texture_id: OnceCell<i64>,
-    video_texture_ptr: OnceCell<i64>,
-    update_frame_callback_ptr: OnceCell<i64>,
+    video_decoder_tx: OnceCell<crossbeam::channel::Sender<Vec<u8>>>,
+    // texture_id: OnceCell<i64>,
+    // video_texture_ptr: OnceCell<i64>,
+    // update_frame_callback_ptr: OnceCell<i64>,
 }
 
 impl EndPoint {
@@ -196,38 +197,38 @@ impl EndPoint {
             call_reply_tx_map: DashMap::new(),
             packet_tx,
             video_decoder_tx: OnceCell::new(),
-            texture_id: OnceCell::new(),
-            video_texture_ptr: OnceCell::new(),
-            update_frame_callback_ptr: OnceCell::new(),
+            // texture_id: OnceCell::new(),
+            // video_texture_ptr: OnceCell::new(),
+            // update_frame_callback_ptr: OnceCell::new(),
         })
     }
 
-    pub fn set_texture_id(&self, texture_id: i64) -> Result<(), MirrorXError> {
-        self.texture_id
-            .set(texture_id)
-            .map_err(|err| MirrorXError::EndPointTextureIDAlreadySet(self.remote_device_id.clone()))
-    }
+    // pub fn set_texture_id(&self, texture_id: i64) -> Result<(), MirrorXError> {
+    //     self.texture_id
+    //         .set(texture_id)
+    //         .map_err(|err| MirrorXError::EndPointTextureIDAlreadySet(self.remote_device_id.clone()))
+    // }
 
-    pub fn set_video_texture_ptr(&self, video_texture_ptr: i64) -> Result<(), MirrorXError> {
-        self.video_texture_ptr
-            .set(video_texture_ptr)
-            .map_err(|err| {
-                MirrorXError::EndPointVideoTexturePtrAlreadySet(self.remote_device_id.clone())
-            })
-    }
+    // pub fn set_video_texture_ptr(&self, video_texture_ptr: i64) -> Result<(), MirrorXError> {
+    //     self.video_texture_ptr
+    //         .set(video_texture_ptr)
+    //         .map_err(|err| {
+    //             MirrorXError::EndPointVideoTexturePtrAlreadySet(self.remote_device_id.clone())
+    //         })
+    // }
 
-    pub fn set_update_frame_callback_ptr(
-        &self,
-        update_frame_callback_ptr: i64,
-    ) -> Result<(), MirrorXError> {
-        self.update_frame_callback_ptr
-            .set(update_frame_callback_ptr)
-            .map_err(|err| {
-                MirrorXError::EndPointUpdateFrameCallbackPtrAlreadySet(
-                    self.remote_device_id.clone(),
-                )
-            })
-    }
+    // pub fn set_update_frame_callback_ptr(
+    //     &self,
+    //     update_frame_callback_ptr: i64,
+    // ) -> Result<(), MirrorXError> {
+    //     self.update_frame_callback_ptr
+    //         .set(update_frame_callback_ptr)
+    //         .map_err(|err| {
+    //             MirrorXError::EndPointUpdateFrameCallbackPtrAlreadySet(
+    //                 self.remote_device_id.clone(),
+    //             )
+    //         })
+    // }
 
     async fn call(
         &self,
@@ -369,6 +370,73 @@ impl EndPoint {
         });
 
         Ok(())
+    }
+
+    pub fn start_desktop_render_thread(
+        &self,
+        texture_id: i64,
+        video_texture_ptr: i64,
+        update_frame_callback_ptr: i64,
+    ) -> anyhow::Result<()> {
+        unsafe {
+            let update_frame_callback = std::mem::transmute::<
+                *mut c_void,
+                unsafe extern "C" fn(
+                    texture_id: i64,
+                    video_texture_ptr: *mut c_void,
+                    new_frame_ptr: *mut c_void,
+                ),
+            >(update_frame_callback_ptr as *mut c_void);
+
+            let mut decoder = crate::media::video_decoder::VideoDecoder::new("h264")?;
+
+            let frame_rx = decoder.open()?;
+
+            let (decoder_tx, decoder_rx) = crossbeam::channel::bounded::<Vec<u8>>(120);
+
+            std::thread::spawn(move || loop {
+                match decoder_rx.recv() {
+                    Ok(data) => {
+                        if let Err(err) = decoder.decode(data.as_ptr(), data.len() as i32, 0, 0) {
+                            error!("decode error");
+                        }
+                    }
+                    Err(err) => {
+                        error!("decoder_rx.recv: {}", err);
+                        break;
+                    }
+                }
+            });
+
+            std::thread::spawn(move || loop {
+                match frame_rx.recv() {
+                    Ok(video_frame) => update_frame_callback(
+                        texture_id,
+                        video_texture_ptr as *mut c_void,
+                        video_frame.0,
+                    ),
+                    Err(err) => {
+                        error!(err= ?err,"desktop render thread error");
+                        break;
+                    }
+                }
+            });
+
+            let _ = self.video_decoder_tx.set(decoder_tx);
+
+            Ok(())
+        }
+    }
+
+    pub fn transfer_desktop_video_frame(&self, frame: Vec<u8>) {
+        if let Some(decoder) = self.video_decoder_tx.get() {
+            if let Err(err) = decoder.try_send(frame) {
+                match err {
+                    crossbeam::channel::TrySendError::Full(_) => return,
+                    crossbeam::channel::TrySendError::Disconnected(_) => return,
+                }
+            }
+        }
     }
 
     make_endpoint_call!(

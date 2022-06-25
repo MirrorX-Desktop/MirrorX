@@ -184,8 +184,6 @@ pub async fn connection_key_exchange(
         .serialize(&active_device_secret)
         .map_err(|err| MirrorXError::SerializeFailed(err))?;
 
-    info!("{:X?}", &active_device_secret_buffer);
-
     // sealing packet and call key-exchange
 
     let unbound_key =

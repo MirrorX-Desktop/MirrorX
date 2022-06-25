@@ -4,7 +4,10 @@ use super::{
     endpoint::EndPoint,
     message::{MediaFrame, StartMediaTransmissionResponse},
 };
-use crate::{error::MirrorXError, socket::endpoint::message::StartMediaTransmissionRequest};
+use crate::{
+    error::MirrorXError,
+    socket::endpoint::{endpoint::ENDPOINTS, message::StartMediaTransmissionRequest},
+};
 
 pub async fn handle_start_media_transmission_request(
     endpoint: &EndPoint,
@@ -36,7 +39,12 @@ pub async fn handle_media_transmission(
     //     "receive media transmission, length: {}",
     //     media_transmission.data.len()
     // );
-    // endpoint.transfer_desktop_video_frame(media_transmission.data);
+
+    if let Some(endpoint) = ENDPOINTS.get(&remove_device_id) {
+        endpoint.transfer_desktop_video_frame(media_transmission.data);
+    };
+
     info!("receive media");
+
     Ok(())
 }
