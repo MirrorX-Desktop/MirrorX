@@ -23,7 +23,7 @@ use crate::media::{
     },
     frame::NativeFrame,
 };
-use anyhow::{anyhow, bail};
+use anyhow::anyhow;
 use crossbeam::channel::{bounded, Receiver, Sender};
 use scopeguard::defer;
 use std::{
@@ -227,22 +227,53 @@ impl VideoDecoder {
                     //     break;
                     // }
 
-                    #[cfg(target_os = "macos")]
-                    let native_frame = crate::media::bindings::macos::CVPixelBufferRetain(
-                        (*self.decode_frame).data[3]
-                            as crate::media::bindings::macos::CVPixelBufferRef,
-                    );
-
-                    #[cfg(target_os = "windows")]
-                    let native_frame = (*self.decode_frame).data[3] as *mut libc::c_void;
-
-                    if let Some(tx) = &self.output_tx {
-                        if let Err(err) = tx.try_send(NativeFrame(native_frame)) {
-                            return Err(MirrorXError::MediaVideoDecoderOutputTxSendFailed);
-                        }
-                    }
+                    let _ = self.send_native_frame(self.decode_frame)?;
                 }
             }
+        }
+    }
+
+    #[cfg(target_os = "macos")]
+    unsafe fn send_native_frame(&self, av_frame: *mut AVFrame) -> Result<(), MirrorXError> {
+        let native_frame = crate::media::bindings::macos::CVPixelBufferRetain(
+            (*self.decode_frame).data[3] as crate::media::bindings::macos::CVPixelBufferRef,
+        );
+
+        if let Some(tx) = &self.output_tx {
+            tx.try_send(NativeFrame(native_frame))
+                .map_err(|_| MirrorXError::MediaVideoDecoderOutputTxSendFailed)
+        } else {
+            Err(MirrorXError::ComponentUninitialized)
+        }
+    }
+
+    #[cfg(target_os = "windows")]
+    unsafe fn send_native_frame(&self, av_frame: *mut AVFrame) -> Result<(), MirrorXError> {
+        use super::libyuv;
+        use crate::media::libyuv::kYvuF709Constants;
+
+        let mut abgr_frame = Vec::<u8>::new();
+        abgr_frame.set_len(((*av_frame).width as usize) * ((*av_frame).height as usize) * 4);
+
+        // the actual AVFrame format is NV12, but in the libyuv, function 'NV12ToABGRMatrix' is a macro to function 'NV21ToARGBMatrix'
+        // and Rust FFI can't convert macro so we directly use it's result function 'NV21ToARGBMatrix' and yuvconstants
+        libyuv::NV21ToARGBMatrix(
+            (*av_frame).data[0],
+            (*av_frame).linesize[0] as isize,
+            (*av_frame).data[1],
+            (*av_frame).linesize[1] as isize,
+            abgr_frame.as_mut_ptr(),
+            ((*av_frame).width as isize) * 4,
+            &kYvuF709Constants,
+            (*av_frame).width as isize,
+            (*av_frame).height as isize,
+        );
+
+        if let Some(tx) = &self.output_tx {
+            tx.try_send(NativeFrame(abgr_frame))
+                .map_err(|_| MirrorXError::MediaVideoDecoderOutputTxSendFailed)
+        } else {
+            Err(MirrorXError::ComponentUninitialized)
         }
     }
 }

@@ -16,6 +16,8 @@ set(PLUGIN_NAME "texture_render_plugin")
 list(APPEND PLUGIN_SOURCES
   "texture_render_plugin.cpp"
   "texture_render_plugin.h"
+  "video_texture.h"
+  "video_texture.cpp"
 )
 
 # Define the plugin library target. Its name must not be changed (see comment

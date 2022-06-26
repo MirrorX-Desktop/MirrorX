@@ -410,11 +410,21 @@ impl EndPoint {
 
             std::thread::spawn(move || loop {
                 match frame_rx.recv() {
-                    Ok(video_frame) => update_frame_callback(
-                        texture_id,
-                        video_texture_ptr as *mut c_void,
-                        video_frame.0,
-                    ),
+                    Ok(video_frame) => {
+                        #[cfg(target_os = "macos")]
+                        update_frame_callback(
+                            texture_id,
+                            video_texture_ptr as *mut c_void,
+                            video_frame.0,
+                        );
+
+                        #[cfg(target_os = "windows")]
+                        update_frame_callback(
+                            texture_id,
+                            video_texture_ptr as *mut c_void,
+                            video_frame.0.as_ptr() as *mut c_void,
+                        );
+                    }
                     Err(err) => {
                         error!(err= ?err,"desktop render thread error");
                         break;
