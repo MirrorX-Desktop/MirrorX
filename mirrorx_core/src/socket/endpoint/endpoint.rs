@@ -334,13 +334,16 @@ impl EndPoint {
                 let capture_frame = match capture_frame_rx.recv() {
                     Ok(frame) => frame,
                     Err(err) => {
-                        tracing::error!(?err, "capture_frame_rx.recv");
+                        error!(?err, "capture_frame_rx.recv");
                         break;
                     }
                 };
 
                 // encode will block current thread until capture_frame released (FFMpeg API 'avcodec_send_frame' finished)
-                encoder.encode(capture_frame);
+                if let Err(err) = encoder.encode(capture_frame) {
+                    error!(err=?err,"video encode failed");
+                    break;
+                }
             }
 
             desktop_duplicator.stop();
