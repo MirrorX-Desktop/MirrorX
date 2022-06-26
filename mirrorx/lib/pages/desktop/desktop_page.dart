@@ -42,6 +42,12 @@ class DesktopPage extends StatelessWidget {
                     ),
                   );
                 case ConnectionState.done:
+                  if (snapshot.hasError) {
+                    return Center(
+                      child: Text(snapshot.error.toString()),
+                    );
+                  }
+
                   model.alreadyPrepared = true;
                   return _buildDesktopSurface();
               }
