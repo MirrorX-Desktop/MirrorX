@@ -220,13 +220,6 @@ impl VideoDecoder {
                 if !self.parser_ctx.is_null() {
                     tmp_frame = self.decode_frame;
                 } else {
-                    // ret = av_hwframe_transfer_data(self.hw_decode_frame, self.decode_frame, 0);
-
-                    // if ret < 0 {
-                    //     tracing::error!(ret = ret, "av_hwframe_transfer_data failed");
-                    //     break;
-                    // }
-
                     let _ = self.send_native_frame(self.decode_frame)?;
                 }
             }
@@ -250,23 +243,36 @@ impl VideoDecoder {
     #[cfg(target_os = "windows")]
     unsafe fn send_native_frame(&self, av_frame: *mut AVFrame) -> Result<(), MirrorXError> {
         use super::libyuv;
-        use crate::media::libyuv::kYvuF709Constants;
+        use crate::media::{
+            ffmpeg::avutil::hwcontext::av_hwframe_transfer_data, libyuv::kYvuF709Constants,
+        };
+
+        let ret = av_hwframe_transfer_data(self.hw_decode_frame, av_frame, 0);
+
+        if ret < 0 {
+            tracing::error!(ret = ret, "av_hwframe_transfer_data failed");
+            return Err(MirrorXError::MediaVideoDecoderOutputTxSendFailed);
+        }
 
         let mut abgr_frame = Vec::<u8>::new();
-        abgr_frame.set_len(((*av_frame).width as usize) * ((*av_frame).height as usize) * 4);
+        abgr_frame.set_len(
+            ((*self.hw_decode_frame).width as usize)
+                * ((*self.hw_decode_frame).height as usize)
+                * 4,
+        );
 
         // the actual AVFrame format is NV12, but in the libyuv, function 'NV12ToABGRMatrix' is a macro to function 'NV21ToARGBMatrix'
         // and Rust FFI can't convert macro so we directly use it's result function 'NV21ToARGBMatrix' and yuvconstants
         libyuv::NV21ToARGBMatrix(
-            (*av_frame).data[0],
-            (*av_frame).linesize[0] as isize,
-            (*av_frame).data[1],
-            (*av_frame).linesize[1] as isize,
+            (*self.hw_decode_frame).data[0],
+            (*self.hw_decode_frame).linesize[0] as isize,
+            (*self.hw_decode_frame).data[1],
+            (*self.hw_decode_frame).linesize[1] as isize,
             abgr_frame.as_mut_ptr(),
-            ((*av_frame).width as isize) * 4,
+            ((*self.hw_decode_frame).width as isize) * 4,
             &kYvuF709Constants,
-            (*av_frame).width as isize,
-            (*av_frame).height as isize,
+            (*self.hw_decode_frame).width as isize,
+            (*self.hw_decode_frame).height as isize,
         );
 
         if let Some(tx) = &self.output_tx {
