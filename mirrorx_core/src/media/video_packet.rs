@@ -1,6 +1,7 @@
 use std::fmt::Display;
 
 /// cbindgen:ignore
+#[derive(Debug)]
 pub struct VideoPacket {
     pub data: Vec<u8>,
     pub dts: i64,

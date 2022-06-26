@@ -168,7 +168,7 @@ unsafe fn add_ivar_capture_frame_release_notify_tx(cls: &mut ClassDecl) {
 unsafe fn add_ivar_capture_frame_release_notify_rx(cls: &mut ClassDecl) {
     // ivar
 
-    cls.add_ivar::<*mut c_void>("_capture_frame_release_notify_tx");
+    cls.add_ivar::<*mut c_void>("_capture_frame_release_notify_rx");
 
     // capture_frame_release_notify_rx setter
 

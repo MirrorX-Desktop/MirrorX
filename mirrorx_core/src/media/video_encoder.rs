@@ -187,6 +187,7 @@ impl VideoEncoder {
                 (*frame).width = capture_frame.width() as i32;
                 (*frame).height = capture_frame.height() as i32;
                 (*frame).format = AV_PIX_FMT_NV12;
+                (*frame).color_range = AVCOL_RANGE_JPEG;
 
                 ret = av_frame_get_buffer(frame, 1);
                 if ret < 0 {
