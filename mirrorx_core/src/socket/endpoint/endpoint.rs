@@ -412,7 +412,7 @@ impl EndPoint {
             std::thread::spawn(move || loop {
                 match decode_packet_rx.recv() {
                     Ok(data) => {
-                        if let Err(err) = decoder.decode(data.as_ptr(), data.len() as i32, 0, 0) {
+                        if let Err(err) = decoder.decode(data, 0, 0) {
                             error!(?err, "decode error");
                             break;
                         }
@@ -457,6 +457,12 @@ impl EndPoint {
     }
 
     pub fn transfer_desktop_video_frame(&self, frame: Vec<u8>) {
+        info!("transfer desktop frame");
+        if frame.len() == 0 {
+            error!("is zero");
+            return;
+        }
+
         if let Some(decoder) = self.video_decoder_tx.get() {
             if let Err(err) = decoder.try_send(frame) {
                 match err {

@@ -34,6 +34,10 @@ use std::{
 };
 use tracing::{error, info, warn};
 
+use super::ffmpeg::avcodec::packet::av_new_packet;
+use super::ffmpeg::avutil::frame::av_frame_unref;
+use super::ffmpeg::avutil::imgutils::av_image_get_buffer_size;
+
 pub struct VideoDecoder {
     codec: *const AVCodec,
     codec_ctx: *mut AVCodecContext,
@@ -94,8 +98,8 @@ impl VideoDecoder {
 
             (*decoder.codec_ctx).width = 1920;
             (*decoder.codec_ctx).height = 1080;
-            (*decoder.codec_ctx).coded_width = 1920;
-            (*decoder.codec_ctx).coded_height = 1080;
+            // (*decoder.codec_ctx).coded_width = 1920;
+            // (*decoder.codec_ctx).coded_height = 1080;
             (*decoder.codec_ctx).pix_fmt = AV_PIX_FMT_NV12;
             // (*decoder.codec_ctx).flags |= AV_CODEC_FLAG2_LOCAL_HEADER;
             (*decoder.codec_ctx).color_range = AVCOL_RANGE_JPEG;
@@ -107,6 +111,18 @@ impl VideoDecoder {
             if decoder.packet.is_null() {
                 return Err(MirrorXError::MediaVideoDecoderAVPacketAllocFailed);
             }
+
+            // let packet_size = av_image_get_buffer_size(
+            //     (*decoder.codec_ctx).pix_fmt,
+            //     (*decoder.codec_ctx).width as i32,
+            //     (*decoder.codec_ctx).height as i32,
+            //     32,
+            // );
+
+            // let ret = av_new_packet(decoder.packet, packet_size);
+            // if ret < 0 {
+            //     return Err(MirrorXError::MediaVideoDecoderAVPacketAllocFailed);
+            // }
 
             decoder.decode_frame = av_frame_alloc();
             if decoder.decode_frame.is_null() {
@@ -121,11 +137,13 @@ impl VideoDecoder {
                 }
             } else {
                 let mut hwdevice_ctx = ptr::null_mut();
+                let device = CString::new("auto")
+                    .map_err(|err| MirrorXError::Other(anyhow::anyhow!(err)))?;
 
                 let ret = av_hwdevice_ctx_create(
                     &mut hwdevice_ctx,
                     (*hw_config).device_type,
-                    ptr::null(),
+                    device.as_ptr(),
                     ptr::null_mut(),
                     0,
                 );
@@ -203,13 +221,7 @@ impl VideoDecoder {
         }
     }
 
-    pub fn decode(
-        &self,
-        data: *const u8,
-        data_size: i32,
-        dts: i64,
-        pts: i64,
-    ) -> Result<(), MirrorXError> {
+    pub fn decode(&self, mut data: Vec<u8>, dts: i64, pts: i64) -> Result<(), MirrorXError> {
         unsafe {
             if !self.parser_ctx.is_null() {
                 let ret = av_parser_parse2(
@@ -217,8 +229,8 @@ impl VideoDecoder {
                     self.codec_ctx,
                     &mut (*self.packet).data,
                     &mut (*self.packet).size,
-                    data,
-                    data_size,
+                    data.as_ptr(),
+                    data.len() as i32,
                     pts,
                     dts,
                     0,
@@ -228,8 +240,8 @@ impl VideoDecoder {
                     return Err(MirrorXError::MediaVideoDecoderParser2Failed(ret));
                 }
             } else {
-                (*self.packet).data = data as *mut u8;
-                (*self.packet).size = data_size;
+                (*self.packet).data = data.as_mut_ptr();
+                (*self.packet).size = data.len() as i32;
                 (*self.packet).pts = pts;
                 (*self.packet).dts = dts;
             }
@@ -241,6 +253,7 @@ impl VideoDecoder {
             } else if ret == AVERROR_EOF {
                 return Err(MirrorXError::MediaVideoDecoderClosed);
             } else if ret < 0 {
+                error!(size = data.len(), "packet size");
                 return Err(MirrorXError::MediaVideoDecoderSendPacketFailed(ret));
             }
 
@@ -252,13 +265,11 @@ impl VideoDecoder {
                 }
 
                 if !self.parser_ctx.is_null() {
-                } else {
-                    if let Err(err) = self.send_native_frame() {
-                        send_native_frame_error = Some(err);
-                    }
+                } else if let Err(err) = self.send_native_frame() {
+                    send_native_frame_error = Some(err);
                 }
 
-                av_packet_unref((*self).packet);
+                av_frame_unref((*self).decode_frame);
             }
 
             if ret == AVERROR(libc::EAGAIN) || ret == AVERROR_EOF {

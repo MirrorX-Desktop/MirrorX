@@ -33,16 +33,16 @@ pub async fn handle_start_media_transmission_request(
 
 pub async fn handle_media_transmission(
     remote_device_id: String,
-    media_transmission: MediaFrame,
+    media_frame: MediaFrame,
 ) -> Result<(), MirrorXError> {
-    // info!(
-    //     "receive media transmission, length: {}",
-    //     media_transmission.data.len()
-    // );
+    info!(
+        data_length = media_frame.data.len(),
+        timestamp = media_frame.timestamp,
+        "handle_media_transmission",
+    );
 
     if let Some(endpoint) = ENDPOINTS.get(&remote_device_id) {
-        info!("transfer desktop frame");
-        endpoint.transfer_desktop_video_frame(media_transmission.data);
+        endpoint.transfer_desktop_video_frame(media_frame.data);
     };
 
     Ok(())

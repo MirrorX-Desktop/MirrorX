@@ -33,6 +33,7 @@ use crate::{
 use anyhow::anyhow;
 use crossbeam::channel::{bounded, Receiver, Sender};
 use once_cell::sync::OnceCell;
+use scopeguard::defer;
 use std::{ffi::CString, slice::from_raw_parts};
 use tracing::error;
 
@@ -247,14 +248,22 @@ impl VideoEncoder {
             let mut err = None;
             while ret >= 0 && err.is_none() {
                 ret = avcodec_receive_packet(self.codec_ctx, self.packet);
+                if ret < 0 {
+                    break;
+                }
 
                 if let Some(tx) = self.output_tx.get() {
-                    if let Err(_) = tx.try_send(VideoPacket {
-                        data: from_raw_parts((*self.packet).data, (*self.packet).size as usize)
-                            .to_vec(),
+                    let video_packet = VideoPacket {
+                        data: std::slice::from_raw_parts(
+                            (*self.packet).data,
+                            (*self.packet).size as usize,
+                        )
+                        .to_vec(),
                         dts: (*self.packet).dts,
                         pts: (*self.packet).pts,
-                    }) {
+                    };
+
+                    if let Err(_) = tx.try_send(video_packet) {
                         err = Some(MirrorXError::MediaVideoEncoderOutputTxSendFailed);
                     }
                 }

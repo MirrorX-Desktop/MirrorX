@@ -1,11 +1,8 @@
-use std::time::Duration;
-
-use bincode::de;
-use tracing::{error, info};
-
 use crate::media::{
     desktop_duplicator::DesktopDuplicator, video_decoder::VideoDecoder, video_encoder::VideoEncoder,
 };
+use std::time::Duration;
+use tracing::{error, info};
 
 #[test]
 fn test_capture_and_encode_and_decode() -> anyhow::Result<()> {
@@ -77,9 +74,7 @@ fn test_capture_and_encode_and_decode() -> anyhow::Result<()> {
     std::thread::spawn(move || loop {
         match packet_rx.recv() {
             Ok(packet) => {
-                if let Err(err) =
-                    decoder.decode(packet.data.as_ptr(), packet.data.len() as i32, 0, 0)
-                {
+                if let Err(err) = decoder.decode(packet.data, 0, 0) {
                     let _ = encode_error_tx
                         .try_send(crate::error::MirrorXError::Other(anyhow::anyhow!(err)));
                 }
