@@ -32,6 +32,7 @@ use crate::{
 };
 use anyhow::anyhow;
 use crossbeam::channel::{bounded, Receiver, Sender};
+use once_cell::sync::OnceCell;
 use std::{ffi::CString, slice::from_raw_parts};
 use tracing::error;
 
@@ -40,7 +41,7 @@ pub struct VideoEncoder {
     codec_ctx: *mut AVCodecContext,
     frame: *mut AVFrame,
     packet: *mut AVPacket,
-    output_tx: Option<Sender<VideoPacket>>,
+    output_tx: OnceCell<Sender<VideoPacket>>,
 }
 
 unsafe impl Send for VideoEncoder {}
@@ -101,7 +102,7 @@ impl VideoEncoder {
                 codec_ctx,
                 frame: std::ptr::null_mut(),
                 packet: std::ptr::null_mut(),
-                output_tx: None,
+                output_tx: OnceCell::new(),
             })
         }
     }
@@ -147,7 +148,7 @@ impl VideoEncoder {
     }
 
     pub fn open(&mut self) -> Result<Receiver<VideoPacket>, MirrorXError> {
-        if self.output_tx.is_some() {
+        if self.output_tx.get().is_some() {
             return Err(MirrorXError::MediaVideoEncoderAlreadyOpened);
         }
 
@@ -158,7 +159,7 @@ impl VideoEncoder {
             }
 
             let (tx, rx) = bounded::<VideoPacket>(600);
-            self.output_tx = Some(tx);
+            self.output_tx.set(tx);
             Ok(rx)
         }
     }
@@ -243,28 +244,32 @@ impl VideoEncoder {
                 return Err(MirrorXError::MediaVideoEncoderSendFrameFailed(ret));
             }
 
-            loop {
+            let mut err = None;
+            while ret >= 0 && err.is_none() {
                 ret = avcodec_receive_packet(self.codec_ctx, self.packet);
 
-                if ret == AVERROR(libc::EAGAIN) || ret == AVERROR_EOF {
-                    return Ok(());
-                } else if ret < 0 {
-                    return Err(MirrorXError::MediaVideoEncoderReceivePacketFailed(ret));
-                }
-
-                if let Some(tx) = &self.output_tx {
+                if let Some(tx) = self.output_tx.get() {
                     if let Err(_) = tx.try_send(VideoPacket {
                         data: from_raw_parts((*self.packet).data, (*self.packet).size as usize)
                             .to_vec(),
                         dts: (*self.packet).dts,
                         pts: (*self.packet).pts,
                     }) {
-                        av_packet_unref(self.packet);
-                        return Err(MirrorXError::MediaVideoEncoderOutputTxSendFailed);
+                        err = Some(MirrorXError::MediaVideoEncoderOutputTxSendFailed);
                     }
                 }
 
                 av_packet_unref(self.packet);
+            }
+
+            if ret == AVERROR(libc::EAGAIN) || ret == AVERROR_EOF {
+                Ok(())
+            } else if ret < 0 {
+                Err(MirrorXError::MediaVideoEncoderReceivePacketFailed(ret))
+            } else if let Some(err) = err {
+                Err(err)
+            } else {
+                Ok(())
             }
         }
     }
