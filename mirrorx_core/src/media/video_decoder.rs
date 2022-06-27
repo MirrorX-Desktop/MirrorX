@@ -262,7 +262,7 @@ impl VideoDecoder {
 
         // the actual AVFrame format is NV12, but in the libyuv, function 'NV12ToABGRMatrix' is a macro to function 'NV21ToARGBMatrix'
         // and Rust FFI can't convert macro so we directly use it's result function 'NV21ToARGBMatrix' and yuvconstants
-        let r = libyuv::NV21ToARGBMatrix(
+        let ret = libyuv::NV21ToARGBMatrix(
             (*self.hw_decode_frame).data[0],
             (*self.hw_decode_frame).linesize[0] as isize,
             (*self.hw_decode_frame).data[1],
@@ -274,7 +274,12 @@ impl VideoDecoder {
             (*self.hw_decode_frame).height as isize,
         );
 
-        info!("{}", r);
+        if ret != 0 {
+            return Err(MirrorXError::Other(anyhow::anyhow!(
+                "libyuv::NV21ToARGBMatrix returns {}",
+                ret
+            )));
+        }
 
         abgr_frame.set_len(abgr_frame_size);
 
