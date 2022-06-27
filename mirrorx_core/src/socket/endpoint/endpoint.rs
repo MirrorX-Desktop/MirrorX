@@ -354,7 +354,7 @@ impl EndPoint {
         std::thread::spawn(move || loop {
             match packet_rx.recv() {
                 Ok(packet) => {
-                    if let Err(err) = sender.blocking_send(EndPointMessagePacket {
+                    if let Err(err) = sender.try_send(EndPointMessagePacket {
                         typ: EndPointMessagePacketType::Push,
                         call_id: None,
                         message: EndPointMessage::MediaFrame(MediaFrame {
@@ -363,6 +363,7 @@ impl EndPoint {
                         }),
                     }) {
                         error!(?err, "desktop_media_transmission failed");
+                        break;
                     }
                 }
                 Err(err) => {
