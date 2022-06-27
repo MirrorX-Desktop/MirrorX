@@ -12,6 +12,7 @@
 
 void UpdateFrameCallback(int64_t texture_id, void *video_texture_ptr,
                          void *new_frame_ptr) {
+  printf("update frame callback");
   auto video_texture = reinterpret_cast<VideoTexture *>(video_texture_ptr);
   video_texture->UpdateFrame(new_frame_ptr);
 }

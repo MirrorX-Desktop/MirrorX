@@ -21,7 +21,7 @@ int64_t VideoTexture::RegisterTexture() {
   }
 
   semaphore = CreateSemaphore(NULL, 1, 1, L"VideoTextureSemaphore");
-  if (semaphore == 0) {
+  if (!semaphore) {
     return -1;
   }
 
@@ -37,11 +37,8 @@ int64_t VideoTexture::RegisterTexture() {
 }
 
 void VideoTexture::UpdateFrame(void *frame_pointer) {
-  if (texture_id == -1) {
-    return;
-  }
-
   if (texture_id > 0) {
+    printf("mark available");
     pixel_buffer = reinterpret_cast<uint8_t *>(frame_pointer);
     texture_registrar->MarkTextureFrameAvailable(texture_id);
     WaitForSingleObject(semaphore, INFINITE);

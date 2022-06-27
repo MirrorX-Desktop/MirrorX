@@ -402,15 +402,15 @@ impl EndPoint {
 
             let mut decoder = crate::media::video_decoder::VideoDecoder::new(decoder_name)?;
 
-            let frame_rx = decoder.open()?;
+            let decode_frame_rx = decoder.open()?;
 
-            let (decoder_tx, decoder_rx) = crossbeam::channel::bounded::<Vec<u8>>(120);
+            let (decode_packet_tx, decode_packet_rx) = crossbeam::channel::bounded::<Vec<u8>>(120);
 
             std::thread::spawn(move || loop {
-                match decoder_rx.recv() {
+                match decode_packet_rx.recv() {
                     Ok(data) => {
                         if let Err(err) = decoder.decode(data.as_ptr(), data.len() as i32, 0, 0) {
-                            error!("decode error");
+                            error!(?err, "decode error");
                             break;
                         }
                     }
@@ -422,7 +422,7 @@ impl EndPoint {
             });
 
             std::thread::spawn(move || loop {
-                match frame_rx.recv() {
+                match decode_frame_rx.recv() {
                     Ok(video_frame) => {
                         #[cfg(target_os = "macos")]
                         update_frame_callback(
@@ -430,6 +430,8 @@ impl EndPoint {
                             video_texture_ptr as *mut c_void,
                             video_frame.0,
                         );
+
+                        info!("receive decoded frame");
 
                         #[cfg(target_os = "windows")]
                         update_frame_callback(
@@ -439,13 +441,13 @@ impl EndPoint {
                         );
                     }
                     Err(err) => {
-                        error!(err= ?err,"desktop render thread error");
+                        error!(?err, "desktop render thread error");
                         break;
                     }
                 }
             });
 
-            let _ = self.video_decoder_tx.set(decoder_tx);
+            let _ = self.video_decoder_tx.set(decode_packet_tx);
 
             Ok(())
         }
@@ -455,8 +457,10 @@ impl EndPoint {
         if let Some(decoder) = self.video_decoder_tx.get() {
             if let Err(err) = decoder.try_send(frame) {
                 match err {
-                    crossbeam::channel::TrySendError::Full(_) => return,
-                    crossbeam::channel::TrySendError::Disconnected(_) => return,
+                    crossbeam::channel::TrySendError::Full(_) => error!("video decoder tx is full"),
+                    crossbeam::channel::TrySendError::Disconnected(_) => {
+                        error!("video decoder tx is disconnected")
+                    }
                 }
             }
         }
