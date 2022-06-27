@@ -220,14 +220,14 @@ impl VideoDecoder {
                 if !self.parser_ctx.is_null() {
                     tmp_frame = self.decode_frame;
                 } else {
-                    let _ = self.send_native_frame(self.decode_frame)?;
+                    let _ = self.send_native_frame()?;
                 }
             }
         }
     }
 
     #[cfg(target_os = "macos")]
-    unsafe fn send_native_frame(&self, av_frame: *mut AVFrame) -> Result<(), MirrorXError> {
+    unsafe fn send_native_frame(&self) -> Result<(), MirrorXError> {
         let native_frame = crate::media::bindings::macos::CVPixelBufferRetain(
             (*self.decode_frame).data[3] as crate::media::bindings::macos::CVPixelBufferRef,
         );
@@ -241,29 +241,28 @@ impl VideoDecoder {
     }
 
     #[cfg(target_os = "windows")]
-    unsafe fn send_native_frame(&self, av_frame: *mut AVFrame) -> Result<(), MirrorXError> {
+    unsafe fn send_native_frame(&self) -> Result<(), MirrorXError> {
         use super::libyuv;
         use crate::media::{
             ffmpeg::avutil::hwcontext::av_hwframe_transfer_data, libyuv::kYvuF709Constants,
         };
 
-        let ret = av_hwframe_transfer_data(self.hw_decode_frame, av_frame, 0);
+        let ret = av_hwframe_transfer_data(self.hw_decode_frame, self.decode_frame, 0);
 
         if ret < 0 {
             tracing::error!(ret = ret, "av_hwframe_transfer_data failed");
             return Err(MirrorXError::MediaVideoDecoderOutputTxSendFailed);
         }
 
-        let mut abgr_frame = Vec::<u8>::new();
-        abgr_frame.set_len(
-            ((*self.hw_decode_frame).width as usize)
-                * ((*self.hw_decode_frame).height as usize)
-                * 4,
-        );
+        let abgr_frame_size = ((*self.hw_decode_frame).width as usize)
+            * ((*self.hw_decode_frame).height as usize)
+            * 4;
+
+        let mut abgr_frame = Vec::<u8>::with_capacity(abgr_frame_size);
 
         // the actual AVFrame format is NV12, but in the libyuv, function 'NV12ToABGRMatrix' is a macro to function 'NV21ToARGBMatrix'
         // and Rust FFI can't convert macro so we directly use it's result function 'NV21ToARGBMatrix' and yuvconstants
-        libyuv::NV21ToARGBMatrix(
+        let r = libyuv::NV21ToARGBMatrix(
             (*self.hw_decode_frame).data[0],
             (*self.hw_decode_frame).linesize[0] as isize,
             (*self.hw_decode_frame).data[1],
@@ -274,6 +273,10 @@ impl VideoDecoder {
             (*self.hw_decode_frame).width as isize,
             (*self.hw_decode_frame).height as isize,
         );
+
+        info!("{}", r);
+
+        abgr_frame.set_len(abgr_frame_size);
 
         if let Some(tx) = &self.output_tx {
             tx.try_send(NativeFrame(abgr_frame))

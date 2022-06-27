@@ -391,7 +391,15 @@ impl EndPoint {
                 ),
             >(update_frame_callback_ptr as *mut c_void);
 
-            let mut decoder = crate::media::video_decoder::VideoDecoder::new("h264")?;
+            let decoder_name = if cfg!(target_os = "macos") {
+                "h264"
+            } else if cfg!(target_os = "windows") {
+                "h264_qsv"
+            } else {
+                panic!("unsupport platform decode");
+            };
+
+            let mut decoder = crate::media::video_decoder::VideoDecoder::new(decoder_name)?;
 
             let frame_rx = decoder.open()?;
 
@@ -402,6 +410,7 @@ impl EndPoint {
                     Ok(data) => {
                         if let Err(err) = decoder.decode(data.as_ptr(), data.len() as i32, 0, 0) {
                             error!("decode error");
+                            break;
                         }
                     }
                     Err(err) => {
