@@ -30,7 +30,9 @@ use std::{
     ffi::{CStr, CString},
     ptr,
 };
-use tracing::{info, warn};
+use tracing::{error, info, warn};
+
+use super::ffmpeg::avutil::buffer::av_buffer_ref;
 
 use super::ffmpeg::avutil::error::AVERROR_OPTION_NOT_FOUND;
 use super::ffmpeg::avutil::opt::av_opt_set;
@@ -95,6 +97,8 @@ impl VideoDecoder {
 
             (*decoder.codec_ctx).width = 1920;
             (*decoder.codec_ctx).height = 1080;
+            (*decoder.codec_ctx).coded_width = 1920;
+            (*decoder.codec_ctx).coded_height = 1080;
             (*decoder.codec_ctx).pix_fmt = AV_PIX_FMT_NV12;
             // (*decoder.codec_ctx).flags |= AV_CODEC_FLAG2_LOCAL_HEADER;
             (*decoder.codec_ctx).color_range = AVCOL_RANGE_JPEG;
@@ -133,7 +137,7 @@ impl VideoDecoder {
                     return Err(MirrorXError::MediaVideoDecoderHWDeviceCreateFailed(ret));
                 }
 
-                (*decoder.codec_ctx).hw_device_ctx = hwdevice_ctx;
+                (*decoder.codec_ctx).hw_device_ctx = av_buffer_ref(hwdevice_ctx);
 
                 decoder.hw_decode_frame = av_frame_alloc();
                 if decoder.hw_decode_frame.is_null() {
@@ -263,7 +267,9 @@ impl VideoDecoder {
                 if !self.parser_ctx.is_null() {
                     tmp_frame = self.decode_frame;
                 } else {
-                    let _ = self.send_native_frame()?;
+                    if let Err(err) = self.send_native_frame() {
+                        return Err(err);
+                    }
                 }
             }
         }
@@ -291,9 +297,8 @@ impl VideoDecoder {
         };
 
         let ret = av_hwframe_transfer_data(self.hw_decode_frame, self.decode_frame, 0);
-
         if ret < 0 {
-            tracing::error!(ret = ret, "av_hwframe_transfer_data failed");
+            error!(ret = ret, "av_hwframe_transfer_data failed");
             return Err(MirrorXError::MediaVideoDecoderOutputTxSendFailed);
         }
 
@@ -326,9 +331,12 @@ impl VideoDecoder {
 
         abgr_frame.set_len(abgr_frame_size);
 
-        if let Some(tx) = &self.output_tx {
+        if let Some(tx) = self.output_tx.as_ref() {
             tx.try_send(NativeFrame(abgr_frame))
-                .map_err(|_| MirrorXError::MediaVideoDecoderOutputTxSendFailed)
+                .map_err(|_| MirrorXError::MediaVideoDecoderOutputTxSendFailed)?;
+
+            info!("output tx send success");
+            Ok(())
         } else {
             Err(MirrorXError::ComponentUninitialized)
         }
@@ -359,6 +367,9 @@ impl Drop for VideoDecoder {
             }
 
             if !self.codec_ctx.is_null() {
+                if !(*self.codec_ctx).hw_device_ctx.is_null() {
+                    av_buffer_ref((*self.codec_ctx).hw_device_ctx);
+                }
                 avcodec_free_context(&mut self.codec_ctx);
             }
         }
