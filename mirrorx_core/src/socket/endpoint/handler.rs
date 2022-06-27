@@ -13,9 +13,7 @@ pub async fn handle_start_media_transmission_request(
     endpoint: &EndPoint,
     req: StartMediaTransmissionRequest,
 ) -> Result<StartMediaTransmissionResponse, MirrorXError> {
-    info!("receive handle start media transmission");
     endpoint.begin_screen_capture()?;
-    info!("begin screen capture end");
 
     let reply = StartMediaTransmissionResponse {
         os_name: crate::constants::OS_NAME
