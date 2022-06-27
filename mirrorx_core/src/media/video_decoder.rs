@@ -32,6 +32,9 @@ use std::{
 };
 use tracing::{info, warn};
 
+use super::ffmpeg::avutil::error::AVERROR_OPTION_NOT_FOUND;
+use super::ffmpeg::avutil::opt::av_opt_set;
+
 pub struct VideoDecoder {
     codec: *const AVCodec,
     codec_ctx: *mut AVCodecContext,
@@ -139,6 +142,46 @@ impl VideoDecoder {
             }
 
             Ok(decoder)
+        }
+    }
+
+    pub fn set_opt(&self, key: &str, value: &str, search_flags: i32) -> Result<(), MirrorXError> {
+        let opt_name =
+            CString::new(key.to_string()).map_err(|err| MirrorXError::Other(anyhow!(err)))?;
+        let opt_value =
+            CString::new(value.to_string()).map_err(|err| MirrorXError::Other(anyhow!(err)))?;
+
+        unsafe {
+            let ret = av_opt_set(
+                (*self.codec_ctx).priv_data,
+                opt_name.as_ptr(),
+                opt_value.as_ptr(),
+                search_flags,
+            );
+
+            if ret == AVERROR_OPTION_NOT_FOUND {
+                return Err(MirrorXError::MediaVideoDecoderOptionNotFound(
+                    key.to_string(),
+                ));
+            } else if ret == AVERROR(libc::ERANGE) {
+                return Err(MirrorXError::MediaVideoDecoderOptionValueOutOfRange {
+                    key: key.to_string(),
+                    value: value.to_string(),
+                });
+            } else if ret == AVERROR(libc::EINVAL) {
+                return Err(MirrorXError::MediaVideoDecoderOptionValueInvalid {
+                    key: key.to_string(),
+                    value: value.to_string(),
+                });
+            } else if ret != 0 {
+                return Err(MirrorXError::MediaVideoDecoderOptionSetFailed {
+                    key: key.to_string(),
+                    value: value.to_string(),
+                    error_code: ret,
+                });
+            } else {
+                Ok(())
+            }
         }
     }
 

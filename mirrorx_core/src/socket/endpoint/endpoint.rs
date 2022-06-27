@@ -401,6 +401,9 @@ impl EndPoint {
             };
 
             let mut decoder = crate::media::video_decoder::VideoDecoder::new(decoder_name)?;
+            if decoder_name == "h264_qsv" {
+                decoder.set_opt("gpu_copy", "on", 0)?;
+            }
 
             let frame_rx = decoder.open()?;
 
@@ -410,12 +413,12 @@ impl EndPoint {
                 match decoder_rx.recv() {
                     Ok(data) => {
                         if let Err(err) = decoder.decode(data.as_ptr(), data.len() as i32, 0, 0) {
-                            error!("decode error");
+                            error!(?err, "decode error");
                             break;
                         }
                     }
                     Err(err) => {
-                        error!("decoder_rx.recv: {}", err);
+                        error!(?err, "decoder_rx");
                         break;
                     }
                 }

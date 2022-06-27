@@ -82,6 +82,20 @@ pub enum MirrorXError {
     MediaVideoDecoderNotFound(String),
     #[error("media video decoder alloc context failed")]
     MediaVideoDecoderAllocContextFailed,
+    #[error("media video decoder option '{0}' not found")]
+    MediaVideoDecoderOptionNotFound(String),
+    #[error("media video decoder option '{key}':'{value}' is out of range")]
+    MediaVideoDecoderOptionValueOutOfRange { key: String, value: String },
+    #[error("media video decoder option '{key}':'{value}' is invalid")]
+    MediaVideoDecoderOptionValueInvalid { key: String, value: String },
+    #[error(
+        "media video decoder option '{key}':'{value}' set failed, av_opt_set returns {error_code}"
+    )]
+    MediaVideoDecoderOptionSetFailed {
+        key: String,
+        value: String,
+        error_code: i32,
+    },
     #[error("media video decoder av_packet_alloc failed")]
     MediaVideoDecoderAVPacketAllocFailed,
     #[error("media video decoder av_frame_alloc failed")]
