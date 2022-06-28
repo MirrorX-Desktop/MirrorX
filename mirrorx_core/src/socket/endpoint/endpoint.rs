@@ -450,6 +450,12 @@ impl EndPoint {
     );
 }
 
+impl Drop for EndPoint {
+    fn drop(&mut self) {
+        info!(remote_device_id = ?self.remote_device_id, "endpoint dropped");
+    }
+}
+
 fn serve_reader(
     remote_device_id: String,
     mut stream: SplitStream<Framed<TcpStream, LengthDelimitedCodec>>,

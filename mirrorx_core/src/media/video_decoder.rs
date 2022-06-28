@@ -325,10 +325,7 @@ impl VideoDecoder {
 
         if let Some(tx) = self.output_tx.as_ref() {
             tx.try_send(NativeFrame(abgr_frame))
-                .map_err(|_| MirrorXError::MediaVideoDecoderOutputTxSendFailed)?;
-
-            info!("output tx send success");
-            Ok(())
+                .map_err(|_| MirrorXError::MediaVideoDecoderOutputTxSendFailed)
         } else {
             Err(MirrorXError::ComponentUninitialized)
         }
