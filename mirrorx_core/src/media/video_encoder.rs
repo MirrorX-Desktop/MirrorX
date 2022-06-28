@@ -95,7 +95,7 @@ impl VideoEncoder {
             (*codec_ctx).flags |= AV_CODEC_FLAG2_LOCAL_HEADER;
             (*codec_ctx).color_range = AVCOL_RANGE_JPEG;
             (*codec_ctx).color_primaries = AVCOL_PRI_BT709;
-            (*codec_ctx).color_trc = AVCOL_PRI_BT709;
+            (*codec_ctx).color_trc = AVCOL_TRC_BT709;
             (*codec_ctx).colorspace = AVCOL_SPC_BT709;
 
             Ok(VideoEncoder {

@@ -389,7 +389,7 @@ impl EndPoint {
                 unsafe extern "C" fn(
                     texture_id: i64,
                     video_texture_ptr: *mut c_void,
-                    new_frame_ptr: *const u8,
+                    new_frame_ptr: *const c_void,
                 ),
             >(update_frame_callback_ptr as *mut c_void);
 
