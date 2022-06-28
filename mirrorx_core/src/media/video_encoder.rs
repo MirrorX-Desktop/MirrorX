@@ -33,9 +33,7 @@ use crate::{
 use anyhow::anyhow;
 use crossbeam::channel::{bounded, Receiver, Sender};
 use once_cell::sync::OnceCell;
-use scopeguard::defer;
-use std::{ffi::CString, slice::from_raw_parts};
-use tracing::error;
+use std::ffi::CString;
 
 pub struct VideoEncoder {
     codec: *const AVCodec,
@@ -83,10 +81,10 @@ impl VideoEncoder {
             (*codec_ctx).framerate = AVRational { num: fps, den: 1 };
             (*codec_ctx).gop_size = fps * 3;
             (*codec_ctx).bit_rate = 80000000;
-            (*codec_ctx).rc_max_rate = 80000000;
-            (*codec_ctx).rc_min_rate = 80000000;
-            (*codec_ctx).rc_buffer_size = 80000000;
-            (*codec_ctx).rc_initial_buffer_occupancy = (*codec_ctx).rc_buffer_size * 3 / 4;
+            // (*codec_ctx).rc_max_rate = 80000000;
+            // (*codec_ctx).rc_min_rate = 80000000;
+            // (*codec_ctx).rc_buffer_size = 80000000;
+            // (*codec_ctx).rc_initial_buffer_occupancy = (*codec_ctx).rc_buffer_size * 3 / 4;
             (*codec_ctx).has_b_frames = 0;
             (*codec_ctx).max_b_frames = 0;
             (*codec_ctx).bit_rate_tolerance = 1;
