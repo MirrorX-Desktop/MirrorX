@@ -1,76 +1,40 @@
 #include "video_texture.h"
 
+VideoTexture::VideoTexture(flutter::TextureRegistrar *texture_registrar)
+    : texture_registrar_(texture_registrar),
+      texture_(flutter::PixelBufferTexture(
+          std::bind(&VideoTexture::CopyPixelBuffer, this, std::placeholders::_1,
+                    std::placeholders::_2))),
+      pixel_buffer_(new FlutterDesktopPixelBuffer()) {
+  texture_id = texture_registrar->RegisterTexture(&texture_);
+  copy_pixel_buffer_semaphore = CreateSemaphore(nullptr, 0, 1, nullptr);
+  pixel_buffer_->release_context = copy_pixel_buffer_semaphore;
+  pixel_buffer_->release_callback = [](void *release_context) {
+    ReleaseSemaphore(release_context, 1, nullptr);
+  };
+}
+
 VideoTexture::~VideoTexture() {
-  if (texture_id > 0) {
-    texture_registrar->UnregisterTexture(texture_id);
-  }
+  ReleaseSemaphore(copy_pixel_buffer_semaphore, 1, nullptr);
+  texture_registrar_->UnregisterTexture(texture_id);
+  CloseHandle(copy_pixel_buffer_semaphore);
 
-  if (semaphore) {
-    CloseHandle(semaphore);
-  }
-
-  texture_id = -1;
-  texture = nullptr;
-  texture_registrar = nullptr;
-  pixel_buffer = nullptr;
-}
-
-int64_t VideoTexture::RegisterTexture() {
-  if (!texture_registrar) {
-    return -1;
-  }
-
-  semaphore = CreateSemaphore(NULL, 1, 1, L"VideoTextureSemaphore");
-  if (!semaphore) {
-    return -1;
-  }
-
-  texture =
-      std::make_unique<flutter::TextureVariant>(flutter::PixelBufferTexture(
-          [this](size_t width,
-                 size_t height) -> const FlutterDesktopPixelBuffer * {
-            return this->ConvertPixelBufferForFlutter(width, height);
-          }));
-
-  texture_id = texture_registrar->RegisterTexture(texture.get());
-  return texture_id;
-}
-
-void VideoTexture::UpdateFrame(uint8_t *frame_pointer) {
-  if (texture_id > 0) {
-    printf("mark available");
-    pixel_buffer = frame_pointer;
-    texture_registrar->MarkTextureFrameAvailable(texture_id);
-    WaitForSingleObject(semaphore, INFINITE);
+  if (pixel_buffer_) {
+    delete pixel_buffer_;
+    pixel_buffer_ = nullptr;
   }
 }
 
-const FlutterDesktopPixelBuffer *
-VideoTexture::ConvertPixelBufferForFlutter(size_t width, size_t height) {
-  if (texture_id <= 0) {
-    return nullptr;
-  }
+void VideoTexture::UpdateFrame(uint8_t *frame_buffer, size_t frame_width,
+                               size_t frame_height) {
+  pixel_buffer_->buffer = frame_buffer;
+  pixel_buffer_->width = frame_width;
+  pixel_buffer_->height = frame_height;
+  texture_registrar_->MarkTextureFrameAvailable(texture_id);
+  WaitForSingleObject(copy_pixel_buffer_semaphore, INFINITE);
+}
 
-  // libyuv::NV12ToABGRMatrix(frame_y_buffer, y_stride, frame_uv_buffer,
-  // uv_stride,
-  //                          rgba_frame_ptr, y_stride,
-  //                          &libyuv::kYuvF709Constants, width, height);
-
-  if (!flutter_desktop_pixel_buffer_) {
-    flutter_desktop_pixel_buffer_ =
-        std::make_unique<FlutterDesktopPixelBuffer>();
-
-    flutter_desktop_pixel_buffer_->release_callback =
-        [](void *release_context) {
-          auto semaphore_handle = reinterpret_cast<HANDLE>(release_context);
-          ReleaseSemaphore(semaphore_handle, 1, nullptr);
-        };
-  }
-
-  flutter_desktop_pixel_buffer_->buffer = pixel_buffer;
-  flutter_desktop_pixel_buffer_->width = width;
-  flutter_desktop_pixel_buffer_->height = height;
-  flutter_desktop_pixel_buffer_->release_context = semaphore;
-
-  return flutter_desktop_pixel_buffer_.get();
+const FlutterDesktopPixelBuffer *VideoTexture::CopyPixelBuffer(size_t width,
+                                                               size_t height) {
+  return pixel_buffer_;
 }

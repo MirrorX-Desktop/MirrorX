@@ -383,12 +383,24 @@ impl EndPoint {
         update_frame_callback_ptr: i64,
     ) -> anyhow::Result<()> {
         unsafe {
+            #[cfg(target_os = "macos")]
             let update_frame_callback = std::mem::transmute::<
                 *mut c_void,
                 unsafe extern "C" fn(
                     texture_id: i64,
                     video_texture_ptr: *mut c_void,
                     new_frame_ptr: *const u8,
+                ),
+            >(update_frame_callback_ptr as *mut c_void);
+
+            #[cfg(target_os = "windows")]
+            let update_frame_callback = std::mem::transmute::<
+                *mut c_void,
+                unsafe extern "C" fn(
+                    video_texture_ptr: *mut c_void,
+                    frame_buffer: *const u8,
+                    frame_width: usize,
+                    frame_height: usize,
                 ),
             >(update_frame_callback_ptr as *mut c_void);
 
@@ -434,13 +446,14 @@ impl EndPoint {
                             video_frame.0,
                         );
 
-                        info!("receive decoded frame");
+                        // info!("receive decoded frame");
 
                         #[cfg(target_os = "windows")]
                         update_frame_callback(
-                            texture_id,
                             video_texture_ptr as *mut c_void,
                             video_frame.0.as_ptr(),
+                            1920,
+                            1080,
                         );
                     }
                     Err(err) => {
@@ -457,9 +470,8 @@ impl EndPoint {
     }
 
     pub fn transfer_desktop_video_frame(&self, frame: Vec<u8>) {
-        info!("transfer desktop frame");
         if frame.len() == 0 {
-            error!("is zero");
+            error!("transfer_desktop_video_frame: frame buffer is zero");
             return;
         }
 
