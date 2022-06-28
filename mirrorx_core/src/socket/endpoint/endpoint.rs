@@ -413,9 +413,9 @@ impl EndPoint {
             };
 
             let mut decoder = crate::media::video_decoder::VideoDecoder::new(decoder_name)?;
-            if decoder_name == "h264_qsv" {
-                decoder.set_opt("preset", "veryfast", 0)?;
-            }
+            // if decoder_name == "h264_qsv" {
+            //     decoder.set_opt("preset", "veryfast", 0)?;
+            // }
 
             let decode_frame_rx = decoder.open()?;
 
