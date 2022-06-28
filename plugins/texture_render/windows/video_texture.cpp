@@ -36,10 +36,10 @@ int64_t VideoTexture::RegisterTexture() {
   return texture_id;
 }
 
-void VideoTexture::UpdateFrame(void *frame_pointer) {
+void VideoTexture::UpdateFrame(uint8_t *frame_pointer) {
   if (texture_id > 0) {
     printf("mark available");
-    pixel_buffer = reinterpret_cast<uint8_t *>(frame_pointer);
+    pixel_buffer = frame_pointer;
     texture_registrar->MarkTextureFrameAvailable(texture_id);
     WaitForSingleObject(semaphore, INFINITE);
   }

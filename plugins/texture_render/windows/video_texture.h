@@ -12,7 +12,7 @@ public:
   virtual ~VideoTexture();
 
   int64_t RegisterTexture();
-  void UpdateFrame(void *frame_pointer);
+  void UpdateFrame(uint8_t *frame_pointer);
 
   VideoTexture(VideoTexture const &) = delete;
   VideoTexture &operator=(VideoTexture const &) = delete;
