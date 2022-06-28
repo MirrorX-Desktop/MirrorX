@@ -41,9 +41,6 @@ pub async fn start_media_transmission(
         None => return Err(MirrorXError::EndPointNotFound(remote_device_id)),
     };
 
-    // endpoint.set_texture_id(texture_id)?;
-    // endpoint.set_video_texture_ptr(video_texture_ptr)?;
-    // endpoint.set_update_frame_callback_ptr(update_frame_callback_ptr)?;
     endpoint.start_desktop_render_thread(
         texture_id,
         video_texture_ptr,

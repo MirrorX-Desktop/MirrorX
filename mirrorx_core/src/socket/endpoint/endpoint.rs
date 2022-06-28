@@ -1,4 +1,5 @@
 use super::{
+    ffi::create_callback_fn,
     handler::{handle_media_transmission, handle_start_media_transmission_request},
     message::{
         EndPointMessage, EndPointMessagePacket, EndPointMessagePacketType, MediaFrame,
@@ -35,7 +36,7 @@ use tokio::{
     time::timeout,
 };
 use tokio_util::codec::{Framed, LengthDelimitedCodec};
-use tracing::{error, info, trace};
+use tracing::{error, info, warn};
 
 const CALL_TIMEOUT: Duration = Duration::from_secs(5);
 
@@ -92,16 +93,11 @@ macro_rules! handle_endpoint_push {
 }
 
 pub struct EndPoint {
-    is_active_side: bool,
-    local_device_id: String,
     remote_device_id: String,
     atomic_call_id: AtomicU16,
     call_reply_tx_map: DashMap<u16, Sender<EndPointMessage>>,
     packet_tx: Sender<EndPointMessagePacket>,
     video_decoder_tx: OnceCell<crossbeam::channel::Sender<Vec<u8>>>,
-    // texture_id: OnceCell<i64>,
-    // video_texture_ptr: OnceCell<i64>,
-    // update_frame_callback_ptr: OnceCell<i64>,
 }
 
 impl EndPoint {
@@ -118,7 +114,7 @@ impl EndPoint {
     {
         let mut stream = timeout(Duration::from_secs(10), TcpStream::connect(addr))
             .await
-            .map_err(|err| MirrorXError::Timeout)?
+            .map_err(|_| MirrorXError::Timeout)?
             .map_err(|err| MirrorXError::IO(err))?;
 
         stream
@@ -149,7 +145,7 @@ impl EndPoint {
         let passive_device_id_buf = passive_device_id.as_bytes();
         if passive_device_id_buf.len() != 10 {
             return Err(MirrorXError::Other(anyhow::anyhow!(
-                "active device id bytes length is not 10"
+                "passive device id bytes length is not 10"
             )));
         }
 
@@ -173,7 +169,7 @@ impl EndPoint {
 
         if handshake_response_buf[0] != 1 {
             return Err(MirrorXError::EndPointError(String::from(
-                "endpoint handshake failed",
+                "handshake failed",
             )));
         }
 
@@ -186,49 +182,17 @@ impl EndPoint {
 
         let (packet_tx, packet_rx) = tokio::sync::mpsc::channel(128);
 
-        serve_stream(remote_device_id.clone(), stream, opening_key);
-        serve_sink(packet_rx, sink, sealing_key);
+        serve_reader(remote_device_id.clone(), stream, opening_key);
+        serve_writer(remote_device_id.clone(), packet_rx, sink, sealing_key);
 
         Ok(Self {
-            is_active_side,
-            local_device_id,
             remote_device_id,
             atomic_call_id: AtomicU16::new(0),
             call_reply_tx_map: DashMap::new(),
             packet_tx,
             video_decoder_tx: OnceCell::new(),
-            // texture_id: OnceCell::new(),
-            // video_texture_ptr: OnceCell::new(),
-            // update_frame_callback_ptr: OnceCell::new(),
         })
     }
-
-    // pub fn set_texture_id(&self, texture_id: i64) -> Result<(), MirrorXError> {
-    //     self.texture_id
-    //         .set(texture_id)
-    //         .map_err(|err| MirrorXError::EndPointTextureIDAlreadySet(self.remote_device_id.clone()))
-    // }
-
-    // pub fn set_video_texture_ptr(&self, video_texture_ptr: i64) -> Result<(), MirrorXError> {
-    //     self.video_texture_ptr
-    //         .set(video_texture_ptr)
-    //         .map_err(|err| {
-    //             MirrorXError::EndPointVideoTexturePtrAlreadySet(self.remote_device_id.clone())
-    //         })
-    // }
-
-    // pub fn set_update_frame_callback_ptr(
-    //     &self,
-    //     update_frame_callback_ptr: i64,
-    // ) -> Result<(), MirrorXError> {
-    //     self.update_frame_callback_ptr
-    //         .set(update_frame_callback_ptr)
-    //         .map_err(|err| {
-    //             MirrorXError::EndPointUpdateFrameCallbackPtrAlreadySet(
-    //                 self.remote_device_id.clone(),
-    //             )
-    //         })
-    // }
 
     async fn call(
         &self,
@@ -294,31 +258,30 @@ impl EndPoint {
     }
 
     pub fn begin_screen_capture(&self) -> Result<(), MirrorXError> {
-        let encoder_name: &str;
-
-        if cfg!(target_os = "macos") {
-            encoder_name = "h264_videotoolbox";
+        let encoder_name = if cfg!(target_os = "macos") {
+            "h264_videotoolbox"
         } else if cfg!(target_os = "windows") {
-            encoder_name = "libx264";
+            "libx264"
         } else {
-            panic!("unsupported platform");
-        }
+            panic!("unsupported platform")
+        };
 
-        let mut encoder = VideoEncoder::new(encoder_name, 60, 1920, 1080)?;
+        let mut video_encoder = VideoEncoder::new(encoder_name, 60, 1920, 1080)?;
 
-        encoder.set_opt("profile", "high", 0)?;
-        encoder.set_opt("level", "5.2", 0)?;
+        video_encoder.set_opt("profile", "high", 0)?;
+        video_encoder.set_opt("level", "5.2", 0)?;
 
         if encoder_name == "libx264" {
-            encoder.set_opt("preset", "ultrafast", 0)?;
-            encoder.set_opt("tune", "zerolatency", 0)?;
-            encoder.set_opt("sc_threshold", "499", 0)?;
+            video_encoder.set_opt("preset", "ultrafast", 0)?;
+            video_encoder.set_opt("tune", "zerolatency", 0)?;
+            video_encoder.set_opt("sc_threshold", "499", 0)?;
         } else {
-            encoder.set_opt("realtime", "1", 0)?;
-            encoder.set_opt("allow_sw", "0", 0)?;
+            video_encoder.set_opt("realtime", "1", 0)?;
+            video_encoder.set_opt("allow_sw", "0", 0)?;
         }
 
-        let packet_rx = encoder.open()?;
+        let av_packet_rx = video_encoder.open()?;
+
         let (mut desktop_duplicator, capture_frame_rx) = DesktopDuplicator::new(60)?;
 
         std::thread::spawn(move || {
@@ -326,48 +289,60 @@ impl EndPoint {
             std::thread::sleep(Duration::from_secs(1));
 
             if let Err(err) = desktop_duplicator.start() {
-                error!(?err, "DesktopDuplicator start capture failed");
+                error!(?err, "desktop_duplicator: start capture failed");
                 return;
             }
+
+            info!("desktop_duplicator: start capture");
 
             loop {
                 let capture_frame = match capture_frame_rx.recv() {
                     Ok(frame) => frame,
                     Err(err) => {
-                        error!(?err, "capture_frame_rx.recv");
+                        error!(?err, "capture_frame_rx: closed");
                         break;
                     }
                 };
 
-                // encode will block current thread until capture_frame released (FFMpeg API 'avcodec_send_frame' finished)
-                if let Err(err) = encoder.encode(capture_frame) {
-                    error!(err=?err,"video encode failed");
+                // encode will block current thread until capture_frame released (after FFMpeg API 'avcodec_send_frame' finished)
+                if let Err(err) = video_encoder.encode(capture_frame) {
+                    error!(?err, "video_encoder: encode failed");
                     break;
                 }
             }
 
             desktop_duplicator.stop();
+            info!("desktop_duplicator: capture stopped");
         });
 
-        let sender = self.packet_tx.clone();
+        let packet_tx = self.packet_tx.clone();
 
         std::thread::spawn(move || loop {
-            match packet_rx.recv() {
-                Ok(packet) => {
-                    if let Err(err) = sender.try_send(EndPointMessagePacket {
+            match av_packet_rx.recv() {
+                Ok(av_packet) => {
+                    let packet = EndPointMessagePacket {
                         typ: EndPointMessagePacketType::Push,
                         call_id: None,
                         message: EndPointMessage::MediaFrame(MediaFrame {
-                            data: packet.data,
+                            data: av_packet.data,
                             timestamp: 0,
                         }),
-                    }) {
-                        error!(?err, "desktop_media_transmission failed");
-                        break;
+                    };
+
+                    if let Err(err) = packet_tx.try_send(packet) {
+                        match err {
+                            tokio::sync::mpsc::error::TrySendError::Full(_) => {
+                                warn!("packet_tx: full")
+                            }
+                            tokio::sync::mpsc::error::TrySendError::Closed(_) => {
+                                error!("packet_tx: closed");
+                                break;
+                            }
+                        }
                     }
                 }
-                Err(err) => {
-                    error!(err=?err, "packet_rx.recv");
+                Err(_) => {
+                    error!("av_packet_rx: closed");
                     break;
                 }
             };
@@ -383,26 +358,7 @@ impl EndPoint {
         update_frame_callback_ptr: i64,
     ) -> anyhow::Result<()> {
         unsafe {
-            #[cfg(target_os = "macos")]
-            let update_frame_callback = std::mem::transmute::<
-                *mut c_void,
-                unsafe extern "C" fn(
-                    texture_id: i64,
-                    video_texture_ptr: *mut c_void,
-                    new_frame_ptr: *const u8,
-                ),
-            >(update_frame_callback_ptr as *mut c_void);
-
-            #[cfg(target_os = "windows")]
-            let update_frame_callback = std::mem::transmute::<
-                *mut c_void,
-                unsafe extern "C" fn(
-                    video_texture_ptr: *mut c_void,
-                    frame_buffer: *const u8,
-                    frame_width: usize,
-                    frame_height: usize,
-                ),
-            >(update_frame_callback_ptr as *mut c_void);
+            let update_callback_fn = create_callback_fn(update_frame_callback_ptr);
 
             let decoder_name = if cfg!(target_os = "macos") {
                 "h264"
@@ -425,12 +381,12 @@ impl EndPoint {
                 match decode_packet_rx.recv() {
                     Ok(data) => {
                         if let Err(err) = decoder.decode(data, 0, 0) {
-                            error!(?err, "decode error");
+                            error!(?err, "video_decoder: decode failed");
                             break;
                         }
                     }
                     Err(err) => {
-                        error!(?err, "decoder_rx");
+                        error!(?err, "decode_packet_rx: closed");
                         break;
                     }
                 }
@@ -438,26 +394,24 @@ impl EndPoint {
 
             std::thread::spawn(move || loop {
                 match decode_frame_rx.recv() {
-                    Ok(video_frame) => {
+                    Ok(native_frame) => {
                         #[cfg(target_os = "macos")]
-                        update_frame_callback(
+                        update_callback_fn(
                             texture_id,
                             video_texture_ptr as *mut c_void,
-                            video_frame.0,
+                            native_frame.0,
                         );
 
-                        // info!("receive decoded frame");
-
                         #[cfg(target_os = "windows")]
-                        update_frame_callback(
+                        update_callback_fn(
                             video_texture_ptr as *mut c_void,
-                            video_frame.0.as_ptr(),
+                            native_frame.0.as_ptr(),
                             1920,
                             1080,
                         );
                     }
                     Err(err) => {
-                        error!(?err, "desktop render thread error");
+                        error!(?err, "decode_frame_rx: closed");
                         break;
                     }
                 }
@@ -478,9 +432,9 @@ impl EndPoint {
         if let Some(decoder) = self.video_decoder_tx.get() {
             if let Err(err) = decoder.try_send(frame) {
                 match err {
-                    crossbeam::channel::TrySendError::Full(_) => error!("video decoder tx is full"),
+                    crossbeam::channel::TrySendError::Full(_) => warn!("video_decoder_rx: full"),
                     crossbeam::channel::TrySendError::Disconnected(_) => {
-                        error!("video decoder tx is disconnected")
+                        error!("video_decoder_tx: closed")
                     }
                 }
             }
@@ -496,7 +450,7 @@ impl EndPoint {
     );
 }
 
-fn serve_stream(
+fn serve_reader(
     remote_device_id: String,
     mut stream: SplitStream<Framed<TcpStream, LengthDelimitedCodec>>,
     mut opening_key: OpeningKey<NonceValue>,
@@ -507,12 +461,12 @@ fn serve_stream(
                 Some(res) => match res {
                     Ok(packet_bytes) => packet_bytes,
                     Err(err) => {
-                        error!(err = ?err, "serve_stream: read failed");
+                        error!(?remote_device_id, ?err, "reader: read packet failed");
                         break;
                     }
                 },
                 None => {
-                    info!("serve_stream: stream closed, going to exit");
+                    info!(?remote_device_id, "reader: remote closed");
                     break;
                 }
             };
@@ -521,7 +475,7 @@ fn serve_stream(
                 match opening_key.open_in_place(ring::aead::Aad::empty(), &mut packet_bytes) {
                     Ok(v) => v,
                     Err(err) => {
-                        error!(err = ?err, "serve_stream: decrypt buffer failed");
+                        error!(?remote_device_id, ?err, "reader: decrypt packet failed");
                         break;
                     }
                 };
@@ -531,7 +485,7 @@ fn serve_stream(
             {
                 Ok(packet) => packet,
                 Err(err) => {
-                    error!(err = ?err, "serve_stream: deserialize packet failed");
+                    error!(?remote_device_id, ?err, "reader: deserialize packet failed");
                     break;
                 }
             };
@@ -543,11 +497,13 @@ fn serve_stream(
             });
         }
 
-        info!("serve stream read loop exit");
+        ENDPOINTS.remove(&remote_device_id);
+        info!(?remote_device_id, "reader: exit");
     });
 }
 
-fn serve_sink(
+fn serve_writer(
+    remote_device_id: String,
     mut packet_rx: Receiver<EndPointMessagePacket>,
     mut sink: SplitSink<Framed<TcpStream, LengthDelimitedCodec>, Bytes>,
     mut sealing_key: SealingKey<NonceValue>,
@@ -557,35 +513,34 @@ fn serve_sink(
             let packet = match packet_rx.recv().await {
                 Some(buffer) => buffer,
                 None => {
-                    info!("serve_sink: packet_rx all sender has dropped, going to exit");
+                    info!(?remote_device_id, "writer: EndPointMessagePacket tx closed");
                     break;
                 }
             };
 
-            trace!(packet = ?packet, "serve_sink: send");
-
-            let mut buffer = match BINCODE_SERIALIZER.serialize(&packet) {
+            let mut packet_buffer = match BINCODE_SERIALIZER.serialize(&packet) {
                 Ok(buffer) => buffer,
                 Err(err) => {
-                    error!(err=?err,"serve_sink: packet serialize failed");
+                    error!(?remote_device_id, ?err, "writer: packet serialize failed");
                     break;
                 }
             };
 
             if let Err(err) =
-                sealing_key.seal_in_place_append_tag(ring::aead::Aad::empty(), &mut buffer)
+                sealing_key.seal_in_place_append_tag(ring::aead::Aad::empty(), &mut packet_buffer)
             {
-                error!(err = ?err, "serve_sink: crypt buffer failed");
+                error!(?remote_device_id, ?err, "writer: crypt buffer failed");
                 break;
             }
 
-            if let Err(err) = sink.send(Bytes::from(buffer)).await {
-                error!(err = ?err, "signaling_serve_sink: send failed, going to exit");
+            if let Err(_) = sink.send(Bytes::from(packet_buffer)).await {
+                error!(?remote_device_id, "writer: send failed");
                 break;
             }
         }
 
-        info!("signaling_serve_sink: exit");
+        ENDPOINTS.remove(&remote_device_id);
+        info!(?remote_device_id, "writer: exit");
     });
 }
 

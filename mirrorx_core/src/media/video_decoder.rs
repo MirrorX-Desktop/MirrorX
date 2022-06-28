@@ -1,5 +1,4 @@
-use crate::error::MirrorXError;
-use crate::media::{
+use super::{
     ffmpeg::{
         avcodec::{
             avcodec::{
@@ -8,35 +7,34 @@ use crate::media::{
                 AVCodecContext, AVCodecParserContext,
             },
             codec::{avcodec_find_decoder_by_name, avcodec_get_hw_config, AVCodec},
-            packet::{av_packet_alloc, av_packet_free, av_packet_unref, AVPacket},
+            packet::{av_packet_alloc, av_packet_free, AVPacket},
         },
         avutil::{
             buffer::av_buffer_ref,
             error::{AVERROR, AVERROR_EOF, AVERROR_OPTION_NOT_FOUND},
-            frame::{av_frame_alloc, av_frame_free, AVFrame},
+            frame::{av_frame_alloc, av_frame_free, av_frame_unref, AVFrame},
             hwcontext::{
                 av_hwdevice_ctx_create, av_hwdevice_get_type_name, av_hwdevice_iterate_types,
                 AV_HWDEVICE_TYPE_NONE,
             },
             log::{av_log_set_flags, av_log_set_level, AV_LOG_SKIP_REPEATED, AV_LOG_TRACE},
             opt::av_opt_set,
-            pixfmt::{AVCOL_RANGE_JPEG, AV_PIX_FMT_NV12},
+            pixfmt::{
+                AVCOL_PRI_BT709, AVCOL_RANGE_JPEG, AVCOL_SPC_BT709, AVCOL_TRC_BT709,
+                AV_PIX_FMT_NV12,
+            },
         },
     },
     frame::NativeFrame,
 };
+use crate::error::MirrorXError;
 use anyhow::anyhow;
 use crossbeam::channel::{bounded, Receiver, Sender};
-use scopeguard::defer;
 use std::{
     ffi::{CStr, CString},
     ptr,
 };
 use tracing::{error, info, warn};
-
-use super::ffmpeg::avcodec::packet::av_new_packet;
-use super::ffmpeg::avutil::frame::av_frame_unref;
-use super::ffmpeg::avutil::imgutils::av_image_get_buffer_size;
 
 pub struct VideoDecoder {
     codec: *const AVCodec,
@@ -98,31 +96,16 @@ impl VideoDecoder {
 
             (*decoder.codec_ctx).width = 1920;
             (*decoder.codec_ctx).height = 1080;
-            // (*decoder.codec_ctx).coded_width = 1920;
-            // (*decoder.codec_ctx).coded_height = 1080;
             (*decoder.codec_ctx).pix_fmt = AV_PIX_FMT_NV12;
-            // (*decoder.codec_ctx).flags |= AV_CODEC_FLAG2_LOCAL_HEADER;
             (*decoder.codec_ctx).color_range = AVCOL_RANGE_JPEG;
-            // (*decoder.codec_ctx).color_primaries = AVCOL_PRI_BT709;
-            // (*decoder.codec_ctx).color_trc = AVCOL_TRC_IEC61966_2_1;
-            // (*decoder.codec_ctx).colorspace = AVCOL_SPC_BT709;
+            (*decoder.codec_ctx).color_primaries = AVCOL_PRI_BT709;
+            (*decoder.codec_ctx).color_trc = AVCOL_TRC_BT709;
+            (*decoder.codec_ctx).colorspace = AVCOL_SPC_BT709;
 
             decoder.packet = av_packet_alloc();
             if decoder.packet.is_null() {
                 return Err(MirrorXError::MediaVideoDecoderAVPacketAllocFailed);
             }
-
-            // let packet_size = av_image_get_buffer_size(
-            //     (*decoder.codec_ctx).pix_fmt,
-            //     (*decoder.codec_ctx).width as i32,
-            //     (*decoder.codec_ctx).height as i32,
-            //     32,
-            // );
-
-            // let ret = av_new_packet(decoder.packet, packet_size);
-            // if ret < 0 {
-            //     return Err(MirrorXError::MediaVideoDecoderAVPacketAllocFailed);
-            // }
 
             decoder.decode_frame = av_frame_alloc();
             if decoder.decode_frame.is_null() {

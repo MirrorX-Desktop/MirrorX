@@ -1,7 +1,7 @@
 use crate::utility::tokio_runtime::TOKIO_RUNTIME;
 use crate::{provider, socket::endpoint::message::StartMediaTransmissionResponse};
 use std::sync::{atomic::AtomicBool, Once};
-use tracing::trace;
+use tracing::{info, trace};
 
 static LOGGER_INIT_ONCE: Once = Once::new();
 static INIT_SUCCESS: AtomicBool = AtomicBool::new(false);
@@ -22,31 +22,10 @@ macro_rules! async_block_on {
 
 pub fn init(os_name: String, os_version: String, config_dir: String) -> anyhow::Result<()> {
     LOGGER_INIT_ONCE.call_once(|| {
-        // env_logger::Builder::new()
-        //     .filter_level(log::LevelFilter::Info)
-        //     .format(|buf, record| {
-        //         writeln!(
-        //             buf,
-        //             "[{}] [{}({}#{})] {} {}",
-        //             chrono::Local::now().format("%Y-%m-%d %H:%M:%S.%3f"),
-        //             record.module_path().unwrap_or(""),
-        //             record.file().unwrap_or(""),
-        //             record.line().unwrap_or(0),
-        //             record.level(),
-        //             record.args(),
-        //         )
-        //     })
-        //     .target(env_logger::Target::Stdout)
-        //     .init();
         tracing_subscriber::fmt::init();
     });
 
-    trace!(
-        os = ?os_name,
-        os_version = ?os_version,
-        config_dir = ?config_dir,
-        "init",
-    );
+    info!(?os_name, ?os_version, ?config_dir, "init",);
 
     if INIT_SUCCESS.load(std::sync::atomic::Ordering::SeqCst) {
         return Ok(());
@@ -64,8 +43,6 @@ pub fn init(os_name: String, os_version: String, config_dir: String) -> anyhow::
 
     Ok(())
 }
-
-// Config
 
 pub fn config_read_device_id() -> anyhow::Result<Option<String>> {
     provider::config::read_device_id().map_err(|err| anyhow::anyhow!(err))

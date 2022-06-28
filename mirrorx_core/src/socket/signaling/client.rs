@@ -127,8 +127,8 @@ impl SignalingClient {
         let (packet_tx, packet_rx) = tokio::sync::mpsc::channel(128);
         // todo: servce_sink should exit
 
-        serve_stream(stream);
-        serve_sink(packet_rx, sink);
+        serve_reader(stream);
+        serve_writer(packet_rx, sink);
 
         Ok(Self {
             device_id: OnceCell::new(),
@@ -254,19 +254,19 @@ impl SignalingClient {
     );
 }
 
-fn serve_stream(mut stream: SplitStream<Framed<TcpStream, LengthDelimitedCodec>>) {
+fn serve_reader(mut stream: SplitStream<Framed<TcpStream, LengthDelimitedCodec>>) {
     TOKIO_RUNTIME.spawn(async move {
         loop {
             let packet_bytes = match stream.next().await {
                 Some(res) => match res {
                     Ok(packet_bytes) => packet_bytes,
                     Err(err) => {
-                        error!(err = ?err, "signaling_serve_stream: read failed");
+                        error!(err = ?err, "reader: read packet failed");
                         break;
                     }
                 },
                 None => {
-                    info!("signaling_serve_stream: stream closed, going to exit");
+                    info!("reader: remote closed");
                     break;
                 }
             };
@@ -275,7 +275,7 @@ fn serve_stream(mut stream: SplitStream<Framed<TcpStream, LengthDelimitedCodec>>
                 match BINCODE_SERIALIZER.deserialize::<SignalingMessagePacket>(&packet_bytes) {
                     Ok(packet) => packet,
                     Err(err) => {
-                        error!(err = ?err, "signaling_serve_stream: deserialize packet failed");
+                        error!(err = ?err, "reader: deserialize packet failed");
                         break;
                     }
                 };
@@ -285,33 +285,31 @@ fn serve_stream(mut stream: SplitStream<Framed<TcpStream, LengthDelimitedCodec>>
             });
         }
 
-        info!("serve stream read loop exit");
+        info!("reader: exit");
     });
 }
 
-fn serve_sink(
-    mut packet_rx: Receiver<Vec<u8>>,
+fn serve_writer(
+    mut packet_buffer_rx: Receiver<Vec<u8>>,
     mut sink: SplitSink<Framed<TcpStream, LengthDelimitedCodec>, Bytes>,
 ) {
     TOKIO_RUNTIME.spawn(async move {
         loop {
-            let buffer = match packet_rx.recv().await {
+            let packet_buffer = match packet_buffer_rx.recv().await {
                 Some(buffer) => buffer,
                 None => {
-                    info!("signaling_serve_sink: packet_rx all sender has dropped, going to exit");
+                    info!("writer: tx closed");
                     break;
                 }
             };
 
-            tracing::trace!(buffer = ?format!("{:02X?}", buffer), "signaling_serve_sink: send");
-
-            if let Err(err) = sink.send(Bytes::from(buffer)).await {
-                error!(err = ?err, "signaling_serve_sink: send failed, going to exit");
+            if let Err(err) = sink.send(Bytes::from(packet_buffer)).await {
+                error!(err = ?err, "writer: send failed");
                 break;
             }
         }
 
-        info!("signaling_serve_sink: exit");
+        info!("writer: exit");
     });
 }
 
