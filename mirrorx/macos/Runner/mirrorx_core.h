@@ -18,7 +18,7 @@ typedef int64_t DartPort;
 typedef bool (*DartPostCObjectFnType)(DartPort port_id, void *message);
 
 void wire_init(int64_t port_,
-               struct wire_uint_8_list *os_name,
+               struct wire_uint_8_list *os_type,
                struct wire_uint_8_list *os_version,
                struct wire_uint_8_list *config_dir);
 
@@ -40,8 +40,11 @@ void wire_signaling_connection_key_exchange(int64_t port_,
                                             struct wire_uint_8_list *remote_device_id,
                                             struct wire_uint_8_list *password);
 
+void wire_endpoint_get_display_info(int64_t port_, struct wire_uint_8_list *remote_device_id);
+
 void wire_endpoint_start_media_transmission(int64_t port_,
                                             struct wire_uint_8_list *remote_device_id,
+                                            uint32_t display_id,
                                             int64_t texture_id,
                                             int64_t video_texture_ptr,
                                             int64_t update_frame_callback_ptr);
@@ -63,6 +66,7 @@ static int64_t dummy_method_to_enforce_bundling(void) {
     dummy_var ^= ((int64_t) (void*) wire_config_save_device_password);
     dummy_var ^= ((int64_t) (void*) wire_signaling_connect);
     dummy_var ^= ((int64_t) (void*) wire_signaling_connection_key_exchange);
+    dummy_var ^= ((int64_t) (void*) wire_endpoint_get_display_info);
     dummy_var ^= ((int64_t) (void*) wire_endpoint_start_media_transmission);
     dummy_var ^= ((int64_t) (void*) new_uint_8_list);
     dummy_var ^= ((int64_t) (void*) free_WireSyncReturnStruct);

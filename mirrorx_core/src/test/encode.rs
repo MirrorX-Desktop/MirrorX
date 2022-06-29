@@ -1,8 +1,7 @@
 use std::time::Duration;
-
 use tracing::{error, info};
 
-use crate::media::{desktop_duplicator::DesktopDuplicator, video_encoder::VideoEncoder};
+use crate::component::{desktop::Duplicator, video_encoder::VideoEncoder};
 
 #[test]
 fn test_capture_and_encode() -> anyhow::Result<()> {
@@ -33,7 +32,7 @@ fn test_capture_and_encode() -> anyhow::Result<()> {
     }
 
     let packet_rx = encoder.open()?;
-    let (mut desktop_duplicator, capture_frame_rx) = DesktopDuplicator::new(60)?;
+    let (mut desktop_duplicator, capture_frame_rx) = Duplicator::new(60)?;
 
     let (error_tx, error_rx) = crossbeam::channel::bounded(1);
 
@@ -71,7 +70,7 @@ fn test_capture_and_encode() -> anyhow::Result<()> {
         match packet_rx.recv() {
             Ok(packet) => {
                 info!(
-                    packet_data_length = packet.data.len(),
+                    packet_data_length = packet.0.len(),
                     "receive encode video packet"
                 );
             }

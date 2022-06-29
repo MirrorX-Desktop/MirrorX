@@ -6,9 +6,7 @@ use super::message::{
 use crate::{
     error::MirrorXError,
     provider,
-    utility::{
-        nonce_value::NonceValue, serializer::BINCODE_SERIALIZER, tokio_runtime::TOKIO_RUNTIME,
-    },
+    utility::{nonce_value::NonceValue, runtime::TOKIO_RUNTIME, serializer::BINCODE_SERIALIZER},
 };
 use anyhow::anyhow;
 use bincode::Options;

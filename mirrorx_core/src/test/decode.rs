@@ -1,8 +1,9 @@
-use crate::media::{
-    desktop_duplicator::DesktopDuplicator, video_decoder::VideoDecoder, video_encoder::VideoEncoder,
-};
 use std::time::Duration;
 use tracing::{error, info};
+
+use crate::component::{
+    desktop::Duplicator, video_decoder::VideoDecoder, video_encoder::VideoEncoder,
+};
 
 #[test]
 fn test_capture_and_encode_and_decode() -> anyhow::Result<()> {
@@ -33,7 +34,7 @@ fn test_capture_and_encode_and_decode() -> anyhow::Result<()> {
     }
 
     let packet_rx = encoder.open()?;
-    let (mut desktop_duplicator, capture_frame_rx) = DesktopDuplicator::new(60)?;
+    let (mut desktop_duplicator, capture_frame_rx) = Duplicator::new(60)?;
 
     let mut decoder = VideoDecoder::new("h264_qsv")?;
     let decode_rx = decoder.open()?;
@@ -74,7 +75,7 @@ fn test_capture_and_encode_and_decode() -> anyhow::Result<()> {
     std::thread::spawn(move || loop {
         match packet_rx.recv() {
             Ok(packet) => {
-                if let Err(err) = decoder.decode(packet.data, 0, 0) {
+                if let Err(err) = decoder.decode(packet.0, 0, 0) {
                     let _ = encode_error_tx
                         .try_send(crate::error::MirrorXError::Other(anyhow::anyhow!(err)));
                 }

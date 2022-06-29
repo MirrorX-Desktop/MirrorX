@@ -1,7 +1,8 @@
-use crate::utility::tokio_runtime::TOKIO_RUNTIME;
+use crate::socket::endpoint::message::GetDisplayInfoResponse;
+use crate::utility::runtime::TOKIO_RUNTIME;
 use crate::{provider, socket::endpoint::message::StartMediaTransmissionResponse};
 use std::sync::{atomic::AtomicBool, Once};
-use tracing::{info, trace};
+use tracing::info;
 
 static LOGGER_INIT_ONCE: Once = Once::new();
 static INIT_SUCCESS: AtomicBool = AtomicBool::new(false);
@@ -20,18 +21,18 @@ macro_rules! async_block_on {
     }};
 }
 
-pub fn init(os_name: String, os_version: String, config_dir: String) -> anyhow::Result<()> {
+pub fn init(os_type: String, os_version: String, config_dir: String) -> anyhow::Result<()> {
     LOGGER_INIT_ONCE.call_once(|| {
         tracing_subscriber::fmt::init();
     });
 
-    info!(?os_name, ?os_version, ?config_dir, "init",);
+    info!(?os_type, ?os_version, ?config_dir, "init",);
 
     if INIT_SUCCESS.load(std::sync::atomic::Ordering::SeqCst) {
         return Ok(());
     }
 
-    crate::constants::OS_NAME.get_or_init(|| os_name);
+    crate::constants::OS_TYPE.get_or_init(|| os_type);
     crate::constants::OS_VERSION.get_or_init(|| os_version);
 
     provider::config::init(config_dir)?;
@@ -83,8 +84,19 @@ pub fn signaling_connection_key_exchange(
     }
 }
 
+pub fn endpoint_get_display_info(
+    remote_device_id: String,
+) -> anyhow::Result<GetDisplayInfoResponse> {
+    async_block_on! {
+        provider::endpoint::get_display_info(
+            remote_device_id
+        )
+    }
+}
+
 pub fn endpoint_start_media_transmission(
     remote_device_id: String,
+    display_id: u32,
     texture_id: i64,
     video_texture_ptr: i64,
     update_frame_callback_ptr: i64,
@@ -92,6 +104,7 @@ pub fn endpoint_start_media_transmission(
     async_block_on! {
         provider::endpoint::start_media_transmission(
             remote_device_id,
+            display_id,
             texture_id,
             video_texture_ptr,
             update_frame_callback_ptr,

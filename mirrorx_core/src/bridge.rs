@@ -15,6 +15,8 @@ use flutter_rust_bridge::*;
 
 // Section: imports
 
+use crate::socket::endpoint::message::DisplayInfo;
+use crate::socket::endpoint::message::GetDisplayInfoResponse;
 use crate::socket::endpoint::message::StartMediaTransmissionResponse;
 
 // Section: wire functions
@@ -22,7 +24,7 @@ use crate::socket::endpoint::message::StartMediaTransmissionResponse;
 #[no_mangle]
 pub extern "C" fn wire_init(
     port_: i64,
-    os_name: *mut wire_uint_8_list,
+    os_type: *mut wire_uint_8_list,
     os_version: *mut wire_uint_8_list,
     config_dir: *mut wire_uint_8_list,
 ) {
@@ -33,10 +35,10 @@ pub extern "C" fn wire_init(
             mode: FfiCallMode::Normal,
         },
         move || {
-            let api_os_name = os_name.wire2api();
+            let api_os_type = os_type.wire2api();
             let api_os_version = os_version.wire2api();
             let api_config_dir = config_dir.wire2api();
-            move |task_callback| init(api_os_name, api_os_version, api_config_dir)
+            move |task_callback| init(api_os_type, api_os_version, api_config_dir)
         },
     )
 }
@@ -163,9 +165,28 @@ pub extern "C" fn wire_signaling_connection_key_exchange(
 }
 
 #[no_mangle]
+pub extern "C" fn wire_endpoint_get_display_info(
+    port_: i64,
+    remote_device_id: *mut wire_uint_8_list,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap(
+        WrapInfo {
+            debug_name: "endpoint_get_display_info",
+            port: Some(port_),
+            mode: FfiCallMode::Normal,
+        },
+        move || {
+            let api_remote_device_id = remote_device_id.wire2api();
+            move |task_callback| endpoint_get_display_info(api_remote_device_id)
+        },
+    )
+}
+
+#[no_mangle]
 pub extern "C" fn wire_endpoint_start_media_transmission(
     port_: i64,
     remote_device_id: *mut wire_uint_8_list,
+    display_id: u32,
     texture_id: i64,
     video_texture_ptr: i64,
     update_frame_callback_ptr: i64,
@@ -178,12 +199,14 @@ pub extern "C" fn wire_endpoint_start_media_transmission(
         },
         move || {
             let api_remote_device_id = remote_device_id.wire2api();
+            let api_display_id = display_id.wire2api();
             let api_texture_id = texture_id.wire2api();
             let api_video_texture_ptr = video_texture_ptr.wire2api();
             let api_update_frame_callback_ptr = update_frame_callback_ptr.wire2api();
             move |task_callback| {
                 endpoint_start_media_transmission(
                     api_remote_device_id,
+                    api_display_id,
                     api_texture_id,
                     api_video_texture_ptr,
                     api_update_frame_callback_ptr,
@@ -255,6 +278,12 @@ impl Wire2Api<i64> for i64 {
     }
 }
 
+impl Wire2Api<u32> for u32 {
+    fn wire2api(self) -> u32 {
+        self
+    }
+}
+
 impl Wire2Api<u8> for u8 {
     fn wire2api(self) -> u8 {
         self
@@ -284,11 +313,32 @@ impl<T> NewWithNullPtr for *mut T {
 
 // Section: impl IntoDart
 
+impl support::IntoDart for DisplayInfo {
+    fn into_dart(self) -> support::DartCObject {
+        vec![
+            self.id.into_dart(),
+            self.is_main.into_dart(),
+            self.screen_shot.into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl support::IntoDartExceptPrimitive for DisplayInfo {}
+
+impl support::IntoDart for GetDisplayInfoResponse {
+    fn into_dart(self) -> support::DartCObject {
+        vec![self.displays.into_dart()].into_dart()
+    }
+}
+impl support::IntoDartExceptPrimitive for GetDisplayInfoResponse {}
+
 impl support::IntoDart for StartMediaTransmissionResponse {
     fn into_dart(self) -> support::DartCObject {
         vec![
             self.os_name.into_dart(),
             self.os_version.into_dart(),
+            self.screen_width.into_dart(),
+            self.screen_height.into_dart(),
             self.video_type.into_dart(),
             self.audio_type.into_dart(),
         ]

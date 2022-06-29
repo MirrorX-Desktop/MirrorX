@@ -13,7 +13,7 @@ import 'dart:ffi' as ffi;
 
 abstract class MirrorXCore {
   Future<void> init(
-      {required String osName,
+      {required String osType,
       required String osVersion,
       required String configDir,
       dynamic hint});
@@ -55,8 +55,14 @@ abstract class MirrorXCore {
 
   FlutterRustBridgeTaskConstMeta get kSignalingConnectionKeyExchangeConstMeta;
 
+  Future<GetDisplayInfoResponse> endpointGetDisplayInfo(
+      {required String remoteDeviceId, dynamic hint});
+
+  FlutterRustBridgeTaskConstMeta get kEndpointGetDisplayInfoConstMeta;
+
   Future<StartMediaTransmissionResponse> endpointStartMediaTransmission(
       {required String remoteDeviceId,
+      required int displayId,
       required int textureId,
       required int videoTexturePtr,
       required int updateFrameCallbackPtr,
@@ -65,15 +71,39 @@ abstract class MirrorXCore {
   FlutterRustBridgeTaskConstMeta get kEndpointStartMediaTransmissionConstMeta;
 }
 
+class DisplayInfo {
+  final int id;
+  final bool isMain;
+  final Uint8List screenShot;
+
+  DisplayInfo({
+    required this.id,
+    required this.isMain,
+    required this.screenShot,
+  });
+}
+
+class GetDisplayInfoResponse {
+  final List<DisplayInfo> displays;
+
+  GetDisplayInfoResponse({
+    required this.displays,
+  });
+}
+
 class StartMediaTransmissionResponse {
   final String osName;
   final String osVersion;
+  final int screenWidth;
+  final int screenHeight;
   final String videoType;
   final String audioType;
 
   StartMediaTransmissionResponse({
     required this.osName,
     required this.osVersion,
+    required this.screenWidth,
+    required this.screenHeight,
     required this.videoType,
     required this.audioType,
   });
@@ -87,23 +117,23 @@ class MirrorXCoreImpl extends FlutterRustBridgeBase<MirrorXCoreWire>
   MirrorXCoreImpl.raw(MirrorXCoreWire inner) : super(inner);
 
   Future<void> init(
-          {required String osName,
+          {required String osType,
           required String osVersion,
           required String configDir,
           dynamic hint}) =>
       executeNormal(FlutterRustBridgeTask(
-        callFfi: (port_) => inner.wire_init(port_, _api2wire_String(osName),
+        callFfi: (port_) => inner.wire_init(port_, _api2wire_String(osType),
             _api2wire_String(osVersion), _api2wire_String(configDir)),
         parseSuccessData: _wire2api_unit,
         constMeta: kInitConstMeta,
-        argValues: [osName, osVersion, configDir],
+        argValues: [osType, osVersion, configDir],
         hint: hint,
       ));
 
   FlutterRustBridgeTaskConstMeta get kInitConstMeta =>
       const FlutterRustBridgeTaskConstMeta(
         debugName: "init",
-        argNames: ["osName", "osVersion", "configDir"],
+        argNames: ["osType", "osVersion", "configDir"],
       );
 
   Future<String?> configReadDeviceId({dynamic hint}) =>
@@ -237,8 +267,26 @@ class MirrorXCoreImpl extends FlutterRustBridgeBase<MirrorXCoreWire>
         argNames: ["remoteDeviceId", "password"],
       );
 
+  Future<GetDisplayInfoResponse> endpointGetDisplayInfo(
+          {required String remoteDeviceId, dynamic hint}) =>
+      executeNormal(FlutterRustBridgeTask(
+        callFfi: (port_) => inner.wire_endpoint_get_display_info(
+            port_, _api2wire_String(remoteDeviceId)),
+        parseSuccessData: _wire2api_get_display_info_response,
+        constMeta: kEndpointGetDisplayInfoConstMeta,
+        argValues: [remoteDeviceId],
+        hint: hint,
+      ));
+
+  FlutterRustBridgeTaskConstMeta get kEndpointGetDisplayInfoConstMeta =>
+      const FlutterRustBridgeTaskConstMeta(
+        debugName: "endpoint_get_display_info",
+        argNames: ["remoteDeviceId"],
+      );
+
   Future<StartMediaTransmissionResponse> endpointStartMediaTransmission(
           {required String remoteDeviceId,
+          required int displayId,
           required int textureId,
           required int videoTexturePtr,
           required int updateFrameCallbackPtr,
@@ -247,6 +295,7 @@ class MirrorXCoreImpl extends FlutterRustBridgeBase<MirrorXCoreWire>
         callFfi: (port_) => inner.wire_endpoint_start_media_transmission(
             port_,
             _api2wire_String(remoteDeviceId),
+            _api2wire_u32(displayId),
             _api2wire_i64(textureId),
             _api2wire_i64(videoTexturePtr),
             _api2wire_i64(updateFrameCallbackPtr)),
@@ -254,6 +303,7 @@ class MirrorXCoreImpl extends FlutterRustBridgeBase<MirrorXCoreWire>
         constMeta: kEndpointStartMediaTransmissionConstMeta,
         argValues: [
           remoteDeviceId,
+          displayId,
           textureId,
           videoTexturePtr,
           updateFrameCallbackPtr
@@ -266,6 +316,7 @@ class MirrorXCoreImpl extends FlutterRustBridgeBase<MirrorXCoreWire>
         debugName: "endpoint_start_media_transmission",
         argNames: [
           "remoteDeviceId",
+          "displayId",
           "textureId",
           "videoTexturePtr",
           "updateFrameCallbackPtr"
@@ -282,6 +333,10 @@ class MirrorXCoreImpl extends FlutterRustBridgeBase<MirrorXCoreWire>
   }
 
   int _api2wire_i64(int raw) {
+    return raw;
+  }
+
+  int _api2wire_u32(int raw) {
     return raw;
   }
 
@@ -312,6 +367,30 @@ int _wire2api_box_autoadd_u32(dynamic raw) {
   return raw as int;
 }
 
+DisplayInfo _wire2api_display_info(dynamic raw) {
+  final arr = raw as List<dynamic>;
+  if (arr.length != 3)
+    throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+  return DisplayInfo(
+    id: _wire2api_u32(arr[0]),
+    isMain: _wire2api_bool(arr[1]),
+    screenShot: _wire2api_uint_8_list(arr[2]),
+  );
+}
+
+GetDisplayInfoResponse _wire2api_get_display_info_response(dynamic raw) {
+  final arr = raw as List<dynamic>;
+  if (arr.length != 1)
+    throw Exception('unexpected arr length: expect 1 but see ${arr.length}');
+  return GetDisplayInfoResponse(
+    displays: _wire2api_list_display_info(arr[0]),
+  );
+}
+
+List<DisplayInfo> _wire2api_list_display_info(dynamic raw) {
+  return (raw as List<dynamic>).map(_wire2api_display_info).toList();
+}
+
 String? _wire2api_opt_String(dynamic raw) {
   return raw == null ? null : _wire2api_String(raw);
 }
@@ -323,14 +402,20 @@ int? _wire2api_opt_box_autoadd_u32(dynamic raw) {
 StartMediaTransmissionResponse _wire2api_start_media_transmission_response(
     dynamic raw) {
   final arr = raw as List<dynamic>;
-  if (arr.length != 4)
-    throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+  if (arr.length != 6)
+    throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
   return StartMediaTransmissionResponse(
     osName: _wire2api_String(arr[0]),
     osVersion: _wire2api_String(arr[1]),
-    videoType: _wire2api_String(arr[2]),
-    audioType: _wire2api_String(arr[3]),
+    screenWidth: _wire2api_u16(arr[2]),
+    screenHeight: _wire2api_u16(arr[3]),
+    videoType: _wire2api_String(arr[4]),
+    audioType: _wire2api_String(arr[5]),
   );
+}
+
+int _wire2api_u16(dynamic raw) {
+  return raw as int;
 }
 
 int _wire2api_u32(dynamic raw) {
@@ -373,13 +458,13 @@ class MirrorXCoreWire implements FlutterRustBridgeWireBase {
 
   void wire_init(
     int port_,
-    ffi.Pointer<wire_uint_8_list> os_name,
+    ffi.Pointer<wire_uint_8_list> os_type,
     ffi.Pointer<wire_uint_8_list> os_version,
     ffi.Pointer<wire_uint_8_list> config_dir,
   ) {
     return _wire_init(
       port_,
-      os_name,
+      os_type,
       os_version,
       config_dir,
     );
@@ -530,9 +615,28 @@ class MirrorXCoreWire implements FlutterRustBridgeWireBase {
           void Function(int, ffi.Pointer<wire_uint_8_list>,
               ffi.Pointer<wire_uint_8_list>)>();
 
+  void wire_endpoint_get_display_info(
+    int port_,
+    ffi.Pointer<wire_uint_8_list> remote_device_id,
+  ) {
+    return _wire_endpoint_get_display_info(
+      port_,
+      remote_device_id,
+    );
+  }
+
+  late final _wire_endpoint_get_display_infoPtr = _lookup<
+          ffi.NativeFunction<
+              ffi.Void Function(ffi.Int64, ffi.Pointer<wire_uint_8_list>)>>(
+      'wire_endpoint_get_display_info');
+  late final _wire_endpoint_get_display_info =
+      _wire_endpoint_get_display_infoPtr
+          .asFunction<void Function(int, ffi.Pointer<wire_uint_8_list>)>();
+
   void wire_endpoint_start_media_transmission(
     int port_,
     ffi.Pointer<wire_uint_8_list> remote_device_id,
+    int display_id,
     int texture_id,
     int video_texture_ptr,
     int update_frame_callback_ptr,
@@ -540,6 +644,7 @@ class MirrorXCoreWire implements FlutterRustBridgeWireBase {
     return _wire_endpoint_start_media_transmission(
       port_,
       remote_device_id,
+      display_id,
       texture_id,
       video_texture_ptr,
       update_frame_callback_ptr,
@@ -548,11 +653,17 @@ class MirrorXCoreWire implements FlutterRustBridgeWireBase {
 
   late final _wire_endpoint_start_media_transmissionPtr = _lookup<
       ffi.NativeFunction<
-          ffi.Void Function(ffi.Int64, ffi.Pointer<wire_uint_8_list>, ffi.Int64,
-              ffi.Int64, ffi.Int64)>>('wire_endpoint_start_media_transmission');
+          ffi.Void Function(
+              ffi.Int64,
+              ffi.Pointer<wire_uint_8_list>,
+              ffi.Uint32,
+              ffi.Int64,
+              ffi.Int64,
+              ffi.Int64)>>('wire_endpoint_start_media_transmission');
   late final _wire_endpoint_start_media_transmission =
       _wire_endpoint_start_media_transmissionPtr.asFunction<
-          void Function(int, ffi.Pointer<wire_uint_8_list>, int, int, int)>();
+          void Function(
+              int, ffi.Pointer<wire_uint_8_list>, int, int, int, int)>();
 
   ffi.Pointer<wire_uint_8_list> new_uint_8_list(
     int len,

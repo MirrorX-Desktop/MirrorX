@@ -9,7 +9,7 @@ use super::{
 };
 use crate::{
     error::MirrorXError,
-    utility::{serializer::BINCODE_SERIALIZER, tokio_runtime::TOKIO_RUNTIME},
+    utility::{runtime::TOKIO_RUNTIME, serializer::BINCODE_SERIALIZER},
 };
 use anyhow::anyhow;
 use arc_swap::ArcSwapOption;

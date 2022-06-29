@@ -8,21 +8,18 @@ use crate::{
             HandshakeRequest, HeartBeatRequest,
         },
     },
-    utility::{
-        nonce_value::NonceValue, serializer::BINCODE_SERIALIZER, tokio_runtime::TOKIO_RUNTIME,
-    },
+    utility::{nonce_value::NonceValue, runtime::TOKIO_RUNTIME, serializer::BINCODE_SERIALIZER},
 };
 use anyhow::anyhow;
 use bincode::Options;
 use hmac::Hmac;
-use pbkdf2::password_hash::PasswordHasher;
 use rand::{rngs::OsRng, RngCore};
 use ring::aead::BoundKey;
 use rsa::PublicKeyParts;
 use sha2::Sha256;
 use std::{sync::Arc, time::Duration};
 use tokio::net::ToSocketAddrs;
-use tracing::{error, info};
+use tracing::error;
 
 pub async fn init<A>(addr: A) -> Result<(), MirrorXError>
 where

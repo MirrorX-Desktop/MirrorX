@@ -1,17 +1,19 @@
 use super::{
     ffi::create_callback_fn,
-    handler::{handle_media_transmission, handle_start_media_transmission_request},
+    handler::{
+        handle_get_display_info_request, handle_media_transmission,
+        handle_start_media_transmission_request,
+    },
     message::{
-        EndPointMessage, EndPointMessagePacket, EndPointMessagePacketType, MediaFrame,
-        StartMediaTransmissionRequest, StartMediaTransmissionResponse,
+        EndPointMessage, EndPointMessagePacket, EndPointMessagePacketType, GetDisplayInfoRequest,
+        GetDisplayInfoResponse, MediaFrame, StartMediaTransmissionRequest,
+        StartMediaTransmissionResponse,
     },
 };
 use crate::{
+    component::{desktop::Duplicator, video_decoder::VideoDecoder, video_encoder::VideoEncoder},
     error::MirrorXError,
-    media::{desktop_duplicator::DesktopDuplicator, video_encoder::VideoEncoder},
-    utility::{
-        nonce_value::NonceValue, serializer::BINCODE_SERIALIZER, tokio_runtime::TOKIO_RUNTIME,
-    },
+    utility::{nonce_value::NonceValue, runtime::TOKIO_RUNTIME, serializer::BINCODE_SERIALIZER},
 };
 use anyhow::anyhow;
 use bincode::Options;
@@ -282,7 +284,7 @@ impl EndPoint {
 
         let av_packet_rx = video_encoder.open()?;
 
-        let (mut desktop_duplicator, capture_frame_rx) = DesktopDuplicator::new(60)?;
+        let (mut desktop_duplicator, capture_frame_rx) = Duplicator::new(60)?;
 
         std::thread::spawn(move || {
             // make sure the media_transmission after start_media_transmission send
@@ -324,7 +326,7 @@ impl EndPoint {
                         typ: EndPointMessagePacketType::Push,
                         call_id: None,
                         message: EndPointMessage::MediaFrame(MediaFrame {
-                            data: av_packet.data,
+                            data: av_packet.0,
                             timestamp: 0,
                         }),
                     };
@@ -368,7 +370,7 @@ impl EndPoint {
                 panic!("unsupport platform decode");
             };
 
-            let mut decoder = crate::media::video_decoder::VideoDecoder::new(decoder_name)?;
+            let mut decoder = VideoDecoder::new(decoder_name)?;
             if decoder_name == "h264_qsv" {
                 decoder.set_opt("async_depth", "1", 0)?;
                 decoder.set_opt("gpu_copy", "on", 0)?;
@@ -448,6 +450,14 @@ impl EndPoint {
         EndPointMessage::StartMediaTransmissionRequest,
         StartMediaTransmissionResponse,
         EndPointMessage::StartMediaTransmissionResponse
+    );
+
+    make_endpoint_call!(
+        get_display_info,
+        GetDisplayInfoRequest,
+        EndPointMessage::GetDisplayInfoRequest,
+        GetDisplayInfoResponse,
+        EndPointMessage::GetDisplayInfoResponse
     );
 }
 
@@ -554,6 +564,15 @@ fn serve_writer(
 async fn handle_message(remote_device_id: String, packet: EndPointMessagePacket) {
     match packet.typ {
         EndPointMessagePacketType::Request => match packet.message {
+            EndPointMessage::GetDisplayInfoRequest(req) => {
+                handle_endpoint_call!(
+                    remote_device_id,
+                    packet.call_id,
+                    req,
+                    EndPointMessage::GetDisplayInfoResponse,
+                    handle_get_display_info_request
+                )
+            }
             EndPointMessage::StartMediaTransmissionRequest(req) => {
                 handle_endpoint_call!(
                     remote_device_id,
