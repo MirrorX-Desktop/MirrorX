@@ -121,13 +121,19 @@ impl VideoDecoder {
                 }
             } else {
                 let mut hwdevice_ctx = ptr::null_mut();
-                let device = CString::new("auto")
-                    .map_err(|err| MirrorXError::Other(anyhow::anyhow!(err)))?;
+
+                let device = if cfg!(target_os = "windows") {
+                    CString::new("auto")
+                        .map_err(|err| MirrorXError::Other(anyhow::anyhow!(err)))?
+                        .as_ptr()
+                } else {
+                    ptr::null()
+                };
 
                 let ret = av_hwdevice_ctx_create(
                     &mut hwdevice_ctx,
                     (*hw_config).device_type,
-                    device.as_ptr(),
+                    device,
                     ptr::null_mut(),
                     0,
                 );

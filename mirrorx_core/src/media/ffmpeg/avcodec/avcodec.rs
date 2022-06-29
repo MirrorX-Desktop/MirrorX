@@ -37,6 +37,24 @@ pub const SUBTITLE_ASS: AVSubtitleType = 3;
 pub const AV_CODEC_FLAG2_LOCAL_HEADER: i32 = 1 << 3;
 pub const AV_CODEC_FLAG_LOW_DELAY: i32 = 1 << 19;
 
+pub const FF_PROFILE_H264_CONSTRAINED: i32 = (1 << 9); // 8+1; constraint_set1_flag
+pub const FF_PROFILE_H264_INTRA: i32 = (1 << 11); // 8+3; constraint_set3_flag
+pub const FF_PROFILE_H264_BASELINE: i32 = 66;
+pub const FF_PROFILE_H264_CONSTRAINED_BASELINE: i32 = (66 | FF_PROFILE_H264_CONSTRAINED);
+pub const FF_PROFILE_H264_MAIN: i32 = 77;
+pub const FF_PROFILE_H264_EXTENDED: i32 = 88;
+pub const FF_PROFILE_H264_HIGH: i32 = 100;
+pub const FF_PROFILE_H264_HIGH_10: i32 = 110;
+pub const FF_PROFILE_H264_HIGH_10_INTRA: i32 = (110 | FF_PROFILE_H264_INTRA);
+pub const FF_PROFILE_H264_MULTIVIEW_HIGH: i32 = 118;
+pub const FF_PROFILE_H264_HIGH_422: i32 = 122;
+pub const FF_PROFILE_H264_HIGH_422_INTRA: i32 = (122 | FF_PROFILE_H264_INTRA);
+pub const FF_PROFILE_H264_STEREO_HIGH: i32 = 128;
+pub const FF_PROFILE_H264_HIGH_444: i32 = 144;
+pub const FF_PROFILE_H264_HIGH_444_PREDICTIVE: i32 = 244;
+pub const FF_PROFILE_H264_HIGH_444_INTRA: i32 = (244 | FF_PROFILE_H264_INTRA);
+pub const FF_PROFILE_H264_CAVLC_444: i32 = 44;
+
 #[repr(C)]
 pub struct AVSubtitleRect {
     pub x: i32,

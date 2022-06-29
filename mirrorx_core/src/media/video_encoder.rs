@@ -35,6 +35,8 @@ use crossbeam::channel::{bounded, Receiver, Sender};
 use once_cell::sync::OnceCell;
 use std::ffi::CString;
 
+use super::ffmpeg::avcodec::avcodec::FF_PROFILE_H264_BASELINE;
+
 pub struct VideoEncoder {
     codec: *const AVCodec,
     codec_ctx: *mut AVCodecContext,
@@ -79,15 +81,14 @@ impl VideoEncoder {
                 den: fps * 100,
             };
             (*codec_ctx).framerate = AVRational { num: fps, den: 1 };
-            (*codec_ctx).gop_size = fps * 3;
-            (*codec_ctx).bit_rate = 80000000;
-            // (*codec_ctx).rc_max_rate = 80000000;
-            // (*codec_ctx).rc_min_rate = 80000000;
-            // (*codec_ctx).rc_buffer_size = 80000000;
-            // (*codec_ctx).rc_initial_buffer_occupancy = (*codec_ctx).rc_buffer_size * 3 / 4;
+            (*codec_ctx).gop_size = fps * 2;
+            (*codec_ctx).bit_rate = 8000 * 1000;
+            (*codec_ctx).rc_max_rate = 8000 * 1000;
+            // (*codec_ctx).rc_min_rate = 8000 * 1000;
+            (*codec_ctx).rc_buffer_size = 8000 * 1000 * 2;
+            (*codec_ctx).rc_initial_buffer_occupancy = (*codec_ctx).rc_buffer_size * 3 / 4;
             (*codec_ctx).has_b_frames = 0;
             (*codec_ctx).max_b_frames = 0;
-            (*codec_ctx).bit_rate_tolerance = 1;
             (*codec_ctx).thread_count = 2;
             (*codec_ctx).pix_fmt = AV_PIX_FMT_NV12;
             (*codec_ctx).flags |= AV_CODEC_FLAG2_LOCAL_HEADER;
@@ -95,6 +96,8 @@ impl VideoEncoder {
             (*codec_ctx).color_primaries = AVCOL_PRI_BT709;
             (*codec_ctx).color_trc = AVCOL_TRC_BT709;
             (*codec_ctx).colorspace = AVCOL_SPC_BT709;
+            // (*codec_ctx).profile = FF_PROFILE_H264_BASELINE;
+            (*codec_ctx).qcompress = 0f32;
 
             Ok(VideoEncoder {
                 codec,
