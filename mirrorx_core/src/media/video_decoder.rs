@@ -4,7 +4,7 @@ use super::{
             avcodec::{
                 av_parser_close, av_parser_init, av_parser_parse2, avcodec_alloc_context3,
                 avcodec_free_context, avcodec_open2, avcodec_receive_frame, avcodec_send_packet,
-                AVCodecContext, AVCodecParserContext,
+                AVCodecContext, AVCodecParserContext, AV_CODEC_FLAG_LOW_DELAY,
             },
             codec::{avcodec_find_decoder_by_name, avcodec_get_hw_config, AVCodec},
             packet::{av_packet_alloc, av_packet_free, AVPacket},
@@ -101,6 +101,7 @@ impl VideoDecoder {
             (*decoder.codec_ctx).color_primaries = AVCOL_PRI_BT709;
             (*decoder.codec_ctx).color_trc = AVCOL_TRC_BT709;
             (*decoder.codec_ctx).colorspace = AVCOL_SPC_BT709;
+            (*decoder.codec_ctx).flags |= AV_CODEC_FLAG_LOW_DELAY;
 
             decoder.packet = av_packet_alloc();
             if decoder.packet.is_null() {

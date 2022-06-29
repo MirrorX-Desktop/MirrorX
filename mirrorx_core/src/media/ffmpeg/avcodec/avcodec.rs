@@ -35,6 +35,7 @@ pub const SUBTITLE_TEXT: AVSubtitleType = 2;
 pub const SUBTITLE_ASS: AVSubtitleType = 3;
 
 pub const AV_CODEC_FLAG2_LOCAL_HEADER: i32 = 1 << 3;
+pub const AV_CODEC_FLAG_LOW_DELAY: i32 = 1 << 19;
 
 #[repr(C)]
 pub struct AVSubtitleRect {
