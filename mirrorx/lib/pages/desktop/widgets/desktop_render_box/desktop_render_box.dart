@@ -74,7 +74,7 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
             child: Texture(
               textureId: widget.model.textureID,
               freeze: true,
-              filterQuality: FilterQuality.none,
+              filterQuality: FilterQuality.high,
             ),
           ),
         ),
