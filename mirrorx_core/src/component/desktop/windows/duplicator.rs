@@ -1,23 +1,24 @@
-use super::windows::duplication::Duplication;
-use crate::media::frame::CaptureFrame;
+use crate::component::desktop::Frame;
 use crossbeam::channel::{Receiver, Sender, TryRecvError};
 use std::time::Duration;
 use tokio::time::Instant;
+
+use super::duplication::Duplication;
 
 pub struct Duplicator {
     fps: i32,
     exit_tx: Sender<()>,
     exit_rx: Receiver<()>,
-    tx: Sender<CaptureFrame>,
+    tx: Sender<Frame<'static>>,
 }
 
 impl Duplicator {
-    pub fn new(fps: i32) -> anyhow::Result<(Duplicator, Receiver<CaptureFrame>)> {
+    pub fn new(fps: i32) -> anyhow::Result<(Duplicator, Receiver<Frame<'static>>)> {
         let (exit_tx, exit_rx) = crossbeam::channel::bounded(1);
-        let (tx, rx) = crossbeam::channel::bounded::<CaptureFrame>(1);
+        let (tx, rx) = crossbeam::channel::bounded(1);
 
         Ok((
-            DesktopDuplicator {
+            Duplicator {
                 fps,
                 exit_tx,
                 exit_rx,

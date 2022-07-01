@@ -1,5 +1,6 @@
 use std::io;
 use thiserror::Error;
+use windows::Win32::Foundation::WIN32_ERROR;
 
 use crate::socket::signaling::message::SignalingMessage;
 
@@ -13,6 +14,13 @@ pub enum MirrorXError {
     Timeout,
     #[error("component uninitialized")]
     ComponentUninitialized,
+    #[cfg(target_os = "windows")]
+    #[error("directX error (api_name = {api_name:?}, description = {description:?}, error_code = {error_code:?})")]
+    D3D {
+        api_name: Option<&'static str>,
+        description: Option<String>,
+        error_code: Option<WIN32_ERROR>,
+    },
     #[error("serialize failed ({0:?})")]
     SerializeFailed(bincode::Error),
     #[error("deserialize failed ({0:?})")]

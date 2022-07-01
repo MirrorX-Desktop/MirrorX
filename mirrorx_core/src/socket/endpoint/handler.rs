@@ -18,13 +18,13 @@ pub async fn handle_get_display_info_request(
 
     // todo: display and display_info has same memory layout, use memory block copy?
     let mut display_info_vec = Vec::with_capacity(displays.len());
-    for display in displays {
-        display_info_vec.push(DisplayInfo {
-            id: display.id,
-            is_main: display.is_main,
-            screen_shot: display.screen_shot,
-        })
-    }
+    // for display in displays {
+    //     display_info_vec.push(DisplayInfo {
+    //         id: display.id,
+    //         is_main: display.is_main,
+    //         screen_shot: display.screen_shot,
+    //     })
+    // }
 
     Ok(GetDisplayInfoResponse {
         displays: display_info_vec,

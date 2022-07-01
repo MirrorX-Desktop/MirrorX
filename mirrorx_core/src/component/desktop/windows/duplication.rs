@@ -1,10 +1,9 @@
-use crate::media::frame::CaptureFrame;
-
 use super::{dx::DX, dx_math::VERTICES};
+use crate::{component::desktop::Frame, utility::wide_char::FromWide};
 use anyhow::bail;
 use crossbeam::channel::{Receiver, Sender};
 use scopeguard::defer;
-use std::{mem::zeroed, ptr::null, sync::Arc};
+use std::{ffi::OsString, mem::zeroed, ptr::null, sync::Arc};
 use windows::{
     core::Interface,
     Win32::{
@@ -38,7 +37,7 @@ pub struct Duplication {
     render_target_view_chrominance: ID3D11RenderTargetView,
 
     // Additional
-    capture_frame_tx: Sender<CaptureFrame>,
+    capture_frame_tx: Sender<Frame<'static>>,
     capture_frame_release_notify_tx: Sender<()>,
     capture_frame_release_notify_rx: Receiver<()>,
 }
@@ -49,7 +48,7 @@ unsafe impl Sync for Duplication {}
 impl Duplication {
     pub fn new(
         output_idx: u32,
-        capture_frame_tx: Sender<CaptureFrame>,
+        capture_frame_tx: Sender<Frame<'static>>,
     ) -> anyhow::Result<Duplication> {
         unsafe {
             let current_desktop = OpenInputDesktop(0, false, GENERIC_ALL).map_err(|err| {
@@ -266,19 +265,19 @@ impl Duplication {
             let chrominance_buffer_size =
                 (height as u32) / 2 * mapped_resource_chrominance.RowPitch;
 
-            let capture_frame = CaptureFrame::new(
-                width as usize,
-                height as usize,
+            let capture_frame = Frame::new(
+                width as u16,
+                height as u16,
                 std::slice::from_raw_parts(
                     mapped_resource_lumina.pData as *mut u8,
                     luminance_buffer_size as usize,
                 ),
-                mapped_resource_lumina.RowPitch as usize,
+                mapped_resource_lumina.RowPitch as u16,
                 std::slice::from_raw_parts(
                     mapped_resource_chrominance.pData as *mut u8,
                     chrominance_buffer_size as usize,
                 ),
-                mapped_resource_chrominance.RowPitch as usize,
+                mapped_resource_chrominance.RowPitch as u16,
                 self.capture_frame_release_notify_tx.clone(),
             );
 
@@ -427,7 +426,8 @@ unsafe fn init_output_duplication(
     })?;
 
     let adapter_desc = dxgi_adapter.GetDesc()?;
-    tracing::info!("{:?}", String::from_utf16_lossy(&adapter_desc.Description));
+    tracing::info!("{:?}", &adapter_desc.AdapterLuid);
+    tracing::info!("{:?}", OsString::from_wide_null(&adapter_desc.Description));
 
     let dxgi_output = dxgi_adapter.EnumOutputs(output_idx).map_err(|err| {
         anyhow::anyhow!(

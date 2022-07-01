@@ -98,8 +98,14 @@ impl DX {
                 };
             }
 
-            if let (Some(device), Some(device_context)) = (device, device_context) {
-                let vertex_shader = device.CreateVertexShader(shader::VERTEX_SHADER_BYTES, None).map_err(|err| {
+            let (device, device_context) =
+                if let (Some(device), Some(device_context)) = (device, device_context) {
+                    (device, device_context)
+                } else {
+                    bail!("create_device: create device failed with all driver types");
+                };
+
+            let vertex_shader = device.CreateVertexShader(shader::VERTEX_SHADER_BYTES, None).map_err(|err| {
                     anyhow::anyhow!(
                         r#"Duplication: ID3D11Device::CreateVertexShader failed {{"shader_name":"{}", "error": "{:?}"}}"#,
                         "vertex_shader",
@@ -107,36 +113,36 @@ impl DX {
                     )
                 })?;
 
-                device_context.VSSetShader(&vertex_shader, &[]);
+            device_context.VSSetShader(&vertex_shader, &[]);
 
-                let buffer_desc = D3D11_BUFFER_DESC {
-                    ByteWidth: VERTEX_STRIDES * VERTICES.len() as u32,
-                    Usage: D3D11_USAGE_DEFAULT,
-                    BindFlags: D3D11_BIND_VERTEX_BUFFER.0,
-                    CPUAccessFlags: 0,
-                    MiscFlags: 0,
-                    StructureByteStride: 0,
-                };
+            let buffer_desc = D3D11_BUFFER_DESC {
+                ByteWidth: VERTEX_STRIDES * VERTICES.len() as u32,
+                Usage: D3D11_USAGE_DEFAULT,
+                BindFlags: D3D11_BIND_VERTEX_BUFFER.0,
+                CPUAccessFlags: 0,
+                MiscFlags: 0,
+                StructureByteStride: 0,
+            };
 
-                let subresource_data = D3D11_SUBRESOURCE_DATA {
-                    pSysMem: &VERTICES as *const _ as *const c_void,
-                    SysMemPitch: 0,
-                    SysMemSlicePitch: 0,
-                };
+            let subresource_data = D3D11_SUBRESOURCE_DATA {
+                pSysMem: &VERTICES as *const _ as *const c_void,
+                SysMemPitch: 0,
+                SysMemSlicePitch: 0,
+            };
 
-                let buffer = device
-                    .CreateBuffer(&buffer_desc, &subresource_data)
-                    .map_err(|err| {
-                        anyhow::anyhow!(
-                            r#"Duplication: ID3D11Device::CreateBuffer failed {{"error": "{:?}"}}"#,
-                            err.code()
-                        )
-                    })?;
+            let buffer = device
+                .CreateBuffer(&buffer_desc, &subresource_data)
+                .map_err(|err| {
+                    anyhow::anyhow!(
+                        r#"Duplication: ID3D11Device::CreateBuffer failed {{"error": "{:?}"}}"#,
+                        err.code()
+                    )
+                })?;
 
-                device_context.IASetVertexBuffers(0, 1, &Some(buffer.clone()), &VERTEX_STRIDES, &0);
-                device_context.IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+            device_context.IASetVertexBuffers(0, 1, &Some(buffer.clone()), &VERTEX_STRIDES, &0);
+            device_context.IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-                let pixel_shader_lumina =
+            let pixel_shader_lumina =
                     device.CreatePixelShader(shader::PIXEL_SHADER_LUMINA_BYTES, None).map_err(|err| {
                         anyhow::anyhow!(
                             r#"Duplication: ID3D11Device::CreatePixelShader failed {{"shader_name":"{}", "error": "{:?}"}}"#,
@@ -145,7 +151,7 @@ impl DX {
                         )
                     })?;
 
-                let pixel_shader_chrominance =
+            let pixel_shader_chrominance =
                     device.CreatePixelShader(shader::PIXEL_SHADER_CHROMINANCE_BYTES, None).map_err(|err| {
                         anyhow::anyhow!(
                             r#"Duplication: ID3D11Device::CreatePixelShader failed {{"shader_name":"{}", "error": "{:?}"}}"#,
@@ -154,28 +160,28 @@ impl DX {
                         )
                     })?;
 
-                let input_element_desc_array = [
-                    D3D11_INPUT_ELEMENT_DESC {
-                        SemanticName: PCSTR(b"POSITION\0".as_ptr()),
-                        SemanticIndex: 0,
-                        Format: DXGI_FORMAT_R32G32B32_FLOAT,
-                        InputSlot: 0,
-                        AlignedByteOffset: 0,
-                        InputSlotClass: D3D11_INPUT_PER_VERTEX_DATA,
-                        InstanceDataStepRate: 0,
-                    },
-                    D3D11_INPUT_ELEMENT_DESC {
-                        SemanticName: PCSTR(b"TEXCOORD\0".as_ptr()),
-                        SemanticIndex: 0,
-                        Format: DXGI_FORMAT_R32G32_FLOAT,
-                        InputSlot: 0,
-                        AlignedByteOffset: 12,
-                        InputSlotClass: D3D11_INPUT_PER_VERTEX_DATA,
-                        InstanceDataStepRate: 0,
-                    },
-                ];
+            let input_element_desc_array = [
+                D3D11_INPUT_ELEMENT_DESC {
+                    SemanticName: PCSTR(b"POSITION\0".as_ptr()),
+                    SemanticIndex: 0,
+                    Format: DXGI_FORMAT_R32G32B32_FLOAT,
+                    InputSlot: 0,
+                    AlignedByteOffset: 0,
+                    InputSlotClass: D3D11_INPUT_PER_VERTEX_DATA,
+                    InstanceDataStepRate: 0,
+                },
+                D3D11_INPUT_ELEMENT_DESC {
+                    SemanticName: PCSTR(b"TEXCOORD\0".as_ptr()),
+                    SemanticIndex: 0,
+                    Format: DXGI_FORMAT_R32G32_FLOAT,
+                    InputSlot: 0,
+                    AlignedByteOffset: 12,
+                    InputSlotClass: D3D11_INPUT_PER_VERTEX_DATA,
+                    InstanceDataStepRate: 0,
+                },
+            ];
 
-                let input_layout = device
+            let input_layout = device
                     .CreateInputLayout(&input_element_desc_array, shader::VERTEX_SHADER_BYTES).map_err(|err| {
                         anyhow::anyhow!(
                             r#"Duplication: ID3D11Device::CreateInputLayout failed {{"error": "{:?}"}}"#,
@@ -183,20 +189,17 @@ impl DX {
                         )
                     })?;
 
-                device_context.IASetInputLayout(&input_layout);
+            device_context.IASetInputLayout(&input_layout);
 
-                Ok(DX {
-                    device,
-                    device_context,
-                    vertex_shader,
-                    buffer,
-                    pixel_shader_lumina,
-                    pixel_shader_chrominance,
-                    input_layout,
-                })
-            } else {
-                bail!("create_device: create device failed with all driver types");
-            }
+            Ok(DX {
+                device,
+                device_context,
+                vertex_shader,
+                buffer,
+                pixel_shader_lumina,
+                pixel_shader_chrominance,
+                input_layout,
+            })
         }
     }
 

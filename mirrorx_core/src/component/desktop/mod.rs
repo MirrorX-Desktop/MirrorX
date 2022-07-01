@@ -6,7 +6,7 @@ pub use macos::Duplicator;
 #[cfg(target_os = "windows")]
 mod windows;
 #[cfg(target_os = "windows")]
-pub use windows::Duplicator;
+pub use self::windows::Duplicator;
 
 mod frame;
 pub use frame::Frame;

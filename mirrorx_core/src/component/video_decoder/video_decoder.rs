@@ -266,10 +266,7 @@ impl VideoDecoder {
 
     #[cfg(target_os = "windows")]
     unsafe fn send_native_frame(&self) -> Result<(), MirrorXError> {
-        use super::libyuv;
-        use crate::ffi::{
-            ffmpeg::avutil::hwcontext::av_hwframe_transfer_data, libyuv::kYvuF709Constants,
-        };
+        use crate::ffi::libyuv::*;
 
         let ret = av_hwframe_transfer_data(self.hw_decode_frame, self.decode_frame, 0);
         if ret < 0 {
@@ -285,7 +282,7 @@ impl VideoDecoder {
 
         // the actual AVFrame format is NV12, but in the libyuv, function 'NV12ToABGRMatrix' is a macro to function 'NV21ToARGBMatrix'
         // and Rust FFI can't convert macro so we directly use it's result function 'NV21ToARGBMatrix' and yuvconstants
-        let ret = libyuv::NV21ToARGBMatrix(
+        let ret = NV21ToARGBMatrix(
             (*self.hw_decode_frame).data[0],
             (*self.hw_decode_frame).linesize[0] as isize,
             (*self.hw_decode_frame).data[1],

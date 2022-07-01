@@ -1,26 +1,27 @@
+use sha2::{Digest, Sha256};
 use tracing::info;
 
 #[test]
 fn test_get_active_displays() -> anyhow::Result<()> {
     tracing_subscriber::fmt::init();
 
-    let displays = match crate::component::display::get_active_displays() {
-        Ok(displays) => displays,
-        Err(err) => return Err(anyhow::anyhow!(err)),
-    };
+    let temp_dir = std::env::temp_dir();
+    info!("screen shot will wirte to temp dir");
 
-    if displays.len() == 0 {
-        return Err(anyhow::anyhow!("display count is zero"));
-    }
+    let monitors = crate::component::display::get_active_displays()?;
+    for monitor in monitors {
+        info!(id=?monitor.id,name=?monitor.name,refresh_rate=?monitor.refresh_rate,width=?monitor.width,height=?monitor.height,is_primary=?monitor.main,screen_shot_buffer_length=?monitor.screen_shot.len(), "monitor");
 
-    for (index, dp) in displays.iter().enumerate() {
-        info!(
-            id = ?dp.id,
-            is_main = ?dp.is_main,
-            screen_shot_buffer_length = ?dp.screen_shot.len(),
-            "display {}",
-            index
-        );
+        let mut hasher = Sha256::new();
+        hasher.update(&monitor.screen_shot);
+        let result = hasher.finalize();
+        let screen_shot_hash = hex::encode_upper(result);
+
+        let filename = temp_dir.join(format!("{}.png", screen_shot_hash));
+
+        info!(?filename, "write screen shot");
+
+        std::fs::write(filename, monitor.screen_shot)?;
     }
 
     Ok(())
