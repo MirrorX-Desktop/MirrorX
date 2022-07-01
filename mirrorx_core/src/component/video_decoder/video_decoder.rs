@@ -1,10 +1,7 @@
 use super::frame::Frame;
 use crate::{
     error::MirrorXError,
-    ffi::{
-        ffmpeg::{avcodec::*, avutil::*},
-        os::*,
-    },
+    ffi::ffmpeg::{avcodec::*, avutil::*},
 };
 use anyhow::anyhow;
 use crossbeam::channel::{bounded, Receiver, Sender};

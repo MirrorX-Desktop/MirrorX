@@ -1,36 +1,19 @@
-use crate::{
-    component::display::Monitor,
-    error::MirrorXError,
-    ffi::os::*,
-    utility::wide_char::{FromWide, ToWide},
-};
+use crate::{component::display::Monitor, error::MirrorXError, utility::wide_char::FromWide};
 use image::ColorType;
 use libc::c_void;
 use scopeguard::defer;
-use serde::{Deserialize, Serialize};
-use std::{
-    collections::HashMap,
-    ffi::{OsStr, OsString},
-    io::Cursor,
-    mem::zeroed,
-    ops::{Deref, DerefMut},
-    os::windows::prelude::OsStringExt,
-};
-use tracing::{error, info};
+use std::{collections::HashMap, ffi::OsString, io::Cursor};
+use tracing::info;
 use windows::{
-    core::{Abi, Interface, PCWSTR},
+    core::Interface,
     Win32::{
         Devices::Display::{
-            DisplayConfigGetDeviceInfo, GetDisplayConfigBufferSizes,
-            GetNumberOfPhysicalMonitorsFromHMONITOR, GetPhysicalMonitorsFromHMONITOR,
-            QueryDisplayConfig, DISPLAYCONFIG_ADAPTER_NAME,
-            DISPLAYCONFIG_DEVICE_INFO_GET_ADAPTER_NAME, DISPLAYCONFIG_DEVICE_INFO_GET_TARGET_NAME,
-            DISPLAYCONFIG_DEVICE_INFO_HEADER, DISPLAYCONFIG_MODE_INFO,
-            DISPLAYCONFIG_MODE_INFO_TYPE, DISPLAYCONFIG_MODE_INFO_TYPE_TARGET,
-            DISPLAYCONFIG_PATH_INFO, DISPLAYCONFIG_SOURCE_DEVICE_NAME,
+            DisplayConfigGetDeviceInfo, GetDisplayConfigBufferSizes, QueryDisplayConfig,
+            DISPLAYCONFIG_DEVICE_INFO_GET_TARGET_NAME, DISPLAYCONFIG_DEVICE_INFO_HEADER,
+            DISPLAYCONFIG_MODE_INFO, DISPLAYCONFIG_MODE_INFO_TYPE_TARGET, DISPLAYCONFIG_PATH_INFO,
             DISPLAYCONFIG_TARGET_DEVICE_NAME,
         },
-        Foundation::{BOOL, ERROR_SUCCESS, HWND, LPARAM, LUID, RECT},
+        Foundation::ERROR_SUCCESS,
         Graphics::{
             Direct3D::{
                 D3D_DRIVER_TYPE, D3D_DRIVER_TYPE_HARDWARE, D3D_DRIVER_TYPE_REFERENCE,
@@ -38,24 +21,19 @@ use windows::{
                 D3D_FEATURE_LEVEL_10_1, D3D_FEATURE_LEVEL_11_0, D3D_FEATURE_LEVEL_11_1,
             },
             Direct3D11::{
-                D3D11CreateDevice, ID3D11Texture2D, D3D11_CREATE_DEVICE_BGRA_SUPPORT,
-                D3D11_CREATE_DEVICE_DEBUG, D3D11_SDK_VERSION,
+                D3D11CreateDevice, D3D11_CREATE_DEVICE_BGRA_SUPPORT, D3D11_CREATE_DEVICE_DEBUG,
+                D3D11_SDK_VERSION,
             },
-            Dxgi::{IDXGIAdapter, IDXGIDevice, IDXGIOutput1},
+            Dxgi::{IDXGIAdapter, IDXGIDevice},
             Gdi::{
-                BitBlt, CreateCompatibleBitmap, CreateCompatibleDC, CreateDCW, CreateDIBSection,
-                DeleteObject, EnumDisplayDevicesW, EnumDisplayMonitors, EnumDisplaySettingsW,
-                GetBitmapBits, GetDC, GetDIBits, GetMonitorInfoW, GetObjectA, GetObjectW,
-                ReleaseDC, SelectObject, BITMAP, BITMAPINFO, BITMAPINFOHEADER, BI_RGB, CAPTUREBLT,
-                DEVMODEW, DIB_RGB_COLORS, DISPLAY_DEVICEW, DISPLAY_DEVICE_ATTACHED_TO_DESKTOP,
-                DISPLAY_DEVICE_PRIMARY_DEVICE, ENUM_CURRENT_SETTINGS, HDC, HGDIOBJ, HMONITOR,
-                MONITORENUMPROC, MONITORINFO, MONITORINFOEXA, MONITORINFOEXW, QDC_ALL_PATHS,
-                QDC_ONLY_ACTIVE_PATHS, ROP_CODE, SRCCOPY,
+                BitBlt, CreateCompatibleBitmap, CreateCompatibleDC, CreateDCW, DeleteObject,
+                EnumDisplayDevicesW, EnumDisplaySettingsW, GetBitmapBits, GetMonitorInfoW,
+                GetObjectW, ReleaseDC, SelectObject, BITMAP, CAPTUREBLT, DEVMODEW, DISPLAY_DEVICEW,
+                DISPLAY_DEVICE_ATTACHED_TO_DESKTOP, ENUM_CURRENT_SETTINGS, HGDIOBJ, MONITORINFO,
+                QDC_ALL_PATHS, ROP_CODE, SRCCOPY,
             },
         },
-        UI::WindowsAndMessaging::{
-            GetSystemMetrics, EDD_GET_DEVICE_INTERFACE_NAME, MONITORINFOF_PRIMARY, SM_CMONITORS,
-        },
+        UI::WindowsAndMessaging::{EDD_GET_DEVICE_INTERFACE_NAME, MONITORINFOF_PRIMARY},
     },
 };
 
@@ -75,7 +53,6 @@ unsafe fn enum_dxgi_outputs(
         D3D_DRIVER_TYPE_HARDWARE,
         D3D_DRIVER_TYPE_WARP,
         D3D_DRIVER_TYPE_REFERENCE,
-        // D3D_DRIVER_TYPE_UNKNOWN,
     ];
 
     let feature_levels = [
@@ -170,12 +147,12 @@ unsafe fn enum_dxgi_outputs(
         monitor_info.cbSize = std::mem::size_of::<MONITORINFO>() as u32;
 
         let mut monitor_is_primary = false;
-        let mut screen_width = 0;
-        let mut screen_height = 0;
+        // let mut screen_width = 0;
+        // let mut screen_height = 0;
         if GetMonitorInfoW(output_desc.Monitor, &mut monitor_info as *mut _).as_bool() {
             monitor_is_primary = (monitor_info.dwFlags & MONITORINFOF_PRIMARY) != 0;
-            screen_width = monitor_info.rcMonitor.right - monitor_info.rcMonitor.left;
-            screen_height = monitor_info.rcMonitor.bottom - monitor_info.rcMonitor.top;
+            // screen_width = monitor_info.rcMonitor.right - monitor_info.rcMonitor.left;
+            // screen_height = monitor_info.rcMonitor.bottom - monitor_info.rcMonitor.top;
         }
 
         let mut dev_index = 0u32;
@@ -203,8 +180,11 @@ unsafe fn enum_dxgi_outputs(
             display_mode.dmSize = std::mem::size_of::<DEVMODEW>() as u16;
 
             let mut refresh_rate = 0;
-            let mut physical_width = 0;
-            let mut physical_height = 0;
+
+            // monitor resolution is resolution in pixels without scaling, and it equals 'Desktop Resolution'
+            // at 'Windows Settings' - 'Screen'
+            let mut monitor_resolution_width = 0;
+            let mut monitor_resolution_height = 0;
 
             if EnumDisplaySettingsW(
                 &*origin_device_name,
@@ -214,8 +194,8 @@ unsafe fn enum_dxgi_outputs(
             .as_bool()
             {
                 refresh_rate = display_mode.dmDisplayFrequency;
-                physical_width = display_mode.dmPelsWidth;
-                physical_height = display_mode.dmPelsHeight;
+                monitor_resolution_width = display_mode.dmPelsWidth;
+                monitor_resolution_height = display_mode.dmPelsHeight;
             }
 
             if (display_device.StateFlags & DISPLAY_DEVICE_ATTACHED_TO_DESKTOP) != 0 {
@@ -223,8 +203,8 @@ unsafe fn enum_dxgi_outputs(
                     origin_device_name,
                     monitor_info.rcMonitor.left,
                     monitor_info.rcMonitor.top,
-                    physical_width,
-                    physical_height,
+                    monitor_resolution_width,
+                    monitor_resolution_height,
                 )?;
 
                 let device_id = OsString::from_wide_null(&display_device.DeviceID)
@@ -241,8 +221,8 @@ unsafe fn enum_dxgi_outputs(
                     id: device_id,
                     name,
                     refresh_rate: refresh_rate.to_string(),
-                    width: screen_width as u16,
-                    height: screen_height as u16,
+                    width: monitor_resolution_width as u16,
+                    height: monitor_resolution_height as u16,
                     main: monitor_is_primary,
                     screen_shot: screent_shot_buffer,
                 });
@@ -294,7 +274,7 @@ unsafe fn enum_all_monitors_path_and_name() -> Result<HashMap<String, String>, M
     let mut all_monitors_path_and_name = HashMap::new();
 
     for mode_info in display_modes {
-        if (mode_info.infoType == DISPLAYCONFIG_MODE_INFO_TYPE_TARGET) {
+        if mode_info.infoType == DISPLAYCONFIG_MODE_INFO_TYPE_TARGET {
             let mut device_name: DISPLAYCONFIG_TARGET_DEVICE_NAME = std::mem::zeroed();
             device_name.header = DISPLAYCONFIG_DEVICE_INFO_HEADER {
                 size: std::mem::size_of::<DISPLAYCONFIG_TARGET_DEVICE_NAME>() as u32,
@@ -344,8 +324,8 @@ unsafe fn take_screen_shot(
     device_name: OsString,
     monitor_coord_x: i32,
     monitor_coord_y: i32,
-    physical_width: u32,
-    physical_height: u32,
+    monitor_resolution_width: u32,
+    monitor_resolution_height: u32,
 ) -> Result<Vec<u8>, MirrorXError> {
     let src_dc = CreateDCW("", device_name, "", std::ptr::null());
     if src_dc.is_invalid() {
@@ -367,7 +347,11 @@ unsafe fn take_screen_shot(
         DeleteObject(HGDIOBJ(dst_dc.0));
     }
 
-    let src_bitmap = CreateCompatibleBitmap(src_dc, physical_width as i32, physical_height as i32);
+    let src_bitmap = CreateCompatibleBitmap(
+        src_dc,
+        monitor_resolution_width as i32,
+        monitor_resolution_height as i32,
+    );
 
     defer! {
         DeleteObject(src_bitmap);
@@ -379,8 +363,8 @@ unsafe fn take_screen_shot(
         dst_dc,
         0,
         0,
-        physical_width as i32,
-        physical_height as i32,
+        monitor_resolution_width as i32,
+        monitor_resolution_height as i32,
         src_dc,
         monitor_coord_x,
         monitor_coord_y,
@@ -449,7 +433,7 @@ unsafe fn take_screen_shot(
     Ok(png_bytes)
 }
 
-#[allow(unused)]
+#[allow(unused, non_snake_case)]
 fn get_driver_type_name(driver_type: D3D_DRIVER_TYPE) -> &'static str {
     match driver_type {
         D3D_DRIVER_TYPE_UNKNOWN => "D3D_DRIVER_TYPE_UNKNOWN",
@@ -462,7 +446,7 @@ fn get_driver_type_name(driver_type: D3D_DRIVER_TYPE) -> &'static str {
     }
 }
 
-#[allow(unused)]
+#[allow(unused, non_snake_case)]
 fn get_d3d_feature_level_name(feature_level: D3D_FEATURE_LEVEL) -> &'static str {
     match feature_level {
         D3D_FEATURE_LEVEL_12_2 => "D3D_FEATURE_LEVEL_12_2",
