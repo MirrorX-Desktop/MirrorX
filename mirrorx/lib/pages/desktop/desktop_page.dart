@@ -56,8 +56,13 @@ class DesktopPage extends StatelessWidget {
   }
 
   Future<void> prepare() async {
+    await MirrorXCoreSDK.instance
+        .endpointGetDisplayInfo(remoteDeviceId: model.remoteDeviceID);
+
+// todo: dialog
     await MirrorXCoreSDK.instance.endpointStartMediaTransmission(
       remoteDeviceId: model.remoteDeviceID,
+      displayId: "",
       textureId: model.textureID,
       videoTexturePtr: model.videoTexturePointer,
       updateFrameCallbackPtr: model.updateFrameCallbackPointer,

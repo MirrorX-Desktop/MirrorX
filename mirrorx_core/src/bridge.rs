@@ -186,7 +186,7 @@ pub extern "C" fn wire_endpoint_get_display_info(
 pub extern "C" fn wire_endpoint_start_media_transmission(
     port_: i64,
     remote_device_id: *mut wire_uint_8_list,
-    display_id: u32,
+    display_id: *mut wire_uint_8_list,
     texture_id: i64,
     video_texture_ptr: i64,
     update_frame_callback_ptr: i64,
@@ -278,12 +278,6 @@ impl Wire2Api<i64> for i64 {
     }
 }
 
-impl Wire2Api<u32> for u32 {
-    fn wire2api(self) -> u32 {
-        self
-    }
-}
-
 impl Wire2Api<u8> for u8 {
     fn wire2api(self) -> u8 {
         self
@@ -317,7 +311,11 @@ impl support::IntoDart for DisplayInfo {
     fn into_dart(self) -> support::DartCObject {
         vec![
             self.id.into_dart(),
-            self.is_main.into_dart(),
+            self.name.into_dart(),
+            self.refresh_rate.into_dart(),
+            self.width.into_dart(),
+            self.height.into_dart(),
+            self.is_primary.into_dart(),
             self.screen_shot.into_dart(),
         ]
         .into_dart()

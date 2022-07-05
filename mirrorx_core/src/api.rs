@@ -96,7 +96,7 @@ pub fn endpoint_get_display_info(
 
 pub fn endpoint_start_media_transmission(
     remote_device_id: String,
-    display_id: u32,
+    display_id: String,
     texture_id: i64,
     video_texture_ptr: i64,
     update_frame_callback_ptr: i64,

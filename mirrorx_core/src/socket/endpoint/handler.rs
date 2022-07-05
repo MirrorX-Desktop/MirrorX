@@ -1,7 +1,7 @@
 use super::{
     endpoint::EndPoint,
     message::{
-        DisplayInfo, GetDisplayInfoRequest, GetDisplayInfoResponse, MediaFrame,
+        DisplayInfo, GetDisplayInfoRequest, GetDisplayInfoResponse, MediaUnit,
         StartMediaTransmissionResponse,
     },
 };
@@ -14,21 +14,24 @@ pub async fn handle_get_display_info_request(
     endpoint: &EndPoint,
     req: GetDisplayInfoRequest,
 ) -> Result<GetDisplayInfoResponse, MirrorXError> {
-    let displays = crate::component::monitor::get_active_displays()?;
+    let monitors = crate::component::monitor::get_active_monitors()?;
 
-    // todo: display and display_info has same memory layout, use memory block copy?
-    let mut display_info_vec = Vec::with_capacity(displays.len());
-    // for display in displays {
-    //     display_info_vec.push(DisplayInfo {
-    //         id: display.id,
-    //         is_main: display.is_main,
-    //         screen_shot: display.screen_shot,
-    //     })
-    // }
+    // todo: monitor and display_info has same memory layout, use memory block copy?
+    let mut displays = Vec::new();
 
-    Ok(GetDisplayInfoResponse {
-        displays: display_info_vec,
-    })
+    for monitor in monitors {
+        displays.push(DisplayInfo {
+            id: monitor.id,
+            name: monitor.name,
+            refresh_rate: monitor.refresh_rate,
+            width: monitor.width,
+            height: monitor.height,
+            is_primary: monitor.is_primary,
+            screen_shot: monitor.screen_shot,
+        });
+    }
+
+    Ok(GetDisplayInfoResponse { displays })
 }
 
 pub async fn handle_start_media_transmission_request(
@@ -36,8 +39,10 @@ pub async fn handle_start_media_transmission_request(
     req: StartMediaTransmissionRequest,
 ) -> Result<StartMediaTransmissionResponse, MirrorXError> {
     let fps = req.expect_fps;
+    let display_id = req.expect_display_id;
 
-    endpoint.begin_screen_capture()?;
+    endpoint.start_audio_capture()?;
+    endpoint.start_video_capture()?;
 
     let reply = StartMediaTransmissionResponse {
         os_name: crate::constants::OS_TYPE
@@ -59,7 +64,7 @@ pub async fn handle_start_media_transmission_request(
 
 pub async fn handle_media_transmission(
     remote_device_id: String,
-    media_frame: MediaFrame,
+    media_frame: MediaUnit,
 ) -> Result<(), MirrorXError> {
     // info!(
     //     data_length = media_frame.data.len(),
@@ -68,7 +73,7 @@ pub async fn handle_media_transmission(
     // );
 
     if let Some(endpoint) = ENDPOINTS.get(&remote_device_id) {
-        endpoint.transfer_desktop_video_frame(media_frame.data);
+        endpoint.enqueue_media_frame(media_frame);
     };
 
     Ok(())

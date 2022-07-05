@@ -1,4 +1,4 @@
-use crate::{component::display::Monitor, error::MirrorXError, utility::wide_char::FromWide};
+use crate::{component::monitor::Monitor, error::MirrorXError, utility::wide_char::FromWide};
 use image::ColorType;
 use libc::c_void;
 use scopeguard::defer;
@@ -37,7 +37,7 @@ use windows::{
     },
 };
 
-pub fn get_active_displays() -> Result<Vec<Monitor>, MirrorXError> {
+pub fn get_active_monitors() -> Result<Vec<Monitor>, MirrorXError> {
     unsafe {
         let all_monitors = enum_all_monitors_path_and_name()?;
         let dxgi_output_monitors = enum_dxgi_outputs(all_monitors)?;
@@ -223,7 +223,7 @@ unsafe fn enum_dxgi_outputs(
                     refresh_rate: refresh_rate.to_string(),
                     width: monitor_resolution_width as u16,
                     height: monitor_resolution_height as u16,
-                    main: monitor_is_primary,
+                    is_primary: monitor_is_primary,
                     screen_shot: screent_shot_buffer,
                 });
             }

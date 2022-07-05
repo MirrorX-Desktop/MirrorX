@@ -5,6 +5,6 @@ pub struct Monitor {
     pub refresh_rate: String,
     pub width: u16,
     pub height: u16,
-    pub main: bool,
+    pub is_primary: bool,
     pub screen_shot: Vec<u8>,
 }

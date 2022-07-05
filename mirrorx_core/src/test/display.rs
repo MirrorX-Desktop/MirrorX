@@ -1,8 +1,6 @@
 use sha2::{Digest, Sha256};
 use tracing::info;
 
-use crate::component::monitor::NSScreen;
-
 #[test]
 fn test_get_active_displays() -> anyhow::Result<()> {
     tracing_subscriber::fmt::init();
@@ -10,9 +8,9 @@ fn test_get_active_displays() -> anyhow::Result<()> {
     let temp_dir = std::env::temp_dir();
     info!("screen shot will wirte to temp dir");
 
-    let monitors = crate::component::monitor::get_active_displays()?;
+    let monitors = crate::component::monitor::get_active_monitors()?;
     for monitor in monitors {
-        info!(id=?monitor.id,name=?monitor.name,refresh_rate=?monitor.refresh_rate,width=?monitor.width,height=?monitor.height,is_primary=?monitor.main,screen_shot_buffer_length=?monitor.screen_shot.len(), "monitor");
+        info!(id=?monitor.id,name=?monitor.name,refresh_rate=?monitor.refresh_rate,width=?monitor.width,height=?monitor.height,is_primary=?monitor.is_primary,screen_shot_buffer_length=?monitor.screen_shot.len(), "monitor");
 
         let mut hasher = Sha256::new();
         hasher.update(&monitor.screen_shot);
@@ -24,18 +22,6 @@ fn test_get_active_displays() -> anyhow::Result<()> {
         info!(?filename, "write screen shot");
 
         std::fs::write(filename, monitor.screen_shot)?;
-    }
-
-    Ok(())
-}
-
-#[test]
-fn test_ns_screen() -> anyhow::Result<()> {
-    tracing_subscriber::fmt::init();
-
-    let screens = NSScreen::screens()?;
-    for (i, screen) in screens.iter().enumerate() {
-        info!(refresh_rate = ?screen.maximumFramesPerSecond(),display_id=?screen.screenNumber(),name=?screen.localizedName(),"monitor {}",i);
     }
 
     Ok(())

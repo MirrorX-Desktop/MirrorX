@@ -46,7 +46,7 @@ pub async fn get_display_info(
 
 pub async fn start_media_transmission(
     remote_device_id: String,
-    display_id: u32,
+    display_id: String,
     texture_id: i64,
     video_texture_ptr: i64,
     update_frame_callback_ptr: i64,
@@ -56,11 +56,8 @@ pub async fn start_media_transmission(
         None => return Err(MirrorXError::EndPointNotFound(remote_device_id)),
     };
 
-    endpoint.start_desktop_render_thread(
-        texture_id,
-        video_texture_ptr,
-        update_frame_callback_ptr,
-    )?;
+    endpoint.start_video_process(texture_id, video_texture_ptr, update_frame_callback_ptr)?;
+    endpoint.start_audio_process()?;
 
     let resp = endpoint
         .start_media_transmission(StartMediaTransmissionRequest {

@@ -21,7 +21,7 @@ pub enum EndPointMessage {
     StartMediaTransmissionResponse(StartMediaTransmissionResponse),
     GetDisplayInfoRequest(GetDisplayInfoRequest),
     GetDisplayInfoResponse(GetDisplayInfoResponse),
-    MediaFrame(MediaFrame),
+    MediaUnit(MediaUnit),
 }
 //
 // #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
@@ -35,8 +35,12 @@ pub struct GetDisplayInfoRequest {}
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct DisplayInfo {
-    pub id: u32,
-    pub is_main: bool,
+    pub id: String,
+    pub name: String,
+    pub refresh_rate: String,
+    pub width: u16,
+    pub height: u16,
+    pub is_primary: bool,
     #[serde(with = "serde_bytes")]
     pub screen_shot: Vec<u8>,
 }
@@ -49,7 +53,7 @@ pub struct GetDisplayInfoResponse {
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct StartMediaTransmissionRequest {
     pub expect_fps: u8,
-    pub expect_display_id: u32,
+    pub expect_display_id: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
@@ -63,8 +67,15 @@ pub struct StartMediaTransmissionResponse {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-pub struct MediaFrame {
+pub enum MediaType {
+    Video,
+    Audio,
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+pub struct MediaUnit {
+    pub r#type: MediaType,
     #[serde(with = "serde_bytes")]
-    pub data: Vec<u8>,
+    pub buffer: Vec<u8>,
     pub timestamp: u64,
 }
