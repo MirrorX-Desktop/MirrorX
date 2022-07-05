@@ -44,7 +44,7 @@ void wire_endpoint_get_display_info(int64_t port_, struct wire_uint_8_list *remo
 
 void wire_endpoint_start_media_transmission(int64_t port_,
                                             struct wire_uint_8_list *remote_device_id,
-                                            uint32_t display_id,
+                                            struct wire_uint_8_list *display_id,
                                             int64_t texture_id,
                                             int64_t video_texture_ptr,
                                             int64_t update_frame_callback_ptr);

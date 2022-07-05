@@ -1,3 +1,4 @@
+use super::ns_screen::NSScreen;
 use crate::{component::monitor::Monitor, error::MirrorXError, ffi::os::*};
 use core_graphics::display::*;
 use libc::c_void;
@@ -6,11 +7,7 @@ use scopeguard::defer;
 use std::ops::DerefMut;
 use tracing::error;
 
-use super::ns_screen::NSScreen;
-
-const MAX_QUERY_DISPLAYS_COUNT: usize = 16;
-
-pub fn get_active_displays() -> Result<Vec<Monitor>, MirrorXError> {
+pub fn get_active_monitors() -> Result<Vec<Monitor>, MirrorXError> {
     unsafe {
         let main_display_id = CGMainDisplayID();
         let ns_screens = NSScreen::screens()?;
@@ -32,7 +29,7 @@ pub fn get_active_displays() -> Result<Vec<Monitor>, MirrorXError> {
                     refresh_rate: ns_screen.maximumFramesPerSecond().to_string(),
                     width: monitor_width as u16,
                     height: monitor_height as u16,
-                    main: display_id == main_display_id,
+                    is_primary: display_id == main_display_id,
                     screen_shot: screen_shot_buffer,
                 });
             }
