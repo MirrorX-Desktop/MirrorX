@@ -46,6 +46,7 @@ objc-foundation = "0.1.1"
 objc_id = "0.1.1"
 core-foundation = "0.9.3"
 core-graphics = "0.22.3"
+coreaudio-rs = "0.11.1"
 
 [target.x86_64-pc-windows-msvc.dependencies]
 image = "0.24.2"

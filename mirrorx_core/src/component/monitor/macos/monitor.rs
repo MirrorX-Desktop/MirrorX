@@ -1,42 +1,39 @@
-use crate::{component::display::Display, error::MirrorXError, ffi::os::*};
-use core_graphics::{display::*, sys::CGImageRef};
+use crate::{component::monitor::Monitor, error::MirrorXError, ffi::os::*};
+use core_graphics::display::*;
 use libc::c_void;
 use objc_foundation::{INSData, INSObject, NSMutableData};
 use scopeguard::defer;
-use serde::{Deserialize, Serialize};
-use std::ops::{Deref, DerefMut};
+use std::ops::DerefMut;
 use tracing::error;
+
+use super::ns_screen::NSScreen;
 
 const MAX_QUERY_DISPLAYS_COUNT: usize = 16;
 
-pub fn get_active_displays() -> Result<Vec<Display>, MirrorXError> {
+pub fn get_active_displays() -> Result<Vec<Monitor>, MirrorXError> {
     unsafe {
-        let mut display_ids: [CGDirectDisplayID; MAX_QUERY_DISPLAYS_COUNT] = Default::default();
-        let mut display_count = 0u32;
-        let cg_error = CGGetActiveDisplayList(
-            MAX_QUERY_DISPLAYS_COUNT as u32,
-            display_ids.as_mut_ptr(),
-            &mut display_count as *mut _,
-        );
-
-        if cg_error != 0 {
-            return Err(MirrorXError::Other(anyhow::anyhow!(
-                "CGGetActiveDisplayList error({})",
-                cg_error
-            )));
-        }
+        let main_display_id = CGMainDisplayID();
+        let ns_screens = NSScreen::screens()?;
 
         let mut displays = Vec::new();
-        let main_display_id = CGMainDisplayID();
-        for i in 0..display_count {
-            let display_id = display_ids[i as usize];
+
+        for ns_screen in ns_screens {
+            let display_id = ns_screen.screenNumber();
+
+            let monitor_width = CGDisplayPixelsWide(display_id);
+            let monitor_height = CGDisplayPixelsHigh(display_id);
+
             let screen_shot_buffer = take_screen_shot_as_png(display_id);
 
-            if let Some(buffer) = screen_shot_buffer {
-                displays.push(Display {
-                    id: display_id,
-                    is_main: display_id == main_display_id,
-                    screen_shot: buffer,
+            if let Some(screen_shot_buffer) = screen_shot_buffer {
+                displays.push(Monitor {
+                    id: display_id.to_string(),
+                    name: ns_screen.localizedName(),
+                    refresh_rate: ns_screen.maximumFramesPerSecond().to_string(),
+                    width: monitor_width as u16,
+                    height: monitor_height as u16,
+                    main: display_id == main_display_id,
+                    screen_shot: screen_shot_buffer,
                 });
             }
         }

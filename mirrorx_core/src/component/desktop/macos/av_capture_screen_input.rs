@@ -1,9 +1,10 @@
-use crate::ffi::os::macos::CMTime;
 use objc::{
     class, msg_send,
     runtime::{Object, NO, YES},
     sel, sel_impl,
 };
+
+use crate::ffi::os::CMTime;
 
 pub struct AVCaptureScreenInput {
     obj: *mut Object,

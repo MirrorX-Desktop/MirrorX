@@ -14,7 +14,7 @@ pub async fn handle_get_display_info_request(
     endpoint: &EndPoint,
     req: GetDisplayInfoRequest,
 ) -> Result<GetDisplayInfoResponse, MirrorXError> {
-    let displays = crate::component::display::get_active_displays()?;
+    let displays = crate::component::monitor::get_active_displays()?;
 
     // todo: display and display_info has same memory layout, use memory block copy?
     let mut display_info_vec = Vec::with_capacity(displays.len());

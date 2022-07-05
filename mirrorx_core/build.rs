@@ -13,6 +13,7 @@ fn link_ffmpeg() {
         println!("cargo:rustc-link-lib=framework=VideoToolbox");
         println!("cargo:rustc-link-lib=framework=ImageIO");
         println!("cargo:rustc-link-lib=framework=CoreServices");
+        println!("cargo:rustc-link-lib=framework=AppKit");
 
         println!("cargo:rustc-link-search=../third/dependencies_build/ffmpeg/lib");
         println!("cargo:rustc-link-lib=avcodec");
