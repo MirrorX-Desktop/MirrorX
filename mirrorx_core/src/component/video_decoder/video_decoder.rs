@@ -251,6 +251,8 @@ impl VideoDecoder {
 
     #[cfg(target_os = "macos")]
     unsafe fn send_native_frame(&self) -> Result<(), MirrorXError> {
+        use crate::ffi::os::{CVPixelBufferRef, CVPixelBufferRetain};
+
         let native_frame = CVPixelBufferRetain((*self.decode_frame).data[3] as CVPixelBufferRef);
 
         if let Some(tx) = &self.output_tx {

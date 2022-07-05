@@ -1,5 +1,7 @@
 use std::io;
 use thiserror::Error;
+
+#[cfg(target_os = "windows")]
 use windows::Win32::Foundation::WIN32_ERROR;
 
 use crate::socket::signaling::message::SignalingMessage;

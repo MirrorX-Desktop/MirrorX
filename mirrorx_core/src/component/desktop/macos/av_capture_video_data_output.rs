@@ -2,8 +2,8 @@ use super::av_capture_video_data_output_callback::AVCaptureVideoDataOutputCallba
 use crate::{
     component::desktop::Frame,
     ffi::os::{
-        kCVPixelBufferHeightKey, kCVPixelBufferWidthKey,
-        macos::{kCVPixelBufferPixelFormatTypeKey, kCVPixelFormatType_420YpCbCr8BiPlanarFullRange},
+        kCVPixelBufferHeightKey, kCVPixelBufferPixelFormatTypeKey, kCVPixelBufferWidthKey,
+        kCVPixelFormatType_420YpCbCr8BiPlanarFullRange,
     },
 };
 use core_foundation::{base::ToVoid, dictionary::CFMutableDictionary, number::CFNumber};

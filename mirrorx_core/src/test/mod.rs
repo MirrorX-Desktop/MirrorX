@@ -1,4 +1,4 @@
+mod audio;
 mod decode;
-mod encode;
-
 mod display;
+mod encode;
