@@ -36,6 +36,7 @@ ring = "0.16.20"
 pbkdf2 = "0.11"
 thiserror = "1.0.31"
 hex = "0.4.3"
+cpal = "0.13.5"
 
 [target.x86_64-apple-darwin.dependencies]
 objc = { version = "0.2.7" }
