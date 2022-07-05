@@ -32,9 +32,14 @@ use once_cell::sync::{Lazy, OnceCell};
 use ring::aead::{OpeningKey, SealingKey};
 use scopeguard::defer;
 use std::{
+    cell::{Cell, RefCell},
     collections::VecDeque,
     os::raw::c_void,
-    sync::atomic::{AtomicU16, Ordering},
+    rc::Rc,
+    sync::{
+        atomic::{AtomicU16, Ordering},
+        Arc, Mutex,
+    },
     time::Duration,
 };
 use tokio::{
@@ -100,6 +105,11 @@ macro_rules! handle_endpoint_push {
     }};
 }
 
+struct AudioStream(Arc<Mutex<cpal::Stream>>);
+
+unsafe impl Send for AudioStream {}
+unsafe impl Sync for AudioStream {}
+
 pub struct EndPoint {
     remote_device_id: String,
     atomic_call_id: AtomicU16,
@@ -107,6 +117,7 @@ pub struct EndPoint {
     packet_tx: Sender<EndPointMessagePacket>,
     video_decoder_tx: OnceCell<crossbeam::channel::Sender<Vec<u8>>>,
     audio_decoder_tx: OnceCell<crossbeam::channel::Sender<Vec<u8>>>,
+    audio_stream: OnceCell<AudioStream>,
 }
 
 impl EndPoint {
@@ -201,6 +212,7 @@ impl EndPoint {
             packet_tx,
             video_decoder_tx: OnceCell::new(),
             audio_decoder_tx: OnceCell::new(),
+            audio_stream: OnceCell::new(),
         })
     }
 
@@ -433,6 +445,9 @@ impl EndPoint {
             .play()
             .map_err(|err| MirrorXError::Other(anyhow::anyhow!(err)))?;
 
+        self.audio_stream
+            .set(AudioStream(Arc::new(Mutex::new(loopback_stream))));
+
         Ok(())
     }
 
@@ -573,6 +588,9 @@ impl EndPoint {
             .map_err(|err| MirrorXError::Other(anyhow::anyhow!(err)))?;
 
         self.audio_decoder_tx.set(audio_consumer_tx);
+
+        self.audio_stream
+            .set(AudioStream(Arc::new(Mutex::new(loopback_stream))));
 
         Ok(())
     }
