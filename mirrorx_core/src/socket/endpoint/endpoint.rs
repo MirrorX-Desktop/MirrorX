@@ -559,7 +559,7 @@ impl EndPoint {
             data.fill(0.0);
 
             if let Ok(v) = audio_consumer_rx.try_recv() {
-                let size = data.len().min(v.len());
+                let size = (data.len() * 4).min(v.len());
                 std::ptr::copy_nonoverlapping(v.as_ptr(), data.as_mut_ptr() as *mut u8, size);
             }
         };
