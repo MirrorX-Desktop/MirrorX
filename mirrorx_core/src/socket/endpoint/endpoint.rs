@@ -24,6 +24,7 @@ use cpal::{
     SupportedStreamConfigRange,
 };
 use dashmap::DashMap;
+use dasp_ring_buffer::Slice;
 use futures::{
     stream::{SplitSink, SplitStream},
     SinkExt, StreamExt,
@@ -116,7 +117,7 @@ pub struct EndPoint {
     call_reply_tx_map: DashMap<u16, Sender<EndPointMessage>>,
     packet_tx: Sender<EndPointMessagePacket>,
     video_decoder_tx: OnceCell<crossbeam::channel::Sender<Vec<u8>>>,
-    audio_decoder_tx: OnceCell<crossbeam::channel::Sender<Vec<u8>>>,
+    audio_decoder_tx: OnceCell<crossbeam::channel::Sender<f32>>,
     audio_stream: OnceCell<AudioStream>,
 }
 
@@ -548,19 +549,28 @@ impl EndPoint {
             )));
         }
 
-        let output_config = supported_config_vec[0]
-            .clone()
-            .with_sample_rate(SampleRate(48000))
-            .config();
+        let output_config = if let Some(config) = supported_config_vec
+            .iter()
+            .find(|config| config.max_sample_rate() == SampleRate(48000))
+        {
+            config.clone().with_sample_rate(SampleRate(48000)).config()
+        } else {
+            return Err(MirrorXError::Other(anyhow::anyhow!(
+                "no supported audio device output config with sample rate 48000"
+            )));
+        };
 
-        let (audio_consumer_tx, audio_consumer_rx) = crossbeam::channel::bounded::<Vec<u8>>(600);
+        let (audio_consumer_tx, audio_consumer_rx) = crossbeam::channel::bounded::<f32>(10240);
 
         let input_callback = move |data: &mut [f32], info: &OutputCallbackInfo| unsafe {
             data.fill(0.0);
 
-            if let Ok(v) = audio_consumer_rx.try_recv() {
-                let size = (data.len() * 4).min(v.len());
-                std::ptr::copy_nonoverlapping(v.as_ptr(), data.as_mut_ptr() as *mut u8, size);
+            for sample in data {
+                if let Ok(v) = audio_consumer_rx.try_recv() {
+                    *sample = v
+                } else {
+                    break;
+                }
             }
         };
 
@@ -614,13 +624,22 @@ impl EndPoint {
             }
             MediaType::Audio => {
                 if let Some(decoder) = self.audio_decoder_tx.get() {
-                    if let Err(err) = decoder.try_send(media_frame.buffer) {
-                        match err {
-                            crossbeam::channel::TrySendError::Full(_) => {
-                                warn!("audio_decoder_rx: full")
-                            }
-                            crossbeam::channel::TrySendError::Disconnected(_) => {
-                                error!("audio_decoder_tx: closed")
+                    for chunk in media_frame.buffer.chunks(4) {
+                        let sample_array = match <[u8; 4]>::try_from(chunk) {
+                            Ok(v) => v,
+                            Err(_) => break,
+                        };
+
+                        let sample = f32::from_le_bytes(sample_array);
+
+                        if let Err(err) = decoder.try_send(sample) {
+                            match err {
+                                crossbeam::channel::TrySendError::Full(_) => {
+                                    warn!("audio_decoder_rx: full")
+                                }
+                                crossbeam::channel::TrySendError::Disconnected(_) => {
+                                    error!("audio_decoder_tx: closed")
+                                }
                             }
                         }
                     }
