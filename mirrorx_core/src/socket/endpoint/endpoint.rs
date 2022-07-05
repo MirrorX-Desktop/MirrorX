@@ -20,7 +20,7 @@ use bincode::Options;
 use bytes::Bytes;
 use cpal::{
     traits::{DeviceTrait, HostTrait, StreamTrait},
-    InputCallbackInfo, OutputCallbackInfo, Sample, SampleFormat, StreamInstant,
+    InputCallbackInfo, OutputCallbackInfo, Sample, SampleFormat, SampleRate, StreamInstant,
     SupportedStreamConfigRange,
 };
 use dashmap::DashMap;
@@ -400,7 +400,7 @@ impl EndPoint {
 
         let output_config = supported_config_vec[0]
             .clone()
-            .with_max_sample_rate()
+            .with_sample_rate(SampleRate(48000))
             .config();
 
         let packet_tx = self.packet_tx.clone();
@@ -550,7 +550,7 @@ impl EndPoint {
 
         let output_config = supported_config_vec[0]
             .clone()
-            .with_max_sample_rate()
+            .with_sample_rate(SampleRate(48000))
             .config();
 
         let (audio_consumer_tx, audio_consumer_rx) = crossbeam::channel::bounded::<Vec<u8>>(600);
