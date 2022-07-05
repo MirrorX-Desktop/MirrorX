@@ -625,12 +625,10 @@ impl EndPoint {
             MediaType::Audio => {
                 if let Some(decoder) = self.audio_decoder_tx.get() {
                     for chunk in media_frame.buffer.chunks(4) {
-                        let sample_array = match <[u8; 4]>::try_from(chunk) {
+                        let sample = f32::from_le_bytes(match chunk.try_into() {
                             Ok(v) => v,
                             Err(_) => break,
-                        };
-
-                        let sample = f32::from_le_bytes(sample_array);
+                        });
 
                         if let Err(err) = decoder.try_send(sample) {
                             match err {
