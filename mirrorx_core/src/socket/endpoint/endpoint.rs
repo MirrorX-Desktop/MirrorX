@@ -560,7 +560,7 @@ impl EndPoint {
             )));
         };
 
-        let (audio_consumer_tx, audio_consumer_rx) = crossbeam::channel::bounded::<f32>(10240);
+        let (audio_consumer_tx, audio_consumer_rx) = crossbeam::channel::bounded::<f32>(48000 * 2);
 
         let input_callback = move |data: &mut [f32], info: &OutputCallbackInfo| unsafe {
             data.fill(0.0);
