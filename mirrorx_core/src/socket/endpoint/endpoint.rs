@@ -824,6 +824,8 @@ async fn start_audio_play_process(
                             read_size,
                         );
                     }
+
+                    chunk.commit_all();
                 }
             };
 
