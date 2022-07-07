@@ -296,7 +296,7 @@ impl EndPoint {
 
                         let mut wrote = 0;
 
-                        if first.len() != 0 {
+                        if first.len() > 0 {
                             let write_size = unwrite.min(first.len());
                             std::ptr::copy_nonoverlapping(
                                 sample_slices as *const _ as *const f32,
@@ -307,7 +307,7 @@ impl EndPoint {
                             unwrite -= write_size;
                         }
 
-                        if second.len() != 0 {
+                        if unwrite > 0 && second.len() > 0 {
                             let write_size = unwrite.min(second.len());
                             std::ptr::copy_nonoverlapping(
                                 (sample_slices as *const _ as *const f32).add(wrote),
@@ -816,7 +816,7 @@ async fn start_audio_play_process(
 
                         let mut read = 0;
 
-                        if first.len() != 0 {
+                        if first.len() > 0 {
                             let read_size = unread.min(first.len());
                             std::ptr::copy_nonoverlapping(
                                 first as *const _ as *const f32,
