@@ -809,6 +809,10 @@ async fn start_audio_play_process(
             let input_callback = move |data: &mut [f32], info: &OutputCallbackInfo| unsafe {
                 data.fill(0.0);
 
+                if samples_rx.is_empty() {
+                    return;
+                }
+
                 let mut unread = data.len();
 
                 if let Ok(chunk) = samples_rx.read_chunk(unread.min(samples_rx.slots())) {
