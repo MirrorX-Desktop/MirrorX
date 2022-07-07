@@ -2,10 +2,10 @@
 use std::os::raw::c_void;
 
 #[cfg(target_os = "macos")]
-pub struct Frame(pub *mut c_void);
+pub struct DecodedFrame(pub *mut c_void);
 
 #[cfg(target_os = "windows")]
-pub struct Frame(pub Vec<u8>);
+pub struct DecodedFrame(pub Vec<u8>);
 
-unsafe impl Send for Frame {}
-unsafe impl Sync for Frame {}
+unsafe impl Send for DecodedFrame {}
+unsafe impl Sync for DecodedFrame {}

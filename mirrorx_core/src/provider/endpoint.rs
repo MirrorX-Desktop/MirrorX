@@ -1,11 +1,8 @@
 use crate::{
     error::MirrorXError,
-    socket::endpoint::{
-        endpoint::{EndPoint, ENDPOINTS},
-        message::{
-            GetDisplayInfoRequest, GetDisplayInfoResponse, StartMediaTransmissionRequest,
-            StartMediaTransmissionResponse,
-        },
+    socket::endpoint::message::{
+        GetDisplayInfoRequest, GetDisplayInfoResponse, StartMediaTransmissionRequest,
+        StartMediaTransmissionResponse,
     },
     utility::nonce_value::NonceValue,
 };
@@ -18,7 +15,7 @@ pub async fn connect(
     sealing_key: SealingKey<NonceValue>,
     opening_key: OpeningKey<NonceValue>,
 ) -> Result<(), MirrorXError> {
-    let endpoint = EndPoint::connect(
+    crate::socket::endpoint::connect(
         "192.168.0.101:28001",
         is_active_side,
         local_device_id,
@@ -26,17 +23,13 @@ pub async fn connect(
         opening_key,
         sealing_key,
     )
-    .await?;
-
-    ENDPOINTS.insert(remote_device_id, endpoint);
-
-    Ok(())
+    .await
 }
 
 pub async fn get_display_info(
     remote_device_id: String,
 ) -> Result<GetDisplayInfoResponse, MirrorXError> {
-    let endpoint = match ENDPOINTS.get(&remote_device_id) {
+    let endpoint = match crate::socket::endpoint::ENDPOINTS.get(&remote_device_id) {
         Some(pair) => pair,
         None => return Err(MirrorXError::EndPointNotFound(remote_device_id)),
     };
@@ -51,17 +44,16 @@ pub async fn start_media_transmission(
     video_texture_ptr: i64,
     update_frame_callback_ptr: i64,
 ) -> Result<StartMediaTransmissionResponse, MirrorXError> {
-    let endpoint = match ENDPOINTS.get(&remote_device_id) {
+    let endpoint = match crate::socket::endpoint::ENDPOINTS.get(&remote_device_id) {
         Some(pair) => pair,
         None => return Err(MirrorXError::EndPointNotFound(remote_device_id)),
     };
 
-    endpoint.start_video_render_process(
-        texture_id,
-        video_texture_ptr,
-        update_frame_callback_ptr,
-    )?;
-    endpoint.start_audio_play_process().await?;
+    endpoint
+        .start_video_render_process(texture_id, video_texture_ptr, update_frame_callback_ptr)
+        .await?;
+
+    endpoint.start_audio_capture_process().await?;
 
     let resp = endpoint
         .start_media_transmission(StartMediaTransmissionRequest {

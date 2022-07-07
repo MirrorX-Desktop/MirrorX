@@ -1,18 +1,20 @@
 use super::{
     ffi::create_callback_fn,
-    handler::{
-        handle_get_display_info_request, handle_media_transmission,
-        handle_start_media_transmission_request,
-    },
+    handler::{handle_get_display_info_request, handle_start_media_transmission_request},
     message::{
-        EndPointMessage, EndPointMessagePacket, EndPointMessagePacketType, GetDisplayInfoRequest,
-        GetDisplayInfoResponse, MediaType, MediaUnit, StartMediaTransmissionRequest,
-        StartMediaTransmissionResponse,
+        AudioFrame, EndPointMessage, EndPointMessagePacket, EndPointMessagePacketType,
+        GetDisplayInfoRequest, GetDisplayInfoResponse, StartMediaTransmissionRequest,
+        StartMediaTransmissionResponse, VideoFrame,
     },
 };
 use crate::{
-    component::{desktop::Duplicator, video_decoder::VideoDecoder, video_encoder::VideoEncoder},
+    component::{
+        desktop::{Duplicator, Frame},
+        video_decoder::{DecodedFrame, VideoDecoder},
+        video_encoder::VideoEncoder,
+    },
     error::MirrorXError,
+    socket::endpoint::handler::{handle_audio_frame, handle_video_frame},
     utility::{nonce_value::NonceValue, runtime::TOKIO_RUNTIME, serializer::BINCODE_SERIALIZER},
 };
 use anyhow::anyhow;
@@ -20,9 +22,9 @@ use bincode::Options;
 use bytes::Bytes;
 use cpal::{
     traits::{DeviceTrait, HostTrait, StreamTrait},
-    InputCallbackInfo, OutputCallbackInfo, Sample, SampleFormat, SampleRate,
-    SupportedStreamConfigRange,
+    InputCallbackInfo, OutputCallbackInfo, SampleFormat, SampleRate, SupportedStreamConfigRange,
 };
+use crossbeam::channel::TrySendError;
 use dashmap::DashMap;
 use futures::{
     stream::{SplitSink, SplitStream},
@@ -30,8 +32,10 @@ use futures::{
 };
 use once_cell::sync::{Lazy, OnceCell};
 use ring::aead::{OpeningKey, SealingKey};
+use rtrb::{Consumer, Producer, RingBuffer};
 use scopeguard::defer;
 use std::{
+    collections::HashMap,
     os::raw::c_void,
     sync::{
         atomic::{AtomicU16, Ordering},
@@ -42,10 +46,7 @@ use std::{
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::{TcpStream, ToSocketAddrs},
-    sync::{
-        mpsc::{Receiver, Sender},
-        Mutex,
-    },
+    sync::Mutex,
     time::timeout,
 };
 use tokio_util::codec::{Framed, LengthDelimitedCodec};
@@ -53,7 +54,7 @@ use tracing::{error, info, warn};
 
 const CALL_TIMEOUT: Duration = Duration::from_secs(5);
 
-pub static ENDPOINTS: Lazy<DashMap<String, EndPoint>> = Lazy::new(|| DashMap::new());
+pub static ENDPOINTS: Lazy<DashMap<String, Arc<EndPoint>>> = Lazy::new(|| DashMap::new());
 
 macro_rules! make_endpoint_call {
     ($name:tt, $req_type:ident, $req_message_type:path, $resp_type:ident, $resp_message_type:path) => {
@@ -69,155 +70,57 @@ macro_rules! make_endpoint_call {
     };
 }
 
-macro_rules! handle_endpoint_call {
-    ($remote_device_id:expr, $call_id:expr, $req:tt, $resp_type:path, $handler:tt) => {{
-        TOKIO_RUNTIME.spawn(async move {
-            if let Some(call_id) = $call_id {
-                if let Some(endpoint) = ENDPOINTS.get(&$remote_device_id) {
-                    let resp_message = match $handler(endpoint.value(), $req).await {
-                        Ok(resp) => $resp_type(resp),
-                        Err(err) => {
-                            error!(err=?err,"handle_endpoint_call returns error");
-                            EndPointMessage::Error
-                        }
-                    };
-
-                    if let Err(err) = endpoint.reply(call_id,resp_message).await{
-                        error!(err=?err,remote_device_id=?$remote_device_id,"handle_message: reply message failed");
-                    }
-                }else{
-                    error!(remote_device_id=?$remote_device_id,"handle_message: endpoint not exists")
+macro_rules! handle_call_message {
+    ($endpoint:expr, $call_id:expr, $req:tt, $resp_type:path, $handler:tt) => {{
+        if let Some(call_id) = $call_id {
+            let resp_message = match $handler($endpoint, $req).await {
+                Ok(resp) => $resp_type(resp),
+                Err(err) => {
+                    error!(?err, "handle_call_message: handler '{}' returns error", stringify!($handler));
+                    EndPointMessage::Error
                 }
-            } else {
-                error!("handle_message: EndPoint Request Message without call_id")
+            };
+
+            if let Err(err) = $endpoint.reply(call_id,resp_message).await{
+                error!(?err, remote_device_id = ?$endpoint.remote_device_id(), "handle_call_message: handler '{}' reply message failed", stringify!($handler));
             }
-        });
+        } else {
+            error!("handle_call_message: received request message '{}' without call id", stringify!($req));
+        }
     }};
 }
 
-macro_rules! handle_endpoint_push {
-    ($remote_device_id:expr, $req:tt, $handler:tt) => {{
-        TOKIO_RUNTIME.spawn(async move {
-            if let Err(err) = $handler($remote_device_id.clone(), $req).await {
-                error!(err=?err,remote_device_id=?$remote_device_id,"handle_message: handle push message failed")
-            }
-        });
+macro_rules! handle_push_message {
+     ($endpoint:expr, $req:tt, $handler:tt) => {{
+        if let Err(err) = $handler($endpoint, $req).await {
+            error!(?err, remote_device_id = ?$endpoint.remote_device_id(), "handle_push_message: handler '{}' returns error", stringify!($handler));
+        }
     }};
 }
-
-struct AudioStream(Arc<Mutex<cpal::Stream>>);
-
-unsafe impl Send for AudioStream {}
-unsafe impl Sync for AudioStream {}
 
 pub struct EndPoint {
+    local_device_id: String,
     remote_device_id: String,
     atomic_call_id: AtomicU16,
-    call_reply_tx_map: DashMap<u16, Sender<EndPointMessage>>,
-    packet_tx: Sender<EndPointMessagePacket>,
-    video_decoder_tx: OnceCell<crossbeam::channel::Sender<Vec<u8>>>,
-    audio_producer: OnceCell<Mutex<rtrb::Producer<f32>>>,
-    exit_notify: tokio::sync::broadcast::Sender<()>,
+    call_reply_tx_map: DashMap<u16, tokio::sync::oneshot::Sender<EndPointMessage>>,
+    packet_tx: tokio::sync::mpsc::Sender<EndPointMessagePacket>,
+    video_frame_tx: OnceCell<crossbeam::channel::Sender<VideoFrame>>,
+    audio_frame_tx: OnceCell<crossbeam::channel::Sender<AudioFrame>>,
+    video_process_exit_tx: OnceCell<crossbeam::channel::Sender<()>>,
+    audio_process_exit_tx: OnceCell<crossbeam::channel::Sender<()>>,
 }
 
 impl EndPoint {
-    pub async fn connect<A>(
-        addr: A,
-        is_active_side: bool,
-        local_device_id: String,
-        remote_device_id: String,
-        opening_key: OpeningKey<NonceValue>,
-        sealing_key: SealingKey<NonceValue>,
-    ) -> Result<Self, MirrorXError>
-    where
-        A: ToSocketAddrs,
-    {
-        let mut stream = timeout(Duration::from_secs(10), TcpStream::connect(addr))
-            .await
-            .map_err(|_| MirrorXError::Timeout)?
-            .map_err(|err| MirrorXError::IO(err))?;
-
-        stream
-            .set_nodelay(true)
-            .map_err(|err| MirrorXError::IO(err))?;
-
-        // handshake for endpoint
-
-        let (active_device_id, passive_device_id) = if is_active_side {
-            (
-                format!("{:0>10}", local_device_id),
-                format!("{:0>10}", remote_device_id),
-            )
-        } else {
-            (
-                format!("{:0>10}", remote_device_id),
-                format!("{:0>10}", local_device_id),
-            )
-        };
-
-        let active_device_id_buf = active_device_id.as_bytes();
-        if active_device_id_buf.len() != 10 {
-            return Err(MirrorXError::Other(anyhow::anyhow!(
-                "active device id bytes length is not 10"
-            )));
-        }
-
-        let passive_device_id_buf = passive_device_id.as_bytes();
-        if passive_device_id_buf.len() != 10 {
-            return Err(MirrorXError::Other(anyhow::anyhow!(
-                "passive device id bytes length is not 10"
-            )));
-        }
-
-        stream
-            .write(active_device_id_buf)
-            .await
-            .map_err(|err| MirrorXError::IO(err))?;
-        stream
-            .write(passive_device_id_buf)
-            .await
-            .map_err(|err| MirrorXError::IO(err))?;
-
-        let mut handshake_response_buf = [0u8; 1];
-        timeout(
-            Duration::from_secs(60),
-            stream.read_exact(&mut handshake_response_buf),
-        )
-        .await
-        .map_err(|_| MirrorXError::Timeout)?
-        .map_err(|err| MirrorXError::IO(err))?;
-
-        if handshake_response_buf[0] != 1 {
-            return Err(MirrorXError::EndPointError(String::from(
-                "handshake failed",
-            )));
-        }
-
-        let framed_stream = LengthDelimitedCodec::builder()
-            .little_endian()
-            .max_frame_length(16 * 1024 * 1024)
-            .new_framed(stream);
-
-        let (sink, stream) = framed_stream.split();
-
-        let (packet_tx, packet_rx) = tokio::sync::mpsc::channel(128);
-
-        serve_reader(remote_device_id.clone(), stream, opening_key);
-        serve_writer(remote_device_id.clone(), packet_rx, sink, sealing_key);
-
-        let (exit_notify, _) = tokio::sync::broadcast::channel(1);
-
-        Ok(Self {
-            remote_device_id,
-            atomic_call_id: AtomicU16::new(0),
-            call_reply_tx_map: DashMap::new(),
-            packet_tx,
-            video_decoder_tx: OnceCell::new(),
-            audio_producer: OnceCell::new(),
-            exit_notify: exit_notify,
-        })
+    pub fn remote_device_id<'a>(&'a self) -> &'a str {
+        &self.remote_device_id
     }
 
+    pub fn local_device_id<'a>(&'a self) -> &'a str {
+        &self.local_device_id
+    }
+}
+
+impl EndPoint {
     async fn call(
         &self,
         message: EndPointMessage,
@@ -231,7 +134,7 @@ impl EndPoint {
             message,
         };
 
-        let mut rx = self.register_call(call_id);
+        let rx = self.register_call(call_id);
         defer! {
             self.remove_call(call_id);
         }
@@ -241,7 +144,10 @@ impl EndPoint {
                 return Err(err);
             }
 
-            rx.recv().await.ok_or(MirrorXError::Timeout)
+            match rx.await {
+                Ok(message) => Ok(message),
+                Err(_) => Err(MirrorXError::Timeout),
+            }
         })
         .await
         .map_err(|_| MirrorXError::Timeout)?
@@ -265,472 +171,182 @@ impl EndPoint {
 
     fn set_call_reply(&self, call_id: u16, message: EndPointMessage) {
         self.remove_call(call_id).map(|tx| {
-            if let Err(err) = tx.try_send(message) {
-                error!(err = %err,remote_device_id=?self.remote_device_id,"set_call_reply: set reply failed")
+            if let Err(_) = tx.send(message) {
+                error!(remote_device_id=?self.remote_device_id,"set_call_reply: set reply failed")
             }
         });
     }
 
-    fn register_call(&self, call_id: u16) -> Receiver<EndPointMessage> {
-        let (tx, rx) = tokio::sync::mpsc::channel(1);
+    fn register_call(&self, call_id: u16) -> tokio::sync::oneshot::Receiver<EndPointMessage> {
+        let (tx, rx) = tokio::sync::oneshot::channel();
         self.call_reply_tx_map.insert(call_id, tx);
         rx
     }
 
-    fn remove_call(&self, call_id: u16) -> Option<Sender<EndPointMessage>> {
+    fn remove_call(&self, call_id: u16) -> Option<tokio::sync::oneshot::Sender<EndPointMessage>> {
         self.call_reply_tx_map.remove(&call_id).map(|entry| entry.1)
     }
 
-    pub fn start_video_capture_process(&self) -> Result<(), MirrorXError> {
-        let encoder_name = if cfg!(target_os = "macos") {
-            "h264_videotoolbox"
-        } else if cfg!(target_os = "windows") {
-            "libx264"
-        } else {
-            panic!("unsupported platform")
-        };
+    pub async fn start_video_capture_process(&self) -> Result<(), MirrorXError> {
+        let exit_tx =
+            start_video_capture_process(self.remote_device_id.clone(), self.packet_tx.clone())
+                .await?;
 
-        let mut video_encoder = VideoEncoder::new(encoder_name, 60, 1920, 1080)?;
-
-        video_encoder.set_opt("profile", "high", 0)?;
-        video_encoder.set_opt("level", "5.2", 0)?;
-
-        if encoder_name == "libx264" {
-            video_encoder.set_opt("preset", "ultrafast", 0)?;
-            video_encoder.set_opt("tune", "zerolatency", 0)?;
-            video_encoder.set_opt("sc_threshold", "499", 0)?;
-        } else {
-            video_encoder.set_opt("realtime", "1", 0)?;
-            video_encoder.set_opt("allow_sw", "0", 0)?;
-        }
-
-        let av_packet_rx = video_encoder.open()?;
-
-        let (mut desktop_duplicator, capture_frame_rx) = Duplicator::new(60)?;
-
-        std::thread::spawn(move || {
-            // make sure the media_transmission after start_media_transmission send
-            std::thread::sleep(Duration::from_secs(1));
-
-            if let Err(err) = desktop_duplicator.start() {
-                error!(?err, "desktop_duplicator: start capture failed");
-                return;
-            }
-
-            info!("desktop_duplicator: start capture");
-
-            loop {
-                let capture_frame = match capture_frame_rx.recv() {
-                    Ok(frame) => frame,
-                    Err(err) => {
-                        error!(?err, "capture_frame_rx: closed");
-                        break;
-                    }
-                };
-
-                // encode will block current thread until capture_frame released (after FFMpeg API 'avcodec_send_frame' finished)
-                if let Err(err) = video_encoder.encode(capture_frame) {
-                    error!(?err, "video_encoder: encode failed");
-                    break;
-                }
-            }
-
-            desktop_duplicator.stop();
-            info!("desktop_duplicator: capture stopped");
-        });
-
-        let packet_tx = self.packet_tx.clone();
-
-        std::thread::spawn(move || loop {
-            match av_packet_rx.recv() {
-                Ok(av_packet) => {
-                    let packet = EndPointMessagePacket {
-                        typ: EndPointMessagePacketType::Push,
-                        call_id: None,
-                        message: EndPointMessage::MediaUnit(MediaUnit {
-                            r#type: MediaType::Video,
-                            buffer: av_packet.0,
-                            timestamp: 0,
-                        }),
-                    };
-
-                    if let Err(err) = packet_tx.try_send(packet) {
-                        match err {
-                            tokio::sync::mpsc::error::TrySendError::Full(_) => {
-                                warn!("packet_tx: full")
-                            }
-                            tokio::sync::mpsc::error::TrySendError::Closed(_) => {
-                                error!("packet_tx: closed");
-                                break;
-                            }
-                        }
-                    }
-                }
-                Err(_) => {
-                    error!("av_packet_rx: closed");
-                    break;
-                }
-            };
-        });
+        let _ = self.video_process_exit_tx.set(exit_tx);
 
         Ok(())
     }
 
     pub async fn start_audio_capture_process(&self) -> Result<(), MirrorXError> {
-        let host = cpal::default_host();
+        let exit_tx =
+            start_audio_capture_process(self.remote_device_id.clone(), self.packet_tx.clone())
+                .await?;
 
-        let device = host
-            .default_output_device()
-            .ok_or(MirrorXError::Other(anyhow::anyhow!(
-                "default audio output device is null"
-            )))?;
+        let _ = self.audio_process_exit_tx.set(exit_tx);
 
-        info!(name=?device.name(),"select default audio output device");
-
-        let supported_configs = device
-            .supported_output_configs()
-            .map_err(|err| MirrorXError::Other(anyhow::anyhow!(err)))?;
-
-        let supported_config_vec: Vec<SupportedStreamConfigRange> =
-            supported_configs.into_iter().collect();
-
-        if supported_config_vec.len() == 0 {
-            return Err(MirrorXError::Other(anyhow::anyhow!(
-                "no supported audio device output config"
-            )));
-        }
-
-        let sample_format = supported_config_vec[0].sample_format();
-
-        if sample_format != SampleFormat::F32 {
-            return Err(MirrorXError::Other(anyhow::anyhow!(
-                "unsupported audio sample format {}",
-                sample_format.sample_size()
-            )));
-        }
-
-        let output_config = supported_config_vec[0]
-            .clone()
-            .with_sample_rate(SampleRate(48000))
-            .config();
-
-        let (inner_err_tx, inner_err_rx) = tokio::sync::oneshot::channel();
-
-        let mut exit_notify = self.exit_notify.subscribe();
-
-        let packet_tx = self.packet_tx.clone();
-
-        TOKIO_RUNTIME.spawn(async move {
-            let input_callback = move |data: &[f32], info: &InputCallbackInfo| unsafe {
-                let size = 4 * data.len(); // f32 => [u8; 4]
-                let mut buffer = Vec::<u8>::with_capacity(size);
-                std::ptr::copy_nonoverlapping(
-                    data.as_ptr() as *const u8,
-                    buffer.as_mut_ptr(),
-                    size,
-                );
-                buffer.set_len(size);
-
-                let _ = packet_tx.try_send(EndPointMessagePacket {
-                    typ: EndPointMessagePacketType::Push,
-                    call_id: None,
-                    message: EndPointMessage::MediaUnit(MediaUnit {
-                        r#type: MediaType::Audio,
-                        buffer,
-                        timestamp: 0,
-                    }),
-                });
-            };
-
-            let err_callback = |err| error!(?err, "error occurred on the output input stream");
-
-            let loopback_stream =
-                match device.build_input_stream(&output_config, input_callback, err_callback) {
-                    Ok(stream) => stream,
-                    Err(err) => {
-                        let _ = inner_err_tx.send(Some(MirrorXError::Other(anyhow::anyhow!(err))));
-                        return;
-                    }
-                };
-
-            if let Err(err) = loopback_stream.play() {
-                let _ = inner_err_tx.send(Some(MirrorXError::Other(anyhow::anyhow!(err))));
-                return;
-            }
-
-            defer! {
-                let _ = loopback_stream.pause();
-                 info!("audio capture process exit");
-            }
-
-            let _ = inner_err_tx.send(None);
-            let _ = exit_notify.recv();
-        });
-
-        match inner_err_rx.await {
-            Ok(inner_err) => match inner_err {
-                Some(err) => Err(err),
-                None => Ok(()),
-            },
-            Err(err) => Err(MirrorXError::Other(anyhow::anyhow!(
-                "receive start_audio_process result failed ({})",
-                err
-            ))),
-        }
+        Ok(())
     }
 
-    pub fn start_video_render_process(
+    pub async fn start_video_render_process(
         &self,
         texture_id: i64,
         video_texture_ptr: i64,
         update_frame_callback_ptr: i64,
-    ) -> anyhow::Result<()> {
-        unsafe {
-            let update_callback_fn = create_callback_fn(update_frame_callback_ptr);
+    ) -> Result<(), MirrorXError> {
+        let (decoder_name, options) = if cfg!(target_os = "macos") {
+            ("h264", HashMap::new())
+        } else if cfg!(target_os = "windows") {
+            (
+                "h264_qsv",
+                HashMap::from([("async_depth", "1"), ("gpu_copy", "on")]),
+            )
+        } else {
+            return Err(MirrorXError::Other(anyhow::anyhow!(
+                "unsupport platform decode"
+            )));
+        };
 
-            let decoder_name = if cfg!(target_os = "macos") {
-                "h264"
-            } else if cfg!(target_os = "windows") {
-                "h264_qsv"
-            } else {
-                panic!("unsupport platform decode");
+        let decoder = VideoDecoder::new(decoder_name, options)?;
+        let (video_frame_tx, video_frame_rx) = crossbeam::channel::bounded::<VideoFrame>(120);
+        let (decoded_frame_tx, decoded_frame_rx) = crossbeam::channel::bounded::<DecodedFrame>(120);
+
+        std::thread::spawn(move || loop {
+            let video_frame = match video_frame_rx.recv() {
+                Ok(frame) => frame,
+                Err(_) => {
+                    info!("video frame decode process exit");
+                    break;
+                }
             };
 
-            let mut decoder = VideoDecoder::new(decoder_name)?;
-            if decoder_name == "h264_qsv" {
-                decoder.set_opt("async_depth", "1", 0)?;
-                decoder.set_opt("gpu_copy", "on", 0)?;
+            let frames = match decoder.decode(video_frame.buffer, 0, 0) {
+                Ok(frames) => frames,
+                Err(err) => {
+                    error!(?err, "video decode failed");
+                    break;
+                }
+            };
+
+            for frame in frames {
+                if let Err(_) = decoded_frame_tx.try_send(frame) {
+                    info!("video frame decode process exit");
+                    break;
+                }
             }
+        });
 
-            let decode_frame_rx = decoder.open()?;
+        start_video_render_process(
+            self.remote_device_id.clone(),
+            decoded_frame_rx,
+            texture_id,
+            video_texture_ptr,
+            update_frame_callback_ptr,
+        );
 
-            let (decode_packet_tx, decode_packet_rx) = crossbeam::channel::bounded::<Vec<u8>>(120);
+        let _ = self.video_frame_tx.set(video_frame_tx);
 
-            std::thread::spawn(move || loop {
-                match decode_packet_rx.recv() {
-                    Ok(data) => {
-                        if let Err(err) = decoder.decode(data, 0, 0) {
-                            error!(?err, "video_decoder: decode failed");
-                            break;
-                        }
-                    }
-                    Err(err) => {
-                        error!(?err, "decode_packet_rx: closed");
-                        break;
-                    }
-                }
-            });
-
-            std::thread::spawn(move || loop {
-                match decode_frame_rx.recv() {
-                    Ok(native_frame) => {
-                        #[cfg(target_os = "macos")]
-                        update_callback_fn(
-                            texture_id,
-                            video_texture_ptr as *mut c_void,
-                            native_frame.0,
-                        );
-
-                        #[cfg(target_os = "windows")]
-                        update_callback_fn(
-                            video_texture_ptr as *mut c_void,
-                            native_frame.0.as_ptr(),
-                            1920,
-                            1080,
-                        );
-                    }
-                    Err(err) => {
-                        error!(?err, "decode_frame_rx: closed");
-                        break;
-                    }
-                }
-            });
-
-            let _ = self.video_decoder_tx.set(decode_packet_tx);
-
-            Ok(())
-        }
+        Ok(())
     }
 
     pub async fn start_audio_play_process(&self) -> Result<(), MirrorXError> {
-        let host = cpal::default_host();
+        let (audio_frame_tx, audio_frame_rx) = crossbeam::channel::bounded::<AudioFrame>(120);
+        let (mut samples_tx, samples_rx) = RingBuffer::new(48000 * 2);
 
-        let device = host
-            .default_output_device()
-            .ok_or(MirrorXError::Other(anyhow::anyhow!(
-                "default audio output device is null"
-            )))?;
-
-        info!(name=?device.name(),"select default audio output device");
-
-        let supported_configs = device
-            .supported_output_configs()
-            .map_err(|err| MirrorXError::Other(anyhow::anyhow!(err)))?;
-
-        let supported_config_vec: Vec<SupportedStreamConfigRange> =
-            supported_configs.into_iter().collect();
-
-        if supported_config_vec.len() == 0 {
-            return Err(MirrorXError::Other(anyhow::anyhow!(
-                "no supported audio device output config"
-            )));
-        }
-
-        let output_config = if let Some(config) = supported_config_vec
-            .iter()
-            .find(|config| config.max_sample_rate() == SampleRate(48000))
-        {
-            config.clone().with_sample_rate(SampleRate(48000)).config()
-        } else {
-            return Err(MirrorXError::Other(anyhow::anyhow!(
-                "no supported audio device output config with sample rate 48000"
-            )));
-        };
-
-        let sample_format = supported_config_vec[0].sample_format();
-
-        if sample_format != SampleFormat::F32 {
-            return Err(MirrorXError::Other(anyhow::anyhow!(
-                "unsupported audio sample format {}",
-                sample_format.sample_size()
-            )));
-        }
-
-        let (audio_producer, mut audio_consumer) = rtrb::RingBuffer::<f32>::new(48000 * 2);
-
-        let (inner_err_tx, inner_err_rx) = tokio::sync::oneshot::channel();
-
-        let mut exit_notify = self.exit_notify.subscribe();
-
-        TOKIO_RUNTIME.spawn(async move {
-            let input_callback = move |data: &mut [f32], info: &OutputCallbackInfo| unsafe {
-                data.fill(0.0);
-
-                let mut unread_size = data.len().min(audio_consumer.slots());
-
-                if let Ok(chunk) = audio_consumer.read_chunk(unread_size) {
-                    let (first, second) = chunk.as_slices();
-
-                    if first.len() != 0 {
-                        let read_size = unread_size.min(first.len());
-                        std::ptr::copy_nonoverlapping(
-                            first as *const _ as *const f32,
-                            data as *mut _ as *mut f32,
-                            read_size,
-                        );
-                        unread_size -= read_size;
-                    }
-
-                    if unread_size > 0 && second.len() > 0 {
-                        let read_size = unread_size.min(second.len());
-                        std::ptr::copy_nonoverlapping(
-                            second as *const _ as *const f32,
-                            (data as *mut _ as *mut f32).add(first.len()),
-                            read_size,
-                        );
-                    }
-                }
-            };
-
-            let err_callback = |err| error!(?err, "error occurred on the output audio stream");
-
-            let loopback_stream =
-                match device.build_output_stream(&output_config, input_callback, err_callback) {
-                    Ok(stream) => stream,
-                    Err(err) => {
-                        let _ = inner_err_tx.send(Some(MirrorXError::Other(anyhow::anyhow!(err))));
-                        return;
+        std::thread::spawn(move || unsafe {
+            loop {
+                let audio_frame = match audio_frame_rx.recv() {
+                    Ok(audio_frame) => audio_frame,
+                    Err(_) => {
+                        info!("audio play process thread exit");
+                        break;
                     }
                 };
 
-            if let Err(err) = loopback_stream.play() {
-                let _ = inner_err_tx.send(Some(MirrorXError::Other(anyhow::anyhow!(err))));
-                return;
-            }
+                let sample_slices = std::slice::from_raw_parts(
+                    audio_frame.buffer.as_ptr() as *const _ as *const f32,
+                    audio_frame.buffer.len() / 4,
+                );
 
-            defer! {
-                let _ = loopback_stream.pause();
-                info!("audio play process exit");
-            }
+                let mut unwrite_count = sample_slices.len();
+                let empty_slots = samples_tx.slots();
+                let request_slots = empty_slots.min(unwrite_count);
 
-            let _ = inner_err_tx.send(None);
-            let _ = exit_notify.recv();
+                if let Ok(mut chunk) = samples_tx.write_chunk(request_slots) {
+                    let (first, second) = chunk.as_mut_slices();
+
+                    if first.len() != 0 {
+                        std::ptr::copy_nonoverlapping(
+                            sample_slices as *const _ as *const f32,
+                            first as *mut _ as *mut f32,
+                            first.len(),
+                        );
+                        unwrite_count -= first.len();
+                    }
+
+                    if second.len() != 0 {
+                        std::ptr::copy_nonoverlapping(
+                            (sample_slices as *const _ as *const f32).add(first.len()),
+                            second as *mut _ as *mut f32,
+                            second.len(),
+                        );
+                        unwrite_count -= second.len();
+                    }
+
+                    chunk.commit_all();
+                }
+
+                if unwrite_count > 0 {
+                    warn!(remaining_samples = ?unwrite_count, "audio frame queue has no enough capacity, enqueue partitial audio frames")
+                }
+            }
         });
 
-        match inner_err_rx.await {
-            Ok(inner_err) => match inner_err {
-                Some(err) => Err(err),
-                None => {
-                    let _ = self.audio_producer.set(Mutex::new(audio_producer));
-                    Ok(())
+        let exit_tx = start_audio_play_process(self.remote_device_id.clone(), samples_rx).await?;
+
+        let _ = self.audio_frame_tx.set(audio_frame_tx);
+        let _ = self.audio_process_exit_tx.set(exit_tx);
+
+        Ok(())
+    }
+
+    pub async fn enqueue_video_frame(&self, video_frame: VideoFrame) {
+        if let Some(tx) = self.video_frame_tx.get() {
+            if let Err(err) = tx.try_send(video_frame) {
+                if err.is_full() {
+                    warn!(remote_device_id = ?self.remote_device_id, "video frame queue is full");
                 }
-            },
-            Err(err) => Err(MirrorXError::Other(anyhow::anyhow!(
-                "receive start_audio_process result failed ({})",
-                err
-            ))),
+            }
         }
     }
 
-    #[inline]
-    pub async fn enqueue_media_frame(&self, media_frame: MediaUnit) {
-        match media_frame.r#type {
-            MediaType::Video => {
-                if let Some(decoder) = self.video_decoder_tx.get() {
-                    if let Err(err) = decoder.try_send(media_frame.buffer) {
-                        match err {
-                            crossbeam::channel::TrySendError::Full(_) => {
-                                warn!("video_decoder_rx: full")
-                            }
-                            crossbeam::channel::TrySendError::Disconnected(_) => {
-                                error!("video_decoder_tx: closed")
-                            }
-                        }
-                    }
+    pub async fn enqueue_audio_frame(&self, audio_frame: AudioFrame) {
+        if let Some(tx) = self.audio_frame_tx.get() {
+            if let Err(err) = tx.try_send(audio_frame) {
+                if err.is_full() {
+                    warn!(remote_device_id = ?self.remote_device_id, "audio frame queue is full");
                 }
             }
-            MediaType::Audio => unsafe {
-                if let Some(mutex) = self.audio_producer.get() {
-                    let mut producer = mutex.lock().await;
-                    let sample_slices = std::slice::from_raw_parts(
-                        media_frame.buffer.as_ptr() as *const _ as *const f32,
-                        media_frame.buffer.len() / 4,
-                    );
-
-                    let mut unwrite_count = sample_slices.len();
-
-                    while unwrite_count > 0 {
-                        let empty_slots = producer.slots();
-                        let request_slots = empty_slots.min(unwrite_count);
-
-                        if let Ok(mut chunk) = producer.write_chunk(request_slots) {
-                            let (first, second) = chunk.as_mut_slices();
-                            // let mut write_count = 0;
-
-                            if first.len() != 0 {
-                                std::ptr::copy_nonoverlapping(
-                                    sample_slices as *const _ as *const f32,
-                                    first as *mut _ as *mut f32,
-                                    first.len(),
-                                );
-                                unwrite_count -= first.len();
-                            }
-
-                            if second.len() != 0 {
-                                std::ptr::copy_nonoverlapping(
-                                    (sample_slices as *const _ as *const f32).add(first.len()),
-                                    second as *mut _ as *mut f32,
-                                    second.len(),
-                                );
-                                unwrite_count -= second.len();
-                            }
-
-                            chunk.commit_all();
-                        }
-                    }
-                }
-            },
-        };
+        }
     }
 
     make_endpoint_call!(
@@ -756,8 +372,109 @@ impl Drop for EndPoint {
     }
 }
 
-fn serve_reader(
+pub async fn connect<A>(
+    addr: A,
+    is_active_side: bool,
+    local_device_id: String,
     remote_device_id: String,
+    opening_key: OpeningKey<NonceValue>,
+    sealing_key: SealingKey<NonceValue>,
+) -> Result<(), MirrorXError>
+where
+    A: ToSocketAddrs,
+{
+    let mut stream = timeout(Duration::from_secs(10), TcpStream::connect(addr))
+        .await
+        .map_err(|_| MirrorXError::Timeout)?
+        .map_err(|err| MirrorXError::IO(err))?;
+
+    stream
+        .set_nodelay(true)
+        .map_err(|err| MirrorXError::IO(err))?;
+
+    // handshake for endpoint
+
+    let (active_device_id, passive_device_id) = if is_active_side {
+        (
+            format!("{:0>10}", local_device_id),
+            format!("{:0>10}", remote_device_id),
+        )
+    } else {
+        (
+            format!("{:0>10}", remote_device_id),
+            format!("{:0>10}", local_device_id),
+        )
+    };
+
+    let active_device_id_buf = active_device_id.as_bytes();
+    if active_device_id_buf.len() != 10 {
+        return Err(MirrorXError::Other(anyhow::anyhow!(
+            "active device id bytes length is not 10"
+        )));
+    }
+
+    let passive_device_id_buf = passive_device_id.as_bytes();
+    if passive_device_id_buf.len() != 10 {
+        return Err(MirrorXError::Other(anyhow::anyhow!(
+            "passive device id bytes length is not 10"
+        )));
+    }
+
+    stream
+        .write(active_device_id_buf)
+        .await
+        .map_err(|err| MirrorXError::IO(err))?;
+    stream
+        .write(passive_device_id_buf)
+        .await
+        .map_err(|err| MirrorXError::IO(err))?;
+
+    let mut handshake_response_buf = [0u8; 1];
+    timeout(
+        Duration::from_secs(60),
+        stream.read_exact(&mut handshake_response_buf),
+    )
+    .await
+    .map_err(|_| MirrorXError::Timeout)?
+    .map_err(|err| MirrorXError::IO(err))?;
+
+    if handshake_response_buf[0] != 1 {
+        return Err(MirrorXError::EndPointError(String::from(
+            "handshake failed",
+        )));
+    }
+
+    let framed_stream = LengthDelimitedCodec::builder()
+        .little_endian()
+        .max_frame_length(16 * 1024 * 1024)
+        .new_framed(stream);
+
+    let (sink, stream) = framed_stream.split();
+
+    let (packet_tx, packet_rx) = tokio::sync::mpsc::channel(128);
+
+    let endpoint = Arc::new(EndPoint {
+        local_device_id,
+        remote_device_id: remote_device_id.clone(),
+        atomic_call_id: AtomicU16::new(0),
+        call_reply_tx_map: DashMap::new(),
+        packet_tx,
+        video_frame_tx: OnceCell::new(),
+        audio_frame_tx: OnceCell::new(),
+        video_process_exit_tx: OnceCell::new(),
+        audio_process_exit_tx: OnceCell::new(),
+    });
+
+    serve_reader(endpoint.clone(), stream, opening_key);
+    serve_writer(remote_device_id.clone(), packet_rx, sink, sealing_key);
+
+    ENDPOINTS.insert(remote_device_id, endpoint);
+
+    Ok(())
+}
+
+fn serve_reader(
+    endpoint: Arc<EndPoint>,
     mut stream: SplitStream<Framed<TcpStream, LengthDelimitedCodec>>,
     mut opening_key: OpeningKey<NonceValue>,
 ) {
@@ -767,12 +484,12 @@ fn serve_reader(
                 Some(res) => match res {
                     Ok(packet_bytes) => packet_bytes,
                     Err(err) => {
-                        error!(?remote_device_id, ?err, "reader: read packet failed");
+                        error!(remote_device_id=?endpoint.remote_device_id(), ?err, "reader: read packet failed");
                         break;
                     }
                 },
                 None => {
-                    info!(?remote_device_id, "reader: remote closed");
+                    info!(remote_device_id=?endpoint.remote_device_id(), "reader: remote closed");
                     break;
                 }
             };
@@ -781,7 +498,7 @@ fn serve_reader(
                 match opening_key.open_in_place(ring::aead::Aad::empty(), &mut packet_bytes) {
                     Ok(v) => v,
                     Err(err) => {
-                        error!(?remote_device_id, ?err, "reader: decrypt packet failed");
+                        error!(remote_device_id=?endpoint.remote_device_id(), ?err, "reader: decrypt packet failed");
                         break;
                     }
                 };
@@ -791,26 +508,25 @@ fn serve_reader(
             {
                 Ok(packet) => packet,
                 Err(err) => {
-                    error!(?remote_device_id, ?err, "reader: deserialize packet failed");
+                    error!(remote_device_id=?endpoint.remote_device_id(), ?err, "reader: deserialize packet failed");
                     break;
                 }
             };
 
-            let remote_device_id = remote_device_id.clone();
-
+            let endpoint = endpoint.clone();
             TOKIO_RUNTIME.spawn(async move {
-                handle_message(remote_device_id, packet).await;
+                handle_message(endpoint, packet).await;
             });
         }
 
-        ENDPOINTS.remove(&remote_device_id);
-        info!(?remote_device_id, "reader: exit");
+        ENDPOINTS.remove(endpoint.remote_device_id());
+        info!(remote_device_id=?endpoint.remote_device_id(), "reader: exit");
     });
 }
 
 fn serve_writer(
     remote_device_id: String,
-    mut packet_rx: Receiver<EndPointMessagePacket>,
+    mut packet_rx: tokio::sync::mpsc::Receiver<EndPointMessagePacket>,
     mut sink: SplitSink<Framed<TcpStream, LengthDelimitedCodec>, Bytes>,
     mut sealing_key: SealingKey<NonceValue>,
 ) {
@@ -850,12 +566,12 @@ fn serve_writer(
     });
 }
 
-async fn handle_message(remote_device_id: String, packet: EndPointMessagePacket) {
+async fn handle_message(endpoint: Arc<EndPoint>, packet: EndPointMessagePacket) {
     match packet.typ {
         EndPointMessagePacketType::Request => match packet.message {
             EndPointMessage::GetDisplayInfoRequest(req) => {
-                handle_endpoint_call!(
-                    remote_device_id,
+                handle_call_message!(
+                    &endpoint,
                     packet.call_id,
                     req,
                     EndPointMessage::GetDisplayInfoResponse,
@@ -863,30 +579,428 @@ async fn handle_message(remote_device_id: String, packet: EndPointMessagePacket)
                 )
             }
             EndPointMessage::StartMediaTransmissionRequest(req) => {
-                handle_endpoint_call!(
-                    remote_device_id,
+                handle_call_message!(
+                    &endpoint,
                     packet.call_id,
                     req,
                     EndPointMessage::StartMediaTransmissionResponse,
                     handle_start_media_transmission_request
                 )
             }
-            _ => error!("handle_message: received unexpected EndPoint Request Message"),
+            _ => error!("handle_message: received unknown request message"),
         },
         EndPointMessagePacketType::Response => {
             if let Some(call_id) = packet.call_id {
-                if let Some(endpoint) = ENDPOINTS.get(&remote_device_id) {
-                    endpoint.set_call_reply(call_id, packet.message);
-                }
+                endpoint.set_call_reply(call_id, packet.message);
             } else {
-                error!("handle_message: EndPoint Response Message without call_id")
+                error!("handle_message: received response message without call_id")
             }
         }
         EndPointMessagePacketType::Push => match packet.message {
-            EndPointMessage::MediaUnit(req) => {
-                handle_endpoint_push!(remote_device_id, req, handle_media_transmission)
+            EndPointMessage::VideoFrame(req) => {
+                handle_push_message!(&endpoint, req, handle_video_frame);
             }
-            _ => error!("handle_message: received unexpected EndPoint Push Message"),
+            EndPointMessage::AudioFrame(req) => {
+                handle_push_message!(&endpoint, req, handle_audio_frame);
+            }
+            _ => error!("handle_message: received unknown push message"),
         },
     }
+}
+
+async fn start_audio_capture_process(
+    remote_device_id: String,
+    packet_tx: tokio::sync::mpsc::Sender<EndPointMessagePacket>,
+) -> Result<crossbeam::channel::Sender<()>, MirrorXError> {
+    let (exit_tx, exit_rx) = crossbeam::channel::bounded(1);
+    let (inner_error_tx, inner_error_rx) = tokio::sync::oneshot::channel();
+
+    let _ = std::thread::Builder::new()
+        .name(format!("audio_capture_process:{}", remote_device_id))
+        .spawn(move || {
+            let host = cpal::default_host();
+
+            let device = match host.default_output_device() {
+                Some(device) => device,
+                None => {
+                    let _ = inner_error_tx.send(Some(MirrorXError::Other(anyhow::anyhow!(
+                        "default audio output device is null"
+                    ))));
+                    return;
+                }
+            };
+
+            info!(name=?device.name(),"select default audio output device");
+
+            let supported_configs = match device.supported_output_configs() {
+                Ok(config) => config,
+                Err(err) => {
+                    let _ = inner_error_tx.send(Some(MirrorXError::Other(anyhow::anyhow!(
+                        "get audio device supported config failed ({})",
+                        err
+                    ))));
+                    return;
+                }
+            };
+
+            let supported_config_vec: Vec<SupportedStreamConfigRange> =
+                supported_configs.into_iter().collect();
+
+            if supported_config_vec.len() == 0 {
+                let _ = inner_error_tx.send(Some(MirrorXError::Other(anyhow::anyhow!(
+                    "no supported audio device output config"
+                ))));
+                return;
+            }
+
+            let sample_format = supported_config_vec[0].sample_format();
+
+            if sample_format != SampleFormat::F32 {
+                let _ = inner_error_tx.send(Some(MirrorXError::Other(anyhow::anyhow!(
+                    "unsupported audio sample format {}",
+                    sample_format.sample_size()
+                ))));
+                return;
+            }
+
+            let output_config = supported_config_vec[0]
+                .clone()
+                .with_sample_rate(SampleRate(48000))
+                .config();
+
+            let input_callback = move |data: &[f32], info: &InputCallbackInfo| unsafe {
+                let size = 4 * data.len(); // f32 => [u8; 4]
+                let mut buffer = Vec::<u8>::with_capacity(size);
+                std::ptr::copy_nonoverlapping(
+                    data.as_ptr() as *const u8,
+                    buffer.as_mut_ptr(),
+                    size,
+                );
+                buffer.set_len(size);
+
+                let _ = packet_tx.try_send(EndPointMessagePacket {
+                    typ: EndPointMessagePacketType::Push,
+                    call_id: None,
+                    message: EndPointMessage::AudioFrame(AudioFrame {
+                        buffer,
+                        timestamp: 0,
+                    }),
+                });
+            };
+
+            let err_callback = |err| error!(?err, "error occurred on the output input stream");
+
+            let loopback_stream =
+                match device.build_input_stream(&output_config, input_callback, err_callback) {
+                    Ok(stream) => stream,
+                    Err(err) => {
+                        let _ = inner_error_tx.send(Some(MirrorXError::Other(anyhow::anyhow!(
+                            "build input stream failed ({})",
+                            err
+                        ))));
+                        return;
+                    }
+                };
+
+            if let Err(err) = loopback_stream.play() {
+                let _ = inner_error_tx.send(Some(MirrorXError::Other(anyhow::anyhow!(
+                    "loop back stream play failed ({})",
+                    err
+                ))));
+                return;
+            }
+
+            defer! {
+                let _ = loopback_stream.pause();
+                info!("audio capture process exit");
+            }
+
+            let _ = inner_error_tx.send(None);
+            let _ = exit_rx.recv();
+        });
+
+    match inner_error_rx.await {
+        Ok(inner_err) => match inner_err {
+            Some(err) => Err(err),
+            None => Ok(exit_tx),
+        },
+        Err(err) => Err(MirrorXError::Other(anyhow::anyhow!(
+            "receive start_audio_capture_process result failed ({})",
+            err
+        ))),
+    }
+}
+
+async fn start_audio_play_process(
+    remote_device_id: String,
+    mut samples_rx: Consumer<f32>,
+) -> Result<crossbeam::channel::Sender<()>, MirrorXError> {
+    let (exit_tx, exit_rx) = crossbeam::channel::bounded(1);
+    let (inner_error_tx, inner_error_rx) = tokio::sync::oneshot::channel();
+
+    let _ = std::thread::Builder::new()
+        .name(format!("audio_play_process:{}", remote_device_id))
+        .spawn(move || {
+            let host = cpal::default_host();
+
+            let device = match host.default_output_device() {
+                Some(device) => device,
+                None => {
+                    let _ = inner_error_tx.send(Some(MirrorXError::Other(anyhow::anyhow!(
+                        "default audio output device is null"
+                    ))));
+                    return;
+                }
+            };
+
+            info!(name=?device.name(),"select default audio output device");
+
+            let supported_configs = match device.supported_output_configs() {
+                Ok(config) => config,
+                Err(err) => {
+                    let _ = inner_error_tx.send(Some(MirrorXError::Other(anyhow::anyhow!(
+                        "get audio device supported config failed ({})",
+                        err
+                    ))));
+                    return;
+                }
+            };
+
+            let supported_config_vec: Vec<SupportedStreamConfigRange> =
+                supported_configs.into_iter().collect();
+
+            if supported_config_vec.len() == 0 {
+                let _ = inner_error_tx.send(Some(MirrorXError::Other(anyhow::anyhow!(
+                    "no supported audio device output config"
+                ))));
+                return;
+            }
+
+            let output_config = if let Some(config) = supported_config_vec
+                .iter()
+                .find(|config| config.max_sample_rate() == SampleRate(48000))
+            {
+                config.clone().with_sample_rate(SampleRate(48000)).config()
+            } else {
+                let _ = inner_error_tx.send(Some(MirrorXError::Other(anyhow::anyhow!(
+                    "no supported audio device output config with sample rate 48000"
+                ))));
+                return;
+            };
+
+            let sample_format = supported_config_vec[0].sample_format();
+
+            if sample_format != SampleFormat::F32 {
+                let _ = inner_error_tx.send(Some(MirrorXError::Other(anyhow::anyhow!(
+                    "unsupported audio sample format {}",
+                    sample_format.sample_size()
+                ))));
+                return;
+            }
+
+            let input_callback = move |data: &mut [f32], info: &OutputCallbackInfo| unsafe {
+                data.fill(0.0);
+
+                let mut unread_size = data.len().min(samples_rx.slots());
+
+                if let Ok(chunk) = samples_rx.read_chunk(unread_size) {
+                    let (first, second) = chunk.as_slices();
+
+                    if first.len() != 0 {
+                        let read_size = unread_size.min(first.len());
+                        std::ptr::copy_nonoverlapping(
+                            first as *const _ as *const f32,
+                            data as *mut _ as *mut f32,
+                            read_size,
+                        );
+                        unread_size -= read_size;
+                    }
+
+                    if unread_size > 0 && second.len() > 0 {
+                        let read_size = unread_size.min(second.len());
+                        std::ptr::copy_nonoverlapping(
+                            second as *const _ as *const f32,
+                            (data as *mut _ as *mut f32).add(first.len()),
+                            read_size,
+                        );
+                    }
+                }
+            };
+
+            let err_callback = |err| error!(?err, "error occurred on the output audio stream");
+
+            let loopback_stream =
+                match device.build_output_stream(&output_config, input_callback, err_callback) {
+                    Ok(stream) => stream,
+                    Err(err) => {
+                        let _ = inner_error_tx.send(Some(MirrorXError::Other(anyhow::anyhow!(
+                            "build output stream failed ({})",
+                            err
+                        ))));
+                        return;
+                    }
+                };
+
+            if let Err(err) = loopback_stream.play() {
+                let _ = inner_error_tx.send(Some(MirrorXError::Other(anyhow::anyhow!(
+                    "loop back stream play failed ({})",
+                    err
+                ))));
+                return;
+            }
+
+            defer! {
+                let _ = loopback_stream.pause();
+                info!("audio play process exit");
+            }
+
+            let _ = inner_error_tx.send(None);
+            let _ = exit_rx.recv();
+        });
+
+    match inner_error_rx.await {
+        Ok(inner_error) => match inner_error {
+            Some(err) => Err(err),
+            None => Ok(exit_tx),
+        },
+        Err(err) => Err(MirrorXError::Other(anyhow::anyhow!(
+            "receive start_audio_play_process result failed ({})",
+            err
+        ))),
+    }
+}
+
+async fn start_video_capture_process(
+    remote_device_id: String,
+    packet_tx: tokio::sync::mpsc::Sender<EndPointMessagePacket>,
+) -> Result<crossbeam::channel::Sender<()>, MirrorXError> {
+    let encoder_name = if cfg!(target_os = "macos") {
+        "h264_videotoolbox"
+    } else if cfg!(target_os = "windows") {
+        "libx264"
+    } else {
+        panic!("unsupported platform")
+    };
+
+    let mut video_encoder = VideoEncoder::new(encoder_name, 60, 1920, 1080)?;
+
+    video_encoder.set_opt("profile", "high", 0)?;
+    video_encoder.set_opt("level", "5.2", 0)?;
+
+    if encoder_name == "libx264" {
+        video_encoder.set_opt("preset", "ultrafast", 0)?;
+        video_encoder.set_opt("tune", "zerolatency", 0)?;
+        video_encoder.set_opt("sc_threshold", "499", 0)?;
+    } else {
+        video_encoder.set_opt("realtime", "1", 0)?;
+        video_encoder.set_opt("allow_sw", "0", 0)?;
+    }
+
+    let av_packet_rx = video_encoder.open()?;
+
+    let (mut desktop_duplicator, capture_frame_rx) = Duplicator::new(60)?;
+
+    std::thread::spawn(move || {
+        // make sure the media_transmission after start_media_transmission send
+        std::thread::sleep(Duration::from_secs(1));
+
+        if let Err(err) = desktop_duplicator.start() {
+            error!(?err, "desktop_duplicator: start capture failed");
+            return;
+        }
+
+        info!("desktop_duplicator: start capture");
+
+        loop {
+            let capture_frame = match capture_frame_rx.recv() {
+                Ok(frame) => frame,
+                Err(err) => {
+                    error!(?err, "capture_frame_rx: closed");
+                    break;
+                }
+            };
+
+            // encode will block current thread until capture_frame released (after FFMpeg API 'avcodec_send_frame' finished)
+            if let Err(err) = video_encoder.encode(capture_frame) {
+                error!(?err, "video_encoder: encode failed");
+                break;
+            }
+        }
+
+        desktop_duplicator.stop();
+        info!("desktop_duplicator: capture stopped");
+    });
+
+    std::thread::spawn(move || loop {
+        match av_packet_rx.recv() {
+            Ok(av_packet) => {
+                let packet = EndPointMessagePacket {
+                    typ: EndPointMessagePacketType::Push,
+                    call_id: None,
+                    message: EndPointMessage::VideoFrame(VideoFrame {
+                        buffer: av_packet.0,
+                        timestamp: 0,
+                    }),
+                };
+
+                if let Err(err) = packet_tx.try_send(packet) {
+                    match err {
+                        tokio::sync::mpsc::error::TrySendError::Full(_) => {
+                            warn!("packet_tx: full")
+                        }
+                        tokio::sync::mpsc::error::TrySendError::Closed(_) => {
+                            error!("packet_tx: closed");
+                            break;
+                        }
+                    }
+                }
+            }
+            Err(_) => {
+                error!("av_packet_rx: closed");
+                break;
+            }
+        };
+    });
+
+    let (tx, rx) = crossbeam::channel::bounded(1);
+    Ok(tx)
+}
+
+fn start_video_render_process(
+    remote_device_id: String,
+    decoded_video_frame_rx: crossbeam::channel::Receiver<DecodedFrame>,
+    texture_id: i64,
+    video_texture_ptr: i64,
+    update_frame_callback_ptr: i64,
+) {
+    let update_callback_fn = unsafe { create_callback_fn(update_frame_callback_ptr) };
+
+    let _ = std::thread::Builder::new()
+        .name(format!("video_render_process:{}", remote_device_id))
+        .spawn(move || loop {
+            let decoded_video_frame = match decoded_video_frame_rx.recv() {
+                Ok(frame) => frame,
+                Err(_) => {
+                    info!("video frame render process exit");
+                    break;
+                }
+            };
+
+            #[cfg(target_os = "macos")]
+            unsafe {
+                update_callback_fn(
+                    texture_id,
+                    video_texture_ptr as *mut c_void,
+                    decoded_video_frame.0,
+                );
+            }
+
+            #[cfg(target_os = "windows")]
+            update_callback_fn(
+                video_texture_ptr as *mut c_void,
+                decoded_video_frame.0.as_ptr(),
+                1920,
+                1080,
+            );
+        });
 }

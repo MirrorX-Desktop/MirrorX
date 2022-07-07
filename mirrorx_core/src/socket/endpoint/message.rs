@@ -21,7 +21,8 @@ pub enum EndPointMessage {
     StartMediaTransmissionResponse(StartMediaTransmissionResponse),
     GetDisplayInfoRequest(GetDisplayInfoRequest),
     GetDisplayInfoResponse(GetDisplayInfoResponse),
-    MediaUnit(MediaUnit),
+    VideoFrame(VideoFrame),
+    AudioFrame(AudioFrame),
 }
 //
 // #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
@@ -67,14 +68,14 @@ pub struct StartMediaTransmissionResponse {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-pub enum MediaType {
-    Video,
-    Audio,
+pub struct VideoFrame {
+    #[serde(with = "serde_bytes")]
+    pub buffer: Vec<u8>,
+    pub timestamp: u64,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-pub struct MediaUnit {
-    pub r#type: MediaType,
+pub struct AudioFrame {
     #[serde(with = "serde_bytes")]
     pub buffer: Vec<u8>,
     pub timestamp: u64,

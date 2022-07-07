@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::{collections::HashMap, time::Duration};
 use tracing::{error, info};
 
 use crate::component::{
@@ -36,8 +36,16 @@ fn test_capture_and_encode_and_decode() -> anyhow::Result<()> {
     let packet_rx = encoder.open()?;
     let (mut desktop_duplicator, capture_frame_rx) = Duplicator::new(60)?;
 
-    let mut decoder = VideoDecoder::new("h264_qsv")?;
-    let decode_rx = decoder.open()?;
+    let decoder_name = if cfg!(target_os = "macos") {
+        "h264"
+    } else if cfg!(target_os = "windows") {
+        "h264_qsv"
+    } else {
+        panic!("unsupported platform")
+    };
+
+    let decoder = VideoDecoder::new(decoder_name, HashMap::new())?;
+    let (decoder_tx, decoder_rx) = crossbeam::channel::bounded(60);
 
     let (error_tx, error_rx) = crossbeam::channel::bounded(1);
 
@@ -74,12 +82,16 @@ fn test_capture_and_encode_and_decode() -> anyhow::Result<()> {
     let encode_error_tx = error_tx.clone();
     std::thread::spawn(move || loop {
         match packet_rx.recv() {
-            Ok(packet) => {
-                if let Err(err) = decoder.decode(packet.0, 0, 0) {
-                    let _ = encode_error_tx
-                        .try_send(crate::error::MirrorXError::Other(anyhow::anyhow!(err)));
+            Ok(packet) => match decoder.decode(packet.0, 0, 0) {
+                Ok(frames) => {
+                    for frame in frames {
+                        let _ = decoder_tx.try_send(frame);
+                    }
                 }
-            }
+                Err(err) => {
+                    let _ = encode_error_tx.try_send(err);
+                }
+            },
             Err(err) => {
                 error!(err=?err, "packet receive failed");
                 let _ = encode_error_tx
@@ -90,7 +102,7 @@ fn test_capture_and_encode_and_decode() -> anyhow::Result<()> {
     });
 
     std::thread::spawn(move || loop {
-        match decode_rx.recv() {
+        match decoder_rx.recv() {
             Ok(packet) => {
                 info!("decode frame");
             }

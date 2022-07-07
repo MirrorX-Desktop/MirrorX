@@ -1,14 +1,11 @@
 use super::{
     endpoint::EndPoint,
     message::{
-        DisplayInfo, GetDisplayInfoRequest, GetDisplayInfoResponse, MediaUnit,
-        StartMediaTransmissionResponse,
+        AudioFrame, DisplayInfo, GetDisplayInfoRequest, GetDisplayInfoResponse,
+        StartMediaTransmissionResponse, VideoFrame,
     },
 };
-use crate::{
-    error::MirrorXError,
-    socket::endpoint::{endpoint::ENDPOINTS, message::StartMediaTransmissionRequest},
-};
+use crate::{error::MirrorXError, socket::endpoint::message::StartMediaTransmissionRequest};
 
 pub async fn handle_get_display_info_request(
     endpoint: &EndPoint,
@@ -42,7 +39,7 @@ pub async fn handle_start_media_transmission_request(
     let display_id = req.expect_display_id;
 
     endpoint.start_audio_capture_process().await?;
-    endpoint.start_video_capture_process()?;
+    endpoint.start_video_capture_process().await?;
 
     let reply = StartMediaTransmissionResponse {
         os_name: crate::constants::OS_TYPE
@@ -62,19 +59,18 @@ pub async fn handle_start_media_transmission_request(
     Ok(reply)
 }
 
-pub async fn handle_media_transmission(
-    remote_device_id: String,
-    media_frame: MediaUnit,
+pub async fn handle_video_frame(
+    endpoint: &EndPoint,
+    video_frame: VideoFrame,
 ) -> Result<(), MirrorXError> {
-    // info!(
-    //     data_length = media_frame.data.len(),
-    //     timestamp = media_frame.timestamp,
-    //     "handle_media_transmission",
-    // );
+    endpoint.enqueue_video_frame(video_frame).await;
+    Ok(())
+}
 
-    if let Some(endpoint) = ENDPOINTS.get(&remote_device_id) {
-        endpoint.enqueue_media_frame(media_frame).await;
-    };
-
+pub async fn handle_audio_frame(
+    endpoint: &EndPoint,
+    audio_frame: AudioFrame,
+) -> Result<(), MirrorXError> {
+    endpoint.enqueue_audio_frame(audio_frame).await;
     Ok(())
 }

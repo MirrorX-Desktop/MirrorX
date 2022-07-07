@@ -1,11 +1,11 @@
-use super::frame::Frame;
+use super::frame::DecodedFrame;
 use crate::{
     error::MirrorXError,
     ffi::ffmpeg::{avcodec::*, avutil::*},
 };
 use anyhow::anyhow;
-use crossbeam::channel::{bounded, Receiver, Sender};
 use std::{
+    collections::HashMap,
     ffi::{CStr, CString},
     ptr,
 };
@@ -18,14 +18,16 @@ pub struct VideoDecoder {
     packet: *mut AVPacket,
     decode_frame: *mut AVFrame,
     hw_decode_frame: *mut AVFrame,
-    output_tx: Option<Sender<Frame>>,
 }
 
 unsafe impl Send for VideoDecoder {}
 unsafe impl Sync for VideoDecoder {}
 
 impl VideoDecoder {
-    pub fn new(decoder_name: &str) -> Result<VideoDecoder, MirrorXError> {
+    pub fn new(
+        decoder_name: &str,
+        options: HashMap<&str, &str>,
+    ) -> Result<VideoDecoder, MirrorXError> {
         let decoder_name_ptr =
             CString::new(decoder_name).map_err(|err| MirrorXError::Other(anyhow!(err)))?;
 
@@ -40,7 +42,6 @@ impl VideoDecoder {
                 packet: ptr::null_mut(),
                 decode_frame: ptr::null_mut(),
                 hw_decode_frame: ptr::null_mut(),
-                output_tx: None,
             };
 
             let mut support_hw_device_type = AV_HWDEVICE_TYPE_NONE;
@@ -77,6 +78,10 @@ impl VideoDecoder {
             (*decoder.codec_ctx).color_trc = AVCOL_TRC_BT709;
             (*decoder.codec_ctx).colorspace = AVCOL_SPC_BT709;
             (*decoder.codec_ctx).flags |= AV_CODEC_FLAG_LOW_DELAY;
+
+            for (k, v) in options {
+                Self::set_opt(decoder.codec_ctx, k, v, 0)?;
+            }
 
             decoder.packet = av_packet_alloc();
             if decoder.packet.is_null() {
@@ -125,11 +130,21 @@ impl VideoDecoder {
                 }
             }
 
+            let ret = avcodec_open2(decoder.codec_ctx, decoder.codec, ptr::null_mut());
+            if ret != 0 {
+                return Err(MirrorXError::MediaVideoDecoderOpenFailed(ret));
+            }
+
             Ok(decoder)
         }
     }
 
-    pub fn set_opt(&self, key: &str, value: &str, search_flags: i32) -> Result<(), MirrorXError> {
+    pub fn set_opt(
+        codec_ctx: *mut AVCodecContext,
+        key: &str,
+        value: &str,
+        search_flags: i32,
+    ) -> Result<(), MirrorXError> {
         let opt_name =
             CString::new(key.to_string()).map_err(|err| MirrorXError::Other(anyhow!(err)))?;
         let opt_value =
@@ -137,7 +152,7 @@ impl VideoDecoder {
 
         unsafe {
             let ret = av_opt_set(
-                (*self.codec_ctx).priv_data,
+                (*codec_ctx).priv_data,
                 opt_name.as_ptr(),
                 opt_value.as_ptr(),
                 search_flags,
@@ -169,24 +184,12 @@ impl VideoDecoder {
         }
     }
 
-    pub fn open(&mut self) -> Result<Receiver<Frame>, MirrorXError> {
-        if self.output_tx.is_some() {
-            return Err(MirrorXError::MediaVideoDecoderAlreadyOpened);
-        }
-
-        unsafe {
-            let ret = avcodec_open2(self.codec_ctx, self.codec, ptr::null_mut());
-            if ret != 0 {
-                return Err(MirrorXError::MediaVideoDecoderOpenFailed(ret));
-            }
-
-            let (tx, rx) = bounded::<Frame>(600);
-            self.output_tx = Some(tx);
-            Ok(rx)
-        }
-    }
-
-    pub fn decode(&self, mut data: Vec<u8>, dts: i64, pts: i64) -> Result<(), MirrorXError> {
+    pub fn decode(
+        &self,
+        mut data: Vec<u8>,
+        dts: i64,
+        pts: i64,
+    ) -> Result<Vec<DecodedFrame>, MirrorXError> {
         unsafe {
             if !self.parser_ctx.is_null() {
                 let ret = av_parser_parse2(
@@ -222,49 +225,39 @@ impl VideoDecoder {
                 return Err(MirrorXError::MediaVideoDecoderSendPacketFailed(ret));
             }
 
-            let mut send_native_frame_error = None;
-            while ret >= 0 && send_native_frame_error.is_none() {
+            let mut frames = Vec::new();
+            loop {
                 ret = avcodec_receive_frame(self.codec_ctx, self.decode_frame);
-                if ret < 0 {
-                    break;
+                if ret == AVERROR(libc::EAGAIN) || ret == AVERROR_EOF {
+                    return Ok(frames);
+                } else if ret < 0 {
+                    return Err(MirrorXError::MediaVideoDecoderReceiveFrameFailed(ret));
                 }
 
                 if !self.parser_ctx.is_null() {
-                } else if let Err(err) = self.send_native_frame() {
-                    send_native_frame_error = Some(err);
+                } else {
+                    match self.send_native_frame() {
+                        Ok(frame) => frames.push(frame),
+                        Err(err) => return Err(err),
+                    };
                 }
 
                 av_frame_unref((*self).decode_frame);
-            }
-
-            if ret == AVERROR(libc::EAGAIN) || ret == AVERROR_EOF {
-                Ok(())
-            } else if ret < 0 {
-                Err(MirrorXError::MediaVideoDecoderReceiveFrameFailed(ret))
-            } else if let Some(err) = send_native_frame_error {
-                Err(err)
-            } else {
-                Ok(())
             }
         }
     }
 
     #[cfg(target_os = "macos")]
-    unsafe fn send_native_frame(&self) -> Result<(), MirrorXError> {
+    unsafe fn send_native_frame(&self) -> Result<DecodedFrame, MirrorXError> {
         use crate::ffi::os::{CVPixelBufferRef, CVPixelBufferRetain};
 
         let native_frame = CVPixelBufferRetain((*self.decode_frame).data[3] as CVPixelBufferRef);
 
-        if let Some(tx) = &self.output_tx {
-            tx.try_send(Frame(native_frame))
-                .map_err(|_| MirrorXError::MediaVideoDecoderOutputTxSendFailed)
-        } else {
-            Err(MirrorXError::ComponentUninitialized)
-        }
+        Ok(DecodedFrame(native_frame))
     }
 
     #[cfg(target_os = "windows")]
-    unsafe fn send_native_frame(&self) -> Result<(), MirrorXError> {
+    unsafe fn send_native_frame(&self) -> Result<DecodedFrame, MirrorXError> {
         use crate::ffi::libyuv::*;
 
         let ret = av_hwframe_transfer_data(self.hw_decode_frame, self.decode_frame, 0);
@@ -302,19 +295,14 @@ impl VideoDecoder {
 
         abgr_frame.set_len(abgr_frame_size);
 
-        if let Some(tx) = self.output_tx.as_ref() {
-            tx.try_send(Frame(abgr_frame))
-                .map_err(|_| MirrorXError::MediaVideoDecoderOutputTxSendFailed)
-        } else {
-            Err(MirrorXError::ComponentUninitialized)
-        }
+        Ok(DecodedFrame(abgr_frame))
     }
 }
 
 impl Drop for VideoDecoder {
     fn drop(&mut self) {
         unsafe {
-            if self.output_tx.is_some() {
+            if !self.codec_ctx.is_null() {
                 avcodec_send_packet(self.codec_ctx, ptr::null());
             }
 
