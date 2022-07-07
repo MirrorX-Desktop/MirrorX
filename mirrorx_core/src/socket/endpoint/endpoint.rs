@@ -996,11 +996,13 @@ fn start_video_render_process(
             }
 
             #[cfg(target_os = "windows")]
-            update_callback_fn(
-                video_texture_ptr as *mut c_void,
-                decoded_video_frame.0.as_ptr(),
-                1920,
-                1080,
-            );
+            unsafe {
+                update_callback_fn(
+                    video_texture_ptr as *mut c_void,
+                    decoded_video_frame.0.as_ptr(),
+                    1920,
+                    1080,
+                );
+            }
         });
 }
