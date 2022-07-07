@@ -290,41 +290,42 @@ impl EndPoint {
 
                 let mut unwrite = sample_slices.len();
 
-                while unwrite > 0 {
-                    if let Ok(mut chunk) = samples_tx.write_chunk(unwrite.min(samples_tx.slots())) {
-                        let (first, second) = chunk.as_mut_slices();
+                if let Ok(mut chunk) = samples_tx.write_chunk(unwrite.min(samples_tx.slots())) {
+                    let (first, second) = chunk.as_mut_slices();
 
-                        let mut wrote = 0;
+                    let mut wrote = 0;
 
-                        if first.len() > 0 {
-                            let write_size = unwrite.min(first.len());
-                            std::ptr::copy_nonoverlapping(
-                                sample_slices as *const _ as *const f32,
-                                first as *mut _ as *mut f32,
-                                write_size,
-                            );
-                            wrote += write_size;
-                            unwrite -= write_size;
-                        }
-
-                        if unwrite > 0 && second.len() > 0 {
-                            let write_size = unwrite.min(second.len());
-                            std::ptr::copy_nonoverlapping(
-                                (sample_slices as *const _ as *const f32).add(wrote),
-                                second as *mut _ as *mut f32,
-                                write_size,
-                            );
-                            wrote += write_size;
-                            unwrite -= write_size;
-                        }
-
-                        chunk.commit(wrote);
+                    if first.len() > 0 {
+                        let write_size = unwrite.min(first.len());
+                        std::ptr::copy_nonoverlapping(
+                            sample_slices as *const _ as *const f32,
+                            first as *mut _ as *mut f32,
+                            write_size,
+                        );
+                        wrote += write_size;
+                        unwrite -= write_size;
                     }
+
+                    if unwrite > 0 && second.len() > 0 {
+                        let write_size = unwrite.min(second.len());
+                        std::ptr::copy_nonoverlapping(
+                            (sample_slices as *const _ as *const f32).add(wrote),
+                            second as *mut _ as *mut f32,
+                            write_size,
+                        );
+                        wrote += write_size;
+                        unwrite -= write_size;
+                    }
+
+                    chunk.commit(wrote);
                 }
 
-                // if unwrite_count > 0 {
-                //     warn!(remaining_samples = ?unwrite_count, "audio frame queue has no enough capacity, enqueue partitial audio frames")
-                // }
+                if unwrite > 0 {
+                    warn!(
+                        ?unwrite,
+                        "audio frame queue has no enough capacity, enqueue partitial audio frames"
+                    )
+                }
             }
         });
 
@@ -810,36 +811,41 @@ async fn start_audio_play_process(
 
                 let mut unread = data.len();
 
-                while unread > 0 {
-                    if let Ok(chunk) = samples_rx.read_chunk(unread.min(samples_rx.slots())) {
-                        let (first, second) = chunk.as_slices();
+                if let Ok(chunk) = samples_rx.read_chunk(unread.min(samples_rx.slots())) {
+                    let (first, second) = chunk.as_slices();
 
-                        let mut read = 0;
+                    let mut read = 0;
 
-                        if first.len() > 0 {
-                            let read_size = unread.min(first.len());
-                            std::ptr::copy_nonoverlapping(
-                                first as *const _ as *const f32,
-                                data as *mut _ as *mut f32,
-                                read_size,
-                            );
-                            read += read_size;
-                            unread -= read_size;
-                        }
-
-                        if unread > 0 && second.len() > 0 {
-                            let read_size = unread.min(second.len());
-                            std::ptr::copy_nonoverlapping(
-                                second as *const _ as *const f32,
-                                (data as *mut _ as *mut f32).add(read),
-                                read_size,
-                            );
-                            read += read_size;
-                            unread -= read_size;
-                        }
-
-                        chunk.commit(read);
+                    if first.len() > 0 {
+                        let read_size = unread.min(first.len());
+                        std::ptr::copy_nonoverlapping(
+                            first as *const _ as *const f32,
+                            data as *mut _ as *mut f32,
+                            read_size,
+                        );
+                        read += read_size;
+                        unread -= read_size;
                     }
+
+                    if unread > 0 && second.len() > 0 {
+                        let read_size = unread.min(second.len());
+                        std::ptr::copy_nonoverlapping(
+                            second as *const _ as *const f32,
+                            (data as *mut _ as *mut f32).add(read),
+                            read_size,
+                        );
+                        read += read_size;
+                        unread -= read_size;
+                    }
+
+                    chunk.commit(read);
+                }
+
+                if unread > 0 {
+                    warn!(
+                        ?unread,
+                        "audio frame queue require more samples, dequeue partitial audio frames"
+                    )
                 }
             };
 
