@@ -205,7 +205,7 @@ impl EndPoint {
         serve_reader(remote_device_id.clone(), stream, opening_key);
         serve_writer(remote_device_id.clone(), packet_rx, sink, sealing_key);
 
-        let (exit_notify, _) = tokio::sync::broadcast::channel(0);
+        let (exit_notify, _) = tokio::sync::broadcast::channel(1);
 
         Ok(Self {
             remote_device_id,
