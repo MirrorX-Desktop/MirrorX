@@ -807,7 +807,7 @@ async fn start_audio_play_process(
             }
 
             let input_callback = move |data: &mut [f32], info: &OutputCallbackInfo| unsafe {
-                data.fill(0.0);
+                // data.fill(0.0);
 
                 if samples_rx.is_empty() {
                     return;
