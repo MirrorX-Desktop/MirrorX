@@ -20,11 +20,10 @@ use bincode::Options;
 use bytes::Bytes;
 use cpal::{
     traits::{DeviceTrait, HostTrait, StreamTrait},
-    InputCallbackInfo, OutputCallbackInfo, Sample, SampleFormat, SampleRate, StreamInstant,
+    InputCallbackInfo, OutputCallbackInfo, Sample, SampleFormat, SampleRate,
     SupportedStreamConfigRange,
 };
 use dashmap::DashMap;
-use dasp_ring_buffer::Slice;
 use futures::{
     stream::{SplitSink, SplitStream},
     SinkExt, StreamExt,
@@ -33,20 +32,20 @@ use once_cell::sync::{Lazy, OnceCell};
 use ring::aead::{OpeningKey, SealingKey};
 use scopeguard::defer;
 use std::{
-    cell::{Cell, RefCell},
-    collections::VecDeque,
     os::raw::c_void,
-    rc::Rc,
     sync::{
         atomic::{AtomicU16, Ordering},
-        Arc, Mutex,
+        Arc,
     },
     time::Duration,
 };
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::{TcpStream, ToSocketAddrs},
-    sync::mpsc::{Receiver, Sender},
+    sync::{
+        mpsc::{Receiver, Sender},
+        Mutex,
+    },
     time::timeout,
 };
 use tokio_util::codec::{Framed, LengthDelimitedCodec};
@@ -117,8 +116,8 @@ pub struct EndPoint {
     call_reply_tx_map: DashMap<u16, Sender<EndPointMessage>>,
     packet_tx: Sender<EndPointMessagePacket>,
     video_decoder_tx: OnceCell<crossbeam::channel::Sender<Vec<u8>>>,
-    audio_decoder_tx: OnceCell<crossbeam::channel::Sender<f32>>,
-    audio_stream: OnceCell<AudioStream>,
+    audio_producer: OnceCell<Mutex<rtrb::Producer<f32>>>,
+    exit_notify: tokio::sync::broadcast::Sender<()>,
 }
 
 impl EndPoint {
@@ -206,14 +205,16 @@ impl EndPoint {
         serve_reader(remote_device_id.clone(), stream, opening_key);
         serve_writer(remote_device_id.clone(), packet_rx, sink, sealing_key);
 
+        let (exit_notify, _) = tokio::sync::broadcast::channel(0);
+
         Ok(Self {
             remote_device_id,
             atomic_call_id: AtomicU16::new(0),
             call_reply_tx_map: DashMap::new(),
             packet_tx,
             video_decoder_tx: OnceCell::new(),
-            audio_decoder_tx: OnceCell::new(),
-            audio_stream: OnceCell::new(),
+            audio_producer: OnceCell::new(),
+            exit_notify: exit_notify,
         })
     }
 
@@ -280,7 +281,7 @@ impl EndPoint {
         self.call_reply_tx_map.remove(&call_id).map(|entry| entry.1)
     }
 
-    pub fn start_video_capture(&self) -> Result<(), MirrorXError> {
+    pub fn start_video_capture_process(&self) -> Result<(), MirrorXError> {
         let encoder_name = if cfg!(target_os = "macos") {
             "h264_videotoolbox"
         } else if cfg!(target_os = "windows") {
@@ -375,7 +376,7 @@ impl EndPoint {
         Ok(())
     }
 
-    pub fn start_audio_capture(&self) -> Result<(), MirrorXError> {
+    pub async fn start_audio_capture_process(&self) -> Result<(), MirrorXError> {
         let host = cpal::default_host();
 
         let device = host
@@ -399,60 +400,86 @@ impl EndPoint {
             )));
         }
 
+        let sample_format = supported_config_vec[0].sample_format();
+
+        if sample_format != SampleFormat::F32 {
+            return Err(MirrorXError::Other(anyhow::anyhow!(
+                "unsupported audio sample format {}",
+                sample_format.sample_size()
+            )));
+        }
+
         let output_config = supported_config_vec[0]
             .clone()
             .with_sample_rate(SampleRate(48000))
             .config();
 
+        let (inner_err_tx, inner_err_rx) = tokio::sync::oneshot::channel();
+
+        let mut exit_notify = self.exit_notify.subscribe();
+
         let packet_tx = self.packet_tx.clone();
 
-        let input_callback = move |data: &[f32], info: &InputCallbackInfo| unsafe {
-            let size = 4 * data.len(); // f32 => [u8; 4]
-            let mut buffer = Vec::<u8>::with_capacity(size);
-            std::ptr::copy_nonoverlapping(data.as_ptr() as *const u8, buffer.as_mut_ptr(), size);
-            buffer.set_len(size);
+        TOKIO_RUNTIME.spawn(async move {
+            let input_callback = move |data: &[f32], info: &InputCallbackInfo| unsafe {
+                let size = 4 * data.len(); // f32 => [u8; 4]
+                let mut buffer = Vec::<u8>::with_capacity(size);
+                std::ptr::copy_nonoverlapping(
+                    data.as_ptr() as *const u8,
+                    buffer.as_mut_ptr(),
+                    size,
+                );
+                buffer.set_len(size);
 
-            packet_tx.try_send(EndPointMessagePacket {
-                typ: EndPointMessagePacketType::Push,
-                call_id: None,
-                message: EndPointMessage::MediaUnit(MediaUnit {
-                    r#type: MediaType::Audio,
-                    buffer,
-                    timestamp: 0,
-                }),
-            });
-        };
+                let _ = packet_tx.try_send(EndPointMessagePacket {
+                    typ: EndPointMessagePacketType::Push,
+                    call_id: None,
+                    message: EndPointMessage::MediaUnit(MediaUnit {
+                        r#type: MediaType::Audio,
+                        buffer,
+                        timestamp: 0,
+                    }),
+                });
+            };
 
-        let err_callback = |err| error!(?err, "error occurred on the output audio stream");
+            let err_callback = |err| error!(?err, "error occurred on the output input stream");
 
-        let loopback_stream = match supported_config_vec[0].sample_format() {
-            SampleFormat::F32 => {
-                device.build_input_stream(&output_config, input_callback, err_callback)
+            let loopback_stream =
+                match device.build_input_stream(&output_config, input_callback, err_callback) {
+                    Ok(stream) => stream,
+                    Err(err) => {
+                        let _ = inner_err_tx.send(Some(MirrorXError::Other(anyhow::anyhow!(err))));
+                        return;
+                    }
+                };
+
+            if let Err(err) = loopback_stream.play() {
+                let _ = inner_err_tx.send(Some(MirrorXError::Other(anyhow::anyhow!(err))));
+                return;
             }
-            SampleFormat::I16 => {
-                return Err(MirrorXError::Other(anyhow::anyhow!(
-                    "unsupported audio sample format i16"
-                )));
+
+            defer! {
+                let _ = loopback_stream.pause();
+                 info!("audio capture process exit");
             }
-            SampleFormat::U16 => {
-                return Err(MirrorXError::Other(anyhow::anyhow!(
-                    "unsupported audio sample format u16"
-                )));
-            }
+
+            let _ = inner_err_tx.send(None);
+            let _ = exit_notify.recv();
+        });
+
+        match inner_err_rx.await {
+            Ok(inner_err) => match inner_err {
+                Some(err) => Err(err),
+                None => Ok(()),
+            },
+            Err(err) => Err(MirrorXError::Other(anyhow::anyhow!(
+                "receive start_audio_process result failed ({})",
+                err
+            ))),
         }
-        .map_err(|err| MirrorXError::Other(anyhow::anyhow!(err)))?;
-
-        loopback_stream
-            .play()
-            .map_err(|err| MirrorXError::Other(anyhow::anyhow!(err)))?;
-
-        self.audio_stream
-            .set(AudioStream(Arc::new(Mutex::new(loopback_stream))));
-
-        Ok(())
     }
 
-    pub fn start_video_process(
+    pub fn start_video_render_process(
         &self,
         texture_id: i64,
         video_texture_ptr: i64,
@@ -525,7 +552,7 @@ impl EndPoint {
         }
     }
 
-    pub fn start_audio_process(&self) -> Result<(), MirrorXError> {
+    pub async fn start_audio_play_process(&self) -> Result<(), MirrorXError> {
         let host = cpal::default_host();
 
         let device = host
@@ -560,53 +587,93 @@ impl EndPoint {
             )));
         };
 
-        let (audio_consumer_tx, audio_consumer_rx) = crossbeam::channel::bounded::<f32>(48000 * 2);
+        let sample_format = supported_config_vec[0].sample_format();
 
-        let input_callback = move |data: &mut [f32], info: &OutputCallbackInfo| unsafe {
-            data.fill(0.0);
-
-            for sample in data {
-                if let Ok(v) = audio_consumer_rx.try_recv() {
-                    *sample = v
-                } else {
-                    break;
-                }
-            }
-        };
-
-        let err_callback = |err| error!(?err, "error occurred on the output audio stream");
-
-        let loopback_stream = match supported_config_vec[0].sample_format() {
-            SampleFormat::F32 => {
-                device.build_output_stream(&output_config, input_callback, err_callback)
-            }
-            SampleFormat::I16 => {
-                return Err(MirrorXError::Other(anyhow::anyhow!(
-                    "unsupported audio sample format i16"
-                )));
-            }
-            SampleFormat::U16 => {
-                return Err(MirrorXError::Other(anyhow::anyhow!(
-                    "unsupported audio sample format u16"
-                )));
-            }
+        if sample_format != SampleFormat::F32 {
+            return Err(MirrorXError::Other(anyhow::anyhow!(
+                "unsupported audio sample format {}",
+                sample_format.sample_size()
+            )));
         }
-        .map_err(|err| MirrorXError::Other(anyhow::anyhow!(err)))?;
 
-        loopback_stream
-            .play()
-            .map_err(|err| MirrorXError::Other(anyhow::anyhow!(err)))?;
+        let (audio_producer, mut audio_consumer) = rtrb::RingBuffer::<f32>::new(48000 * 2);
 
-        self.audio_decoder_tx.set(audio_consumer_tx);
+        let (inner_err_tx, inner_err_rx) = tokio::sync::oneshot::channel();
 
-        self.audio_stream
-            .set(AudioStream(Arc::new(Mutex::new(loopback_stream))));
+        let mut exit_notify = self.exit_notify.subscribe();
 
-        Ok(())
+        TOKIO_RUNTIME.spawn(async move {
+            let input_callback = move |data: &mut [f32], info: &OutputCallbackInfo| unsafe {
+                data.fill(0.0);
+
+                let mut unread_size = data.len().min(audio_consumer.slots());
+
+                if let Ok(chunk) = audio_consumer.read_chunk(unread_size) {
+                    let (first, second) = chunk.as_slices();
+
+                    if first.len() != 0 {
+                        let read_size = unread_size.min(first.len());
+                        std::ptr::copy_nonoverlapping(
+                            first as *const _ as *const f32,
+                            data as *mut _ as *mut f32,
+                            read_size,
+                        );
+                        unread_size -= read_size;
+                    }
+
+                    if unread_size > 0 && second.len() > 0 {
+                        let read_size = unread_size.min(second.len());
+                        std::ptr::copy_nonoverlapping(
+                            second as *const _ as *const f32,
+                            (data as *mut _ as *mut f32).add(first.len()),
+                            read_size,
+                        );
+                    }
+                }
+            };
+
+            let err_callback = |err| error!(?err, "error occurred on the output audio stream");
+
+            let loopback_stream =
+                match device.build_output_stream(&output_config, input_callback, err_callback) {
+                    Ok(stream) => stream,
+                    Err(err) => {
+                        let _ = inner_err_tx.send(Some(MirrorXError::Other(anyhow::anyhow!(err))));
+                        return;
+                    }
+                };
+
+            if let Err(err) = loopback_stream.play() {
+                let _ = inner_err_tx.send(Some(MirrorXError::Other(anyhow::anyhow!(err))));
+                return;
+            }
+
+            defer! {
+                let _ = loopback_stream.pause();
+                info!("audio play process exit");
+            }
+
+            let _ = inner_err_tx.send(None);
+            let _ = exit_notify.recv();
+        });
+
+        match inner_err_rx.await {
+            Ok(inner_err) => match inner_err {
+                Some(err) => Err(err),
+                None => {
+                    let _ = self.audio_producer.set(Mutex::new(audio_producer));
+                    Ok(())
+                }
+            },
+            Err(err) => Err(MirrorXError::Other(anyhow::anyhow!(
+                "receive start_audio_process result failed ({})",
+                err
+            ))),
+        }
     }
 
     #[inline]
-    pub fn enqueue_media_frame(&self, media_frame: MediaUnit) {
+    pub async fn enqueue_media_frame(&self, media_frame: MediaUnit) {
         match media_frame.r#type {
             MediaType::Video => {
                 if let Some(decoder) = self.video_decoder_tx.get() {
@@ -622,27 +689,47 @@ impl EndPoint {
                     }
                 }
             }
-            MediaType::Audio => {
-                if let Some(decoder) = self.audio_decoder_tx.get() {
-                    for chunk in media_frame.buffer.chunks(4) {
-                        let sample = f32::from_le_bytes(match chunk.try_into() {
-                            Ok(v) => v,
-                            Err(_) => break,
-                        });
+            MediaType::Audio => unsafe {
+                if let Some(mutex) = self.audio_producer.get() {
+                    let mut producer = mutex.lock().await;
+                    let sample_slices = std::slice::from_raw_parts(
+                        media_frame.buffer.as_ptr() as *const _ as *const f32,
+                        media_frame.buffer.len() / 4,
+                    );
 
-                        if let Err(err) = decoder.try_send(sample) {
-                            match err {
-                                crossbeam::channel::TrySendError::Full(_) => {
-                                    warn!("audio_decoder_rx: full")
-                                }
-                                crossbeam::channel::TrySendError::Disconnected(_) => {
-                                    error!("audio_decoder_tx: closed")
-                                }
+                    let mut unwrite_count = sample_slices.len();
+
+                    while unwrite_count > 0 {
+                        let empty_slots = producer.slots();
+                        let request_slots = empty_slots.min(unwrite_count);
+
+                        if let Ok(mut chunk) = producer.write_chunk(request_slots) {
+                            let (first, second) = chunk.as_mut_slices();
+                            // let mut write_count = 0;
+
+                            if first.len() != 0 {
+                                std::ptr::copy_nonoverlapping(
+                                    sample_slices as *const _ as *const f32,
+                                    first as *mut _ as *mut f32,
+                                    first.len(),
+                                );
+                                unwrite_count -= first.len();
                             }
+
+                            if second.len() != 0 {
+                                std::ptr::copy_nonoverlapping(
+                                    (sample_slices as *const _ as *const f32).add(first.len()),
+                                    second as *mut _ as *mut f32,
+                                    second.len(),
+                                );
+                                unwrite_count -= second.len();
+                            }
+
+                            chunk.commit_all();
                         }
                     }
                 }
-            }
+            },
         };
     }
 

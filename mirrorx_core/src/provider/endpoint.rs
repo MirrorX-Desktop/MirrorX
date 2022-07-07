@@ -56,8 +56,12 @@ pub async fn start_media_transmission(
         None => return Err(MirrorXError::EndPointNotFound(remote_device_id)),
     };
 
-    endpoint.start_video_process(texture_id, video_texture_ptr, update_frame_callback_ptr)?;
-    endpoint.start_audio_process()?;
+    endpoint.start_video_render_process(
+        texture_id,
+        video_texture_ptr,
+        update_frame_callback_ptr,
+    )?;
+    endpoint.start_audio_play_process().await?;
 
     let resp = endpoint
         .start_media_transmission(StartMediaTransmissionRequest {

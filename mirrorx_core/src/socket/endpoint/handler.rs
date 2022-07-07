@@ -41,8 +41,8 @@ pub async fn handle_start_media_transmission_request(
     let fps = req.expect_fps;
     let display_id = req.expect_display_id;
 
-    endpoint.start_audio_capture()?;
-    endpoint.start_video_capture()?;
+    endpoint.start_audio_capture_process().await?;
+    endpoint.start_video_capture_process()?;
 
     let reply = StartMediaTransmissionResponse {
         os_name: crate::constants::OS_TYPE
@@ -73,7 +73,7 @@ pub async fn handle_media_transmission(
     // );
 
     if let Some(endpoint) = ENDPOINTS.get(&remote_device_id) {
-        endpoint.enqueue_media_frame(media_frame);
+        endpoint.enqueue_media_frame(media_frame).await;
     };
 
     Ok(())
