@@ -53,7 +53,7 @@ pub async fn start_media_transmission(
         .start_video_render_process(texture_id, video_texture_ptr, update_frame_callback_ptr)
         .await?;
 
-    endpoint.start_audio_capture_process().await?;
+    endpoint.start_audio_play_process().await?;
 
     let resp = endpoint
         .start_media_transmission(StartMediaTransmissionRequest {
