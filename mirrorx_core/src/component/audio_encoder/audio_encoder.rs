@@ -9,17 +9,19 @@ use crate::{
 pub struct AudioEncoder {
     enc: *mut OpusEncoder,
     enc_buffer: [u8; 4000],
+    sample_rate: i32,
+    channels: isize,
 }
 
 unsafe impl Send for AudioEncoder {}
 
 impl AudioEncoder {
-    pub fn new() -> Result<Self, MirrorXError> {
+    pub fn new(sample_rate: i32, channels: isize) -> Result<Self, MirrorXError> {
         unsafe {
             let mut err: isize = 0;
             let enc = opus_encoder_create(
-                48000,
-                2,
+                sample_rate,
+                channels,
                 OPUS_APPLICATION_RESTRICTED_LOWDELAY,
                 &mut err as *mut _,
             );
@@ -33,6 +35,8 @@ impl AudioEncoder {
             Ok(Self {
                 enc,
                 enc_buffer: [0u8; 4000],
+                sample_rate,
+                channels,
             })
         }
     }
@@ -46,7 +50,7 @@ impl AudioEncoder {
             let ret = opus_encode_float(
                 self.enc,
                 pcm.as_ptr(),
-                pcm.len() as isize,
+                (pcm.len() as isize) / self.channels,
                 self.enc_buffer.as_mut_ptr(),
                 self.enc_buffer.len() as i32,
             );

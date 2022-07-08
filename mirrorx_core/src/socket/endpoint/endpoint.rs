@@ -272,11 +272,13 @@ impl EndPoint {
     }
 
     pub async fn start_audio_play_process(&self) -> Result<(), MirrorXError> {
-        let mut audio_decoder = AudioDecoder::new()?;
+        let mut audio_decoder = AudioDecoder::new(48000, 2)?;
         let (audio_frame_tx, audio_frame_rx) = crossbeam::channel::bounded::<AudioFrame>(120);
         let (mut samples_tx, samples_rx) = RingBuffer::new(48000 * 2);
 
         std::thread::spawn(move || loop {
+            info!("begin receive audio");
+
             let audio_frame = match audio_frame_rx.recv() {
                 Ok(audio_frame) => audio_frame,
                 Err(_) => {
@@ -285,14 +287,19 @@ impl EndPoint {
                 }
             };
 
-            let audio_buffer =
-                match audio_decoder.decode(&audio_frame.buffer, audio_frame.frame_size) {
-                    Ok(pcm) => pcm,
-                    Err(err) => {
-                        error!(?err, "audio decoder decode failed");
-                        break;
-                    }
-                };
+            info!("audio decode begin");
+
+            let audio_buffer = match audio_decoder
+                .decode(&audio_frame.buffer, audio_frame.frame_size_per_channel)
+            {
+                Ok(pcm) => pcm,
+                Err(err) => {
+                    error!(?err, "audio decoder decode failed");
+                    break;
+                }
+            };
+
+            info!("audio decode success");
 
             for v in audio_buffer {
                 if let Err(_) = samples_tx.push(v) {
@@ -648,7 +655,7 @@ async fn start_audio_capture_process(
                 .with_sample_rate(SampleRate(48000))
                 .config();
 
-            let mut audio_encoder = match AudioEncoder::new() {
+            let mut audio_encoder = match AudioEncoder::new(48000, 2) {
                 Ok(encoder) => encoder,
                 Err(err) => {
                     let _ = inner_error_tx.send(Some(err));
@@ -656,6 +663,7 @@ async fn start_audio_capture_process(
                 }
             };
 
+            let channels = 2;
             let mut audio_epoch: Option<std::time::Instant> = None;
 
             let input_callback = move |data: &[f32], info: &InputCallbackInfo| unsafe {
@@ -667,14 +675,16 @@ async fn start_audio_capture_process(
                     0
                 };
 
+                info!("audio encoder encode begin");
                 match audio_encoder.encode(data) {
                     Ok(buffer) => {
+                        info!("audio encoder encode end");
                         let _ = packet_tx.try_send(EndPointMessagePacket {
                             typ: EndPointMessagePacketType::Push,
                             call_id: None,
                             message: EndPointMessage::AudioFrame(AudioFrame {
                                 buffer,
-                                frame_size: data.len() as u16,
+                                frame_size_per_channel: (data.len() / channels) as u16,
                                 elpased,
                             }),
                         });
@@ -795,7 +805,7 @@ async fn start_audio_play_process(
                 return;
             }
 
-            let input_callback = move |data: &mut [f32], info: &OutputCallbackInfo| unsafe {
+            let input_callback = move |data: &mut [f32], info: &OutputCallbackInfo| {
                 for b in data {
                     *b = match samples_rx.pop() {
                         Ok(v) => v,
