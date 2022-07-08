@@ -11,7 +11,7 @@ use crate::{
     component::{
         audio_decoder::audio_decoder::AudioDecoder,
         audio_encoder::audio_encoder::AudioEncoder,
-        desktop::{Duplicator, Frame},
+        desktop::Duplicator,
         video_decoder::{DecodedFrame, VideoDecoder},
         video_encoder::VideoEncoder,
     },
@@ -26,7 +26,6 @@ use cpal::{
     traits::{DeviceTrait, HostTrait, StreamTrait},
     InputCallbackInfo, OutputCallbackInfo, SampleFormat, SampleRate, SupportedStreamConfigRange,
 };
-use crossbeam::channel::TrySendError;
 use dashmap::DashMap;
 use futures::{
     stream::{SplitSink, SplitStream},
@@ -34,12 +33,11 @@ use futures::{
 };
 use once_cell::sync::{Lazy, OnceCell};
 use ring::aead::{OpeningKey, SealingKey};
-use rtrb::{Consumer, Producer, RingBuffer};
+use rtrb::{Consumer, RingBuffer};
 use scopeguard::defer;
 use std::{
     collections::HashMap,
     os::raw::c_void,
-    panic::UnwindSafe,
     sync::{
         atomic::{AtomicU16, Ordering},
         Arc,
@@ -49,7 +47,6 @@ use std::{
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::{TcpStream, ToSocketAddrs},
-    sync::Mutex,
     time::timeout,
 };
 use tokio_util::codec::{Framed, LengthDelimitedCodec};
@@ -863,8 +860,8 @@ async fn start_video_capture_process(
 
     let mut video_encoder = VideoEncoder::new(encoder_name, 60, 1920, 1080)?;
 
-    video_encoder.set_opt("profile", "high", 0)?;
-    video_encoder.set_opt("level", "5.2", 0)?;
+    video_encoder.set_opt("profile", "baseline", 0)?;
+    video_encoder.set_opt("level", "3.0", 0)?;
 
     if encoder_name == "libx264" {
         video_encoder.set_opt("preset", "ultrafast", 0)?;
