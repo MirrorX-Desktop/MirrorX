@@ -23,6 +23,9 @@ fn link_ffmpeg() {
 
         println!("cargo:rustc-link-search=../third/dependencies_build/x264/lib");
         println!("cargo:rustc-link-lib=x264");
+
+        println!("cargo:rustc-link-search=../third/dependencies_build/opus/lib");
+        println!("cargo:rustc-link-lib=opus");
     }
 
     #[cfg(target_os = "windows")]

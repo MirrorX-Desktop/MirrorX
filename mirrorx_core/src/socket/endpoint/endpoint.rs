@@ -9,6 +9,8 @@ use super::{
 };
 use crate::{
     component::{
+        audio_decoder::audio_decoder::AudioDecoder,
+        audio_encoder::audio_encoder::AudioEncoder,
         desktop::{Duplicator, Frame},
         video_decoder::{DecodedFrame, VideoDecoder},
         video_encoder::VideoEncoder,
@@ -270,61 +272,31 @@ impl EndPoint {
     }
 
     pub async fn start_audio_play_process(&self) -> Result<(), MirrorXError> {
+        let mut audio_decoder = AudioDecoder::new()?;
         let (audio_frame_tx, audio_frame_rx) = crossbeam::channel::bounded::<AudioFrame>(120);
         let (mut samples_tx, samples_rx) = RingBuffer::new(48000 * 2);
 
-        std::thread::spawn(move || unsafe {
-            loop {
-                let audio_frame = match audio_frame_rx.recv() {
-                    Ok(audio_frame) => audio_frame,
-                    Err(_) => {
-                        info!("audio play process thread exit");
+        std::thread::spawn(move || loop {
+            let audio_frame = match audio_frame_rx.recv() {
+                Ok(audio_frame) => audio_frame,
+                Err(_) => {
+                    info!("audio play process thread exit");
+                    break;
+                }
+            };
+
+            let audio_buffer =
+                match audio_decoder.decode(&audio_frame.buffer, audio_frame.frame_size) {
+                    Ok(pcm) => pcm,
+                    Err(err) => {
+                        error!(?err, "audio decoder decode failed");
                         break;
                     }
                 };
 
-                let sample_slices = std::slice::from_raw_parts(
-                    audio_frame.buffer.as_ptr() as *const _ as *const f32,
-                    audio_frame.buffer.len() / 4,
-                );
-
-                let mut unwrite = sample_slices.len();
-
-                if let Ok(mut chunk) = samples_tx.write_chunk(unwrite.min(samples_tx.slots())) {
-                    let (first, second) = chunk.as_mut_slices();
-
-                    let mut wrote = 0;
-
-                    if first.len() > 0 {
-                        let write_size = unwrite.min(first.len());
-                        std::ptr::copy_nonoverlapping(
-                            sample_slices as *const _ as *const f32,
-                            first as *mut _ as *mut f32,
-                            write_size,
-                        );
-                        wrote += write_size;
-                        unwrite -= write_size;
-                    }
-
-                    if unwrite > 0 && second.len() > 0 {
-                        let write_size = unwrite.min(second.len());
-                        std::ptr::copy_nonoverlapping(
-                            (sample_slices as *const _ as *const f32).add(wrote),
-                            second as *mut _ as *mut f32,
-                            write_size,
-                        );
-                        wrote += write_size;
-                        unwrite -= write_size;
-                    }
-
-                    chunk.commit(wrote);
-                }
-
-                if unwrite > 0 {
-                    warn!(
-                        ?unwrite,
-                        "audio frame queue has no enough capacity, enqueue partitial audio frames"
-                    )
+            for v in audio_buffer {
+                if let Err(_) = samples_tx.push(v) {
+                    break;
                 }
             }
         });
@@ -676,24 +648,41 @@ async fn start_audio_capture_process(
                 .with_sample_rate(SampleRate(48000))
                 .config();
 
-            let input_callback = move |data: &[f32], info: &InputCallbackInfo| unsafe {
-                let size = 4 * data.len(); // f32 => [u8; 4]
-                let mut buffer = Vec::<u8>::with_capacity(size);
-                std::ptr::copy_nonoverlapping(
-                    data.as_ptr() as *const u8,
-                    buffer.as_mut_ptr(),
-                    size,
-                );
-                buffer.set_len(size);
+            let mut audio_encoder = match AudioEncoder::new() {
+                Ok(encoder) => encoder,
+                Err(err) => {
+                    let _ = inner_error_tx.send(Some(err));
+                    return;
+                }
+            };
 
-                let _ = packet_tx.try_send(EndPointMessagePacket {
-                    typ: EndPointMessagePacketType::Push,
-                    call_id: None,
-                    message: EndPointMessage::AudioFrame(AudioFrame {
-                        buffer,
-                        timestamp: 0,
-                    }),
-                });
+            let mut audio_epoch: Option<std::time::Instant> = None;
+
+            let input_callback = move |data: &[f32], info: &InputCallbackInfo| unsafe {
+                let elpased = if let Some(instant) = audio_epoch {
+                    instant.elapsed().as_millis()
+                } else {
+                    let instant = std::time::Instant::now();
+                    audio_epoch = Some(instant);
+                    0
+                };
+
+                match audio_encoder.encode(data) {
+                    Ok(buffer) => {
+                        let _ = packet_tx.try_send(EndPointMessagePacket {
+                            typ: EndPointMessagePacketType::Push,
+                            call_id: None,
+                            message: EndPointMessage::AudioFrame(AudioFrame {
+                                buffer,
+                                frame_size: data.len() as u16,
+                                elpased,
+                            }),
+                        });
+                    }
+                    Err(err) => {
+                        error!(?err, "audio encoder encode failed");
+                    }
+                }
             };
 
             let err_callback = |err| error!(?err, "error occurred on the output input stream");
@@ -807,49 +796,11 @@ async fn start_audio_play_process(
             }
 
             let input_callback = move |data: &mut [f32], info: &OutputCallbackInfo| unsafe {
-                // data.fill(0.0);
-
-                if samples_rx.is_empty() {
-                    return;
-                }
-
-                let mut unread = data.len();
-
-                if let Ok(chunk) = samples_rx.read_chunk(unread.min(samples_rx.slots())) {
-                    let (first, second) = chunk.as_slices();
-
-                    let mut read = 0;
-
-                    if first.len() > 0 {
-                        let read_size = unread.min(first.len());
-                        std::ptr::copy_nonoverlapping(
-                            first as *const _ as *const f32,
-                            data as *mut _ as *mut f32,
-                            read_size,
-                        );
-                        read += read_size;
-                        unread -= read_size;
-                    }
-
-                    if unread > 0 && second.len() > 0 {
-                        let read_size = unread.min(second.len());
-                        std::ptr::copy_nonoverlapping(
-                            second as *const _ as *const f32,
-                            (data as *mut _ as *mut f32).add(read),
-                            read_size,
-                        );
-                        read += read_size;
-                        unread -= read_size;
-                    }
-
-                    chunk.commit(read);
-                }
-
-                if unread > 0 {
-                    warn!(
-                        ?unread,
-                        "audio frame queue require more samples, dequeue partitial audio frames"
-                    )
+                for b in data {
+                    *b = match samples_rx.pop() {
+                        Ok(v) => v,
+                        Err(_) => Default::default(),
+                    };
                 }
             };
 

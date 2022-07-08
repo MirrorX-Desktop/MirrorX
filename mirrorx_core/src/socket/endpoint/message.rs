@@ -78,5 +78,6 @@ pub struct VideoFrame {
 pub struct AudioFrame {
     #[serde(with = "serde_bytes")]
     pub buffer: Vec<u8>,
-    pub timestamp: u64,
+    pub frame_size: u16,
+    pub elpased: u128,
 }
