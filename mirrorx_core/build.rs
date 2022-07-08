@@ -39,5 +39,8 @@ fn link_ffmpeg() {
 
         println!("cargo:rustc-link-search=../third/dependencies/libyuv/Release");
         println!("cargo:rustc-link-lib=yuv");
+
+        println!("cargo:rustc-link-search=../third/dependencies/opus_build/lib");
+        println!("cargo:rustc-link-lib=opus");
     }
 }
