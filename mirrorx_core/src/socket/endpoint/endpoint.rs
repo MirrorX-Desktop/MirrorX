@@ -277,8 +277,6 @@ impl EndPoint {
         let (mut samples_tx, samples_rx) = RingBuffer::new(48000 * 2);
 
         std::thread::spawn(move || loop {
-            info!("begin receive audio");
-
             let audio_frame = match audio_frame_rx.recv() {
                 Ok(audio_frame) => audio_frame,
                 Err(_) => {
@@ -286,8 +284,6 @@ impl EndPoint {
                     break;
                 }
             };
-
-            info!("audio decode begin");
 
             let audio_buffer = match audio_decoder
                 .decode(&audio_frame.buffer, audio_frame.frame_size_per_channel)
@@ -298,8 +294,6 @@ impl EndPoint {
                     break;
                 }
             };
-
-            info!("audio decode success");
 
             for v in audio_buffer {
                 if let Err(_) = samples_tx.push(v) {
@@ -675,10 +669,8 @@ async fn start_audio_capture_process(
                     0
                 };
 
-                info!("audio encoder encode begin");
                 match audio_encoder.encode(data) {
                     Ok(buffer) => {
-                        info!("audio encoder encode end");
                         let _ = packet_tx.try_send(EndPointMessagePacket {
                             typ: EndPointMessagePacketType::Push,
                             call_id: None,

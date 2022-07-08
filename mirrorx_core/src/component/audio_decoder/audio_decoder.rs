@@ -61,7 +61,9 @@ impl AudioDecoder {
                 )));
             }
 
-            let data = self.dec_buffer[0..ret as usize].to_vec();
+            let data = self.dec_buffer
+                [0..(frame_size_per_channel as usize) * (self.channels as usize)]
+                .to_vec();
             return Ok(data);
         }
     }
