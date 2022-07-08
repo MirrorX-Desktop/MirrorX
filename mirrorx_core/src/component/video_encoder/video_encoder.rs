@@ -53,7 +53,6 @@ impl VideoEncoder {
             (*codec_ctx).rc_min_rate = 4000 * 1000;
             (*codec_ctx).rc_buffer_size = 4000 * 1000 * 2;
             (*codec_ctx).has_b_frames = 0;
-            (*codec_ctx).max_b_frames = 0;
             (*codec_ctx).pix_fmt = AV_PIX_FMT_NV12;
             (*codec_ctx).flags |= AV_CODEC_FLAG2_LOCAL_HEADER;
             (*codec_ctx).color_range = AVCOL_RANGE_JPEG;
