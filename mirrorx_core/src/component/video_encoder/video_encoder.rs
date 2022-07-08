@@ -46,16 +46,14 @@ impl VideoEncoder {
 
             (*codec_ctx).width = width;
             (*codec_ctx).height = height;
-            (*codec_ctx).time_base = AVRational {
-                num: 1,
-                den: 1000000,
-            };
+            (*codec_ctx).time_base = AVRational { num: 1, den: fps };
             (*codec_ctx).gop_size = fps * 2;
-            (*codec_ctx).rc_max_rate = 1500 * 1000;
-            (*codec_ctx).rc_buffer_size = 1500 * 1000 * 2;
-            (*codec_ctx).rc_initial_buffer_occupancy = (*codec_ctx).rc_buffer_size * 3 / 4;
-            (*codec_ctx).rc_max_available_vbv_use = 1.2;
+            (*codec_ctx).bit_rate = 4000 * 1000;
+            (*codec_ctx).rc_max_rate = 4000 * 1000;
+            (*codec_ctx).rc_min_rate = 4000 * 1000;
+            (*codec_ctx).rc_buffer_size = 4000 * 1000 * 2;
             (*codec_ctx).has_b_frames = 0;
+            (*codec_ctx).max_b_frames = 0;
             (*codec_ctx).pix_fmt = AV_PIX_FMT_NV12;
             (*codec_ctx).flags |= AV_CODEC_FLAG2_LOCAL_HEADER;
             (*codec_ctx).color_range = AVCOL_RANGE_JPEG;

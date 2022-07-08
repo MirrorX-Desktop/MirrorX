@@ -861,12 +861,12 @@ async fn start_video_capture_process(
     let mut video_encoder = VideoEncoder::new(encoder_name, 60, 1920, 1080)?;
 
     video_encoder.set_opt("profile", "baseline", 0)?;
-    video_encoder.set_opt("level", "3.0", 0)?;
+    video_encoder.set_opt("level", "5.2", 0)?;
 
     if encoder_name == "libx264" {
         video_encoder.set_opt("preset", "ultrafast", 0)?;
         video_encoder.set_opt("tune", "zerolatency", 0)?;
-        video_encoder.set_opt("sc_threshold", "499", 0)?;
+        video_encoder.set_opt("sc_threshold", "0", 0)?;
     } else {
         video_encoder.set_opt("realtime", "1", 0)?;
         video_encoder.set_opt("allow_sw", "0", 0)?;
