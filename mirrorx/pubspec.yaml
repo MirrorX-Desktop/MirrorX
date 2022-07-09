@@ -51,6 +51,7 @@ dependencies:
 
   texture_render:
     path: ../plugins/texture_render
+  card_swiper: ^2.0.4
   
 dev_dependencies:
   flutter_test:

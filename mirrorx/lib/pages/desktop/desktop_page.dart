@@ -1,5 +1,6 @@
 import 'dart:developer';
 
+import 'package:card_swiper/card_swiper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mirrorx/env/langs/tr.dart';
@@ -118,7 +119,7 @@ class _DesktopPageState extends State<DesktopPage> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text("选择显示器"),
-              _buildMonitors(displays),
+              ScreenShotSwiper(displays: displays),
             ],
           ),
           actions: <Widget>[
@@ -144,17 +145,93 @@ class _DesktopPageState extends State<DesktopPage> {
       transitionDuration: kThemeAnimationDuration * 2,
     );
   }
+}
 
-  Widget _buildMonitors(List<DisplayInfo> displays) {
-    return Row(
+class ScreenShotSwiper extends StatefulWidget {
+  const ScreenShotSwiper({Key? key, required this.displays}) : super(key: key);
+
+  final List<DisplayInfo> displays;
+
+  @override
+  _ScreenShotSwiperState createState() => _ScreenShotSwiperState();
+}
+
+class _ScreenShotSwiperState extends State<ScreenShotSwiper> {
+  int _selectedIndex = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    var monitorName = widget.displays[_selectedIndex].name;
+    if (monitorName.isEmpty) {
+      monitorName = "内建显示器";
+    }
+    return Column(
       children: [
-        for (var display in displays)
-          IconButton(
-            icon: Image.memory(display.screenShot),
-            onPressed: () {
-              Navigator.of(context).pop(display.id);
+        SizedBox(
+          width: 500,
+          height: 280,
+          child: Swiper(
+            itemCount: widget.displays.length,
+            pagination: const SwiperPagination(
+              builder: DotSwiperPaginationBuilder(
+                activeColor: Colors.yellow,
+                color: Colors.white,
+              ),
+            ),
+            control: const SwiperControl(
+                iconPrevious: Icons.chevron_left_rounded,
+                iconNext: Icons.chevron_right_rounded,
+                color: Colors.yellow,
+                size: 60,
+                padding: EdgeInsets.zero),
+            indicatorLayout: PageIndicatorLayout.SCALE,
+            onIndexChanged: (index) {
+              setState(() {
+                _selectedIndex = index;
+              });
+            },
+            itemBuilder: (BuildContext context, int index) {
+              final display = widget.displays[index];
+              return Container(
+                padding: const EdgeInsets.symmetric(horizontal: 60),
+                child: Center(
+                  child: MouseRegion(
+                    cursor: SystemMouseCursors.click,
+                    child: GestureDetector(
+                      child: AspectRatio(
+                        aspectRatio: display.width / display.height,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(4),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.2),
+                                blurRadius: 4,
+                                spreadRadius: 1.5,
+                              ),
+                            ],
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(4),
+                            child: Image.memory(
+                              display.screenShot,
+                            ),
+                          ),
+                        ),
+                      ),
+                      onTap: () {
+                        Navigator.pop(context, display.id);
+                      },
+                    ),
+                  ),
+                ),
+              );
             },
           ),
+        ),
+        Text(monitorName),
+        Text(
+            "${widget.displays[_selectedIndex].width}x${widget.displays[_selectedIndex].height}@${widget.displays[_selectedIndex].refreshRate}"),
       ],
     );
   }
