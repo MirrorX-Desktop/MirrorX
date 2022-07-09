@@ -292,9 +292,28 @@ impl EndPoint {
                 }
             };
 
-            for v in audio_buffer {
-                if let Err(_) = samples_tx.push(v) {
-                    break;
+            if let Ok(mut chunk) =
+                samples_tx.write_chunk(audio_buffer.len().min(samples_tx.slots()))
+            {
+                unsafe {
+                    let (first, second) = chunk.as_mut_slices();
+                    let first_copy_length = audio_buffer.len().min(first.len());
+                    std::ptr::copy_nonoverlapping(
+                        audio_buffer.as_ptr(),
+                        first.as_mut_ptr(),
+                        first_copy_length,
+                    );
+
+                    let second_copy_length =
+                        second.len().min(audio_buffer.len() - first_copy_length);
+
+                    if second_copy_length > 0 {
+                        std::ptr::copy_nonoverlapping(
+                            audio_buffer.as_ptr().add(first_copy_length),
+                            second.as_mut_ptr(),
+                            second_copy_length,
+                        );
+                    }
                 }
             }
         });
