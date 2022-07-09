@@ -3,6 +3,7 @@ mod bridge; /* AUTO INJECTED BY flutter_rust_bridge. This line may not be accura
 mod component;
 mod constants;
 mod error;
+/// cbindgen:ignore
 mod ffi;
 mod service;
 mod utility;

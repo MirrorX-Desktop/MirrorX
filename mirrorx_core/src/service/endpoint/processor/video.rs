@@ -16,7 +16,7 @@ pub fn start_video_encode_process(
     width: i32,
     height: i32,
     fps: i32,
-    capture_frame_rx: crossbeam::channel::Receiver<Frame<'static>>,
+    capture_frame_rx: crossbeam::channel::Receiver<Frame>,
     packet_tx: tokio::sync::mpsc::Sender<EndPointMessagePacket>,
 ) -> Result<(), MirrorXError> {
     let encoder_name = if cfg!(target_os = "macos") {

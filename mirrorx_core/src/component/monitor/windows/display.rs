@@ -220,7 +220,7 @@ unsafe fn enum_dxgi_outputs(
                 displays.push(Monitor {
                     id: device_id,
                     name,
-                    refresh_rate: refresh_rate.to_string(),
+                    refresh_rate: (refresh_rate.min(u8::MAX as u32) as u8),
                     width: monitor_resolution_width as u16,
                     height: monitor_resolution_height as u16,
                     is_primary: monitor_is_primary,

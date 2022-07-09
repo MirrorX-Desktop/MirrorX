@@ -37,7 +37,7 @@ pub struct Duplication {
     render_target_view_chrominance: ID3D11RenderTargetView,
 
     // Additional
-    capture_frame_tx: Sender<Frame<'static>>,
+    capture_frame_tx: Sender<Frame>,
     capture_frame_release_notify_tx: Sender<()>,
     capture_frame_release_notify_rx: Receiver<()>,
 }
@@ -46,10 +46,7 @@ unsafe impl Send for Duplication {}
 unsafe impl Sync for Duplication {}
 
 impl Duplication {
-    pub fn new(
-        output_idx: u32,
-        capture_frame_tx: Sender<Frame<'static>>,
-    ) -> anyhow::Result<Duplication> {
+    pub fn new(output_idx: u32, capture_frame_tx: Sender<Frame>) -> anyhow::Result<Duplication> {
         unsafe {
             let current_desktop = OpenInputDesktop(0, false, GENERIC_ALL).map_err(|err| {
                 anyhow::anyhow!(
@@ -271,21 +268,20 @@ impl Duplication {
                 std::slice::from_raw_parts(
                     mapped_resource_lumina.pData as *mut u8,
                     luminance_buffer_size as usize,
-                ),
+                )
+                .to_vec(),
                 mapped_resource_lumina.RowPitch as u16,
                 std::slice::from_raw_parts(
                     mapped_resource_chrominance.pData as *mut u8,
                     chrominance_buffer_size as usize,
-                ),
+                )
+                .to_vec(),
                 mapped_resource_chrominance.RowPitch as u16,
-                self.capture_frame_release_notify_tx.clone(),
             );
 
             if let Err(err) = self.capture_frame_tx.send(capture_frame) {
                 bail!("capture_frame_tx send failed");
             }
-
-            let _ = self.capture_frame_release_notify_rx.recv();
 
             Ok(())
         }

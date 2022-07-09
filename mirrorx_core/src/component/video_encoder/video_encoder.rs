@@ -185,8 +185,6 @@ impl VideoEncoder {
 
             ret = avcodec_send_frame(self.codec_ctx, self.frame);
 
-            frame.notify_frame_release();
-
             if ret != 0 {
                 if ret == AVERROR(libc::EAGAIN) {
                     return Err(MirrorXError::MediaVideoEncoderFrameUnacceptable);

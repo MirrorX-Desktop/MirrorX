@@ -6,26 +6,24 @@ use tokio::time::Instant;
 use super::duplication::Duplication;
 
 pub struct Duplicator {
+    display_id: String,
     fps: i32,
     exit_tx: Sender<()>,
     exit_rx: Receiver<()>,
-    tx: Sender<Frame<'static>>,
+    tx: Sender<Frame>,
 }
 
 impl Duplicator {
-    pub fn new(fps: i32) -> anyhow::Result<(Duplicator, Receiver<Frame<'static>>)> {
+    pub fn new(capture_frame_tx: Sender<Frame>, display_id: &str, fps: u8) -> anyhow::Result<Self> {
         let (exit_tx, exit_rx) = crossbeam::channel::bounded(1);
-        let (tx, rx) = crossbeam::channel::bounded(1);
 
-        Ok((
-            Duplicator {
-                fps,
-                exit_tx,
-                exit_rx,
-                tx,
-            },
-            rx,
-        ))
+        Ok(Duplicator {
+            display_id: display_id.to_string(),
+            fps: fps as i32,
+            exit_tx,
+            exit_rx,
+            tx: capture_frame_tx,
+        })
     }
 
     pub fn start(&self) -> anyhow::Result<()> {

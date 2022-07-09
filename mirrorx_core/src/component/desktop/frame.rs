@@ -1,26 +1,22 @@
-use crossbeam::channel::Sender;
-
 #[derive(Debug)]
-pub struct Frame<'a> {
+pub struct Frame {
     pub width: u16,
     pub height: u16,
-    pub luminance_buffer: &'a [u8],
+    pub luminance_buffer: Vec<u8>,
     pub luminance_stride: u16,
-    pub chrominance_buffer: &'a [u8],
+    pub chrominance_buffer: Vec<u8>,
     pub chrominance_stride: u16,
-    notify_release_tx: Sender<()>,
 }
 
-impl Frame<'_> {
-    pub fn new<'a>(
+impl Frame {
+    pub fn new(
         width: u16,
         height: u16,
-        luminance_buffer: &'a [u8],
+        luminance_buffer: Vec<u8>,
         luminance_stride: u16,
-        chrominance_buffer: &'a [u8],
+        chrominance_buffer: Vec<u8>,
         chrominance_stride: u16,
-        notify_release_tx: Sender<()>,
-    ) -> Frame<'a> {
+    ) -> Frame {
         Frame {
             width,
             height,
@@ -28,7 +24,6 @@ impl Frame<'_> {
             luminance_stride,
             chrominance_buffer,
             chrominance_stride,
-            notify_release_tx,
         }
     }
 
@@ -55,8 +50,4 @@ impl Frame<'_> {
     // pub fn chrominance_stride(&self) -> size_t {
     //     self.chrominance_stride
     // }
-
-    pub fn notify_frame_release(&self) {
-        let _ = self.notify_release_tx.send(());
-    }
 }
