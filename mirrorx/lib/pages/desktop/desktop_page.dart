@@ -71,9 +71,18 @@ class _DesktopPageState extends State<DesktopPage> {
       return Future.error("display Id is null");
     }
 
+    var fps = 30;
+
+    for (var display in resp.displays) {
+      if (display.id == displayID) {
+        fps = display.refreshRate;
+        break;
+      }
+    }
+
     await MirrorXCoreSDK.instance.endpointStartMediaTransmission(
       remoteDeviceId: widget.model.remoteDeviceID,
-      expectFps: 0,
+      expectFps: fps,
       expectDisplayId: displayID,
       textureId: widget.model.textureID,
       videoTexturePtr: widget.model.videoTexturePointer,
