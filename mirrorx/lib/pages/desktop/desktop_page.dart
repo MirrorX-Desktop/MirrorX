@@ -201,6 +201,7 @@ class _ScreenShotSwiperState extends State<ScreenShotSwiper> {
                       child: AspectRatio(
                         aspectRatio: display.width / display.height,
                         child: Container(
+                          padding: const EdgeInsets.only(bottom: 8),
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(4),
                             boxShadow: [
