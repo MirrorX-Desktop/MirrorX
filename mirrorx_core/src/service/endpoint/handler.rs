@@ -5,7 +5,7 @@ use super::{
         StartMediaTransmissionResponse, VideoFrame,
     },
 };
-use crate::{error::MirrorXError, socket::endpoint::message::StartMediaTransmissionRequest};
+use crate::{error::MirrorXError, service::endpoint::message::StartMediaTransmissionRequest};
 
 pub async fn handle_get_display_info_request(
     endpoint: &EndPoint,
@@ -35,11 +35,10 @@ pub async fn handle_start_media_transmission_request(
     endpoint: &EndPoint,
     req: StartMediaTransmissionRequest,
 ) -> Result<StartMediaTransmissionResponse, MirrorXError> {
-    let fps = req.expect_fps;
-    let display_id = req.expect_display_id;
-
-    endpoint.start_audio_capture_process().await?;
-    endpoint.start_video_capture_process().await?;
+    endpoint.start_audio_capture().await?;
+    endpoint
+        .start_video_capture(&req.expect_display_id, req.expect_fps)
+        .await?;
 
     let reply = StartMediaTransmissionResponse {
         os_name: crate::constants::OS_TYPE

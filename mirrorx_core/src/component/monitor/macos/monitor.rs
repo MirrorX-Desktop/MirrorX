@@ -26,7 +26,7 @@ pub fn get_active_monitors() -> Result<Vec<Monitor>, MirrorXError> {
                 displays.push(Monitor {
                     id: display_id.to_string(),
                     name: ns_screen.localizedName(),
-                    refresh_rate: ns_screen.maximumFramesPerSecond().to_string(),
+                    refresh_rate: (ns_screen.maximumFramesPerSecond().min(u8::MAX as isize)) as u8,
                     width: monitor_width as u16,
                     height: monitor_height as u16,
                     is_primary: display_id == main_display_id,

@@ -4,8 +4,7 @@ mod component;
 mod constants;
 mod error;
 mod ffi;
-mod provider;
-mod socket;
+mod service;
 mod utility;
 
 #[cfg(test)]

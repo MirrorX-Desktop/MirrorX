@@ -4,8 +4,8 @@ use super::message::{
     ConnectionKeyExchangeResponse,
 };
 use crate::{
+    api,
     error::MirrorXError,
-    provider,
     utility::{nonce_value::NonceValue, runtime::TOKIO_RUNTIME, serializer::BINCODE_SERIALIZER},
 };
 use anyhow::anyhow;
@@ -24,12 +24,12 @@ pub async fn handle_connect_request(req: ConnectRequest) -> Result<ConnectRespon
 pub async fn handle_connection_key_exchange_request(
     mut req: ConnectionKeyExchangeRequest,
 ) -> Result<ConnectionKeyExchangeResponse, MirrorXError> {
-    let passive_device_id = match provider::config::read_device_id()? {
+    let passive_device_id = match api::config::read_device_id()? {
         Some(id) => id,
         None => return Err(MirrorXError::LocalDeviceIDInvalid),
     };
 
-    let password = match provider::config::read_device_password()? {
+    let password = match api::config::read_device_password()? {
         Some(password) => password,
         None => return Err(MirrorXError::LocalDevicePasswordInvalid),
     };
@@ -185,7 +185,7 @@ pub async fn handle_connection_key_exchange_request(
     let local_device_id = passive_device_id.clone();
 
     TOKIO_RUNTIME.spawn(async move {
-        if let Err(err) = provider::endpoint::connect(
+        if let Err(err) = api::endpoint::connect(
             false,
             local_device_id,
             req.active_device_id.clone(),

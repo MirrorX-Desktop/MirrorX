@@ -3,6 +3,7 @@ import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mirrorx/env/langs/tr.dart';
+import 'package:mirrorx/env/sdk/mirrorx_core.dart';
 import 'package:mirrorx/env/sdk/mirrorx_core_sdk.dart';
 import 'package:mirrorx/model/desktop.dart';
 import 'package:mirrorx/pages/desktop/widgets/desktop_render_box/desktop_render_box.dart';
@@ -10,14 +11,19 @@ import 'package:texture_render/model.dart';
 import 'package:texture_render/texture_render_platform_interface.dart';
 import 'package:flutter/foundation.dart';
 
-class DesktopPage extends StatelessWidget {
+class DesktopPage extends StatefulWidget {
   const DesktopPage({Key? key, required this.model}) : super(key: key);
 
   final DesktopModel model;
 
   @override
+  _DesktopPageState createState() => _DesktopPageState();
+}
+
+class _DesktopPageState extends State<DesktopPage> {
+  @override
   Widget build(BuildContext context) {
-    return model.alreadyPrepared
+    return widget.model.alreadyPrepared
         ? _buildDesktopSurface()
         : FutureBuilder(
             future: prepare(),
@@ -48,7 +54,7 @@ class DesktopPage extends StatelessWidget {
                     );
                   }
 
-                  model.alreadyPrepared = true;
+                  widget.model.alreadyPrepared = true;
                   return _buildDesktopSurface();
               }
             },
@@ -56,16 +62,22 @@ class DesktopPage extends StatelessWidget {
   }
 
   Future<void> prepare() async {
-    await MirrorXCoreSDK.instance
-        .endpointGetDisplayInfo(remoteDeviceId: model.remoteDeviceID);
+    final resp = await MirrorXCoreSDK.instance
+        .endpointGetDisplayInfo(remoteDeviceId: widget.model.remoteDeviceID);
 
-// todo: dialog
+    final displayID = await _popupSelectMonitorDialog(resp.displays);
+
+    if (displayID == null) {
+      return Future.error("display Id is null");
+    }
+
     await MirrorXCoreSDK.instance.endpointStartMediaTransmission(
-      remoteDeviceId: model.remoteDeviceID,
-      displayId: "",
-      textureId: model.textureID,
-      videoTexturePtr: model.videoTexturePointer,
-      updateFrameCallbackPtr: model.updateFrameCallbackPointer,
+      remoteDeviceId: widget.model.remoteDeviceID,
+      expectFps: 0,
+      expectDisplayId: displayID,
+      textureId: widget.model.textureID,
+      videoTexturePtr: widget.model.videoTexturePointer,
+      updateFrameCallbackPtr: widget.model.updateFrameCallbackPointer,
     );
   }
 
@@ -80,9 +92,60 @@ class DesktopPage extends StatelessWidget {
         ),
         Expanded(
           child: DesktopRenderBox(
-            model: model,
+            model: widget.model,
           ),
         )
+      ],
+    );
+  }
+
+  Future<String?> _popupSelectMonitorDialog(List<DisplayInfo> displays) {
+    return showGeneralDialog<String?>(
+      context: context,
+      pageBuilder: (context, animationValue1, animationValue2) {
+        return AlertDialog(
+          title: const Text("MirrorX", textAlign: TextAlign.center),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text("选择显示器"),
+              _buildMonitors(displays),
+            ],
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: Text(Tr.of(context).dialogCancel),
+              onPressed: () {
+                Navigator.of(context).pop(null);
+              },
+            ),
+          ],
+        );
+      },
+      barrierDismissible: false,
+      transitionBuilder: (context, animationValue1, animationValue2, child) {
+        return Transform.scale(
+          scale: animationValue1.value,
+          child: Opacity(
+            opacity: animationValue1.value,
+            child: child,
+          ),
+        );
+      },
+      transitionDuration: kThemeAnimationDuration * 2,
+    );
+  }
+
+  Widget _buildMonitors(List<DisplayInfo> displays) {
+    return Row(
+      children: [
+        for (var display in displays)
+          IconButton(
+            icon: Image.memory(display.screenShot),
+            onPressed: () {
+              Navigator.of(context).pop(display.id);
+            },
+          ),
       ],
     );
   }

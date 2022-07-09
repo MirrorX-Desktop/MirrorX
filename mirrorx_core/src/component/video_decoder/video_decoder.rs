@@ -26,6 +26,8 @@ unsafe impl Sync for VideoDecoder {}
 impl VideoDecoder {
     pub fn new(
         decoder_name: &str,
+        width: i32,
+        height: i32,
         options: HashMap<&str, &str>,
     ) -> Result<VideoDecoder, MirrorXError> {
         let decoder_name_ptr =
@@ -70,8 +72,8 @@ impl VideoDecoder {
                 return Err(MirrorXError::MediaVideoDecoderAllocContextFailed);
             }
 
-            (*decoder.codec_ctx).width = 1920;
-            (*decoder.codec_ctx).height = 1080;
+            (*decoder.codec_ctx).width = width;
+            (*decoder.codec_ctx).height = height;
             (*decoder.codec_ctx).pix_fmt = AV_PIX_FMT_NV12;
             (*decoder.codec_ctx).color_range = AVCOL_RANGE_JPEG;
             (*decoder.codec_ctx).color_primaries = AVCOL_PRI_BT709;

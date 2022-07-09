@@ -1,6 +1,6 @@
 use crate::{
     error::MirrorXError,
-    socket::signaling::{
+    service::signaling::{
         client::{SignalingClient, CURRENT_SIGNALING_CLIENT},
         message::{
             ConnectRequest, ConnectionKeyExchangeActiveDeviceSecret,
@@ -64,8 +64,8 @@ pub fn begin_heartbeat() {
 }
 
 pub async fn handshake() -> Result<(), MirrorXError> {
-    let device_id = crate::provider::config::read_device_id()?;
-    let device_hash = match crate::provider::config::read_device_hash()? {
+    let device_id = crate::api::config::read_device_id()?;
+    let device_hash = match crate::api::config::read_device_hash()? {
         Some(v) => v,
         None => {
             let mut device_hash = [0u8; 512];
@@ -87,9 +87,9 @@ pub async fn handshake() -> Result<(), MirrorXError> {
         )
         .await?;
 
-    crate::provider::config::save_device_id(&resp.device_id)?;
-    crate::provider::config::save_device_hash(&device_hash)?;
-    crate::provider::config::save_device_id_expiration(&resp.expire)?;
+    crate::api::config::save_device_id(&resp.device_id)?;
+    crate::api::config::save_device_hash(&device_hash)?;
+    crate::api::config::save_device_id_expiration(&resp.expire)?;
 
     CURRENT_SIGNALING_CLIENT
         .load()
@@ -115,7 +115,7 @@ pub async fn connection_key_exchange(
     remote_device_id: String,
     password: String,
 ) -> Result<(), MirrorXError> {
-    let local_device_id = match crate::provider::config::read_device_id()? {
+    let local_device_id = match crate::api::config::read_device_id()? {
         Some(id) => id,
         None => return Err(MirrorXError::LocalDeviceIDInvalid),
     };
@@ -302,7 +302,7 @@ pub async fn connection_key_exchange(
     let opening_key =
         ring::aead::OpeningKey::new(unbound_opening_key, NonceValue::new(active_device_nonce));
 
-    crate::provider::endpoint::connect(
+    crate::api::endpoint::connect(
         true,
         local_device_id,
         remote_device_id,

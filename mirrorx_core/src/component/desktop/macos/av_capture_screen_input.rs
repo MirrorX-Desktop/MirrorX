@@ -11,11 +11,11 @@ pub struct AVCaptureScreenInput {
 }
 
 impl AVCaptureScreenInput {
-    pub fn new(display_idx: u32) -> Self {
+    pub fn new(display_id: u32) -> Self {
         let obj: *mut Object = unsafe {
             let cls = class!(AVCaptureScreenInput);
             let obj: *mut Object = msg_send![cls, alloc];
-            msg_send![obj, initWithDisplayID: display_idx]
+            msg_send![obj, initWithDisplayID: display_id]
         };
 
         AVCaptureScreenInput { obj }

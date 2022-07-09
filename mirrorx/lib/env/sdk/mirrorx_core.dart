@@ -62,7 +62,8 @@ abstract class MirrorXCore {
 
   Future<StartMediaTransmissionResponse> endpointStartMediaTransmission(
       {required String remoteDeviceId,
-      required String displayId,
+      required int expectFps,
+      required String expectDisplayId,
       required int textureId,
       required int videoTexturePtr,
       required int updateFrameCallbackPtr,
@@ -74,7 +75,7 @@ abstract class MirrorXCore {
 class DisplayInfo {
   final String id;
   final String name;
-  final String refreshRate;
+  final int refreshRate;
   final int width;
   final int height;
   final bool isPrimary;
@@ -294,7 +295,8 @@ class MirrorXCoreImpl extends FlutterRustBridgeBase<MirrorXCoreWire>
 
   Future<StartMediaTransmissionResponse> endpointStartMediaTransmission(
           {required String remoteDeviceId,
-          required String displayId,
+          required int expectFps,
+          required String expectDisplayId,
           required int textureId,
           required int videoTexturePtr,
           required int updateFrameCallbackPtr,
@@ -303,7 +305,8 @@ class MirrorXCoreImpl extends FlutterRustBridgeBase<MirrorXCoreWire>
         callFfi: (port_) => inner.wire_endpoint_start_media_transmission(
             port_,
             _api2wire_String(remoteDeviceId),
-            _api2wire_String(displayId),
+            _api2wire_u8(expectFps),
+            _api2wire_String(expectDisplayId),
             _api2wire_i64(textureId),
             _api2wire_i64(videoTexturePtr),
             _api2wire_i64(updateFrameCallbackPtr)),
@@ -311,7 +314,8 @@ class MirrorXCoreImpl extends FlutterRustBridgeBase<MirrorXCoreWire>
         constMeta: kEndpointStartMediaTransmissionConstMeta,
         argValues: [
           remoteDeviceId,
-          displayId,
+          expectFps,
+          expectDisplayId,
           textureId,
           videoTexturePtr,
           updateFrameCallbackPtr
@@ -324,7 +328,8 @@ class MirrorXCoreImpl extends FlutterRustBridgeBase<MirrorXCoreWire>
         debugName: "endpoint_start_media_transmission",
         argNames: [
           "remoteDeviceId",
-          "displayId",
+          "expectFps",
+          "expectDisplayId",
           "textureId",
           "videoTexturePtr",
           "updateFrameCallbackPtr"
@@ -378,7 +383,7 @@ DisplayInfo _wire2api_display_info(dynamic raw) {
   return DisplayInfo(
     id: _wire2api_String(arr[0]),
     name: _wire2api_String(arr[1]),
-    refreshRate: _wire2api_String(arr[2]),
+    refreshRate: _wire2api_u8(arr[2]),
     width: _wire2api_u16(arr[3]),
     height: _wire2api_u16(arr[4]),
     isPrimary: _wire2api_bool(arr[5]),
@@ -644,7 +649,8 @@ class MirrorXCoreWire implements FlutterRustBridgeWireBase {
   void wire_endpoint_start_media_transmission(
     int port_,
     ffi.Pointer<wire_uint_8_list> remote_device_id,
-    ffi.Pointer<wire_uint_8_list> display_id,
+    int expect_fps,
+    ffi.Pointer<wire_uint_8_list> expect_display_id,
     int texture_id,
     int video_texture_ptr,
     int update_frame_callback_ptr,
@@ -652,7 +658,8 @@ class MirrorXCoreWire implements FlutterRustBridgeWireBase {
     return _wire_endpoint_start_media_transmission(
       port_,
       remote_device_id,
-      display_id,
+      expect_fps,
+      expect_display_id,
       texture_id,
       video_texture_ptr,
       update_frame_callback_ptr,
@@ -664,13 +671,14 @@ class MirrorXCoreWire implements FlutterRustBridgeWireBase {
           ffi.Void Function(
               ffi.Int64,
               ffi.Pointer<wire_uint_8_list>,
+              ffi.Uint8,
               ffi.Pointer<wire_uint_8_list>,
               ffi.Int64,
               ffi.Int64,
               ffi.Int64)>>('wire_endpoint_start_media_transmission');
   late final _wire_endpoint_start_media_transmission =
       _wire_endpoint_start_media_transmissionPtr.asFunction<
-          void Function(int, ffi.Pointer<wire_uint_8_list>,
+          void Function(int, ffi.Pointer<wire_uint_8_list>, int,
               ffi.Pointer<wire_uint_8_list>, int, int, int)>();
 
   ffi.Pointer<wire_uint_8_list> new_uint_8_list(
@@ -715,7 +723,440 @@ class MirrorXCoreWire implements FlutterRustBridgeWireBase {
           'store_dart_post_cobject');
   late final _store_dart_post_cobject = _store_dart_post_cobjectPtr
       .asFunction<void Function(DartPostCObjectFnType)>();
+
+  int opus_decoder_get_size(
+    int channels,
+  ) {
+    return _opus_decoder_get_size(
+      channels,
+    );
+  }
+
+  late final _opus_decoder_get_sizePtr =
+      _lookup<ffi.NativeFunction<ffi.IntPtr Function(ffi.IntPtr)>>(
+          'opus_decoder_get_size');
+  late final _opus_decoder_get_size =
+      _opus_decoder_get_sizePtr.asFunction<int Function(int)>();
+
+  ffi.Pointer<OpusDecoder> opus_decoder_create(
+    int fs,
+    int channels,
+    ffi.Pointer<ffi.IntPtr> error,
+  ) {
+    return _opus_decoder_create(
+      fs,
+      channels,
+      error,
+    );
+  }
+
+  late final _opus_decoder_createPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Pointer<OpusDecoder> Function(ffi.Int32, ffi.IntPtr,
+              ffi.Pointer<ffi.IntPtr>)>>('opus_decoder_create');
+  late final _opus_decoder_create = _opus_decoder_createPtr.asFunction<
+      ffi.Pointer<OpusDecoder> Function(int, int, ffi.Pointer<ffi.IntPtr>)>();
+
+  int opus_decoder_init(
+    ffi.Pointer<OpusDecoder> st,
+    int fs,
+    int channels,
+  ) {
+    return _opus_decoder_init(
+      st,
+      fs,
+      channels,
+    );
+  }
+
+  late final _opus_decoder_initPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.IntPtr Function(ffi.Pointer<OpusDecoder>, ffi.Int32,
+              ffi.IntPtr)>>('opus_decoder_init');
+  late final _opus_decoder_init = _opus_decoder_initPtr
+      .asFunction<int Function(ffi.Pointer<OpusDecoder>, int, int)>();
+
+  int opus_decode(
+    ffi.Pointer<OpusDecoder> st,
+    ffi.Pointer<ffi.Uint8> data,
+    int len,
+    ffi.Pointer<ffi.Int16> pcm,
+    int frame_size,
+    int decodec_fec,
+  ) {
+    return _opus_decode(
+      st,
+      data,
+      len,
+      pcm,
+      frame_size,
+      decodec_fec,
+    );
+  }
+
+  late final _opus_decodePtr = _lookup<
+      ffi.NativeFunction<
+          ffi.IntPtr Function(
+              ffi.Pointer<OpusDecoder>,
+              ffi.Pointer<ffi.Uint8>,
+              ffi.Int32,
+              ffi.Pointer<ffi.Int16>,
+              ffi.IntPtr,
+              ffi.IntPtr)>>('opus_decode');
+  late final _opus_decode = _opus_decodePtr.asFunction<
+      int Function(ffi.Pointer<OpusDecoder>, ffi.Pointer<ffi.Uint8>, int,
+          ffi.Pointer<ffi.Int16>, int, int)>();
+
+  int opus_decode_float(
+    ffi.Pointer<OpusDecoder> st,
+    ffi.Pointer<ffi.Uint8> data,
+    int len,
+    ffi.Pointer<ffi.Float> pcm,
+    int frame_size,
+    int decodec_fec,
+  ) {
+    return _opus_decode_float(
+      st,
+      data,
+      len,
+      pcm,
+      frame_size,
+      decodec_fec,
+    );
+  }
+
+  late final _opus_decode_floatPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.IntPtr Function(
+              ffi.Pointer<OpusDecoder>,
+              ffi.Pointer<ffi.Uint8>,
+              ffi.Int32,
+              ffi.Pointer<ffi.Float>,
+              ffi.IntPtr,
+              ffi.IntPtr)>>('opus_decode_float');
+  late final _opus_decode_float = _opus_decode_floatPtr.asFunction<
+      int Function(ffi.Pointer<OpusDecoder>, ffi.Pointer<ffi.Uint8>, int,
+          ffi.Pointer<ffi.Float>, int, int)>();
+
+  void opus_decoder_destroy(
+    ffi.Pointer<OpusDecoder> st,
+  ) {
+    return _opus_decoder_destroy(
+      st,
+    );
+  }
+
+  late final _opus_decoder_destroyPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<OpusDecoder>)>>(
+          'opus_decoder_destroy');
+  late final _opus_decoder_destroy = _opus_decoder_destroyPtr
+      .asFunction<void Function(ffi.Pointer<OpusDecoder>)>();
+
+  int opus_packet_parse(
+    ffi.Pointer<ffi.Uint8> data,
+    int len,
+    ffi.Pointer<ffi.Uint8> out_toc,
+    ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Uint8>>> frames,
+    ffi.Pointer<ffi.Pointer<ffi.Int16>> size,
+    ffi.Pointer<ffi.IntPtr> payload_offset,
+  ) {
+    return _opus_packet_parse(
+      data,
+      len,
+      out_toc,
+      frames,
+      size,
+      payload_offset,
+    );
+  }
+
+  late final _opus_packet_parsePtr = _lookup<
+      ffi.NativeFunction<
+          ffi.IntPtr Function(
+              ffi.Pointer<ffi.Uint8>,
+              ffi.Int32,
+              ffi.Pointer<ffi.Uint8>,
+              ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Uint8>>>,
+              ffi.Pointer<ffi.Pointer<ffi.Int16>>,
+              ffi.Pointer<ffi.IntPtr>)>>('opus_packet_parse');
+  late final _opus_packet_parse = _opus_packet_parsePtr.asFunction<
+      int Function(
+          ffi.Pointer<ffi.Uint8>,
+          int,
+          ffi.Pointer<ffi.Uint8>,
+          ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Uint8>>>,
+          ffi.Pointer<ffi.Pointer<ffi.Int16>>,
+          ffi.Pointer<ffi.IntPtr>)>();
+
+  int opus_packet_get_bandwidth(
+    ffi.Pointer<ffi.Uint8> data,
+  ) {
+    return _opus_packet_get_bandwidth(
+      data,
+    );
+  }
+
+  late final _opus_packet_get_bandwidthPtr =
+      _lookup<ffi.NativeFunction<ffi.IntPtr Function(ffi.Pointer<ffi.Uint8>)>>(
+          'opus_packet_get_bandwidth');
+  late final _opus_packet_get_bandwidth = _opus_packet_get_bandwidthPtr
+      .asFunction<int Function(ffi.Pointer<ffi.Uint8>)>();
+
+  int opus_packet_get_samples_per_frame(
+    ffi.Pointer<ffi.Uint8> data,
+    int fs,
+  ) {
+    return _opus_packet_get_samples_per_frame(
+      data,
+      fs,
+    );
+  }
+
+  late final _opus_packet_get_samples_per_framePtr = _lookup<
+      ffi.NativeFunction<
+          ffi.IntPtr Function(ffi.Pointer<ffi.Uint8>,
+              ffi.Int32)>>('opus_packet_get_samples_per_frame');
+  late final _opus_packet_get_samples_per_frame =
+      _opus_packet_get_samples_per_framePtr
+          .asFunction<int Function(ffi.Pointer<ffi.Uint8>, int)>();
+
+  int opus_packet_get_nb_channels(
+    ffi.Pointer<ffi.Uint8> data,
+  ) {
+    return _opus_packet_get_nb_channels(
+      data,
+    );
+  }
+
+  late final _opus_packet_get_nb_channelsPtr =
+      _lookup<ffi.NativeFunction<ffi.IntPtr Function(ffi.Pointer<ffi.Uint8>)>>(
+          'opus_packet_get_nb_channels');
+  late final _opus_packet_get_nb_channels = _opus_packet_get_nb_channelsPtr
+      .asFunction<int Function(ffi.Pointer<ffi.Uint8>)>();
+
+  int opus_packet_get_nb_frames(
+    ffi.Pointer<ffi.Uint8> packet,
+    int len,
+  ) {
+    return _opus_packet_get_nb_frames(
+      packet,
+      len,
+    );
+  }
+
+  late final _opus_packet_get_nb_framesPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.IntPtr Function(
+              ffi.Pointer<ffi.Uint8>, ffi.Int32)>>('opus_packet_get_nb_frames');
+  late final _opus_packet_get_nb_frames = _opus_packet_get_nb_framesPtr
+      .asFunction<int Function(ffi.Pointer<ffi.Uint8>, int)>();
+
+  int opus_packet_get_nb_samples(
+    ffi.Pointer<ffi.Uint8> packet,
+    int len,
+    int fs,
+  ) {
+    return _opus_packet_get_nb_samples(
+      packet,
+      len,
+      fs,
+    );
+  }
+
+  late final _opus_packet_get_nb_samplesPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.IntPtr Function(ffi.Pointer<ffi.Uint8>, ffi.Int32,
+              ffi.Int32)>>('opus_packet_get_nb_samples');
+  late final _opus_packet_get_nb_samples = _opus_packet_get_nb_samplesPtr
+      .asFunction<int Function(ffi.Pointer<ffi.Uint8>, int, int)>();
+
+  int opus_decoder_get_nb_samples(
+    ffi.Pointer<OpusDecoder> dec,
+    ffi.Pointer<ffi.Uint8> packet,
+    int len,
+  ) {
+    return _opus_decoder_get_nb_samples(
+      dec,
+      packet,
+      len,
+    );
+  }
+
+  late final _opus_decoder_get_nb_samplesPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.IntPtr Function(ffi.Pointer<OpusDecoder>, ffi.Pointer<ffi.Uint8>,
+              ffi.Int32)>>('opus_decoder_get_nb_samples');
+  late final _opus_decoder_get_nb_samples =
+      _opus_decoder_get_nb_samplesPtr.asFunction<
+          int Function(
+              ffi.Pointer<OpusDecoder>, ffi.Pointer<ffi.Uint8>, int)>();
+
+  void opus_pcm_soft_clip(
+    ffi.Pointer<ffi.Float> pcm,
+    int frame_size,
+    int channels,
+    ffi.Pointer<ffi.Float> softclip_mem,
+  ) {
+    return _opus_pcm_soft_clip(
+      pcm,
+      frame_size,
+      channels,
+      softclip_mem,
+    );
+  }
+
+  late final _opus_pcm_soft_clipPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Void Function(ffi.Pointer<ffi.Float>, ffi.IntPtr, ffi.IntPtr,
+              ffi.Pointer<ffi.Float>)>>('opus_pcm_soft_clip');
+  late final _opus_pcm_soft_clip = _opus_pcm_soft_clipPtr.asFunction<
+      void Function(
+          ffi.Pointer<ffi.Float>, int, int, ffi.Pointer<ffi.Float>)>();
+
+  int opus_encoder_get_size(
+    int channels,
+  ) {
+    return _opus_encoder_get_size(
+      channels,
+    );
+  }
+
+  late final _opus_encoder_get_sizePtr =
+      _lookup<ffi.NativeFunction<ffi.IntPtr Function(ffi.IntPtr)>>(
+          'opus_encoder_get_size');
+  late final _opus_encoder_get_size =
+      _opus_encoder_get_sizePtr.asFunction<int Function(int)>();
+
+  ffi.Pointer<OpusEncoder> opus_encoder_create(
+    int fs,
+    int channels,
+    int application,
+    ffi.Pointer<ffi.IntPtr> error,
+  ) {
+    return _opus_encoder_create(
+      fs,
+      channels,
+      application,
+      error,
+    );
+  }
+
+  late final _opus_encoder_createPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Pointer<OpusEncoder> Function(ffi.Int32, ffi.IntPtr, ffi.IntPtr,
+              ffi.Pointer<ffi.IntPtr>)>>('opus_encoder_create');
+  late final _opus_encoder_create = _opus_encoder_createPtr.asFunction<
+      ffi.Pointer<OpusEncoder> Function(
+          int, int, int, ffi.Pointer<ffi.IntPtr>)>();
+
+  int opus_encoder_init(
+    ffi.Pointer<OpusEncoder> st,
+    int fs,
+    int channels,
+    int application,
+  ) {
+    return _opus_encoder_init(
+      st,
+      fs,
+      channels,
+      application,
+    );
+  }
+
+  late final _opus_encoder_initPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.IntPtr Function(ffi.Pointer<OpusEncoder>, ffi.Int32, ffi.IntPtr,
+              ffi.IntPtr)>>('opus_encoder_init');
+  late final _opus_encoder_init = _opus_encoder_initPtr
+      .asFunction<int Function(ffi.Pointer<OpusEncoder>, int, int, int)>();
+
+  int opus_encode(
+    ffi.Pointer<OpusEncoder> st,
+    ffi.Pointer<ffi.Int16> pcm,
+    int frame_size,
+    ffi.Pointer<ffi.Uint8> data,
+    int max_data_bytes,
+  ) {
+    return _opus_encode(
+      st,
+      pcm,
+      frame_size,
+      data,
+      max_data_bytes,
+    );
+  }
+
+  late final _opus_encodePtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Int32 Function(ffi.Pointer<OpusEncoder>, ffi.Pointer<ffi.Int16>,
+              ffi.IntPtr, ffi.Pointer<ffi.Uint8>, ffi.Int32)>>('opus_encode');
+  late final _opus_encode = _opus_encodePtr.asFunction<
+      int Function(ffi.Pointer<OpusEncoder>, ffi.Pointer<ffi.Int16>, int,
+          ffi.Pointer<ffi.Uint8>, int)>();
+
+  int opus_encode_float(
+    ffi.Pointer<OpusEncoder> st,
+    ffi.Pointer<ffi.Float> pcm,
+    int frame_size,
+    ffi.Pointer<ffi.Uint8> data,
+    int max_data_bytes,
+  ) {
+    return _opus_encode_float(
+      st,
+      pcm,
+      frame_size,
+      data,
+      max_data_bytes,
+    );
+  }
+
+  late final _opus_encode_floatPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Int32 Function(
+              ffi.Pointer<OpusEncoder>,
+              ffi.Pointer<ffi.Float>,
+              ffi.IntPtr,
+              ffi.Pointer<ffi.Uint8>,
+              ffi.Int32)>>('opus_encode_float');
+  late final _opus_encode_float = _opus_encode_floatPtr.asFunction<
+      int Function(ffi.Pointer<OpusEncoder>, ffi.Pointer<ffi.Float>, int,
+          ffi.Pointer<ffi.Uint8>, int)>();
+
+  void opus_encoder_destroy(
+    ffi.Pointer<OpusEncoder> st,
+  ) {
+    return _opus_encoder_destroy(
+      st,
+    );
+  }
+
+  late final _opus_encoder_destroyPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<OpusEncoder>)>>(
+          'opus_encoder_destroy');
+  late final _opus_encoder_destroy = _opus_encoder_destroyPtr
+      .asFunction<void Function(ffi.Pointer<OpusEncoder>)>();
+
+  int opus_encoder_ctl(
+    ffi.Pointer<OpusEncoder> st,
+    int request,
+  ) {
+    return _opus_encoder_ctl(
+      st,
+      request,
+    );
+  }
+
+  late final _opus_encoder_ctlPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.IntPtr Function(
+              ffi.Pointer<OpusEncoder>, ffi.IntPtr)>>('opus_encoder_ctl');
+  late final _opus_encoder_ctl = _opus_encoder_ctlPtr
+      .asFunction<int Function(ffi.Pointer<OpusEncoder>, int)>();
 }
+
+class OpusDecoder extends ffi.Opaque {}
+
+class OpusEncoder extends ffi.Opaque {}
 
 class wire_uint_8_list extends ffi.Struct {
   external ffi.Pointer<ffi.Uint8> ptr;
@@ -727,3 +1168,9 @@ class wire_uint_8_list extends ffi.Struct {
 typedef DartPostCObjectFnType = ffi.Pointer<
     ffi.NativeFunction<ffi.Uint8 Function(DartPort, ffi.Pointer<ffi.Void>)>>;
 typedef DartPort = ffi.Int64;
+
+const int OPUS_APPLICATION_VOIP = 2048;
+
+const int OPUS_APPLICATION_AUDIO = 2049;
+
+const int OPUS_APPLICATION_RESTRICTED_LOWDELAY = 2051;

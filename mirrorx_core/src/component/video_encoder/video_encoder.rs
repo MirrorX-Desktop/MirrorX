@@ -12,7 +12,6 @@ pub struct VideoEncoder {
     codec_ctx: *mut AVCodecContext,
     frame: *mut AVFrame,
     packet: *mut AVPacket,
-    output_tx: OnceCell<Sender<(Vec<u8>, u64)>>,
 }
 
 unsafe impl Send for VideoEncoder {}
@@ -60,12 +59,16 @@ impl VideoEncoder {
             (*codec_ctx).color_trc = AVCOL_TRC_BT709;
             (*codec_ctx).colorspace = AVCOL_SPC_BT709;
 
+            let ret = avcodec_open2(codec_ctx, codec, std::ptr::null_mut());
+            if ret != 0 {
+                return Err(MirrorXError::MediaVideoEncoderOpenFailed(ret));
+            }
+
             Ok(VideoEncoder {
                 codec,
                 codec_ctx,
                 frame: std::ptr::null_mut(),
                 packet: std::ptr::null_mut(),
-                output_tx: OnceCell::new(),
             })
         }
     }
@@ -110,24 +113,10 @@ impl VideoEncoder {
         }
     }
 
-    pub fn open(&mut self) -> Result<Receiver<(Vec<u8>, u64)>, MirrorXError> {
-        if self.output_tx.get().is_some() {
-            return Err(MirrorXError::MediaVideoEncoderAlreadyOpened);
-        }
-
-        unsafe {
-            let ret = avcodec_open2(self.codec_ctx, self.codec, std::ptr::null_mut());
-            if ret != 0 {
-                return Err(MirrorXError::MediaVideoEncoderOpenFailed(ret));
-            }
-
-            let (tx, rx) = bounded::<(Vec<u8>, u64)>(600);
-            self.output_tx.set(tx);
-            Ok(rx)
-        }
-    }
-
-    pub fn encode(&mut self, frame: crate::component::desktop::Frame) -> Result<(), MirrorXError> {
+    pub fn encode(
+        &mut self,
+        frame: crate::component::desktop::Frame,
+    ) -> Result<Vec<Vec<u8>>, MirrorXError> {
         unsafe {
             let mut ret: i32;
 
@@ -207,36 +196,22 @@ impl VideoEncoder {
                 return Err(MirrorXError::MediaVideoEncoderSendFrameFailed(ret));
             }
 
-            let mut err = None;
-            while ret >= 0 && err.is_none() {
+            let mut frames = Vec::new();
+            loop {
                 ret = avcodec_receive_packet(self.codec_ctx, self.packet);
-                if ret < 0 {
-                    break;
+                if ret == AVERROR(libc::EAGAIN) || ret == AVERROR_EOF {
+                    return Ok(frames);
+                } else if ret < 0 {
+                    return Err(MirrorXError::MediaVideoDecoderReceiveFrameFailed(ret));
                 }
 
-                if let Some(tx) = self.output_tx.get() {
-                    let frame_buffer = std::slice::from_raw_parts(
-                        (*self.packet).data,
-                        (*self.packet).size as usize,
-                    )
-                    .to_vec();
+                let frame_buffer =
+                    std::slice::from_raw_parts((*self.packet).data, (*self.packet).size as usize)
+                        .to_vec();
 
-                    if let Err(_) = tx.try_send((frame_buffer, 0)) {
-                        err = Some(MirrorXError::MediaVideoEncoderOutputTxSendFailed);
-                    }
-                }
+                frames.push(frame_buffer);
 
                 av_packet_unref(self.packet);
-            }
-
-            if ret == AVERROR(libc::EAGAIN) || ret == AVERROR_EOF {
-                Ok(())
-            } else if ret < 0 {
-                Err(MirrorXError::MediaVideoEncoderReceivePacketFailed(ret))
-            } else if let Some(err) = err {
-                Err(err)
-            } else {
-                Ok(())
             }
         }
     }

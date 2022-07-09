@@ -156,7 +156,6 @@ class _RemoteConnectFieldState extends State<RemoteConnectField> {
     PageManagerCubit pageManagerCubit,
     DesktopManagerCubit desktopManagerCubit,
   ) async {
-    // 6034116984
     try {
       final remoteDeviceID =
           _textControllers.map((e) => e.text).toList().join();

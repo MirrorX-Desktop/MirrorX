@@ -1,6 +1,6 @@
 use crate::{
     error::MirrorXError,
-    socket::endpoint::message::{
+    service::endpoint::message::{
         GetDisplayInfoRequest, GetDisplayInfoResponse, StartMediaTransmissionRequest,
         StartMediaTransmissionResponse,
     },
@@ -15,7 +15,7 @@ pub async fn connect(
     sealing_key: SealingKey<NonceValue>,
     opening_key: OpeningKey<NonceValue>,
 ) -> Result<(), MirrorXError> {
-    crate::socket::endpoint::connect(
+    crate::service::endpoint::connect(
         "192.168.0.101:28001",
         is_active_side,
         local_device_id,
@@ -29,7 +29,7 @@ pub async fn connect(
 pub async fn get_display_info(
     remote_device_id: String,
 ) -> Result<GetDisplayInfoResponse, MirrorXError> {
-    let endpoint = match crate::socket::endpoint::ENDPOINTS.get(&remote_device_id) {
+    let endpoint = match crate::service::endpoint::ENDPOINTS.get(&remote_device_id) {
         Some(pair) => pair,
         None => return Err(MirrorXError::EndPointNotFound(remote_device_id)),
     };
@@ -39,28 +39,35 @@ pub async fn get_display_info(
 
 pub async fn start_media_transmission(
     remote_device_id: String,
-    display_id: String,
+    expect_fps: u8,
+    expect_display_id: String,
     texture_id: i64,
     video_texture_ptr: i64,
     update_frame_callback_ptr: i64,
 ) -> Result<StartMediaTransmissionResponse, MirrorXError> {
-    let endpoint = match crate::socket::endpoint::ENDPOINTS.get(&remote_device_id) {
+    let endpoint = match crate::service::endpoint::ENDPOINTS.get(&remote_device_id) {
         Some(pair) => pair,
         None => return Err(MirrorXError::EndPointNotFound(remote_device_id)),
     };
 
-    endpoint
-        .start_video_render_process(texture_id, video_texture_ptr, update_frame_callback_ptr)
-        .await?;
-
-    endpoint.start_audio_play_process().await?;
-
     let resp = endpoint
         .start_media_transmission(StartMediaTransmissionRequest {
-            expect_fps: 60,
-            expect_display_id: display_id,
+            expect_fps,
+            expect_display_id,
         })
         .await?;
+
+    endpoint
+        .start_video_render(
+            resp.screen_width as i32,
+            resp.screen_height as i32,
+            texture_id,
+            video_texture_ptr,
+            update_frame_callback_ptr,
+        )
+        .await?;
+
+    endpoint.start_audio_play().await?;
 
     Ok(resp)
 }
