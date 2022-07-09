@@ -29,25 +29,6 @@ impl AVCaptureVideoDataOutputCallback {
             let obj = &mut *(self as *mut _ as *mut Object);
             let capture_frame_tx_ptr = Box::into_raw(Box::new(capture_frame_tx));
             let _: () = msg_send![obj, setCaptureFrameTx: capture_frame_tx_ptr as *mut c_void];
-
-            let (capture_frame_release_notify_tx, capture_frame_release_notify_rx) =
-                crossbeam::channel::bounded::<()>(1);
-
-            let capture_frame_release_notify_tx_ptr =
-                Box::into_raw(Box::new(capture_frame_release_notify_tx));
-
-            let capture_frame_release_notify_rx_ptr =
-                Box::into_raw(Box::new(capture_frame_release_notify_rx));
-
-            let _: () = msg_send![
-                obj,
-                setCaptureFrameReleaseNotifyTx: capture_frame_release_notify_tx_ptr as *mut c_void
-            ];
-
-            let _: () = msg_send![
-                obj,
-                setCaptureFrameReleaseNotifyRx: capture_frame_release_notify_rx_ptr as *mut c_void
-            ];
         }
     }
 }
@@ -62,8 +43,6 @@ impl objc_foundation::INSObject for AVCaptureVideoDataOutputCallback {
 
             // ivars
             add_ivar_capture_frame_tx(&mut cls);
-            add_ivar_capture_frame_release_notify_tx(&mut cls);
-            add_ivar_capture_frame_release_notify_rx(&mut cls);
 
             // methods
             add_method_capture_output_callback(&mut cls);
@@ -90,18 +69,6 @@ impl Drop for AVCaptureVideoDataOutputCallback {
             let capture_frame_tx_ptr: *mut c_void = msg_send![obj, captureFrameTx];
             if !capture_frame_tx_ptr.is_null() {
                 Box::from_raw(capture_frame_tx_ptr as *mut Sender<Frame>);
-            }
-
-            let capture_frame_release_notify_tx_ptr: *mut c_void =
-                msg_send![obj, captureFrameReleaseNotifyTx];
-            if !capture_frame_release_notify_tx_ptr.is_null() {
-                Box::from_raw(capture_frame_release_notify_tx_ptr as *mut Sender<()>);
-            }
-
-            let capture_frame_release_notify_rx_ptr: *mut c_void =
-                msg_send![obj, captureFrameReleaseNotifyRx];
-            if !capture_frame_release_notify_rx_ptr.is_null() {
-                Box::from_raw(capture_frame_release_notify_rx_ptr as *mut Receiver<()>);
             }
 
             msg_send![obj, release]
@@ -133,82 +100,6 @@ unsafe fn add_ivar_capture_frame_tx(cls: &mut ClassDecl) {
     let get_capture_frame_tx_fn: extern "C" fn(&Object, Sel) -> *mut c_void = get_capture_frame_tx;
 
     cls.add_method(sel!(captureFrameTx), get_capture_frame_tx_fn);
-}
-
-unsafe fn add_ivar_capture_frame_release_notify_tx(cls: &mut ClassDecl) {
-    // ivar
-
-    cls.add_ivar::<*mut c_void>("_capture_frame_release_notify_tx");
-
-    // capture_frame_release_notify_tx setter
-
-    extern "C" fn set_capture_frame_release_notify_tx(
-        this: &mut Object,
-        _cmd: Sel,
-        tx_ptr: *mut c_void,
-    ) {
-        unsafe { this.set_ivar("_capture_frame_release_notify_tx", tx_ptr) }
-    }
-
-    let set_capture_frame_release_notify_tx_fn: extern "C" fn(&mut Object, Sel, *mut c_void) =
-        set_capture_frame_release_notify_tx;
-
-    cls.add_method(
-        sel!(setCaptureFrameReleaseNotifyTx:),
-        set_capture_frame_release_notify_tx_fn,
-    );
-
-    // capture_frame_release_notify_tx getter
-
-    extern "C" fn get_capture_frame_release_notify_tx(this: &Object, _cmd: Sel) -> *mut c_void {
-        unsafe { *this.get_ivar("_capture_frame_release_notify_tx") }
-    }
-
-    let get_capture_frame_release_notify_tx_fn: extern "C" fn(&Object, Sel) -> *mut c_void =
-        get_capture_frame_release_notify_tx;
-
-    cls.add_method(
-        sel!(captureFrameReleaseNotifyTx),
-        get_capture_frame_release_notify_tx_fn,
-    );
-}
-
-unsafe fn add_ivar_capture_frame_release_notify_rx(cls: &mut ClassDecl) {
-    // ivar
-
-    cls.add_ivar::<*mut c_void>("_capture_frame_release_notify_rx");
-
-    // capture_frame_release_notify_rx setter
-
-    extern "C" fn set_capture_frame_release_notify_rx(
-        this: &mut Object,
-        _cmd: Sel,
-        tx_ptr: *mut c_void,
-    ) {
-        unsafe { this.set_ivar("_capture_frame_release_notify_rx", tx_ptr) }
-    }
-
-    let set_capture_frame_release_notify_rx_fn: extern "C" fn(&mut Object, Sel, *mut c_void) =
-        set_capture_frame_release_notify_rx;
-
-    cls.add_method(
-        sel!(setCaptureFrameReleaseNotifyRx:),
-        set_capture_frame_release_notify_rx_fn,
-    );
-
-    // capture_frame_release_notify_rx getter
-
-    extern "C" fn get_capture_frame_release_notify_rx(this: &Object, _cmd: Sel) -> *mut c_void {
-        unsafe { *this.get_ivar("_capture_frame_release_notify_rx") }
-    }
-
-    let get_capture_frame_release_notify_rx_fn: extern "C" fn(&Object, Sel) -> *mut c_void =
-        get_capture_frame_release_notify_rx;
-
-    cls.add_method(
-        sel!(captureFrameReleaseNotifyRx),
-        get_capture_frame_release_notify_rx_fn,
-    );
 }
 
 unsafe fn add_method_capture_output_callback(cls: &mut ClassDecl) {
@@ -248,35 +139,6 @@ unsafe fn add_method_capture_output_callback(cls: &mut ClassDecl) {
 
             let capture_frame_tx =
                 std::mem::transmute::<*mut c_void, &mut Sender<Frame>>(capture_frame_tx_ptr);
-
-            // capture_frame_release_notify_tx
-
-            let capture_frame_release_notify_tx_ptr: *mut c_void =
-                msg_send![this, captureFrameReleaseNotifyTx];
-
-            if capture_frame_release_notify_tx_ptr.is_null() {
-                error!("capture_frame_release_notify_tx_ptr is null");
-                return;
-            }
-
-            let capture_frame_release_notify_tx = std::mem::transmute::<*mut c_void, &mut Sender<()>>(
-                capture_frame_release_notify_tx_ptr,
-            );
-
-            // capture_frame_release_notify_rx
-
-            let capture_frame_release_notify_rx_ptr: *mut c_void =
-                msg_send![this, captureFrameReleaseNotifyRx];
-
-            if capture_frame_release_notify_rx_ptr.is_null() {
-                error!("capture_frame_release_notify_tx_ptr is null");
-                return;
-            }
-
-            let capture_frame_release_notify_rx = std::mem::transmute::<
-                *mut c_void,
-                &mut Receiver<()>,
-            >(capture_frame_release_notify_rx_ptr);
 
             let mut timing_info: CMSampleTimingInfo = std::mem::zeroed();
             let ret = CMSampleBufferGetSampleTimingInfo(didOutputSampleBuffer, 0, &mut timing_info);
@@ -332,13 +194,15 @@ unsafe fn add_method_capture_output_callback(cls: &mut ClassDecl) {
             let luminance_buffer = std::slice::from_raw_parts(
                 luminance_buffer_ptr as *const u8,
                 luminance_stride * height,
-            );
+            )
+            .to_vec();
 
             let chrominance_stride = CVPixelBufferGetBytesPerRowOfPlane(image_buffer, 1);
             let chrominance_buffer = std::slice::from_raw_parts(
                 chrominance_buffer as *const u8,
                 chrominance_stride * height / 2,
-            );
+            )
+            .to_vec();
 
             let capture_frame = Frame::new(
                 width as u16,
@@ -347,15 +211,10 @@ unsafe fn add_method_capture_output_callback(cls: &mut ClassDecl) {
                 luminance_stride as u16,
                 chrominance_buffer,
                 chrominance_stride as u16,
-                capture_frame_release_notify_tx.clone(),
             );
 
             if let Err(err) = capture_frame_tx.send(capture_frame) {
                 error!(?err, "send capture frame failed");
-                return;
-            }
-
-            if let Err(_) = capture_frame_release_notify_rx.recv() {
                 return;
             }
         }
