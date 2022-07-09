@@ -1,6 +1,5 @@
 #![allow(unused)]
 
-/// cbindgen:ignore
 mod convert_argb;
 mod row;
 

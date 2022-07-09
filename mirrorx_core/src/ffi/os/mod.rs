@@ -1,6 +1,5 @@
 #![allow(unused)]
 
-/// cbindgen:ignore
 #[cfg(target_os = "macos")]
 mod macos;
 
