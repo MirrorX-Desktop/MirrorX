@@ -314,6 +314,8 @@ impl EndPoint {
                             second_copy_length,
                         );
                     }
+
+                    chunk.commit(first_copy_length + second_copy_length);
                 }
             }
         });
