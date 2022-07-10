@@ -2,12 +2,20 @@ use std::{collections::HashMap, time::Duration};
 use tracing::{error, info};
 
 use crate::component::{
-    desktop::Duplicator, video_decoder::VideoDecoder, video_encoder::VideoEncoder,
+    desktop::Duplicator, monitor, video_decoder::VideoDecoder, video_encoder::VideoEncoder,
 };
 
 #[test]
 fn test_capture_and_encode_and_decode() -> anyhow::Result<()> {
     tracing_subscriber::fmt::init();
+
+    let monitors = monitor::get_active_monitors()?;
+    let monitor = match monitors.iter().find(|v| v.is_primary) {
+        Some(v) => v,
+        None => {
+            return Err(anyhow::anyhow!("no primary monitor"));
+        }
+    };
 
     let encoder_name: &str;
 
@@ -19,7 +27,12 @@ fn test_capture_and_encode_and_decode() -> anyhow::Result<()> {
         panic!("unsupported platform");
     }
 
-    let mut encoder = VideoEncoder::new(encoder_name, 60, 1920, 1080)?;
+    let mut encoder = VideoEncoder::new(
+        encoder_name,
+        monitor.refresh_rate as i32,
+        monitor.width as i32,
+        monitor.height as i32,
+    )?;
 
     encoder.set_opt("profile", "high", 0)?;
     encoder.set_opt("level", "5.2", 0)?;
@@ -33,8 +46,9 @@ fn test_capture_and_encode_and_decode() -> anyhow::Result<()> {
         encoder.set_opt("allow_sw", "0", 0)?;
     }
 
-    let packet_rx = encoder.open()?;
-    let (mut desktop_duplicator, capture_frame_rx) = Duplicator::new(60)?;
+    let (capture_tx, capture_rx) = crossbeam::channel::bounded(1);
+    let mut duplicator = Duplicator::new(capture_tx, &monitor.id, 30)?;
+    let (packet_tx, packet_rx) = crossbeam::channel::bounded(16);
 
     let decoder_name = if cfg!(target_os = "macos") {
         "h264"
@@ -44,7 +58,13 @@ fn test_capture_and_encode_and_decode() -> anyhow::Result<()> {
         panic!("unsupported platform")
     };
 
-    let decoder = VideoDecoder::new(decoder_name, HashMap::new())?;
+    let decoder = VideoDecoder::new(
+        decoder_name,
+        monitor.width as i32,
+        monitor.height as i32,
+        HashMap::new(),
+    )?;
+
     let (decoder_tx, decoder_rx) = crossbeam::channel::bounded(60);
 
     let (error_tx, error_rx) = crossbeam::channel::bounded(1);
@@ -54,35 +74,45 @@ fn test_capture_and_encode_and_decode() -> anyhow::Result<()> {
         // make sure the media_transmission after start_media_transmission send
         std::thread::sleep(Duration::from_secs(1));
 
-        if let Err(err) = desktop_duplicator.start() {
+        if let Err(err) = duplicator.start() {
             error!(?err, "DesktopDuplicator start capture failed");
             return;
         }
 
         loop {
-            let capture_frame = match capture_frame_rx.recv() {
-                Ok(frame) => frame,
+            let capture_frame = match capture_rx.recv() {
+                Ok(frame) => {
+                    info!(width=?frame.width,height=?frame.height,luminance_len=?frame.luminance_buffer.len(),luminance_stride=?frame.luminance_stride,chrominance_len=?frame.chrominance_buffer.len(),chrominance_stride=?frame.chrominance_stride,"capture");
+                    frame
+                }
                 Err(err) => {
-                    tracing::error!(?err, "capture_frame_rx.recv");
+                    tracing::error!(?err, "capture_rx.recv");
                     break;
                 }
             };
 
             // encode will block current thread until capture_frame released (FFMpeg API 'avcodec_send_frame' finished)
-            if let Err(err) = encoder.encode(capture_frame) {
-                error!(err=?err,"video encode failed");
-                let _ = encode_error_tx.try_send(err);
-                break;
-            }
+            match encoder.encode(capture_frame) {
+                Ok(frames) => {
+                    for frame in frames {
+                        info!(len=?frame.len(), "encoded frame");
+                        let _ = packet_tx.try_send(frame);
+                    }
+                }
+                Err(err) => {
+                    error!(err=?err,"video encode failed");
+                    let _ = encode_error_tx.try_send(err);
+                }
+            };
         }
 
-        desktop_duplicator.stop();
+        duplicator.stop();
     });
 
     let encode_error_tx = error_tx.clone();
     std::thread::spawn(move || loop {
         match packet_rx.recv() {
-            Ok(packet) => match decoder.decode(packet.0, 0, 0) {
+            Ok(packet) => match decoder.decode(packet, 0, 0) {
                 Ok(frames) => {
                     for frame in frames {
                         let _ = decoder_tx.try_send(frame);
