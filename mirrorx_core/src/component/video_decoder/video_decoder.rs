@@ -5,6 +5,7 @@ use crate::{
     service::endpoint::message::VideoFrame,
 };
 use anyhow::anyhow;
+use scopeguard::defer;
 use std::{
     collections::HashMap,
     ffi::{CStr, CString},
@@ -241,6 +242,7 @@ impl VideoDecoder {
                     };
                 }
 
+                av_frame_unref((*self).hw_decode_frame);
                 av_frame_unref((*self).decode_frame);
             }
         }
