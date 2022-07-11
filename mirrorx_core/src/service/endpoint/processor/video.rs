@@ -122,7 +122,7 @@ pub fn start_video_decode_process(
         ("h264", HashMap::new())
     } else if cfg!(target_os = "windows") {
         (
-            "h264_qsv",
+            "h264_d3d11va",
             HashMap::new(), // HashMap::from([("async_depth", "1"), ("gpu_copy", "on")]),
         )
     } else {

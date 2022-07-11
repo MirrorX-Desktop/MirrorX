@@ -62,7 +62,7 @@ impl VideoDecoder {
                 }
             }
 
-            decoder.codec = avcodec_find_decoder_by_name(decoder_name_ptr.as_ptr());
+            decoder.codec = avcodec_find_decoder(AV_CODEC_ID_H264); // avcodec_find_decoder_by_name(decoder_name_ptr.as_ptr());
             if decoder.codec.is_null() {
                 return Err(MirrorXError::MediaVideoDecoderNotFound(
                     decoder_name.to_string(),
@@ -97,42 +97,42 @@ impl VideoDecoder {
                 return Err(MirrorXError::MediaVideoDecoderAVFrameAllocFailed);
             }
 
-            let hw_config = avcodec_get_hw_config(decoder.codec, 0);
-            if hw_config.is_null() {
-                decoder.parser_ctx = av_parser_init((*decoder.codec).id);
-                if decoder.parser_ctx.is_null() {
-                    return Err(MirrorXError::MediaVideoDecoderParserInitFailed);
-                }
-            } else {
-                let mut hwdevice_ctx = ptr::null_mut();
+            // let hw_config = avcodec_get_hw_config(decoder.codec, 0);
+            // if hw_config.is_null() {
+            //     decoder.parser_ctx = av_parser_init((*decoder.codec).id);
+            //     if decoder.parser_ctx.is_null() {
+            //         return Err(MirrorXError::MediaVideoDecoderParserInitFailed);
+            //     }
+            // } else {
+            let mut hwdevice_ctx = ptr::null_mut();
 
-                let device = if cfg!(target_os = "windows") {
-                    CString::new("auto")
-                        .map_err(|err| MirrorXError::Other(anyhow::anyhow!(err)))?
-                        .as_ptr()
-                } else {
-                    ptr::null()
-                };
+            //     let device = if cfg!(target_os = "windows") {
+            //         CString::new("auto")
+            //             .map_err(|err| MirrorXError::Other(anyhow::anyhow!(err)))?
+            //             .as_ptr()
+            //     } else {
+            //         ptr::null()
+            //     };
 
-                let ret = av_hwdevice_ctx_create(
-                    &mut hwdevice_ctx,
-                    (*hw_config).device_type,
-                    device,
-                    ptr::null_mut(),
-                    0,
-                );
+            let ret = av_hwdevice_ctx_create(
+                &mut hwdevice_ctx,
+                AV_HWDEVICE_TYPE_D3D11VA,
+                ptr::null(),
+                ptr::null_mut(),
+                0,
+            );
 
-                if ret < 0 {
-                    return Err(MirrorXError::MediaVideoDecoderHWDeviceCreateFailed(ret));
-                }
-
-                (*decoder.codec_ctx).hw_device_ctx = av_buffer_ref(hwdevice_ctx);
-
-                decoder.hw_decode_frame = av_frame_alloc();
-                if decoder.hw_decode_frame.is_null() {
-                    return Err(MirrorXError::MediaVideoDecoderHWAVFrameAllocFailed);
-                }
+            if ret < 0 {
+                return Err(MirrorXError::MediaVideoDecoderHWDeviceCreateFailed(ret));
             }
+
+            (*decoder.codec_ctx).hw_device_ctx = av_buffer_ref(hwdevice_ctx);
+
+            decoder.hw_decode_frame = av_frame_alloc();
+            if decoder.hw_decode_frame.is_null() {
+                return Err(MirrorXError::MediaVideoDecoderHWAVFrameAllocFailed);
+            }
+            // }
 
             let ret = avcodec_open2(decoder.codec_ctx, decoder.codec, ptr::null_mut());
             if ret != 0 {
