@@ -77,6 +77,8 @@ impl VideoDecoder {
 
             (*decoder.codec_ctx).width = width;
             (*decoder.codec_ctx).height = height;
+            (*decoder.codec_ctx).framerate = AVRational { num: fps, den: 1 };
+            (*decoder.codec_ctx).pkt_timebase = AVRational { num: 1, den: fps };
             (*decoder.codec_ctx).pix_fmt = AV_PIX_FMT_NV12;
             (*decoder.codec_ctx).color_range = AVCOL_RANGE_JPEG;
             (*decoder.codec_ctx).color_primaries = AVCOL_PRI_BT709;
@@ -199,8 +201,8 @@ impl VideoDecoder {
                     &mut (*self.packet).size,
                     frame.buffer.as_ptr(),
                     frame.buffer.len() as i32,
-                    0,
-                    0,
+                    frame.pts,
+                    frame.pts,
                     0,
                 );
 
@@ -210,9 +212,11 @@ impl VideoDecoder {
             } else {
                 (*self.packet).data = frame.buffer.as_mut_ptr();
                 (*self.packet).size = frame.buffer.len() as i32;
-                (*self.packet).pts = 0;
-                (*self.packet).dts = 0;
+                (*self.packet).pts = frame.pts;
+                (*self.packet).dts = frame.pts;
             }
+
+            av_packet_rescale_ts(self.packet, AV_TIME_BASE_Q, (*self.codec_ctx).pkt_timebase);
 
             let mut ret = avcodec_send_packet(self.codec_ctx, self.packet);
 
