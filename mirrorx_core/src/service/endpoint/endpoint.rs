@@ -16,6 +16,7 @@ use crate::{
 use anyhow::anyhow;
 use bincode::Options;
 use bytes::Bytes;
+use crossbeam::channel::Sender;
 use dashmap::DashMap;
 use futures::{
     stream::{SplitSink, SplitStream},
@@ -93,10 +94,10 @@ pub struct EndPoint {
     atomic_call_id: AtomicU16,
     call_reply_tx_map: DashMap<u16, tokio::sync::oneshot::Sender<EndPointMessage>>,
     packet_tx: tokio::sync::mpsc::Sender<EndPointMessagePacket>,
-    video_frame_tx: OnceCell<crossbeam::channel::Sender<VideoFrame>>,
-    audio_frame_tx: OnceCell<crossbeam::channel::Sender<AudioFrame>>,
-    capture_process_exit_tx: OnceCell<crossbeam::channel::Sender<()>>,
-    audio_process_exit_tx: OnceCell<crossbeam::channel::Sender<()>>,
+    video_frame_tx: OnceCell<Sender<VideoFrame>>,
+    audio_frame_tx: OnceCell<Sender<AudioFrame>>,
+    exit_tx: crossbeam::channel::Sender<()>,
+    exit_rx: crossbeam::channel::Receiver<()>,
 }
 
 impl EndPoint {
@@ -201,8 +202,10 @@ impl EndPoint {
 
         let (capture_frame_tx, capture_frame_rx) = crossbeam::channel::bounded(1);
 
-        let capture_process_exit_tx = start_desktop_capture_process(
+        start_desktop_capture_process(
             self.remote_device_id.clone(),
+            self.exit_tx.clone(),
+            self.exit_rx.clone(),
             capture_frame_tx,
             display_id,
             fps,
@@ -210,14 +213,14 @@ impl EndPoint {
 
         start_video_encode_process(
             self.remote_device_id.clone(),
+            self.exit_tx.clone(),
+            self.exit_rx.clone(),
             width as i32,
             height as i32,
             fps as i32,
             capture_frame_rx,
             self.packet_tx.clone(),
         )?;
-
-        let _ = self.capture_process_exit_tx.set(capture_process_exit_tx);
 
         Ok(())
     }
@@ -226,6 +229,7 @@ impl EndPoint {
         &self,
         width: i32,
         height: i32,
+        fps: i32,
         texture_id: i64,
         video_texture_ptr: i64,
         update_frame_callback_ptr: i64,
@@ -235,8 +239,11 @@ impl EndPoint {
 
         start_video_decode_process(
             self.remote_device_id.clone(),
+            self.exit_tx.clone(),
+            self.exit_rx.clone(),
             width,
             height,
+            fps,
             video_frame_rx,
             decoded_frame_tx,
         )?;
@@ -267,8 +274,6 @@ impl EndPoint {
 
         let exit_tx = start_audio_capture_process(self.remote_device_id.clone(), pcm_tx).await?;
 
-        let _ = self.audio_process_exit_tx.set(exit_tx);
-
         Ok(())
     }
 
@@ -288,12 +293,11 @@ impl EndPoint {
         let exit_tx = start_audio_play_process(self.remote_device_id.clone(), pcm_consumer).await?;
 
         let _ = self.audio_frame_tx.set(audio_frame_tx);
-        let _ = self.audio_process_exit_tx.set(exit_tx);
 
         Ok(())
     }
 
-    pub async fn enqueue_video_frame(&self, video_frame: VideoFrame) {
+    pub fn enqueue_video_frame(&self, video_frame: VideoFrame) {
         if let Some(tx) = self.video_frame_tx.get() {
             if let Err(err) = tx.try_send(video_frame) {
                 if err.is_full() {
@@ -303,7 +307,7 @@ impl EndPoint {
         }
     }
 
-    pub async fn enqueue_audio_frame(&self, audio_frame: AudioFrame) {
+    pub fn enqueue_audio_frame(&self, audio_frame: AudioFrame) {
         if let Some(tx) = self.audio_frame_tx.get() {
             if let Err(err) = tx.try_send(audio_frame) {
                 if err.is_full() {
@@ -417,6 +421,8 @@ where
 
     let (packet_tx, packet_rx) = tokio::sync::mpsc::channel(128);
 
+    let (exit_tx, exit_rx) = crossbeam::channel::unbounded();
+
     let endpoint = Arc::new(EndPoint {
         local_device_id,
         remote_device_id: remote_device_id.clone(),
@@ -425,8 +431,8 @@ where
         packet_tx,
         video_frame_tx: OnceCell::new(),
         audio_frame_tx: OnceCell::new(),
-        capture_process_exit_tx: OnceCell::new(),
-        audio_process_exit_tx: OnceCell::new(),
+        exit_tx,
+        exit_rx,
     });
 
     serve_reader(endpoint.clone(), stream, opening_key);

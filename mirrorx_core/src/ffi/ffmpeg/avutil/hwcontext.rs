@@ -19,6 +19,7 @@ pub const AV_HWDEVICE_TYPE_MEDIACODEC: AVHWDeviceType = 10;
 pub const AV_HWDEVICE_TYPE_VULKAN: AVHWDeviceType = 11;
 
 extern "C" {
+    pub fn av_hwdevice_find_type_by_name(name: *const c_char) -> AVHWDeviceType;
     pub fn av_hwframe_transfer_data(dst: *mut AVFrame, src: *const AVFrame, flags: i32) -> i32;
     pub fn av_hwdevice_iterate_types(prev: AVHWDeviceType) -> AVHWDeviceType;
     pub fn av_hwdevice_get_type_name(type_: AVHWDeviceType) -> *const c_char;

@@ -2,6 +2,7 @@ use super::frame::DecodedFrame;
 use crate::{
     error::MirrorXError,
     ffi::ffmpeg::{avcodec::*, avutil::*},
+    service::endpoint::message::VideoFrame,
 };
 use anyhow::anyhow;
 use std::{
@@ -28,6 +29,7 @@ impl VideoDecoder {
         decoder_name: &str,
         width: i32,
         height: i32,
+        fps: i32,
         options: HashMap<&str, &str>,
     ) -> Result<VideoDecoder, MirrorXError> {
         let decoder_name_ptr =
@@ -186,12 +188,7 @@ impl VideoDecoder {
         }
     }
 
-    pub fn decode(
-        &self,
-        mut data: Vec<u8>,
-        dts: i64,
-        pts: i64,
-    ) -> Result<Vec<DecodedFrame>, MirrorXError> {
+    pub fn decode(&self, mut frame: VideoFrame) -> Result<Vec<DecodedFrame>, MirrorXError> {
         unsafe {
             if !self.parser_ctx.is_null() {
                 let ret = av_parser_parse2(
@@ -199,10 +196,10 @@ impl VideoDecoder {
                     self.codec_ctx,
                     &mut (*self.packet).data,
                     &mut (*self.packet).size,
-                    data.as_ptr(),
-                    data.len() as i32,
-                    pts,
-                    dts,
+                    frame.buffer.as_ptr(),
+                    frame.buffer.len() as i32,
+                    0,
+                    0,
                     0,
                 );
 
@@ -210,10 +207,10 @@ impl VideoDecoder {
                     return Err(MirrorXError::MediaVideoDecoderParser2Failed(ret));
                 }
             } else {
-                (*self.packet).data = data.as_mut_ptr();
-                (*self.packet).size = data.len() as i32;
-                (*self.packet).pts = pts;
-                (*self.packet).dts = dts;
+                (*self.packet).data = frame.buffer.as_mut_ptr();
+                (*self.packet).size = frame.buffer.len() as i32;
+                (*self.packet).pts = 0;
+                (*self.packet).dts = 0;
             }
 
             let mut ret = avcodec_send_packet(self.codec_ctx, self.packet);
@@ -223,7 +220,7 @@ impl VideoDecoder {
             } else if ret == AVERROR_EOF {
                 return Err(MirrorXError::MediaVideoDecoderClosed);
             } else if ret < 0 {
-                error!(size = data.len(), "packet size");
+                error!(size = frame.buffer.len(), "packet size");
                 return Err(MirrorXError::MediaVideoDecoderSendPacketFailed(ret));
             }
 
@@ -331,5 +328,24 @@ impl Drop for VideoDecoder {
                 avcodec_free_context(&mut self.codec_ctx);
             }
         }
+    }
+}
+
+extern "C" fn get_format(
+    ctx: *mut AVCodecContext,
+    mut pix_fmts: *const AVPixelFormat,
+) -> AVPixelFormat {
+    unsafe {
+        while *pix_fmts != AV_PIX_FMT_NONE {
+            if *pix_fmts == AV_PIX_FMT_QSV {
+                return AV_PIX_FMT_QSV;
+            }
+
+            pix_fmts = pix_fmts.offset(1);
+        }
+
+        error!("The QSV pixel format not offered in get_format()");
+
+        return AV_PIX_FMT_NONE;
     }
 }

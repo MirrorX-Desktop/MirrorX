@@ -6,6 +6,7 @@ pub struct Frame {
     pub luminance_stride: u16,
     pub chrominance_buffer: Vec<u8>,
     pub chrominance_stride: u16,
+    pub capture_time: i64,
 }
 
 impl Frame {
@@ -16,6 +17,7 @@ impl Frame {
         luminance_stride: u16,
         chrominance_buffer: Vec<u8>,
         chrominance_stride: u16,
+        duration: i64,
     ) -> Frame {
         Frame {
             width,
@@ -24,6 +26,7 @@ impl Frame {
             luminance_stride,
             chrominance_buffer,
             chrominance_stride,
+            capture_time: duration,
         }
     }
 

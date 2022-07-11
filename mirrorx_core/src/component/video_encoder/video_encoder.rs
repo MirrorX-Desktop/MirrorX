@@ -1,10 +1,10 @@
 use crate::{
     error::MirrorXError,
     ffi::ffmpeg::{avcodec::*, avutil::*},
+    service::endpoint::message::VideoFrame,
 };
 use anyhow::anyhow;
 use crossbeam::channel::{bounded, Receiver, Sender};
-use once_cell::sync::OnceCell;
 use std::ffi::CString;
 
 pub struct VideoEncoder {
@@ -52,12 +52,15 @@ impl VideoEncoder {
             (*codec_ctx).rc_min_rate = 4000 * 1000;
             (*codec_ctx).rc_buffer_size = 4000 * 1000 * 2;
             (*codec_ctx).has_b_frames = 0;
+            (*codec_ctx).max_b_frames = 0;
             (*codec_ctx).pix_fmt = AV_PIX_FMT_NV12;
             (*codec_ctx).flags |= AV_CODEC_FLAG2_LOCAL_HEADER;
             (*codec_ctx).color_range = AVCOL_RANGE_JPEG;
             (*codec_ctx).color_primaries = AVCOL_PRI_BT709;
             (*codec_ctx).color_trc = AVCOL_TRC_BT709;
             (*codec_ctx).colorspace = AVCOL_SPC_BT709;
+            (*codec_ctx).thread_count = 4;
+            (*codec_ctx).thread_safe_callbacks = 1;
 
             let ret = avcodec_open2(codec_ctx, codec, std::ptr::null_mut());
             if ret != 0 {
@@ -116,7 +119,7 @@ impl VideoEncoder {
     pub fn encode(
         &mut self,
         frame: crate::component::desktop::Frame,
-    ) -> Result<Vec<Vec<u8>>, MirrorXError> {
+    ) -> Result<Vec<VideoFrame>, MirrorXError> {
         unsafe {
             let mut ret: i32;
 
@@ -179,9 +182,11 @@ impl VideoEncoder {
             (*self.frame).linesize[0] = frame.luminance_stride as i32;
             (*self.frame).data[1] = frame.chrominance_buffer.as_ptr() as *mut _;
             (*self.frame).linesize[1] = frame.chrominance_stride as i32;
-            // (*self.frame).time_base.num = 1;
-            // (*self.frame).time_base.den = pts_scale;
-            // (*self.frame).pts = pts;
+            (*self.frame).pts = av_rescale_q(
+                frame.capture_time,
+                AV_TIME_BASE_Q,
+                (*self.codec_ctx).time_base,
+            );
 
             ret = avcodec_send_frame(self.codec_ctx, self.frame);
 
@@ -203,11 +208,14 @@ impl VideoEncoder {
                     return Err(MirrorXError::MediaVideoDecoderReceiveFrameFailed(ret));
                 }
 
-                let frame_buffer =
+                let buffer =
                     std::slice::from_raw_parts((*self.packet).data, (*self.packet).size as usize)
                         .to_vec();
 
-                frames.push(frame_buffer);
+                frames.push(VideoFrame {
+                    buffer,
+                    pts: (*self.packet).pts,
+                });
 
                 av_packet_unref(self.packet);
             }

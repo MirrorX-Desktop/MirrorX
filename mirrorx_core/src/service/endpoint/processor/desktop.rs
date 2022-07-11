@@ -4,41 +4,88 @@ use crate::{
         video_decoder::DecodedFrame,
     },
     error::MirrorXError,
+    ffi::ffmpeg::avutil::av_gettime_relative,
     service::endpoint::ffi::create_callback_fn,
 };
-use crossbeam::channel::Sender;
+use crossbeam::channel::{Receiver, Sender, TryRecvError, TrySendError};
 use scopeguard::defer;
 use std::{os::raw::c_void, time::Duration};
-use tracing::{error, info};
+use tracing::{error, info, trace};
 
 pub fn start_desktop_capture_process(
     remote_device_id: String,
+    exit_tx: Sender<()>,
+    exit_rx: Receiver<()>,
     capture_frame_tx: Sender<Frame>,
     display_id: &str,
     fps: u8,
-) -> Result<Sender<()>, MirrorXError> {
-    let mut desktop_duplicator = Duplicator::new(capture_frame_tx, display_id, fps)?;
-    let (exit_tx, exit_rx) = crossbeam::channel::bounded(1);
+) -> Result<(), MirrorXError> {
+    let mut duplicator = Duplicator::new(display_id)?;
 
-    if let Err(err) = desktop_duplicator.start() {
-        return Err(MirrorXError::Other(anyhow::anyhow!(
-            "start desktop duplicator failed ({})",
-            err
-        )));
-    }
+    let expected_wait_time = Duration::from_secs_f32(1f32 / (fps as f32));
 
     let _ = std::thread::Builder::new()
-        .name(format!("audio_play_process:{}", remote_device_id))
+        .name(format!("desktop_capture_process:{}", remote_device_id))
         .spawn(move || {
             defer! {
-                desktop_duplicator.stop();
-                info!("desktop capture process exit");
+                let _ = exit_tx.send(());
             }
 
-            let _ = exit_rx.recv();
+            let epoch = unsafe { av_gettime_relative() };
+
+            loop {
+                let process_time_start = std::time::Instant::now();
+
+                match exit_rx.try_recv() {
+                    Ok(_) => {
+                        info!("process exit channel received signal");
+                        break;
+                    }
+                    Err(err) => {
+                        if err == TryRecvError::Disconnected {
+                            info!("process exit channel disconnected");
+                            break;
+                        }
+                    }
+                };
+
+                match duplicator.capture() {
+                    Ok(mut frame) => unsafe {
+                        frame.capture_time = av_gettime_relative() - epoch;
+
+                        trace!(
+                            width=?frame.width,
+                            height=?frame.height,
+                            chrominance_len=?frame.chrominance_buffer.len(),
+                            chrominance_stride=?frame.chrominance_stride,
+                            luminance_len=?frame.luminance_buffer.len(),
+                            luminance_stride=?frame.luminance_stride,
+                            capture_time=?frame.capture_time,
+                            "desktop capture frame",
+                        );
+
+                        if let Err(_) = capture_frame_tx.send(frame) {
+                            info!("desktop frame channel disconnected");
+                            break;
+                        }
+                    },
+                    Err(err) => {
+                        error!(?err, "capture desktop frame failed");
+                        break;
+                    }
+                };
+
+                if let Some(actual_wait_time) =
+                    expected_wait_time.checked_sub(process_time_start.elapsed())
+                {
+                    std::thread::sleep(actual_wait_time);
+                }
+            }
+
+            info!(?remote_device_id, "desktop capture process exit");
         });
 
-    Ok(exit_tx)
+    Ok(())
 }
 
 pub fn start_desktop_render_process(

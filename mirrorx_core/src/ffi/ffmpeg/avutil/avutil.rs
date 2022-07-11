@@ -1,3 +1,14 @@
+use super::AVRational;
+
+pub const AV_NOPTS_VALUE: i64 = 0x8000000000000000u64 as i64;
+
+pub const AV_TIME_BASE: i32 = 1000000;
+
+pub const AV_TIME_BASE_Q: AVRational = AVRational {
+    num: 1,
+    den: AV_TIME_BASE,
+};
+
 pub type AVPictureType = u32;
 pub const AV_PICTURE_TYPE_NONE: AVPictureType = 0;
 pub const AV_PICTURE_TYPE_I: AVPictureType = 1;

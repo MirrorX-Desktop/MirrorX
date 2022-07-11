@@ -72,4 +72,5 @@ extern "C" {
     pub fn av_packet_alloc() -> *mut AVPacket;
     pub fn av_new_packet(pkt: *mut AVPacket, size: i32) -> i32;
     pub fn av_packet_unref(pkt: *mut AVPacket);
+    pub fn av_packet_rescale_ts(pkt: *mut AVPacket, tb_src: AVRational, tb_dst: AVRational);
 }

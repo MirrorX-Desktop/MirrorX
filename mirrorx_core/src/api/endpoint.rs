@@ -61,6 +61,7 @@ pub async fn start_media_transmission(
         .start_video_render(
             resp.screen_width as i32,
             resp.screen_height as i32,
+            expect_fps as i32,
             texture_id,
             video_texture_ptr,
             update_frame_callback_ptr,

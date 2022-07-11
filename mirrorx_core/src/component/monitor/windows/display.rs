@@ -125,13 +125,8 @@ unsafe fn enum_dxgi_outputs(
     let mut displays = Vec::new();
     let mut output_index = 0u32;
 
-    loop {
-        let dxgi_output = if let Ok(dxgi_output) = dxgi_adapter.EnumOutputs(output_index) {
-            output_index += 1;
-            dxgi_output
-        } else {
-            break;
-        };
+    while let Ok(dxgi_output) = dxgi_adapter.EnumOutputs(output_index) {
+        output_index += 1;
 
         let output_desc = dxgi_output.GetDesc().map_err(|err| MirrorXError::D3D {
             api_name: Some("IDXGIOutput::GetDesc"),

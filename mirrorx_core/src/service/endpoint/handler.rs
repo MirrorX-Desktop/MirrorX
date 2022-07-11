@@ -62,7 +62,7 @@ pub async fn handle_video_frame(
     endpoint: &EndPoint,
     video_frame: VideoFrame,
 ) -> Result<(), MirrorXError> {
-    endpoint.enqueue_video_frame(video_frame).await;
+    endpoint.enqueue_video_frame(video_frame);
     Ok(())
 }
 
@@ -70,6 +70,6 @@ pub async fn handle_audio_frame(
     endpoint: &EndPoint,
     audio_frame: AudioFrame,
 ) -> Result<(), MirrorXError> {
-    endpoint.enqueue_audio_frame(audio_frame).await;
+    endpoint.enqueue_audio_frame(audio_frame);
     Ok(())
 }

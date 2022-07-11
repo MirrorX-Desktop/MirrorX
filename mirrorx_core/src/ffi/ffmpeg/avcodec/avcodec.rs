@@ -354,5 +354,5 @@ extern "C" {
         options: *const c_void,
     ) -> i32;
     pub fn avcodec_free_context(avctx: *mut *mut AVCodecContext);
-    pub fn av_parser_init(codec_id: u32) -> *mut AVCodecParserContext;
+    pub fn av_parser_init(codec_id: i32) -> *mut AVCodecParserContext;
 }

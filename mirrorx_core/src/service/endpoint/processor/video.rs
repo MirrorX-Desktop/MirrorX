@@ -7,16 +7,19 @@ use crate::{
     error::MirrorXError,
     service::endpoint::message::*,
 };
-use crossbeam::channel::{Receiver, Sender};
+use crossbeam::channel::{Receiver, Sender, TryRecvError};
+use scopeguard::defer;
 use std::collections::HashMap;
-use tracing::{error, info, warn};
+use tracing::{error, info, trace, warn};
 
 pub fn start_video_encode_process(
     remote_device_id: String,
+    exit_tx: Sender<()>,
+    exit_rx: Receiver<()>,
     width: i32,
     height: i32,
     fps: i32,
-    capture_frame_rx: crossbeam::channel::Receiver<Frame>,
+    capture_frame_rx: Receiver<Frame>,
     packet_tx: tokio::sync::mpsc::Sender<EndPointMessagePacket>,
 ) -> Result<(), MirrorXError> {
     let encoder_name = if cfg!(target_os = "macos") {
@@ -35,7 +38,7 @@ pub fn start_video_encode_process(
     if encoder_name == "libx264" {
         encoder.set_opt("preset", "ultrafast", 0)?;
         encoder.set_opt("tune", "zerolatency", 0)?;
-        encoder.set_opt("sc_threshold", "0", 0)?;
+        // encoder.set_opt("sc_threshold", "0", 0)?;
     } else {
         encoder.set_opt("realtime", "1", 0)?;
         encoder.set_opt("allow_sw", "0", 0)?;
@@ -44,7 +47,24 @@ pub fn start_video_encode_process(
     let _ = std::thread::Builder::new()
         .name(format!("video_encode_process:{}", remote_device_id))
         .spawn(move || {
+            defer! {
+                let _ = exit_tx.send(());
+            }
+
             loop {
+                match exit_rx.try_recv() {
+                    Ok(_) => {
+                        info!("process exit channel received signal");
+                        break;
+                    }
+                    Err(err) => {
+                        if err == TryRecvError::Disconnected {
+                            info!("process exit channel disconnected");
+                            break;
+                        }
+                    }
+                };
+
                 let frame = match capture_frame_rx.recv() {
                     Ok(v) => v,
                     Err(_) => {
@@ -65,10 +85,7 @@ pub fn start_video_encode_process(
                     let packet = EndPointMessagePacket {
                         typ: EndPointMessagePacketType::Push,
                         call_id: None,
-                        message: EndPointMessage::VideoFrame(VideoFrame {
-                            buffer: frame,
-                            timestamp: 0,
-                        }),
+                        message: EndPointMessage::VideoFrame(frame),
                     };
 
                     if let Err(err) = packet_tx.try_send(packet) {
@@ -93,8 +110,11 @@ pub fn start_video_encode_process(
 
 pub fn start_video_decode_process(
     remote_device_id: String,
+    exit_tx: Sender<()>,
+    exit_rx: Receiver<()>,
     width: i32,
     height: i32,
+    fps: i32,
     video_frame_rx: Receiver<VideoFrame>,
     decoded_frame_tx: Sender<DecodedFrame>,
 ) -> Result<(), MirrorXError> {
@@ -103,7 +123,7 @@ pub fn start_video_decode_process(
     } else if cfg!(target_os = "windows") {
         (
             "h264_qsv",
-            HashMap::from([("async_depth", "1"), ("gpu_copy", "on")]),
+            HashMap::new(), // HashMap::from([("async_depth", "1"), ("gpu_copy", "on")]),
         )
     } else {
         return Err(MirrorXError::Other(anyhow::anyhow!(
@@ -111,12 +131,29 @@ pub fn start_video_decode_process(
         )));
     };
 
-    let decoder = VideoDecoder::new(decoder_name, width, height, options)?;
+    let decoder = VideoDecoder::new(decoder_name, width, height, fps, options)?;
 
     let _ = std::thread::Builder::new()
         .name(format!("video_decode_process:{}", remote_device_id))
         .spawn(move || {
+            defer! {
+                let _ = exit_tx.send(());
+            }
+
             loop {
+                match exit_rx.try_recv() {
+                    Ok(_) => {
+                        info!("process exit channel received signal");
+                        break;
+                    }
+                    Err(err) => {
+                        if err == TryRecvError::Disconnected {
+                            info!("process exit channel disconnected");
+                            break;
+                        }
+                    }
+                };
+
                 let video_frame = match video_frame_rx.recv() {
                     Ok(frame) => frame,
                     Err(_) => {
@@ -125,7 +162,7 @@ pub fn start_video_decode_process(
                     }
                 };
 
-                let frames = match decoder.decode(video_frame.buffer, 0, 0) {
+                let frames = match decoder.decode(video_frame) {
                     Ok(frames) => frames,
                     Err(err) => {
                         error!(?err, "video frame decode failed");

@@ -1,4 +1,4 @@
-pub type AVCodecID = u32;
+pub type AVCodecID = i32;
 pub const AV_CODEC_ID_NONE: AVCodecID = 0;
 pub const AV_CODEC_ID_MPEG1VIDEO: AVCodecID = 1;
 pub const AV_CODEC_ID_MPEG2VIDEO: AVCodecID = 2;

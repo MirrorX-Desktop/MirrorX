@@ -15,6 +15,7 @@ use tracing::{error, info};
 
 pub async fn start_audio_capture_process(
     remote_device_id: String,
+    
     pcm_tx: crossbeam::channel::Sender<(Vec<f32>, u128)>,
 ) -> Result<crossbeam::channel::Sender<()>, MirrorXError> {
     let (exit_tx, exit_rx) = crossbeam::channel::bounded(1);
