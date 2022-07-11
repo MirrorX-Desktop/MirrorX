@@ -12,6 +12,7 @@ use scopeguard::defer;
 use std::{os::raw::c_void, time::Duration};
 use tracing::{error, info, trace};
 
+#[cfg(target_os = "windows")]
 pub fn start_desktop_capture_process(
     remote_device_id: String,
     exit_tx: Sender<()>,
@@ -20,7 +21,7 @@ pub fn start_desktop_capture_process(
     display_id: &str,
     fps: u8,
 ) -> Result<(), MirrorXError> {
-    let mut duplicator = Duplicator::new(display_id)?;
+    let mut duplicator = Duplicator::new(display_id, fps)?;
 
     let expected_wait_time = Duration::from_secs_f32(1f32 / (fps as f32));
 
@@ -83,6 +84,40 @@ pub fn start_desktop_capture_process(
             }
 
             info!(?remote_device_id, "desktop capture process exit");
+        });
+
+    Ok(())
+}
+
+#[cfg(target_os = "macos")]
+pub fn start_desktop_capture_process(
+    remote_device_id: String,
+    exit_tx: Sender<()>,
+    exit_rx: Receiver<()>,
+    capture_frame_tx: Sender<Frame>,
+    display_id: &str,
+    fps: u8,
+) -> Result<(), MirrorXError> {
+    let mut duplicator = Duplicator::new(capture_frame_tx, display_id, fps)?;
+
+    let _ = std::thread::Builder::new()
+        .name(format!("desktop_capture_process:{}", remote_device_id))
+        .spawn(move || {
+            defer! {
+                let _ = exit_tx.send(());
+                info!(?remote_device_id, "desktop capture process exit");
+            }
+
+            if let Err(err) = duplicator.start() {
+                error!(?err, "duplicator start failed");
+                return;
+            }
+
+            defer! {
+                duplicator.stop();
+            }
+
+            let _ = exit_rx.recv();
         });
 
     Ok(())

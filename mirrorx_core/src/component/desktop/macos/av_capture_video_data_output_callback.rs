@@ -211,6 +211,7 @@ unsafe fn add_method_capture_output_callback(cls: &mut ClassDecl) {
                 luminance_stride as u16,
                 chrominance_buffer,
                 chrominance_stride as u16,
+                0,
             );
 
             if let Err(err) = capture_frame_tx.send(capture_frame) {
