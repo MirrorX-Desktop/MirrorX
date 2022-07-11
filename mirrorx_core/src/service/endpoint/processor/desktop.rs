@@ -21,7 +21,7 @@ pub fn start_desktop_capture_process(
     display_id: &str,
     fps: u8,
 ) -> Result<(), MirrorXError> {
-    let mut duplicator = Duplicator::new(display_id, fps)?;
+    let mut duplicator = Duplicator::new(display_id)?;
 
     let expected_wait_time = Duration::from_secs_f32(1f32 / (fps as f32));
 
