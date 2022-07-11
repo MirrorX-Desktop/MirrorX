@@ -68,7 +68,7 @@ pub async fn start_media_transmission(
         )
         .await?;
 
-    endpoint.start_audio_play().await?;
+    // endpoint.start_audio_play().await?;
 
     Ok(resp)
 }

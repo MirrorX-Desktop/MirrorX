@@ -35,7 +35,8 @@ pub async fn handle_start_media_transmission_request(
     endpoint: &EndPoint,
     req: StartMediaTransmissionRequest,
 ) -> Result<StartMediaTransmissionResponse, MirrorXError> {
-    endpoint.start_audio_capture().await?;
+    // endpoint.start_audio_capture().await?;
+
     endpoint
         .start_video_capture(&req.expect_display_id, req.expect_fps)
         .await?;
