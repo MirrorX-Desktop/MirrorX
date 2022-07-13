@@ -5,12 +5,10 @@ class HorizontalScrollBar extends StatefulWidget {
   const HorizontalScrollBar({
     Key? key,
     required this.maxScrollableValue,
-    required this.windowWidth,
     required this.onScroll,
   }) : super(key: key);
 
   final double maxScrollableValue;
-  final double windowWidth;
   final Function(double offset) onScroll;
 
   @override
@@ -20,20 +18,35 @@ class HorizontalScrollBar extends StatefulWidget {
 class _HorizontalScrollBarState extends State<HorizontalScrollBar>
     with WidgetsBindingObserver {
   double _barOffset = 0;
-  late double _thumbWidth;
-  late double _scrollbarMaxOffsetHeight;
+  double _thumbWidth = 0;
+  double _scrollbarMaxOffsetHeight = 0;
+  double _boxWidth = 0;
 
   @override
   void initState() {
     super.initState();
-    _updateThumb();
-    _updateMaxScrollBarOffset();
     WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.scheduleFrameCallback((_) {
+      final size = context.size;
+      if (size != null) {
+        _boxWidth = size.width;
+      }
+
+      _updateThumb();
+      _updateMaxScrollBarOffset();
+      _updateBarOffset();
+      _notifyScrollChange();
+    });
   }
 
   @override
   void didChangeMetrics() {
     setState(() {
+      final size = context.size;
+      if (size != null) {
+        _boxWidth = size.width;
+      }
+
       _updateThumb();
       _updateMaxScrollBarOffset();
       _updateBarOffset();
@@ -54,16 +67,14 @@ class _HorizontalScrollBarState extends State<HorizontalScrollBar>
   }
 
   Widget _buildScrollThumb() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.blue,
-          borderRadius: BorderRadius.circular(6),
-        ),
-        height: 10,
-        width: _thumbWidth,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(6),
       ),
+      height: 6,
+      width: _thumbWidth,
     );
   }
 
@@ -74,15 +85,14 @@ class _HorizontalScrollBarState extends State<HorizontalScrollBar>
   }
 
   void _updateThumb() {
-    _thumbWidth =
-        widget.windowWidth * widget.windowWidth / widget.maxScrollableValue;
+    _thumbWidth = _boxWidth * _boxWidth / widget.maxScrollableValue;
     if (_thumbWidth > widget.maxScrollableValue) {
       _thumbWidth = widget.maxScrollableValue;
     }
   }
 
   void _updateMaxScrollBarOffset() {
-    var height = widget.windowWidth;
+    var height = _boxWidth;
     if (height > widget.maxScrollableValue) {
       height = widget.maxScrollableValue;
     }
@@ -105,8 +115,7 @@ class _HorizontalScrollBarState extends State<HorizontalScrollBar>
   }
 
   void _notifyScrollChange() {
-    widget
-        .onScroll(_barOffset / widget.windowWidth * widget.maxScrollableValue);
+    widget.onScroll(_barOffset / _boxWidth * widget.maxScrollableValue);
   }
 
   @override

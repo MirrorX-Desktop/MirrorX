@@ -29,56 +29,50 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
   double widthOffset = 0.0;
 
   @override
+  void initState() {
+    super.initState();
+    log("initial width: ${widget.width} height: ${widget.height}");
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Stack(
       children: [
         Positioned(
-          top: heightOffset,
-          left: widthOffset,
-          child: Container(
-            width: widget.width.toDouble(),
-            height: widget.height.toDouble(),
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Colors.blue, Color(0xFFf7418c)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
-            child: _buildTexture(),
-          ),
+          top: heightOffset.floorToDouble(),
+          left: widthOffset.floorToDouble(),
+          width: widget.width.toDouble(),
+          height: widget.height.toDouble(),
+          child: _buildTexture(),
         ),
-        LayoutBuilder(builder: ((context, constraints) {
-          return VerticalScrollBar(
-            maxScrollableValue: widget.width.toDouble(),
-            windowHeight: constraints.maxHeight,
-            onScroll: (offset) {
-              setState(() {
-                heightOffset = -offset;
-              });
-            },
-          );
-        })),
-        LayoutBuilder(builder: ((context, constraints) {
-          return HorizontalScrollBar(
-            maxScrollableValue: widget.height.toDouble(),
-            windowWidth: constraints.maxWidth,
-            onScroll: (offset) {
-              setState(() {
-                widthOffset = -offset;
-              });
-            },
-          );
-        })),
+        VerticalScrollBar(
+          maxScrollableValue: widget.height.toDouble(),
+          onScroll: (offset) {
+            setState(() {
+              heightOffset = -offset;
+              heightOffset = heightOffset.floorToDouble();
+            });
+          },
+        ),
+        HorizontalScrollBar(
+          maxScrollableValue: widget.width.toDouble(),
+          onScroll: (offset) {
+            setState(() {
+              widthOffset = -offset;
+              widthOffset = widthOffset.floorToDouble();
+            });
+          },
+        ),
       ],
     );
   }
 
   Widget _buildTexture() {
     return Listener(
+      behavior: HitTestBehavior.opaque,
       onPointerDown: _handlePointerDown,
       onPointerUp: _handlePointerUp,
-      onPointerMove: _handlePointerMove,
+      onPointerHover: _handlePointerHover,
       onPointerSignal: _handlePointerSignal,
       child: RepaintBoundary(
         child: Container(
@@ -106,8 +100,15 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
     log("pointer up ${event.buttons}");
   }
 
-  void _handlePointerMove(PointerMoveEvent event) {
-    log("pointer move ${event.position}");
+  void _handlePointerHover(PointerHoverEvent event) {
+    final renderObject = context.findRenderObject() as RenderBox?;
+    if (renderObject != null) {
+      final position = renderObject.globalToLocal(event.position);
+      final x = position.dx + (-widthOffset);
+      final y = position.dy + (-heightOffset);
+
+      log("pointer hover $x $y");
+    }
   }
 
   void _handlePointerSignal(PointerSignalEvent event) {

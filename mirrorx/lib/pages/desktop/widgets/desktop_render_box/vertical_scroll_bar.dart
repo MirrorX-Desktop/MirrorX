@@ -4,12 +4,10 @@ class VerticalScrollBar extends StatefulWidget {
   const VerticalScrollBar({
     Key? key,
     required this.maxScrollableValue,
-    required this.windowHeight,
     required this.onScroll,
   }) : super(key: key);
 
   final double maxScrollableValue;
-  final double windowHeight;
   final Function(double offset) onScroll;
 
   @override
@@ -19,20 +17,35 @@ class VerticalScrollBar extends StatefulWidget {
 class _VerticalScrollBarState extends State<VerticalScrollBar>
     with WidgetsBindingObserver {
   double _barOffset = 0;
-  late double _thumbHeight;
-  late double _scrollbarMaxOffsetHeight;
+  double _thumbHeight = 0;
+  double _scrollbarMaxOffsetHeight = 0;
+  double _boxHeight = 0;
 
   @override
   void initState() {
     super.initState();
-    _updateThumb();
-    _updateMaxScrollBarOffset();
     WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.scheduleFrameCallback((_) {
+      final size = context.size;
+      if (size != null) {
+        _boxHeight = size.height;
+      }
+
+      _updateThumb();
+      _updateMaxScrollBarOffset();
+      _updateBarOffset();
+      _notifyScrollChange();
+    });
   }
 
   @override
   void didChangeMetrics() {
     setState(() {
+      final size = context.size;
+      if (size != null) {
+        _boxHeight = size.height;
+      }
+
       _updateThumb();
       _updateMaxScrollBarOffset();
       _updateBarOffset();
@@ -53,16 +66,14 @@ class _VerticalScrollBarState extends State<VerticalScrollBar>
   }
 
   Widget _buildScrollThumb() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 16),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.blue,
-          borderRadius: BorderRadius.circular(6),
-        ),
-        height: _thumbHeight,
-        width: 10,
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(6),
       ),
+      height: _thumbHeight,
+      width: 6,
     );
   }
 
@@ -73,15 +84,14 @@ class _VerticalScrollBarState extends State<VerticalScrollBar>
   }
 
   void _updateThumb() {
-    _thumbHeight =
-        widget.windowHeight * widget.windowHeight / widget.maxScrollableValue;
+    _thumbHeight = _boxHeight * _boxHeight / widget.maxScrollableValue;
     if (_thumbHeight > widget.maxScrollableValue) {
       _thumbHeight = widget.maxScrollableValue;
     }
   }
 
   void _updateMaxScrollBarOffset() {
-    var height = widget.windowHeight;
+    var height = _boxHeight;
     if (height > widget.maxScrollableValue) {
       height = widget.maxScrollableValue;
     }
@@ -104,8 +114,7 @@ class _VerticalScrollBarState extends State<VerticalScrollBar>
   }
 
   void _notifyScrollChange() {
-    widget
-        .onScroll(_barOffset / widget.windowHeight * widget.maxScrollableValue);
+    widget.onScroll(_barOffset / _boxHeight * widget.maxScrollableValue);
   }
 
   @override
