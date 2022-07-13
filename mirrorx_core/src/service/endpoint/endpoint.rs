@@ -10,7 +10,9 @@ use crate::{
         video_decoder::{DecodedFrame, VideoDecoder},
     },
     error::MirrorXError,
-    service::endpoint::handler::{handle_audio_frame, handle_video_frame},
+    service::endpoint::handler::{
+        handle_audio_frame, handle_mouse_event_frame, handle_video_frame,
+    },
     utility::{nonce_value::NonceValue, runtime::TOKIO_RUNTIME, serializer::BINCODE_SERIALIZER},
 };
 use anyhow::anyhow;
@@ -60,6 +62,19 @@ macro_rules! make_endpoint_call {
     };
 }
 
+macro_rules! make_endpoint_push {
+    ($name:tt, $req_type:ident, $req_message_type:path) => {
+        pub async fn $name(&self, req: $req_type) -> Result<(), MirrorXError> {
+            self.send(EndPointMessagePacket {
+                typ: EndPointMessagePacketType::Push,
+                call_id: None,
+                message: $req_message_type(req),
+            })
+            .await
+        }
+    };
+}
+
 macro_rules! handle_call_message {
     ($endpoint:expr, $call_id:expr, $req:tt, $resp_type:path, $handler:tt) => {{
         if let Some(call_id) = $call_id {
@@ -89,6 +104,7 @@ macro_rules! handle_push_message {
 }
 
 pub struct EndPoint {
+    display_id: OnceCell<String>,
     local_device_id: String,
     remote_device_id: String,
     atomic_call_id: AtomicU16,
@@ -107,6 +123,10 @@ impl EndPoint {
 
     pub fn local_device_id<'a>(&'a self) -> &'a str {
         &self.local_device_id
+    }
+
+    pub fn display_id(&self) -> Option<String> {
+        self.display_id.get().map(|id| id.to_owned())
     }
 }
 
@@ -222,6 +242,8 @@ impl EndPoint {
             self.packet_tx.clone(),
         )?;
 
+        let _ = self.display_id.set(monitor.id.to_owned());
+
         Ok(())
     }
 
@@ -332,6 +354,12 @@ impl EndPoint {
         GetDisplayInfoResponse,
         EndPointMessage::GetDisplayInfoResponse
     );
+
+    make_endpoint_push!(
+        trigger_mouse_event,
+        MouseEventFrame,
+        EndPointMessage::MouseEventFrame
+    );
 }
 
 impl Drop for EndPoint {
@@ -424,6 +452,8 @@ where
     let (exit_tx, exit_rx) = crossbeam::channel::unbounded();
 
     let endpoint = Arc::new(EndPoint {
+        #[cfg(target_os = "macos")]
+        display_id: OnceCell::new(),
         local_device_id,
         remote_device_id: remote_device_id.clone(),
         atomic_call_id: AtomicU16::new(0),
@@ -572,6 +602,9 @@ async fn handle_message(endpoint: Arc<EndPoint>, packet: EndPointMessagePacket) 
             }
             EndPointMessage::AudioFrame(req) => {
                 handle_push_message!(&endpoint, req, handle_audio_frame);
+            }
+            EndPointMessage::MouseEventFrame(req) => {
+                handle_push_message!(&endpoint, req, handle_mouse_event_frame);
             }
             _ => error!("handle_message: received unknown push message"),
         },

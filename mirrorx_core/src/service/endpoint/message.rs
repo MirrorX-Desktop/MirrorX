@@ -23,6 +23,7 @@ pub enum EndPointMessage {
     GetDisplayInfoResponse(GetDisplayInfoResponse),
     VideoFrame(VideoFrame),
     AudioFrame(AudioFrame),
+    MouseEventFrame(MouseEventFrame),
 }
 //
 // #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
@@ -80,4 +81,26 @@ pub struct AudioFrame {
     pub buffer: Vec<u8>,
     pub frame_size_per_channel: u16,
     pub elpased: u128,
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+pub enum MouseKey {
+    None,
+    Left,
+    Right,
+    Wheel,
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+pub enum MouseEvent {
+    Up(MouseKey),
+    Down(MouseKey),
+    Move(MouseKey),
+    ScrollWheel(f32),
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+pub struct MouseEventFrame {
+    pub event: MouseEvent,
+    pub position: (f32, f32),
 }

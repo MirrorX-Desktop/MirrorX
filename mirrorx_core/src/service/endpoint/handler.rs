@@ -1,9 +1,12 @@
+use tokio::process;
+
 use super::{
     endpoint::EndPoint,
     message::{
-        AudioFrame, DisplayInfo, GetDisplayInfoRequest, GetDisplayInfoResponse,
-        StartMediaTransmissionResponse, VideoFrame,
+        AudioFrame, DisplayInfo, GetDisplayInfoRequest, GetDisplayInfoResponse, MouseEvent,
+        MouseEventFrame, StartMediaTransmissionResponse, VideoFrame,
     },
+    processor,
 };
 use crate::{error::MirrorXError, service::endpoint::message::StartMediaTransmissionRequest};
 
@@ -73,4 +76,34 @@ pub async fn handle_audio_frame(
 ) -> Result<(), MirrorXError> {
     endpoint.enqueue_audio_frame(audio_frame);
     Ok(())
+}
+
+pub async fn handle_mouse_event_frame(
+    endpoint: &EndPoint,
+    mouse_event_frame: MouseEventFrame,
+) -> Result<(), MirrorXError> {
+    match mouse_event_frame.event {
+        MouseEvent::Up(key) => processor::mouse_event::mouse_up(key, mouse_event_frame.position),
+        MouseEvent::Down(key) => {
+            processor::mouse_event::mouse_down(key, mouse_event_frame.position)
+        }
+        MouseEvent::Move(key) => {
+            if let Some(display_id) = endpoint.display_id() {
+                if let Ok(display_id) = display_id.parse::<u32>() {
+                    processor::mouse_event::mouse_move(display_id, key, mouse_event_frame.position)
+                } else {
+                    Err(MirrorXError::Other(anyhow::anyhow!(
+                        "parse display id failed"
+                    )))
+                }
+            } else {
+                Err(MirrorXError::Other(anyhow::anyhow!(
+                    "no associate display id to endpoint"
+                )))
+            }
+        }
+        MouseEvent::ScrollWheel(delta) => {
+            processor::mouse_event::mouse_scroll_whell(delta, mouse_event_frame.position)
+        }
+    }
 }

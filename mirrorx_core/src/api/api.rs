@@ -1,4 +1,4 @@
-use crate::service::endpoint::message::GetDisplayInfoResponse;
+use crate::service::endpoint::message::{GetDisplayInfoResponse, MouseEvent};
 use crate::utility::runtime::TOKIO_RUNTIME;
 use crate::{api, service::endpoint::message::StartMediaTransmissionResponse};
 use std::sync::{atomic::AtomicBool, Once};
@@ -111,5 +111,16 @@ pub fn endpoint_start_media_transmission(
             video_texture_ptr,
             update_frame_callback_ptr,
         )
+    }
+}
+
+pub fn endpoint_mouse_event(
+    remote_device_id: String,
+    event: MouseEvent,
+    x: f32,
+    y: f32,
+) -> anyhow::Result<()> {
+    async_block_on! {
+        api::endpoint::mouse_event(remote_device_id, event, x, y)
     }
 }

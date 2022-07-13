@@ -17,6 +17,8 @@ use flutter_rust_bridge::*;
 
 use crate::service::endpoint::message::DisplayInfo;
 use crate::service::endpoint::message::GetDisplayInfoResponse;
+use crate::service::endpoint::message::MouseEvent;
+use crate::service::endpoint::message::MouseKey;
 use crate::service::endpoint::message::StartMediaTransmissionResponse;
 
 // Section: wire functions
@@ -219,6 +221,30 @@ pub extern "C" fn wire_endpoint_start_media_transmission(
     )
 }
 
+#[no_mangle]
+pub extern "C" fn wire_endpoint_mouse_event(
+    port_: i64,
+    remote_device_id: *mut wire_uint_8_list,
+    event: *mut wire_MouseEvent,
+    x: f32,
+    y: f32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap(
+        WrapInfo {
+            debug_name: "endpoint_mouse_event",
+            port: Some(port_),
+            mode: FfiCallMode::Normal,
+        },
+        move || {
+            let api_remote_device_id = remote_device_id.wire2api();
+            let api_event = event.wire2api();
+            let api_x = x.wire2api();
+            let api_y = y.wire2api();
+            move |task_callback| endpoint_mouse_event(api_remote_device_id, api_event, api_x, api_y)
+        },
+    )
+}
+
 // Section: wire structs
 
 #[repr(C)]
@@ -228,6 +254,45 @@ pub struct wire_uint_8_list {
     len: i32,
 }
 
+#[repr(C)]
+#[derive(Clone)]
+pub struct wire_MouseEvent {
+    tag: i32,
+    kind: *mut MouseEventKind,
+}
+
+#[repr(C)]
+pub union MouseEventKind {
+    Up: *mut MouseEvent_Up,
+    Down: *mut MouseEvent_Down,
+    Move: *mut MouseEvent_Move,
+    ScrollWheel: *mut MouseEvent_ScrollWheel,
+}
+
+#[repr(C)]
+#[derive(Clone)]
+pub struct MouseEvent_Up {
+    field0: i32,
+}
+
+#[repr(C)]
+#[derive(Clone)]
+pub struct MouseEvent_Down {
+    field0: i32,
+}
+
+#[repr(C)]
+#[derive(Clone)]
+pub struct MouseEvent_Move {
+    field0: i32,
+}
+
+#[repr(C)]
+#[derive(Clone)]
+pub struct MouseEvent_ScrollWheel {
+    field0: f32,
+}
+
 // Section: wrapper structs
 
 // Section: static checks
@@ -235,7 +300,12 @@ pub struct wire_uint_8_list {
 // Section: allocate functions
 
 #[no_mangle]
-pub extern "C" fn new_uint_8_list(len: i32) -> *mut wire_uint_8_list {
+pub extern "C" fn new_box_autoadd_mouse_event_0() -> *mut wire_MouseEvent {
+    support::new_leak_box_ptr(wire_MouseEvent::new_with_null_ptr())
+}
+
+#[no_mangle]
+pub extern "C" fn new_uint_8_list_0(len: i32) -> *mut wire_uint_8_list {
     let ans = wire_uint_8_list {
         ptr: support::new_leak_vec_ptr(Default::default(), len),
         len,
@@ -269,6 +339,19 @@ impl Wire2Api<String> for *mut wire_uint_8_list {
     }
 }
 
+impl Wire2Api<MouseEvent> for *mut wire_MouseEvent {
+    fn wire2api(self) -> MouseEvent {
+        let wrap = unsafe { support::box_from_leak_ptr(self) };
+        Wire2Api::<MouseEvent>::wire2api(*wrap).into()
+    }
+}
+
+impl Wire2Api<f32> for f32 {
+    fn wire2api(self) -> f32 {
+        self
+    }
+}
+
 impl Wire2Api<i32> for i32 {
     fn wire2api(self) -> i32 {
         self
@@ -278,6 +361,46 @@ impl Wire2Api<i32> for i32 {
 impl Wire2Api<i64> for i64 {
     fn wire2api(self) -> i64 {
         self
+    }
+}
+
+impl Wire2Api<MouseEvent> for wire_MouseEvent {
+    fn wire2api(self) -> MouseEvent {
+        match self.tag {
+            0 => unsafe {
+                let ans = support::box_from_leak_ptr(self.kind);
+                let ans = support::box_from_leak_ptr(ans.Up);
+                MouseEvent::Up(ans.field0.wire2api())
+            },
+            1 => unsafe {
+                let ans = support::box_from_leak_ptr(self.kind);
+                let ans = support::box_from_leak_ptr(ans.Down);
+                MouseEvent::Down(ans.field0.wire2api())
+            },
+            2 => unsafe {
+                let ans = support::box_from_leak_ptr(self.kind);
+                let ans = support::box_from_leak_ptr(ans.Move);
+                MouseEvent::Move(ans.field0.wire2api())
+            },
+            3 => unsafe {
+                let ans = support::box_from_leak_ptr(self.kind);
+                let ans = support::box_from_leak_ptr(ans.ScrollWheel);
+                MouseEvent::ScrollWheel(ans.field0.wire2api())
+            },
+            _ => unreachable!(),
+        }
+    }
+}
+
+impl Wire2Api<MouseKey> for i32 {
+    fn wire2api(self) -> MouseKey {
+        match self {
+            0 => MouseKey::None,
+            1 => MouseKey::Left,
+            2 => MouseKey::Right,
+            3 => MouseKey::Wheel,
+            _ => unreachable!("Invalid variant for MouseKey: {}", self),
+        }
     }
 }
 
@@ -306,6 +429,51 @@ impl<T> NewWithNullPtr for *mut T {
     fn new_with_null_ptr() -> Self {
         std::ptr::null_mut()
     }
+}
+
+impl NewWithNullPtr for wire_MouseEvent {
+    fn new_with_null_ptr() -> Self {
+        Self {
+            tag: -1,
+            kind: core::ptr::null_mut(),
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn inflate_MouseEvent_Up() -> *mut MouseEventKind {
+    support::new_leak_box_ptr(MouseEventKind {
+        Up: support::new_leak_box_ptr(MouseEvent_Up {
+            field0: Default::default(),
+        }),
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn inflate_MouseEvent_Down() -> *mut MouseEventKind {
+    support::new_leak_box_ptr(MouseEventKind {
+        Down: support::new_leak_box_ptr(MouseEvent_Down {
+            field0: Default::default(),
+        }),
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn inflate_MouseEvent_Move() -> *mut MouseEventKind {
+    support::new_leak_box_ptr(MouseEventKind {
+        Move: support::new_leak_box_ptr(MouseEvent_Move {
+            field0: Default::default(),
+        }),
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn inflate_MouseEvent_ScrollWheel() -> *mut MouseEventKind {
+    support::new_leak_box_ptr(MouseEventKind {
+        ScrollWheel: support::new_leak_box_ptr(MouseEvent_ScrollWheel {
+            field0: Default::default(),
+        }),
+    })
 }
 
 // Section: impl IntoDart

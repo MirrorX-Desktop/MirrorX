@@ -5,11 +5,14 @@
 
 import 'dart:convert';
 import 'dart:typed_data';
+import 'package:freezed_annotation/freezed_annotation.dart';
 
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter_rust_bridge/flutter_rust_bridge.dart';
 import 'dart:ffi' as ffi;
+
+part 'mirrorx_core.freezed.dart';
 
 abstract class MirrorXCore {
   Future<void> init(
@@ -70,6 +73,15 @@ abstract class MirrorXCore {
       dynamic hint});
 
   FlutterRustBridgeTaskConstMeta get kEndpointStartMediaTransmissionConstMeta;
+
+  Future<void> endpointMouseEvent(
+      {required String remoteDeviceId,
+      required MouseEvent event,
+      required double x,
+      required double y,
+      dynamic hint});
+
+  FlutterRustBridgeTaskConstMeta get kEndpointMouseEventConstMeta;
 }
 
 class DisplayInfo {
@@ -98,6 +110,29 @@ class GetDisplayInfoResponse {
   GetDisplayInfoResponse({
     required this.displays,
   });
+}
+
+@freezed
+class MouseEvent with _$MouseEvent {
+  const factory MouseEvent.up(
+    MouseKey field0,
+  ) = Up;
+  const factory MouseEvent.down(
+    MouseKey field0,
+  ) = Down;
+  const factory MouseEvent.move(
+    MouseKey field0,
+  ) = Move;
+  const factory MouseEvent.scrollWheel(
+    double field0,
+  ) = ScrollWheel;
+}
+
+enum MouseKey {
+  None,
+  Left,
+  Right,
+  Wheel,
 }
 
 class StartMediaTransmissionResponse {
@@ -336,9 +371,45 @@ class MirrorXCoreImpl extends FlutterRustBridgeBase<MirrorXCoreWire>
         ],
       );
 
+  Future<void> endpointMouseEvent(
+          {required String remoteDeviceId,
+          required MouseEvent event,
+          required double x,
+          required double y,
+          dynamic hint}) =>
+      executeNormal(FlutterRustBridgeTask(
+        callFfi: (port_) => inner.wire_endpoint_mouse_event(
+            port_,
+            _api2wire_String(remoteDeviceId),
+            _api2wire_box_autoadd_mouse_event(event),
+            _api2wire_f32(x),
+            _api2wire_f32(y)),
+        parseSuccessData: _wire2api_unit,
+        constMeta: kEndpointMouseEventConstMeta,
+        argValues: [remoteDeviceId, event, x, y],
+        hint: hint,
+      ));
+
+  FlutterRustBridgeTaskConstMeta get kEndpointMouseEventConstMeta =>
+      const FlutterRustBridgeTaskConstMeta(
+        debugName: "endpoint_mouse_event",
+        argNames: ["remoteDeviceId", "event", "x", "y"],
+      );
+
   // Section: api2wire
   ffi.Pointer<wire_uint_8_list> _api2wire_String(String raw) {
     return _api2wire_uint_8_list(utf8.encoder.convert(raw));
+  }
+
+  ffi.Pointer<wire_MouseEvent> _api2wire_box_autoadd_mouse_event(
+      MouseEvent raw) {
+    final ptr = inner.new_box_autoadd_mouse_event_0();
+    _api_fill_to_wire_mouse_event(raw, ptr.ref);
+    return ptr;
+  }
+
+  double _api2wire_f32(double raw) {
+    return raw;
   }
 
   int _api2wire_i32(int raw) {
@@ -349,18 +420,50 @@ class MirrorXCoreImpl extends FlutterRustBridgeBase<MirrorXCoreWire>
     return raw;
   }
 
+  int _api2wire_mouse_key(MouseKey raw) {
+    return _api2wire_i32(raw.index);
+  }
+
   int _api2wire_u8(int raw) {
     return raw;
   }
 
   ffi.Pointer<wire_uint_8_list> _api2wire_uint_8_list(Uint8List raw) {
-    final ans = inner.new_uint_8_list(raw.length);
+    final ans = inner.new_uint_8_list_0(raw.length);
     ans.ref.ptr.asTypedList(raw.length).setAll(0, raw);
     return ans;
   }
 
   // Section: api_fill_to_wire
 
+  void _api_fill_to_wire_box_autoadd_mouse_event(
+      MouseEvent apiObj, ffi.Pointer<wire_MouseEvent> wireObj) {
+    _api_fill_to_wire_mouse_event(apiObj, wireObj.ref);
+  }
+
+  void _api_fill_to_wire_mouse_event(
+      MouseEvent apiObj, wire_MouseEvent wireObj) {
+    if (apiObj is Up) {
+      wireObj.tag = 0;
+      wireObj.kind = inner.inflate_MouseEvent_Up();
+      wireObj.kind.ref.Up.ref.field0 = _api2wire_mouse_key(apiObj.field0);
+    }
+    if (apiObj is Down) {
+      wireObj.tag = 1;
+      wireObj.kind = inner.inflate_MouseEvent_Down();
+      wireObj.kind.ref.Down.ref.field0 = _api2wire_mouse_key(apiObj.field0);
+    }
+    if (apiObj is Move) {
+      wireObj.tag = 2;
+      wireObj.kind = inner.inflate_MouseEvent_Move();
+      wireObj.kind.ref.Move.ref.field0 = _api2wire_mouse_key(apiObj.field0);
+    }
+    if (apiObj is ScrollWheel) {
+      wireObj.tag = 3;
+      wireObj.kind = inner.inflate_MouseEvent_ScrollWheel();
+      wireObj.kind.ref.ScrollWheel.ref.field0 = _api2wire_f32(apiObj.field0);
+    }
+  }
 }
 
 // Section: wire2api
@@ -681,20 +784,100 @@ class MirrorXCoreWire implements FlutterRustBridgeWireBase {
           void Function(int, ffi.Pointer<wire_uint_8_list>, int,
               ffi.Pointer<wire_uint_8_list>, int, int, int)>();
 
-  ffi.Pointer<wire_uint_8_list> new_uint_8_list(
+  void wire_endpoint_mouse_event(
+    int port_,
+    ffi.Pointer<wire_uint_8_list> remote_device_id,
+    ffi.Pointer<wire_MouseEvent> event,
+    double x,
+    double y,
+  ) {
+    return _wire_endpoint_mouse_event(
+      port_,
+      remote_device_id,
+      event,
+      x,
+      y,
+    );
+  }
+
+  late final _wire_endpoint_mouse_eventPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Void Function(
+              ffi.Int64,
+              ffi.Pointer<wire_uint_8_list>,
+              ffi.Pointer<wire_MouseEvent>,
+              ffi.Float,
+              ffi.Float)>>('wire_endpoint_mouse_event');
+  late final _wire_endpoint_mouse_event =
+      _wire_endpoint_mouse_eventPtr.asFunction<
+          void Function(int, ffi.Pointer<wire_uint_8_list>,
+              ffi.Pointer<wire_MouseEvent>, double, double)>();
+
+  ffi.Pointer<wire_MouseEvent> new_box_autoadd_mouse_event_0() {
+    return _new_box_autoadd_mouse_event_0();
+  }
+
+  late final _new_box_autoadd_mouse_event_0Ptr =
+      _lookup<ffi.NativeFunction<ffi.Pointer<wire_MouseEvent> Function()>>(
+          'new_box_autoadd_mouse_event_0');
+  late final _new_box_autoadd_mouse_event_0 = _new_box_autoadd_mouse_event_0Ptr
+      .asFunction<ffi.Pointer<wire_MouseEvent> Function()>();
+
+  ffi.Pointer<wire_uint_8_list> new_uint_8_list_0(
     int len,
   ) {
-    return _new_uint_8_list(
+    return _new_uint_8_list_0(
       len,
     );
   }
 
-  late final _new_uint_8_listPtr = _lookup<
+  late final _new_uint_8_list_0Ptr = _lookup<
       ffi.NativeFunction<
           ffi.Pointer<wire_uint_8_list> Function(
-              ffi.Int32)>>('new_uint_8_list');
-  late final _new_uint_8_list = _new_uint_8_listPtr
+              ffi.Int32)>>('new_uint_8_list_0');
+  late final _new_uint_8_list_0 = _new_uint_8_list_0Ptr
       .asFunction<ffi.Pointer<wire_uint_8_list> Function(int)>();
+
+  ffi.Pointer<MouseEventKind> inflate_MouseEvent_Up() {
+    return _inflate_MouseEvent_Up();
+  }
+
+  late final _inflate_MouseEvent_UpPtr =
+      _lookup<ffi.NativeFunction<ffi.Pointer<MouseEventKind> Function()>>(
+          'inflate_MouseEvent_Up');
+  late final _inflate_MouseEvent_Up = _inflate_MouseEvent_UpPtr
+      .asFunction<ffi.Pointer<MouseEventKind> Function()>();
+
+  ffi.Pointer<MouseEventKind> inflate_MouseEvent_Down() {
+    return _inflate_MouseEvent_Down();
+  }
+
+  late final _inflate_MouseEvent_DownPtr =
+      _lookup<ffi.NativeFunction<ffi.Pointer<MouseEventKind> Function()>>(
+          'inflate_MouseEvent_Down');
+  late final _inflate_MouseEvent_Down = _inflate_MouseEvent_DownPtr
+      .asFunction<ffi.Pointer<MouseEventKind> Function()>();
+
+  ffi.Pointer<MouseEventKind> inflate_MouseEvent_Move() {
+    return _inflate_MouseEvent_Move();
+  }
+
+  late final _inflate_MouseEvent_MovePtr =
+      _lookup<ffi.NativeFunction<ffi.Pointer<MouseEventKind> Function()>>(
+          'inflate_MouseEvent_Move');
+  late final _inflate_MouseEvent_Move = _inflate_MouseEvent_MovePtr
+      .asFunction<ffi.Pointer<MouseEventKind> Function()>();
+
+  ffi.Pointer<MouseEventKind> inflate_MouseEvent_ScrollWheel() {
+    return _inflate_MouseEvent_ScrollWheel();
+  }
+
+  late final _inflate_MouseEvent_ScrollWheelPtr =
+      _lookup<ffi.NativeFunction<ffi.Pointer<MouseEventKind> Function()>>(
+          'inflate_MouseEvent_ScrollWheel');
+  late final _inflate_MouseEvent_ScrollWheel =
+      _inflate_MouseEvent_ScrollWheelPtr
+          .asFunction<ffi.Pointer<MouseEventKind> Function()>();
 
   void free_WireSyncReturnStruct(
     WireSyncReturnStruct val,
@@ -732,6 +915,43 @@ class wire_uint_8_list extends ffi.Struct {
   external int len;
 }
 
+class MouseEvent_Up extends ffi.Struct {
+  @ffi.Int32()
+  external int field0;
+}
+
+class MouseEvent_Down extends ffi.Struct {
+  @ffi.Int32()
+  external int field0;
+}
+
+class MouseEvent_Move extends ffi.Struct {
+  @ffi.Int32()
+  external int field0;
+}
+
+class MouseEvent_ScrollWheel extends ffi.Struct {
+  @ffi.Float()
+  external double field0;
+}
+
+class MouseEventKind extends ffi.Union {
+  external ffi.Pointer<MouseEvent_Up> Up;
+
+  external ffi.Pointer<MouseEvent_Down> Down;
+
+  external ffi.Pointer<MouseEvent_Move> Move;
+
+  external ffi.Pointer<MouseEvent_ScrollWheel> ScrollWheel;
+}
+
+class wire_MouseEvent extends ffi.Struct {
+  @ffi.Int32()
+  external int tag;
+
+  external ffi.Pointer<MouseEventKind> kind;
+}
+
 typedef DartPostCObjectFnType = ffi.Pointer<
-    ffi.NativeFunction<ffi.Uint8 Function(DartPort, ffi.Pointer<ffi.Void>)>>;
+    ffi.NativeFunction<ffi.Bool Function(DartPort, ffi.Pointer<ffi.Void>)>>;
 typedef DartPort = ffi.Int64;

@@ -1,6 +1,8 @@
 import 'dart:developer';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:mirrorx/env/sdk/mirrorx_core.dart';
+import 'package:mirrorx/env/sdk/mirrorx_core_sdk.dart';
 import 'package:mirrorx/model/desktop.dart';
 import 'package:mirrorx/pages/desktop/widgets/desktop_render_box/desktop_render_box_scrollbar.dart';
 
@@ -102,26 +104,82 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
 
   void _handlePointerDown(PointerDownEvent event) {
     log("pointer down ${event.buttons}");
+
+    var mouseKey = MouseKey.None;
+
+    switch (event.buttons) {
+      case kPrimaryMouseButton:
+        mouseKey = MouseKey.Left;
+        break;
+      case kSecondaryMouseButton:
+        mouseKey = MouseKey.Right;
+        break;
+      case kMiddleMouseButton:
+        mouseKey = MouseKey.Wheel;
+    }
+
+    MirrorXCoreSDK.instance.endpointMouseEvent(
+      remoteDeviceId: widget.model.remoteDeviceID,
+      event: MouseEvent.down(mouseKey),
+      x: event.localPosition.dx,
+      y: event.localPosition.dy,
+    );
   }
 
   void _handlePointerUp(PointerUpEvent event) {
-    log("pointer up ${event.buttons}");
+    var mouseKey = MouseKey.None;
+
+    switch (event.buttons) {
+      case kPrimaryMouseButton:
+        mouseKey = MouseKey.Left;
+        break;
+      case kSecondaryMouseButton:
+        mouseKey = MouseKey.Right;
+        break;
+      case kMiddleMouseButton:
+        mouseKey = MouseKey.Wheel;
+    }
+
+    MirrorXCoreSDK.instance.endpointMouseEvent(
+      remoteDeviceId: widget.model.remoteDeviceID,
+      event: MouseEvent.up(mouseKey),
+      x: event.localPosition.dx,
+      y: event.localPosition.dy,
+    );
   }
 
   void _handlePointerHover(PointerHoverEvent event) {
-    final renderObject = context.findRenderObject() as RenderBox?;
-    if (renderObject != null) {
-      final position = renderObject.globalToLocal(event.position);
-      final x = position.dx + (-offsetX);
-      final y = position.dy + (-offsetY);
+    var mouseKey = MouseKey.None;
 
-      log("pointer hover $x $y");
+    if (event.down) {
+      switch (event.buttons) {
+        case kPrimaryMouseButton:
+          mouseKey = MouseKey.Left;
+          break;
+        case kSecondaryMouseButton:
+          mouseKey = MouseKey.Right;
+          break;
+        case kMiddleMouseButton:
+          mouseKey = MouseKey.Wheel;
+      }
     }
+
+    MirrorXCoreSDK.instance.endpointMouseEvent(
+      remoteDeviceId: widget.model.remoteDeviceID,
+      event: MouseEvent.move(mouseKey),
+      x: event.localPosition.dx,
+      y: event.localPosition.dy,
+    );
   }
 
   void _handlePointerSignal(PointerSignalEvent event) {
     if (event is PointerScrollEvent) {
-      log("pointer scroll ${event.scrollDelta}");
+      MirrorXCoreSDK.instance.endpointMouseEvent(
+        remoteDeviceId: widget.model.remoteDeviceID,
+        event: MouseEvent.scrollWheel(event.scrollDelta.dy),
+        x: event.localPosition.dx,
+        y: event.localPosition.dy,
+      );
     }
   }
 }
