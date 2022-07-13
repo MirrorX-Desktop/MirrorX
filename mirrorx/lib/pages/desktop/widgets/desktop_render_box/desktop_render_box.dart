@@ -1,12 +1,8 @@
 import 'dart:developer';
-
-import 'package:adaptive_scrollbar/adaptive_scrollbar.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:mirrorx/model/desktop.dart';
-import 'package:mirrorx/pages/desktop/widgets/desktop_render_box/horizontal_scroll_bar.dart';
-import 'package:mirrorx/pages/desktop/widgets/desktop_render_box/vertical_scroll_bar.dart';
+import 'package:mirrorx/pages/desktop/widgets/desktop_render_box/desktop_render_box_scrollbar.dart';
 
 class DesktopRenderBox extends StatefulWidget {
   const DesktopRenderBox({
@@ -27,6 +23,8 @@ class DesktopRenderBox extends StatefulWidget {
 class _DesktopRenderBoxState extends State<DesktopRenderBox> {
   double offsetY = 0.0;
   double offsetX = 0.0;
+  double renderBoxWidth = 0.0;
+  double renderBoxHeight = 0.0;
 
   @override
   void initState() {
@@ -47,9 +45,9 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
         ),
         LayoutBuilder(builder: (context, constraints) {
           return DesktopRenderBoxScrollBar(
-            maxScrollableValue: widget.height.floorToDouble(),
+            maxTrunkWidth: widget.height.floorToDouble(),
             axis: Axis.vertical,
-            initialWidth: constraints.maxHeight,
+            trunkWidth: constraints.maxHeight,
             onScroll: (offset) {
               setState(() {
                 offsetY = -offset;
@@ -62,9 +60,9 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
         }),
         LayoutBuilder(builder: (context, constraints) {
           return DesktopRenderBoxScrollBar(
-            maxScrollableValue: widget.width.floorToDouble(),
+            maxTrunkWidth: widget.width.floorToDouble(),
             axis: Axis.horizontal,
-            initialWidth: constraints.maxWidth,
+            trunkWidth: constraints.maxWidth,
             onScroll: (offset) {
               setState(() {
                 offsetX = -offset;
