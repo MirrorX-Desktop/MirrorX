@@ -22,10 +22,15 @@ class DesktopPage extends StatefulWidget {
 }
 
 class _DesktopPageState extends State<DesktopPage> {
+  StartMediaTransmissionResponse? _startMediaTransmissionResponse;
+
   @override
   Widget build(BuildContext context) {
     return widget.model.alreadyPrepared
-        ? _buildDesktopSurface()
+        ? _buildDesktopSurface(
+            _startMediaTransmissionResponse!.screenWidth,
+            _startMediaTransmissionResponse!.screenHeight,
+          )
         : FutureBuilder(
             future: prepare(),
             builder: (context, snapshot) {
@@ -55,14 +60,21 @@ class _DesktopPageState extends State<DesktopPage> {
                     );
                   }
 
+                  _startMediaTransmissionResponse =
+                      snapshot.data as StartMediaTransmissionResponse;
+
                   widget.model.alreadyPrepared = true;
-                  return _buildDesktopSurface();
+
+                  return _buildDesktopSurface(
+                    _startMediaTransmissionResponse!.screenWidth,
+                    _startMediaTransmissionResponse!.screenHeight,
+                  );
               }
             },
           );
   }
 
-  Future<void> prepare() async {
+  Future<StartMediaTransmissionResponse> prepare() async {
     final resp = await MirrorXCoreSDK.instance
         .endpointGetDisplayInfo(remoteDeviceId: widget.model.remoteDeviceID);
 
@@ -81,7 +93,7 @@ class _DesktopPageState extends State<DesktopPage> {
       }
     }
 
-    await MirrorXCoreSDK.instance.endpointStartMediaTransmission(
+    return await MirrorXCoreSDK.instance.endpointStartMediaTransmission(
       remoteDeviceId: widget.model.remoteDeviceID,
       expectFps: fps,
       expectDisplayId: displayID,
@@ -91,7 +103,7 @@ class _DesktopPageState extends State<DesktopPage> {
     );
   }
 
-  Widget _buildDesktopSurface() {
+  Widget _buildDesktopSurface(int width, int height) {
     return Column(
       children: [
         Row(
@@ -103,6 +115,8 @@ class _DesktopPageState extends State<DesktopPage> {
         Expanded(
           child: DesktopRenderBox(
             model: widget.model,
+            width: width,
+            height: height,
           ),
         )
       ],
