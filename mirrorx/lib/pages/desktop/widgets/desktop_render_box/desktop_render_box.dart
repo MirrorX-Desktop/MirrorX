@@ -25,8 +25,8 @@ class DesktopRenderBox extends StatefulWidget {
 }
 
 class _DesktopRenderBoxState extends State<DesktopRenderBox> {
-  double heightOffset = 0.0;
-  double widthOffset = 0.0;
+  double offsetY = 0.0;
+  double offsetX = 0.0;
 
   @override
   void initState() {
@@ -39,30 +39,42 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
     return Stack(
       children: [
         Positioned(
-          top: heightOffset.floorToDouble(),
-          left: widthOffset.floorToDouble(),
-          width: widget.width.toDouble(),
-          height: widget.height.toDouble(),
+          top: offsetY,
+          left: offsetX,
+          width: widget.width.floorToDouble(),
+          height: widget.height.floorToDouble(),
           child: _buildTexture(),
         ),
-        VerticalScrollBar(
-          maxScrollableValue: widget.height.toDouble(),
-          onScroll: (offset) {
-            setState(() {
-              heightOffset = -offset;
-              heightOffset = heightOffset.floorToDouble();
-            });
-          },
-        ),
-        HorizontalScrollBar(
-          maxScrollableValue: widget.width.toDouble(),
-          onScroll: (offset) {
-            setState(() {
-              widthOffset = -offset;
-              widthOffset = widthOffset.floorToDouble();
-            });
-          },
-        ),
+        LayoutBuilder(builder: (context, constraints) {
+          return DesktopRenderBoxScrollBar(
+            maxScrollableValue: widget.height.floorToDouble(),
+            axis: Axis.vertical,
+            initialWidth: constraints.maxHeight,
+            onScroll: (offset) {
+              setState(() {
+                offsetY = -offset;
+                if ((offsetY + constraints.maxHeight) > widget.height) {
+                  offsetY = widget.height - constraints.maxHeight;
+                }
+              });
+            },
+          );
+        }),
+        LayoutBuilder(builder: (context, constraints) {
+          return DesktopRenderBoxScrollBar(
+            maxScrollableValue: widget.width.floorToDouble(),
+            axis: Axis.horizontal,
+            initialWidth: constraints.maxWidth,
+            onScroll: (offset) {
+              setState(() {
+                offsetX = -offset;
+                if ((offsetX + constraints.maxWidth) > widget.width) {
+                  offsetX = widget.width - constraints.maxWidth;
+                }
+              });
+            },
+          );
+        })
       ],
     );
   }
@@ -104,8 +116,8 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
     final renderObject = context.findRenderObject() as RenderBox?;
     if (renderObject != null) {
       final position = renderObject.globalToLocal(event.position);
-      final x = position.dx + (-widthOffset);
-      final y = position.dy + (-heightOffset);
+      final x = position.dx + (-offsetX);
+      final y = position.dy + (-offsetY);
 
       log("pointer hover $x $y");
     }

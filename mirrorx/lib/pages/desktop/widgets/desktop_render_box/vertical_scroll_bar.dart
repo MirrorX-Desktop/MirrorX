@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:window_manager/window_manager.dart';
 
 class VerticalScrollBar extends StatefulWidget {
   const VerticalScrollBar({
@@ -15,7 +16,7 @@ class VerticalScrollBar extends StatefulWidget {
 }
 
 class _VerticalScrollBarState extends State<VerticalScrollBar>
-    with WidgetsBindingObserver {
+    with WindowListener {
   double _barOffset = 0;
   double _thumbHeight = 0;
   double _scrollbarMaxOffsetHeight = 0;
@@ -23,23 +24,12 @@ class _VerticalScrollBarState extends State<VerticalScrollBar>
 
   @override
   void initState() {
+    windowManager.addListener(this);
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
-    WidgetsBinding.instance.scheduleFrameCallback((_) {
-      final size = context.size;
-      if (size != null) {
-        _boxHeight = size.height;
-      }
-
-      _updateThumb();
-      _updateMaxScrollBarOffset();
-      _updateBarOffset();
-      _notifyScrollChange();
-    });
   }
 
   @override
-  void didChangeMetrics() {
+  void onWindowResize() {
     setState(() {
       final size = context.size;
       if (size != null) {
@@ -84,25 +74,25 @@ class _VerticalScrollBarState extends State<VerticalScrollBar>
   }
 
   void _updateThumb() {
-    _thumbHeight = _boxHeight * _boxHeight / widget.maxScrollableValue;
-    if (_thumbHeight > widget.maxScrollableValue) {
-      _thumbHeight = widget.maxScrollableValue;
+    final thumbFactor = _boxHeight / widget.maxScrollableValue;
+    if (thumbFactor >= 1) {
+      // todo disable
+    } else {
+      _thumbHeight = _boxHeight * thumbFactor;
     }
   }
 
   void _updateMaxScrollBarOffset() {
-    var height = _boxHeight;
-    if (height > widget.maxScrollableValue) {
-      height = widget.maxScrollableValue;
+    _scrollbarMaxOffsetHeight = _boxHeight - _thumbHeight;
+    if (_scrollbarMaxOffsetHeight < 0) {
+      _scrollbarMaxOffsetHeight = 0;
     }
-
-    _scrollbarMaxOffsetHeight = height - _thumbHeight;
   }
 
   void _updateBarOffset() {
-    if (_barOffset + _thumbHeight > widget.maxScrollableValue) {
-      _barOffset = widget.maxScrollableValue - _thumbHeight;
-    }
+    // if (_barOffset + _thumbHeight > widget.maxScrollableValue) {
+    // _barOffset = widget.maxScrollableValue - _thumbHeight;
+    // }
 
     if (_barOffset < 0) {
       _barOffset = 0;
@@ -119,7 +109,7 @@ class _VerticalScrollBarState extends State<VerticalScrollBar>
 
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
+    windowManager.removeListener(this);
     super.dispose();
   }
 }

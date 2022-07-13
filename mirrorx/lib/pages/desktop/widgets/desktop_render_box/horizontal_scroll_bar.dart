@@ -1,52 +1,48 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:window_manager/window_manager.dart';
 
-class HorizontalScrollBar extends StatefulWidget {
-  const HorizontalScrollBar({
+class DesktopRenderBoxScrollBar extends StatefulWidget {
+  const DesktopRenderBoxScrollBar({
     Key? key,
     required this.maxScrollableValue,
+    required this.axis,
+    required this.initialWidth,
     required this.onScroll,
   }) : super(key: key);
 
   final double maxScrollableValue;
+  final double initialWidth;
+  final Axis axis;
   final Function(double offset) onScroll;
 
   @override
-  _HorizontalScrollBarState createState() => _HorizontalScrollBarState();
+  _DesktopRenderBoxScrollBarState createState() =>
+      _DesktopRenderBoxScrollBarState();
 }
 
-class _HorizontalScrollBarState extends State<HorizontalScrollBar>
-    with WidgetsBindingObserver {
+class _DesktopRenderBoxScrollBarState extends State<DesktopRenderBoxScrollBar>
+    with WindowListener {
   double _barOffset = 0;
   double _thumbWidth = 0;
   double _scrollbarMaxOffsetHeight = 0;
   double _boxWidth = 0;
+  bool _visible = true;
 
   @override
   void initState() {
+    windowManager.addListener(this);
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
-    WidgetsBinding.instance.scheduleFrameCallback((_) {
-      final size = context.size;
-      if (size != null) {
-        _boxWidth = size.width;
-      }
 
-      _updateThumb();
-      _updateMaxScrollBarOffset();
-      _updateBarOffset();
-      _notifyScrollChange();
-    });
+    _boxWidth = widget.initialWidth;
+    _updateThumb();
+    _updateMaxScrollBarOffset();
   }
 
   @override
-  void didChangeMetrics() {
+  void onWindowResize() {
     setState(() {
-      final size = context.size;
-      if (size != null) {
-        _boxWidth = size.width;
-      }
-
+      _updateBoxWidth();
       _updateThumb();
       _updateMaxScrollBarOffset();
       _updateBarOffset();
@@ -56,55 +52,75 @@ class _HorizontalScrollBarState extends State<HorizontalScrollBar>
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onHorizontalDragUpdate: _onHorizontalDragUpdate,
-      child: Container(
-        alignment: Alignment.bottomLeft,
-        margin: EdgeInsets.only(left: _barOffset),
-        child: _buildScrollThumb(),
+    return Visibility(
+      visible: _visible,
+      child: GestureDetector(
+        onHorizontalDragUpdate:
+            widget.axis == Axis.horizontal ? _onDragUpdate : null,
+        onVerticalDragUpdate:
+            widget.axis == Axis.vertical ? _onDragUpdate : null,
+        child: Container(
+          alignment: widget.axis == Axis.horizontal
+              ? Alignment.bottomLeft
+              : Alignment.topRight,
+          margin: EdgeInsets.only(
+            left: widget.axis == Axis.horizontal ? _barOffset : 0,
+            top: widget.axis == Axis.vertical ? _barOffset : 0,
+          ),
+          child: _buildScrollThumb(),
+        ),
       ),
     );
   }
 
   Widget _buildScrollThumb() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8),
       decoration: BoxDecoration(
         color: Colors.black.withOpacity(0.2),
         borderRadius: BorderRadius.circular(6),
       ),
-      height: 6,
-      width: _thumbWidth,
+      height: widget.axis == Axis.horizontal ? 6 : _thumbWidth,
+      width: widget.axis == Axis.horizontal ? _thumbWidth : 6,
     );
   }
 
-  void _onHorizontalDragUpdate(DragUpdateDetails details) {
-    _barOffset += details.delta.dx;
+  void _onDragUpdate(DragUpdateDetails details) {
+    _barOffset +=
+        widget.axis == Axis.horizontal ? details.delta.dx : details.delta.dy;
+
     _updateBarOffset();
     _notifyScrollChange();
   }
 
+  void _updateBoxWidth() {
+    final size = context.size;
+    if (size != null) {
+      if (widget.axis == Axis.horizontal) {
+        _boxWidth = size.width;
+      } else {
+        _boxWidth = size.height;
+      }
+    }
+  }
+
   void _updateThumb() {
-    _thumbWidth = _boxWidth * _boxWidth / widget.maxScrollableValue;
-    if (_thumbWidth > widget.maxScrollableValue) {
-      _thumbWidth = widget.maxScrollableValue;
+    final thumbFactor = _boxWidth / widget.maxScrollableValue;
+    if (thumbFactor >= 1) {
+      _visible = false;
+    } else {
+      _visible = true;
+      _thumbWidth = _boxWidth * thumbFactor;
     }
   }
 
   void _updateMaxScrollBarOffset() {
-    var height = _boxWidth;
-    if (height > widget.maxScrollableValue) {
-      height = widget.maxScrollableValue;
+    _scrollbarMaxOffsetHeight = _boxWidth - _thumbWidth;
+    if (_scrollbarMaxOffsetHeight < 0) {
+      _scrollbarMaxOffsetHeight = 0;
     }
-
-    _scrollbarMaxOffsetHeight = height - _thumbWidth;
   }
 
   void _updateBarOffset() {
-    if (_barOffset + _thumbWidth > widget.maxScrollableValue) {
-      _barOffset = widget.maxScrollableValue - _thumbWidth;
-    }
-
     if (_barOffset < 0) {
       _barOffset = 0;
     }
@@ -120,7 +136,7 @@ class _HorizontalScrollBarState extends State<HorizontalScrollBar>
 
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
+    windowManager.removeListener(this);
     super.dispose();
   }
 }

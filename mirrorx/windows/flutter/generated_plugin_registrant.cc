@@ -6,9 +6,15 @@
 
 #include "generated_plugin_registrant.h"
 
+#include <screen_retriever/screen_retriever_plugin.h>
 #include <texture_render/texture_render_plugin_c_api.h>
+#include <window_manager/window_manager_plugin.h>
 
 void RegisterPlugins(flutter::PluginRegistry* registry) {
+  ScreenRetrieverPluginRegisterWithRegistrar(
+      registry->GetRegistrarForPlugin("ScreenRetrieverPlugin"));
   TextureRenderPluginCApiRegisterWithRegistrar(
       registry->GetRegistrarForPlugin("TextureRenderPluginCApi"));
+  WindowManagerPluginRegisterWithRegistrar(
+      registry->GetRegistrarForPlugin("WindowManagerPlugin"));
 }
