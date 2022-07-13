@@ -48,6 +48,7 @@ pub fn start_video_encode_process(
         .name(format!("video_encode_process:{}", remote_device_id))
         .spawn(move || {
             defer! {
+                info!(?remote_device_id, "video encode process exit");
                 let _ = exit_tx.send(());
             }
 
@@ -95,14 +96,12 @@ pub fn start_video_encode_process(
                             }
                             tokio::sync::mpsc::error::TrySendError::Closed(_) => {
                                 error!("network send channel is closed");
-                                break;
+                                return;
                             }
                         }
                     }
                 }
             }
-
-            info!(?remote_device_id, "video encode process exit");
         });
 
     Ok(())
@@ -137,6 +136,7 @@ pub fn start_video_decode_process(
         .name(format!("video_decode_process:{}", remote_device_id))
         .spawn(move || {
             defer! {
+                info!(?remote_device_id, "video decode process exit");
                 let _ = exit_tx.send(());
             }
 
@@ -178,14 +178,12 @@ pub fn start_video_decode_process(
                             }
                             crossbeam::channel::TrySendError::Disconnected(_) => {
                                 info!("video decoded frame channel closed");
-                                break;
+                                return;
                             }
                         }
                     }
                 }
             }
-
-            info!(?remote_device_id, "video decode process exit");
         });
 
     Ok(())
