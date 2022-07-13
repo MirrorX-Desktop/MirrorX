@@ -23,8 +23,6 @@ class DesktopRenderBox extends StatefulWidget {
 class _DesktopRenderBoxState extends State<DesktopRenderBox> {
   double offsetY = 0.0;
   double offsetX = 0.0;
-  double renderBoxWidth = 0.0;
-  double renderBoxHeight = 0.0;
 
   @override
   void initState() {
