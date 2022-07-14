@@ -31,6 +31,8 @@ pub fn get_active_monitors() -> Result<Vec<Monitor>, MirrorXError> {
                     height: monitor_height as u16,
                     is_primary: display_id == main_display_id,
                     screen_shot: screen_shot_buffer,
+                    left: 0,
+                    top: 0,
                 });
             }
         }
