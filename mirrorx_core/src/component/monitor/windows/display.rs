@@ -220,6 +220,8 @@ unsafe fn enum_dxgi_outputs(
                     height: monitor_resolution_height as u16,
                     is_primary: monitor_is_primary,
                     screen_shot: screent_shot_buffer,
+                    left: monitor_info.rcMonitor.left as u16,
+                    top: monitor_info.rcMonitor.top as u16,
                 });
             }
         }

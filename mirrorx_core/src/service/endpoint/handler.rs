@@ -88,8 +88,8 @@ pub async fn handle_mouse_event_frame(
             processor::mouse_event::mouse_down(key, mouse_event_frame.position)
         }
         MouseEvent::Move(key) => {
-            if let Some(display_id) = endpoint.display_id() {
-                processor::mouse_event::mouse_move(&display_id, key, mouse_event_frame.position)
+            if let Some(monitor) = endpoint.monitor() {
+                processor::mouse_event::mouse_move(monitor, key, mouse_event_frame.position)
             } else {
                 Err(MirrorXError::Other(anyhow::anyhow!(
                     "no associate display id to endpoint"

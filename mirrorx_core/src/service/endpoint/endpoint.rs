@@ -6,7 +6,7 @@ use super::{
 };
 use crate::{
     component::{
-        monitor,
+        monitor::{self, Monitor},
         video_decoder::{DecodedFrame, VideoDecoder},
     },
     error::MirrorXError,
@@ -104,7 +104,7 @@ macro_rules! handle_push_message {
 }
 
 pub struct EndPoint {
-    display_id: OnceCell<String>,
+    monitor: OnceCell<Monitor>,
     local_device_id: String,
     remote_device_id: String,
     atomic_call_id: AtomicU16,
@@ -125,8 +125,8 @@ impl EndPoint {
         &self.local_device_id
     }
 
-    pub fn display_id(&self) -> Option<String> {
-        self.display_id.get().map(|id| id.to_owned())
+    pub fn monitor(&self) -> Option<&Monitor> {
+        self.monitor.get()
     }
 }
 
@@ -242,7 +242,7 @@ impl EndPoint {
             self.packet_tx.clone(),
         )?;
 
-        let _ = self.display_id.set(monitor.id.to_owned());
+        let _ = self.monitor.set(monitor.clone());
 
         Ok(())
     }
@@ -452,7 +452,7 @@ where
     let (exit_tx, exit_rx) = crossbeam::channel::unbounded();
 
     let endpoint = Arc::new(EndPoint {
-        display_id: OnceCell::new(),
+        monitor: OnceCell::new(),
         local_device_id,
         remote_device_id: remote_device_id.clone(),
         atomic_call_id: AtomicU16::new(0),
