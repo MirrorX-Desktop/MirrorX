@@ -62,8 +62,6 @@ impl VideoEncoder {
             (*codec_ctx).color_primaries = AVCOL_PRI_BT709;
             (*codec_ctx).color_trc = AVCOL_TRC_BT709;
             (*codec_ctx).colorspace = AVCOL_SPC_BT709;
-            (*codec_ctx).thread_count = 4;
-            (*codec_ctx).thread_safe_callbacks = 1;
 
             let ret = avcodec_open2(codec_ctx, codec, std::ptr::null_mut());
             if ret != 0 {
