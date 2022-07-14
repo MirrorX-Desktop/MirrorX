@@ -208,11 +208,11 @@ impl VideoDecoder {
             } else {
                 (*self.packet).data = frame.buffer.as_mut_ptr();
                 (*self.packet).size = frame.buffer.len() as i32;
-                (*self.packet).pts = frame.pts;
-                (*self.packet).dts = frame.pts;
+                // (*self.packet).pts = frame.pts;
+                // (*self.packet).dts = frame.pts;
             }
 
-            av_packet_rescale_ts(self.packet, AV_TIME_BASE_Q, (*self.codec_ctx).pkt_timebase);
+            // av_packet_rescale_ts(self.packet, AV_TIME_BASE_Q, (*self.codec_ctx).pkt_timebase);
 
             let mut ret = avcodec_send_packet(self.codec_ctx, self.packet);
 
