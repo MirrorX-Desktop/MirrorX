@@ -73,6 +73,7 @@ fn test_capture_and_encode_and_decode() -> anyhow::Result<()> {
     std::thread::spawn(move || loop {
         match decoded_frame_rx.recv() {
             Ok(frame) => {
+                #[cfg(not(target_os = "macos"))]
                 info!(len=?frame.0.len(),"decodec frame size");
             }
             Err(err) => panic!("receive decoded frame failed ({})", err),
