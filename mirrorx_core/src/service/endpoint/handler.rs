@@ -89,13 +89,7 @@ pub async fn handle_mouse_event_frame(
         }
         MouseEvent::Move(key) => {
             if let Some(display_id) = endpoint.display_id() {
-                if let Ok(display_id) = display_id.parse::<u32>() {
-                    processor::mouse_event::mouse_move(display_id, key, mouse_event_frame.position)
-                } else {
-                    Err(MirrorXError::Other(anyhow::anyhow!(
-                        "parse display id failed"
-                    )))
-                }
+                processor::mouse_event::mouse_move(&display_id, key, mouse_event_frame.position)
             } else {
                 Err(MirrorXError::Other(anyhow::anyhow!(
                     "no associate display id to endpoint"

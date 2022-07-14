@@ -57,10 +57,14 @@ pub fn mouse_down(key: MouseKey, position: (f32, f32)) -> Result<(), MirrorXErro
 }
 
 pub fn mouse_move(
-    display_id: CGDirectDisplayID,
+    display_id: &str,
     key: MouseKey,
     position: (f32, f32),
 ) -> Result<(), MirrorXError> {
+    let display_id = display_id
+        .parse::<u32>()
+        .map_err(|err| MirrorXError::Other(anyhow::anyhow!(err)))?;
+
     let (mouse_type, mouse_button) = match key {
         MouseKey::None => (CGEventType::MouseMoved, CGMouseButton::Left),
         MouseKey::Left => (CGEventType::LeftMouseDragged, CGMouseButton::Left),

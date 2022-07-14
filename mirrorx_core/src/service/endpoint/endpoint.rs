@@ -452,7 +452,6 @@ where
     let (exit_tx, exit_rx) = crossbeam::channel::unbounded();
 
     let endpoint = Arc::new(EndPoint {
-        #[cfg(target_os = "macos")]
         display_id: OnceCell::new(),
         local_device_id,
         remote_device_id: remote_device_id.clone(),
