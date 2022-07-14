@@ -127,6 +127,8 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
   }
 
   void _handlePointerUp(PointerUpEvent event) {
+    log("pointer down ${event.buttons}");
+
     var mouseKey = MouseKey.None;
 
     switch (event.buttons) {
@@ -149,6 +151,8 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
   }
 
   void _handlePointerHover(PointerHoverEvent event) {
+    log("pointer down ${event.buttons} ${event.localPosition}");
+
     var mouseKey = MouseKey.None;
 
     if (event.down) {
