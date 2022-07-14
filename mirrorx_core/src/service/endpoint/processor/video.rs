@@ -74,33 +74,13 @@ pub fn start_video_encode_process(
                     }
                 };
 
-                let frames = match encoder.encode(frame) {
+                match encoder.encode(frame, &packet_tx) {
                     Ok(frames) => frames,
                     Err(err) => {
                         error!(?err, "video frame decode failed");
                         break;
                     }
                 };
-
-                for frame in frames {
-                    let packet = EndPointMessagePacket {
-                        typ: EndPointMessagePacketType::Push,
-                        call_id: None,
-                        message: EndPointMessage::VideoFrame(frame),
-                    };
-
-                    if let Err(err) = packet_tx.try_send(packet) {
-                        match err {
-                            tokio::sync::mpsc::error::TrySendError::Full(_) => {
-                                warn!("network send channel is full")
-                            }
-                            tokio::sync::mpsc::error::TrySendError::Closed(_) => {
-                                error!("network send channel is closed");
-                                return;
-                            }
-                        }
-                    }
-                }
             }
         });
 
@@ -162,27 +142,13 @@ pub fn start_video_decode_process(
                     }
                 };
 
-                let frames = match decoder.decode(video_frame) {
+                match decoder.decode(video_frame, &decoded_frame_tx) {
                     Ok(frames) => frames,
                     Err(err) => {
                         error!(?err, "video frame decode failed");
                         break;
                     }
                 };
-
-                for frame in frames {
-                    if let Err(err) = decoded_frame_tx.try_send(frame) {
-                        match err {
-                            crossbeam::channel::TrySendError::Full(_) => {
-                                warn!("video decoded frame channel is full")
-                            }
-                            crossbeam::channel::TrySendError::Disconnected(_) => {
-                                info!("video decoded frame channel closed");
-                                return;
-                            }
-                        }
-                    }
-                }
             }
         });
 

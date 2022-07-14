@@ -5,6 +5,7 @@ use crate::{
     service::endpoint::message::VideoFrame,
 };
 use anyhow::anyhow;
+use crossbeam::channel::Sender;
 use scopeguard::defer;
 use std::{
     collections::HashMap,
@@ -183,7 +184,11 @@ impl VideoDecoder {
         }
     }
 
-    pub fn decode(&self, mut frame: VideoFrame) -> Result<Vec<DecodedFrame>, MirrorXError> {
+    pub fn decode(
+        &self,
+        mut frame: VideoFrame,
+        tx: &Sender<DecodedFrame>,
+    ) -> Result<(), MirrorXError> {
         unsafe {
             if !self.parser_ctx.is_null() {
                 let ret = av_parser_parse2(
@@ -221,11 +226,10 @@ impl VideoDecoder {
                 return Err(MirrorXError::MediaVideoDecoderSendPacketFailed(ret));
             }
 
-            let mut frames = Vec::new();
             loop {
                 ret = avcodec_receive_frame(self.codec_ctx, self.decode_frame);
                 if ret == AVERROR(libc::EAGAIN) || ret == AVERROR_EOF {
-                    return Ok(frames);
+                    return Ok(());
                 } else if ret < 0 {
                     return Err(MirrorXError::MediaVideoDecoderReceiveFrameFailed(ret));
                 }
@@ -233,7 +237,20 @@ impl VideoDecoder {
                 if !self.parser_ctx.is_null() {
                 } else {
                     match self.send_native_frame() {
-                        Ok(frame) => frames.push(frame),
+                        Ok(frame) => {
+                            if let Err(err) = tx.try_send(frame) {
+                                match err {
+                                    crossbeam::channel::TrySendError::Full(_) => {
+                                        warn!("video decoded frame channel is full")
+                                    }
+                                    crossbeam::channel::TrySendError::Disconnected(_) => {
+                                        return Err(MirrorXError::Other(anyhow::anyhow!(
+                                            "video decoded frame channel closed"
+                                        )));
+                                    }
+                                }
+                            }
+                        }
                         Err(err) => return Err(err),
                     };
                 }

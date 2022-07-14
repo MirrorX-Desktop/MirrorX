@@ -1,11 +1,14 @@
 use crate::{
     error::MirrorXError,
     ffi::ffmpeg::{avcodec::*, avutil::*},
-    service::endpoint::message::VideoFrame,
+    service::endpoint::message::{
+        EndPointMessage, EndPointMessagePacket, EndPointMessagePacketType, VideoFrame,
+    },
 };
 use anyhow::anyhow;
-use crossbeam::channel::{bounded, Receiver, Sender};
 use std::ffi::CString;
+use tokio::sync::mpsc::Sender;
+use tracing::warn;
 
 pub struct VideoEncoder {
     codec: *const AVCodec,
@@ -119,7 +122,8 @@ impl VideoEncoder {
     pub fn encode(
         &mut self,
         frame: crate::component::desktop::Frame,
-    ) -> Result<Vec<VideoFrame>, MirrorXError> {
+        tx: &Sender<EndPointMessagePacket>,
+    ) -> Result<(), MirrorXError> {
         unsafe {
             let mut ret: i32;
 
@@ -199,11 +203,10 @@ impl VideoEncoder {
                 return Err(MirrorXError::MediaVideoEncoderSendFrameFailed(ret));
             }
 
-            let mut frames = Vec::new();
             loop {
                 ret = avcodec_receive_packet(self.codec_ctx, self.packet);
                 if ret == AVERROR(libc::EAGAIN) || ret == AVERROR_EOF {
-                    return Ok(frames);
+                    return Ok(());
                 } else if ret < 0 {
                     return Err(MirrorXError::MediaVideoDecoderReceiveFrameFailed(ret));
                 }
@@ -212,10 +215,27 @@ impl VideoEncoder {
                     std::slice::from_raw_parts((*self.packet).data, (*self.packet).size as usize)
                         .to_vec();
 
-                frames.push(VideoFrame {
-                    buffer,
-                    pts: (*self.packet).pts,
-                });
+                let packet = EndPointMessagePacket {
+                    typ: EndPointMessagePacketType::Push,
+                    call_id: None,
+                    message: EndPointMessage::VideoFrame(VideoFrame {
+                        buffer,
+                        pts: (*self.packet).pts,
+                    }),
+                };
+
+                if let Err(err) = tx.try_send(packet) {
+                    match err {
+                        tokio::sync::mpsc::error::TrySendError::Full(_) => {
+                            warn!("network send channel is full")
+                        }
+                        tokio::sync::mpsc::error::TrySendError::Closed(_) => {
+                            return Err(MirrorXError::Other(anyhow::anyhow!(
+                                "network send channel is closed"
+                            )));
+                        }
+                    }
+                }
 
                 av_packet_unref(self.packet);
             }
