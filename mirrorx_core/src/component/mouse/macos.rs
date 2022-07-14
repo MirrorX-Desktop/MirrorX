@@ -25,15 +25,20 @@ pub fn mouse_up(
     };
 
     unsafe {
-        post_cg_event(display_id, position.0, position.1, |event_source, point| {
-            CGEvent::new_mouse_event(
-                event_source,
-                event_type,
-                CGPoint::new(position.0 as f64, position.1 as f64),
-                mouse_button,
-            )
-            .map_err(|_| MirrorXError::Other(anyhow::anyhow!("create CGEvent failed")))
-        })
+        post_cg_event(
+            display_id,
+            position.0,
+            position.1,
+            move |event_source, point| {
+                CGEvent::new_mouse_event(
+                    event_source,
+                    event_type,
+                    CGPoint::new(position.0 as f64, position.1 as f64),
+                    mouse_button,
+                )
+                .map_err(|_| MirrorXError::Other(anyhow::anyhow!("create CGEvent failed")))
+            },
+        )
     }
 }
 
@@ -55,10 +60,15 @@ pub fn mouse_down(
     };
 
     unsafe {
-        post_cg_event(display_id, position.0, position.1, |event_source, point| {
-            CGEvent::new_mouse_event(event_source, event_type, point, mouse_button)
-                .map_err(|_| MirrorXError::Other(anyhow::anyhow!("create CGEvent failed")))
-        })
+        post_cg_event(
+            display_id,
+            position.0,
+            position.1,
+            move |event_source, point| {
+                CGEvent::new_mouse_event(event_source, event_type, point, mouse_button)
+                    .map_err(|_| MirrorXError::Other(anyhow::anyhow!("create CGEvent failed")))
+            },
+        )
     }
 }
 
@@ -80,10 +90,15 @@ pub fn mouse_move(
     };
 
     unsafe {
-        post_cg_event(display_id, position.0, position.1, |event_source, point| {
-            CGEvent::new_mouse_event(event_source, event_type, point, mouse_button)
-                .map_err(|_| MirrorXError::Other(anyhow::anyhow!("create CGEvent failed")))
-        })
+        post_cg_event(
+            display_id,
+            position.0,
+            position.1,
+            move |event_source, point| {
+                CGEvent::new_mouse_event(event_source, event_type, point, mouse_button)
+                    .map_err(|_| MirrorXError::Other(anyhow::anyhow!("create CGEvent failed")))
+            },
+        )
     }
 }
 
@@ -98,17 +113,22 @@ pub fn mouse_scroll_whell(
         .map_err(|err| MirrorXError::Other(anyhow::anyhow!(err)))?;
 
     unsafe {
-        post_cg_event(display_id, position.0, position.1, |event_source, point| {
-            CGEvent::new_scroll_event(
-                event_source,
-                ScrollEventUnit::PIXEL,
-                1,
-                delta.round() as i32,
-                0,
-                0,
-            )
-            .map_err(|_| MirrorXError::Other(anyhow::anyhow!("create CGEvent failed")))
-        })
+        post_cg_event(
+            display_id,
+            position.0,
+            position.1,
+            move |event_source, point| {
+                CGEvent::new_scroll_event(
+                    event_source,
+                    ScrollEventUnit::PIXEL,
+                    1,
+                    delta.round() as i32,
+                    0,
+                    0,
+                )
+                .map_err(|_| MirrorXError::Other(anyhow::anyhow!("create CGEvent failed")))
+            },
+        )
     }
 }
 
@@ -116,21 +136,19 @@ unsafe fn post_cg_event(
     display_id: CGDirectDisplayID,
     x: f32,
     y: f32,
-    event_create_fn: impl Fn(CGEventSource, CGPoint) -> Result<CGEvent, MirrorXError>,
+    event_create_fn: impl Fn(CGEventSource, CGPoint) -> Result<CGEvent, MirrorXError> + 'static + Send,
 ) -> Result<(), MirrorXError> {
-    let event_source = CGEventSource::new(CGEventSourceStateID::HIDSystemState)
-        .map_err(|_| MirrorXError::Other(anyhow::anyhow!("create CGEventSource failed")))?;
+    // todo: use self created serial queue
+    dispatch::Queue::global(dispatch::QueuePriority::High).barrier_async(move || {
+        if let Ok(event_source) = CGEventSource::new(CGEventSourceStateID::HIDSystemState) {
+            let point = CGPoint::new(x as f64, y as f64);
 
-    let point = CGPoint::new(x as f64, y as f64);
-
-    let event = event_create_fn(event_source, point.clone())?;
-    event.post(CGEventTapLocation::HID);
-
-    if CGDisplayMoveCursorToPoint(display_id, point) != 0 {
-        return Err(MirrorXError::Other(anyhow::anyhow!(
-            "CGDisplayMoveCursorToPoint failed"
-        )));
-    }
+            if let Ok(event) = event_create_fn(event_source, point.clone()) {
+                event.post(CGEventTapLocation::HID);
+                let _ = CGDisplayMoveCursorToPoint(display_id, point);
+            }
+        }
+    });
 
     Ok(())
 }

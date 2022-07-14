@@ -128,7 +128,7 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
   }
 
   void _handlePointerUp(PointerUpEvent event) {
-    final button = downButtons[event.pointer];
+    final button = downButtons.remove(event.pointer);
     if (button == null) {
       return;
     }
@@ -159,16 +159,19 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
 
     var mouseKey = MouseKey.None;
 
-    if (event.down) {
-      switch (event.buttons) {
-        case kPrimaryMouseButton:
-          mouseKey = MouseKey.Left;
-          break;
-        case kSecondaryMouseButton:
-          mouseKey = MouseKey.Right;
-          break;
-        case kMiddleMouseButton:
-          mouseKey = MouseKey.Wheel;
+    final button = downButtons[event.pointer];
+    if (button != null) {
+      if (event.down) {
+        switch (button) {
+          case kPrimaryMouseButton:
+            mouseKey = MouseKey.Left;
+            break;
+          case kSecondaryMouseButton:
+            mouseKey = MouseKey.Right;
+            break;
+          case kMiddleMouseButton:
+            mouseKey = MouseKey.Wheel;
+        }
       }
     }
 
