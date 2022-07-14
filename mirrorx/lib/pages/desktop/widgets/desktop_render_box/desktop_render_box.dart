@@ -79,10 +79,8 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
       onPointerDown: _handlePointerDown,
       onPointerUp: _handlePointerUp,
       onPointerHover: _handlePointerHover,
+      onPointerMove: _handlePointerMove,
       onPointerSignal: _handlePointerSignal,
-      onPointerCancel: (event) {
-        log("pointer cancel ${event.buttons}");
-      },
       child: RepaintBoundary(
         child: Container(
           color: Colors.black,
@@ -154,30 +152,39 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
     );
   }
 
-  void _handlePointerHover(PointerHoverEvent event) {
-    log("pointer hover ${event.buttons} ${event.localPosition}");
+  void _handlePointerMove(PointerMoveEvent event) {
+    log("pointer move ${event.buttons} ${event.localPosition}");
 
     var mouseKey = MouseKey.None;
 
-    final button = downButtons[event.pointer];
-    if (button != null) {
-      if (event.down) {
-        switch (button) {
-          case kPrimaryMouseButton:
-            mouseKey = MouseKey.Left;
-            break;
-          case kSecondaryMouseButton:
-            mouseKey = MouseKey.Right;
-            break;
-          case kMiddleMouseButton:
-            mouseKey = MouseKey.Wheel;
-        }
-      }
+    switch (event.buttons) {
+      case kPrimaryMouseButton:
+        mouseKey = MouseKey.Left;
+        break;
+      case kSecondaryMouseButton:
+        mouseKey = MouseKey.Right;
+        break;
+      case kMiddleMouseButton:
+        mouseKey = MouseKey.Wheel;
+        break;
+      default:
+        return;
     }
 
     MirrorXCoreSDK.instance.endpointMouseEvent(
       remoteDeviceId: widget.model.remoteDeviceID,
       event: MouseEvent.move(mouseKey),
+      x: event.localPosition.dx,
+      y: event.localPosition.dy,
+    );
+  }
+
+  void _handlePointerHover(PointerHoverEvent event) {
+    log("pointer hover ${event.buttons} ${event.localPosition}");
+
+    MirrorXCoreSDK.instance.endpointMouseEvent(
+      remoteDeviceId: widget.model.remoteDeviceID,
+      event: const MouseEvent.move(MouseKey.None),
       x: event.localPosition.dx,
       y: event.localPosition.dy,
     );
