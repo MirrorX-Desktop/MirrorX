@@ -4,12 +4,20 @@ use crate::{
     service::endpoint::message::{MouseEventFrame, MouseKey},
 };
 
-pub fn mouse_up(key: MouseKey, position: (f32, f32)) -> Result<(), MirrorXError> {
-    component::mouse_controller::mouse_up(key, position)
+pub fn mouse_up(
+    monitor: &Monitor,
+    key: MouseKey,
+    position: (f32, f32),
+) -> Result<(), MirrorXError> {
+    component::mouse_controller::mouse_up(monitor, key, position)
 }
 
-pub fn mouse_down(key: MouseKey, position: (f32, f32)) -> Result<(), MirrorXError> {
-    component::mouse_controller::mouse_down(key, position)
+pub fn mouse_down(
+    monitor: &Monitor,
+    key: MouseKey,
+    position: (f32, f32),
+) -> Result<(), MirrorXError> {
+    component::mouse_controller::mouse_down(monitor, key, position)
 }
 
 pub fn mouse_move(
@@ -20,6 +28,10 @@ pub fn mouse_move(
     component::mouse_controller::mouse_move(monitor, key, position)
 }
 
-pub fn mouse_scroll_whell(delta: f32, position: (f32, f32)) -> Result<(), MirrorXError> {
-    component::mouse_controller::mouse_scroll_whell(delta, position)
+pub fn mouse_scroll_whell(
+    monitor: &Monitor,
+    delta: f32,
+    position: (f32, f32),
+) -> Result<(), MirrorXError> {
+    component::mouse_controller::mouse_scroll_whell(monitor, delta, position)
 }
