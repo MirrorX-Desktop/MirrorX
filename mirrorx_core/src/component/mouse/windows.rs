@@ -137,7 +137,7 @@ unsafe fn send_input(
 
     inputs.set_len(args.len());
 
-    if SendInput(&inputs, std::mem::size_of::<INPUT>() as i32) as usize != inputs.len() {
+    if SendInput(&inputs, std::mem::size_of::<INPUT>() as i32) as usize == inputs.len() {
         Ok(())
     } else {
         Err(MirrorXError::Other(anyhow::anyhow!(
