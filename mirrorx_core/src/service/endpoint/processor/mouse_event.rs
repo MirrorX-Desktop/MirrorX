@@ -9,7 +9,7 @@ pub fn mouse_up(
     key: MouseKey,
     position: (f32, f32),
 ) -> Result<(), MirrorXError> {
-    component::mouse_controller::mouse_up(monitor, key, position)
+    component::mouse::mouse_up(monitor, key, position)
 }
 
 pub fn mouse_down(
@@ -17,7 +17,7 @@ pub fn mouse_down(
     key: MouseKey,
     position: (f32, f32),
 ) -> Result<(), MirrorXError> {
-    component::mouse_controller::mouse_down(monitor, key, position)
+    component::mouse::mouse_down(monitor, key, position)
 }
 
 pub fn mouse_move(
@@ -25,7 +25,7 @@ pub fn mouse_move(
     key: MouseKey,
     position: (f32, f32),
 ) -> Result<(), MirrorXError> {
-    component::mouse_controller::mouse_move(monitor, key, position)
+    component::mouse::mouse_move(monitor, key, position)
 }
 
 pub fn mouse_scroll_whell(
@@ -33,5 +33,5 @@ pub fn mouse_scroll_whell(
     delta: f32,
     position: (f32, f32),
 ) -> Result<(), MirrorXError> {
-    component::mouse_controller::mouse_scroll_whell(monitor, delta, position)
+    component::mouse::mouse_scroll_whell(monitor, delta, position)
 }
