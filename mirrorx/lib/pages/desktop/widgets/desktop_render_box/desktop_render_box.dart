@@ -1,6 +1,7 @@
 import 'dart:developer';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:mirrorx/env/sdk/mirrorx_core.dart';
 import 'package:mirrorx/env/sdk/mirrorx_core_sdk.dart';
 import 'package:mirrorx/model/desktop.dart';
@@ -25,12 +26,7 @@ class DesktopRenderBox extends StatefulWidget {
 class _DesktopRenderBoxState extends State<DesktopRenderBox> {
   double offsetY = 0.0;
   double offsetX = 0.0;
-
-  @override
-  void initState() {
-    super.initState();
-    log("initial width: ${widget.width} height: ${widget.height}");
-  }
+  Map<int, int> downButtons = {};
 
   @override
   Widget build(BuildContext context) {
@@ -84,6 +80,9 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
       onPointerUp: _handlePointerUp,
       onPointerHover: _handlePointerHover,
       onPointerSignal: _handlePointerSignal,
+      onPointerCancel: (event) {
+        log("pointer cancel ${event.buttons}");
+      },
       child: RepaintBoundary(
         child: Container(
           color: Colors.black,
@@ -103,7 +102,7 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
   }
 
   void _handlePointerDown(PointerDownEvent event) {
-    log("pointer down ${event.buttons}");
+    log("pointer down ${event.buttons} ${event.pointer}");
 
     var mouseKey = MouseKey.None;
 
@@ -124,14 +123,19 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
       x: event.localPosition.dx,
       y: event.localPosition.dy,
     );
+
+    downButtons[event.pointer] = event.buttons;
   }
 
   void _handlePointerUp(PointerUpEvent event) {
-    log("pointer down ${event.buttons}");
+    final button = downButtons[event.pointer];
+    if (button == null) {
+      return;
+    }
 
     var mouseKey = MouseKey.None;
 
-    switch (event.buttons) {
+    switch (button) {
       case kPrimaryMouseButton:
         mouseKey = MouseKey.Left;
         break;
@@ -151,7 +155,7 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
   }
 
   void _handlePointerHover(PointerHoverEvent event) {
-    log("pointer down ${event.buttons} ${event.localPosition}");
+    log("pointer hover ${event.buttons} ${event.localPosition}");
 
     var mouseKey = MouseKey.None;
 
