@@ -1,4 +1,5 @@
 use crate::{
+    component::monitor::Monitor,
     error::MirrorXError,
     service::endpoint::message::{MouseEvent, MouseEventFrame, MouseKey},
 };
@@ -57,11 +58,12 @@ pub fn mouse_down(key: MouseKey, position: (f32, f32)) -> Result<(), MirrorXErro
 }
 
 pub fn mouse_move(
-    display_id: &str,
+    monitor: &Monitor,
     key: MouseKey,
     position: (f32, f32),
 ) -> Result<(), MirrorXError> {
-    let display_id = display_id
+    let display_id = monitor
+        .id
         .parse::<u32>()
         .map_err(|err| MirrorXError::Other(anyhow::anyhow!(err)))?;
 
@@ -77,9 +79,8 @@ pub fn mouse_move(
 
     let point = CGPoint::new(position.0 as f64, position.1 as f64);
 
-    let event =
-        CGEvent::new_mouse_event(event_source, CGEventType::MouseMoved, point, mouse_button)
-            .map_err(|err| MirrorXError::Other(anyhow::anyhow!("create CGEvent failed")))?;
+    let event = CGEvent::new_mouse_event(event_source, mouse_type, point, mouse_button)
+        .map_err(|err| MirrorXError::Other(anyhow::anyhow!("create CGEvent failed")))?;
 
     event.post(CGEventTapLocation::HID);
 
