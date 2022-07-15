@@ -30,7 +30,12 @@ pub fn start_video_encode_process(
     } else if cfg!(target_os = "windows") {
         (
             "libx264",
-            HashMap::from([("preset", "ultrafast"), ("tune", "zerolatency")]),
+            HashMap::from([
+                ("profile", "high"),
+                ("level", "5.0"),
+                ("preset", "ultrafast"),
+                ("tune", "zerolatency"),
+            ]),
         )
     } else {
         panic!("unsupported platform")

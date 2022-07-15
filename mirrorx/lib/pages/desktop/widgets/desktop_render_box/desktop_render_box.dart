@@ -1,7 +1,6 @@
 import 'dart:developer';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:mirrorx/env/sdk/mirrorx_core.dart';
 import 'package:mirrorx/env/sdk/mirrorx_core_sdk.dart';
 import 'package:mirrorx/model/desktop.dart';
@@ -27,9 +26,24 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
   double offsetY = 0.0;
   double offsetX = 0.0;
   Map<int, int> downButtons = {};
+  FocusNode focusNode = FocusNode();
+
+  // @override
+  // void initState() {
+  //   super.initState();
+  //   focusAttachment = focusNode.attach(context, onKey: _handleKeyboardEvent);
+  //   focusNode.requestFocus();
+  // }
+  //
+  // @override
+  // void dispose() {
+  //   focusNode.dispose();
+  //   super.dispose();
+  // }
 
   @override
   Widget build(BuildContext context) {
+    // focusAttachment.reparent();
     return Stack(
       children: [
         Positioned(
@@ -74,7 +88,8 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
   }
 
   Widget _buildTexture() {
-    return RepaintBoundary(
+    return Focus(
+      onKey: _handleKeyboardEvent,
       child: Listener(
         behavior: HitTestBehavior.opaque,
         onPointerDown: _handlePointerDown,
@@ -82,18 +97,20 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
         onPointerHover: _handlePointerHover,
         onPointerMove: _handlePointerMove,
         onPointerSignal: _handlePointerSignal,
-        child: Container(
-            color: Colors.black,
-            child: Center(
-              child: AspectRatio(
-                aspectRatio: widget.width.toDouble() / widget.height.toDouble(),
-                child: Texture(
-                  textureId: widget.model.textureID,
-                  freeze: true,
-                  filterQuality: FilterQuality.high,
+        child: RepaintBoundary(
+          child: Container(
+              color: Colors.black,
+              child: Center(
+                child: AspectRatio(
+                  aspectRatio: widget.width.toDouble() / widget.height.toDouble(),
+                  child: Texture(
+                    textureId: widget.model.textureID,
+                    freeze: true,
+                    filterQuality: FilterQuality.high,
+                  ),
                 ),
-              ),
-            )),
+              )),
+        ),
       ),
     );
   }
@@ -198,5 +215,11 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
         y: event.localPosition.dy,
       );
     }
+  }
+
+  KeyEventResult _handleKeyboardEvent(FocusNode _, RawKeyEvent event) {
+    log("alt:${event.isAltPressed} control:${event.isControlPressed} meta:${event.isMetaPressed} shift:${event.isShiftPressed} repeat:${event.repeat} logical:${event.logicalKey}");
+
+    return KeyEventResult.handled;
   }
 }
