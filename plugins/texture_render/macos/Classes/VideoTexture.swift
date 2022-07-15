@@ -9,7 +9,7 @@ class VideoTexture: NSObject, FlutterTexture {
     
     init(registry: FlutterTextureRegistry) {
         self.registry = registry
-        self.semaphore = DispatchSemaphore.init(value: 1)
+        self.semaphore = DispatchSemaphore.init(value: 0)
     }
     
     func updateFrame(textureID: Int64, pixelBuffer: Unmanaged<CVPixelBuffer>) {

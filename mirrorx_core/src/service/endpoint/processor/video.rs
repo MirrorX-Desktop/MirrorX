@@ -24,27 +24,21 @@ pub fn start_video_encode_process(
     mut capture_frame_rx: tokio::sync::mpsc::Receiver<Frame>,
     packet_tx: tokio::sync::mpsc::Sender<EndPointMessagePacket>,
 ) -> Result<(), MirrorXError> {
-    let encoder_name = if cfg!(target_os = "macos") {
-        "h264_videotoolbox"
+    let (encoder_name, options) = if cfg!(target_os = "macos") {
+        (
+            "h264_videotoolbox",
+            HashMap::from([("realtime", "1"), ("allow_sw", "0")]),
+        )
     } else if cfg!(target_os = "windows") {
-        "libx264"
+        (
+            "libx264",
+            HashMap::from([("preset", "ultrafast"), ("tune", "zerolatency")]),
+        )
     } else {
         panic!("unsupported platform")
     };
 
-    let mut encoder = VideoEncoder::new(encoder_name, fps, width, height)?;
-
-    encoder.set_opt("profile", "baseline", 0)?;
-    encoder.set_opt("level", "5.2", 0)?;
-
-    if encoder_name == "libx264" {
-        encoder.set_opt("preset", "ultrafast", 0)?;
-        encoder.set_opt("tune", "zerolatency", 0)?;
-        // encoder.set_opt("sc_threshold", "0", 0)?;
-    } else {
-        encoder.set_opt("realtime", "1", 0)?;
-        encoder.set_opt("allow_sw", "0", 0)?;
-    }
+    let mut encoder = VideoEncoder::new(encoder_name, fps, width, height, options)?;
 
     TOKIO_RUNTIME.spawn(async move {
         defer! {

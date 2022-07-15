@@ -6,7 +6,7 @@ use crate::{
     },
 };
 use anyhow::anyhow;
-use std::ffi::CString;
+use std::{collections::HashMap, ffi::CString};
 use tokio::sync::mpsc::Sender;
 use tracing::warn;
 
@@ -26,6 +26,7 @@ impl VideoEncoder {
         fps: i32,
         width: i32,
         height: i32,
+        options: HashMap<&str, &str>,
     ) -> Result<VideoEncoder, MirrorXError> {
         let encoder_name_ptr = CString::new(encoder_name.to_string())
             .map_err(|err| MirrorXError::Other(anyhow!(err)))?;
@@ -63,6 +64,10 @@ impl VideoEncoder {
             (*codec_ctx).color_trc = AVCOL_TRC_BT709;
             (*codec_ctx).colorspace = AVCOL_SPC_BT709;
 
+            for (k, v) in options {
+                Self::set_opt(codec_ctx, k, v, 0)?;
+            }
+
             let ret = avcodec_open2(codec_ctx, codec, std::ptr::null_mut());
             if ret != 0 {
                 return Err(MirrorXError::MediaVideoEncoderOpenFailed(ret));
@@ -77,7 +82,12 @@ impl VideoEncoder {
         }
     }
 
-    pub fn set_opt(&self, key: &str, value: &str, search_flags: i32) -> Result<(), MirrorXError> {
+    fn set_opt(
+        codec_ctx: *mut AVCodecContext,
+        key: &str,
+        value: &str,
+        search_flags: i32,
+    ) -> Result<(), MirrorXError> {
         let opt_name =
             CString::new(key.to_string()).map_err(|err| MirrorXError::Other(anyhow!(err)))?;
         let opt_value =
@@ -85,7 +95,7 @@ impl VideoEncoder {
 
         unsafe {
             let ret = av_opt_set(
-                (*self.codec_ctx).priv_data,
+                (*codec_ctx).priv_data,
                 opt_name.as_ptr(),
                 opt_value.as_ptr(),
                 search_flags,
