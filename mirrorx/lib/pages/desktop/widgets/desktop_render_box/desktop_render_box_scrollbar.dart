@@ -51,19 +51,19 @@ class _DesktopRenderBoxScrollBarState extends State<DesktopRenderBoxScrollBar> {
   Widget build(BuildContext context) {
     return Visibility(
       visible: _visible,
-      child: GestureDetector(
-        onHorizontalDragUpdate:
-            widget.axis == Axis.horizontal ? _onDragUpdate : null,
-        onVerticalDragUpdate:
-            widget.axis == Axis.vertical ? _onDragUpdate : null,
-        child: Container(
-          alignment: widget.axis == Axis.horizontal
-              ? Alignment.bottomLeft
-              : Alignment.topRight,
-          margin: EdgeInsets.only(
-            left: widget.axis == Axis.horizontal ? _thumbOffset : 0,
-            top: widget.axis == Axis.vertical ? _thumbOffset : 0,
-          ),
+      child: Container(
+        alignment: widget.axis == Axis.horizontal
+            ? Alignment.bottomLeft
+            : Alignment.topRight,
+        margin: EdgeInsets.only(
+          left: widget.axis == Axis.horizontal ? _thumbOffset : 0,
+          top: widget.axis == Axis.vertical ? _thumbOffset : 0,
+        ),
+        child: GestureDetector(
+          onHorizontalDragUpdate:
+              widget.axis == Axis.horizontal ? _onDragUpdate : null,
+          onVerticalDragUpdate:
+              widget.axis == Axis.vertical ? _onDragUpdate : null,
           child: _buildScrollThumb(),
         ),
       ),

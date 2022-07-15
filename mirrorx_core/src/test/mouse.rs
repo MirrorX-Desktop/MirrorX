@@ -1,11 +1,12 @@
-use std::mem::zeroed;
-use windows::Win32::{
-    Foundation::GetLastError,
-    UI::{Input::KeyboardAndMouse::*, WindowsAndMessaging::GetMessageExtraInfo},
-};
-
+#[cfg(target_os = "windows")]
 #[test]
 fn test_mouse_move() -> anyhow::Result<()> {
+    use std::mem::zeroed;
+    use windows::Win32::{
+        Foundation::GetLastError,
+        UI::{Input::KeyboardAndMouse::*, WindowsAndMessaging::GetMessageExtraInfo},
+    };
+
     unsafe {
         let mut inputs: [INPUT; 1] = zeroed();
         inputs[0].r#type = INPUT_MOUSE;

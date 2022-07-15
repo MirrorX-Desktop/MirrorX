@@ -92,33 +92,31 @@ pub fn start_desktop_capture_process(
 #[cfg(target_os = "macos")]
 pub fn start_desktop_capture_process(
     remote_device_id: String,
-    exit_tx: Sender<()>,
-    exit_rx: Receiver<()>,
-    capture_frame_tx: Sender<Frame>,
+    exit_tx: tokio::sync::broadcast::Sender<()>,
+    mut exit_rx: tokio::sync::broadcast::Receiver<()>,
+    capture_frame_tx: tokio::sync::mpsc::Sender<Frame>,
     display_id: &str,
     fps: u8,
 ) -> Result<(), MirrorXError> {
+    use crate::utility::runtime::TOKIO_RUNTIME;
+
     let mut duplicator = Duplicator::new(capture_frame_tx, display_id, fps)?;
 
-    let _ = std::thread::Builder::new()
-        .name(format!("desktop_capture_process:{}", remote_device_id))
-        .spawn(move || {
-            defer! {
-                let _ = exit_tx.send(());
-                info!(?remote_device_id, "desktop capture process exit");
-            }
+    TOKIO_RUNTIME.spawn(async move {
+        defer! {
+            let _ = exit_tx.send(());
+            info!(?remote_device_id, "desktop capture process exit");
+        }
 
-            if let Err(err) = duplicator.start() {
-                error!(?err, "duplicator start failed");
-                return;
-            }
+        if let Err(err) = duplicator.start() {
+            error!(?err, "duplicator start failed");
+            return;
+        }
 
-            defer! {
-                duplicator.stop();
-            }
+        let _ = exit_rx.recv().await;
 
-            let _ = exit_rx.recv();
-        });
+        duplicator.stop();
+    });
 
     Ok(())
 }
@@ -144,6 +142,10 @@ pub fn start_desktop_render_process(
                     }
                 };
 
+                info!(
+                    "begin render frame {}",
+                    chrono::Utc::now().timestamp_millis()
+                );
                 #[cfg(target_os = "macos")]
                 unsafe {
                     update_callback_fn(
@@ -152,6 +154,10 @@ pub fn start_desktop_render_process(
                         decoded_video_frame.0,
                     );
                 }
+                info!(
+                    "begin render frame {}",
+                    chrono::Utc::now().timestamp_millis()
+                );
 
                 #[cfg(target_os = "windows")]
                 unsafe {

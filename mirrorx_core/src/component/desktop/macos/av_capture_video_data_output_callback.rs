@@ -24,7 +24,7 @@ static VIDEO_DATA_OUTPUT_CALLBACK_CLASS_INIT_ONCE: Once = Once::new();
 pub struct AVCaptureVideoDataOutputCallback {}
 
 impl AVCaptureVideoDataOutputCallback {
-    pub fn initialize(&mut self, capture_frame_tx: Sender<Frame>) {
+    pub fn initialize(&mut self, capture_frame_tx: tokio::sync::mpsc::Sender<Frame>) {
         unsafe {
             let obj = &mut *(self as *mut _ as *mut Object);
             let capture_frame_tx_ptr = Box::into_raw(Box::new(capture_frame_tx));
@@ -137,8 +137,10 @@ unsafe fn add_method_capture_output_callback(cls: &mut ClassDecl) {
                 return;
             }
 
-            let capture_frame_tx =
-                std::mem::transmute::<*mut c_void, &mut Sender<Frame>>(capture_frame_tx_ptr);
+            let capture_frame_tx = std::mem::transmute::<
+                *mut c_void,
+                &mut tokio::sync::mpsc::Sender<Frame>,
+            >(capture_frame_tx_ptr);
 
             let mut timing_info: CMSampleTimingInfo = std::mem::zeroed();
             let ret = CMSampleBufferGetSampleTimingInfo(didOutputSampleBuffer, 0, &mut timing_info);
@@ -214,7 +216,7 @@ unsafe fn add_method_capture_output_callback(cls: &mut ClassDecl) {
                 0,
             );
 
-            if let Err(err) = capture_frame_tx.send(capture_frame) {
+            if let Err(err) = capture_frame_tx.try_send(capture_frame) {
                 error!(?err, "send capture frame failed");
                 return;
             }

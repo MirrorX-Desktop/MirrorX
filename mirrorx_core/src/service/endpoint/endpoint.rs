@@ -110,10 +110,114 @@ pub struct EndPoint {
     atomic_call_id: AtomicU16,
     call_reply_tx_map: DashMap<u16, tokio::sync::oneshot::Sender<EndPointMessage>>,
     packet_tx: tokio::sync::mpsc::Sender<EndPointMessagePacket>,
-    video_frame_tx: OnceCell<Sender<VideoFrame>>,
+    video_frame_tx: OnceCell<tokio::sync::mpsc::Sender<VideoFrame>>,
     audio_frame_tx: OnceCell<Sender<AudioFrame>>,
-    exit_tx: crossbeam::channel::Sender<()>,
-    exit_rx: crossbeam::channel::Receiver<()>,
+    exit_tx: tokio::sync::broadcast::Sender<()>,
+    exit_rx: tokio::sync::broadcast::Receiver<()>,
+}
+
+pub async fn connect<A>(
+    addr: A,
+    is_active_side: bool,
+    local_device_id: String,
+    remote_device_id: String,
+    opening_key: OpeningKey<NonceValue>,
+    sealing_key: SealingKey<NonceValue>,
+) -> Result<(), MirrorXError>
+where
+    A: ToSocketAddrs,
+{
+    let mut stream = timeout(Duration::from_secs(10), TcpStream::connect(addr))
+        .await
+        .map_err(|_| MirrorXError::Timeout)?
+        .map_err(|err| MirrorXError::IO(err))?;
+
+    stream
+        .set_nodelay(true)
+        .map_err(|err| MirrorXError::IO(err))?;
+
+    // handshake for endpoint
+
+    let (active_device_id, passive_device_id) = if is_active_side {
+        (
+            format!("{:0>10}", local_device_id),
+            format!("{:0>10}", remote_device_id),
+        )
+    } else {
+        (
+            format!("{:0>10}", remote_device_id),
+            format!("{:0>10}", local_device_id),
+        )
+    };
+
+    let active_device_id_buf = active_device_id.as_bytes();
+    if active_device_id_buf.len() != 10 {
+        return Err(MirrorXError::Other(anyhow::anyhow!(
+            "active device id bytes length is not 10"
+        )));
+    }
+
+    let passive_device_id_buf = passive_device_id.as_bytes();
+    if passive_device_id_buf.len() != 10 {
+        return Err(MirrorXError::Other(anyhow::anyhow!(
+            "passive device id bytes length is not 10"
+        )));
+    }
+
+    stream
+        .write(active_device_id_buf)
+        .await
+        .map_err(|err| MirrorXError::IO(err))?;
+    stream
+        .write(passive_device_id_buf)
+        .await
+        .map_err(|err| MirrorXError::IO(err))?;
+
+    let mut handshake_response_buf = [0u8; 1];
+    timeout(
+        Duration::from_secs(60),
+        stream.read_exact(&mut handshake_response_buf),
+    )
+    .await
+    .map_err(|_| MirrorXError::Timeout)?
+    .map_err(|err| MirrorXError::IO(err))?;
+
+    if handshake_response_buf[0] != 1 {
+        return Err(MirrorXError::EndPointError(String::from(
+            "handshake failed",
+        )));
+    }
+
+    let framed_stream = LengthDelimitedCodec::builder()
+        .little_endian()
+        .max_frame_length(16 * 1024 * 1024)
+        .new_framed(stream);
+
+    let (sink, stream) = framed_stream.split();
+
+    let (packet_tx, packet_rx) = tokio::sync::mpsc::channel(128);
+
+    let (exit_tx, exit_rx) = tokio::sync::broadcast::channel(1);
+
+    let endpoint = Arc::new(EndPoint {
+        monitor: OnceCell::new(),
+        local_device_id,
+        remote_device_id: remote_device_id.clone(),
+        atomic_call_id: AtomicU16::new(0),
+        call_reply_tx_map: DashMap::new(),
+        packet_tx,
+        video_frame_tx: OnceCell::new(),
+        audio_frame_tx: OnceCell::new(),
+        exit_tx,
+        exit_rx,
+    });
+
+    serve_reader(endpoint.clone(), stream, opening_key);
+    serve_writer(remote_device_id.clone(), packet_rx, sink, sealing_key);
+
+    ENDPOINTS.insert(remote_device_id, endpoint);
+
+    Ok(())
 }
 
 impl EndPoint {
@@ -220,26 +324,26 @@ impl EndPoint {
         let height = monitor.height;
         let fps = monitor.refresh_rate.min(except_fps);
 
-        let (capture_frame_tx, capture_frame_rx) = crossbeam::channel::bounded(1);
-
-        start_desktop_capture_process(
-            self.remote_device_id.clone(),
-            self.exit_tx.clone(),
-            self.exit_rx.clone(),
-            capture_frame_tx,
-            display_id,
-            fps,
-        )?;
+        let (capture_frame_tx, capture_frame_rx) = tokio::sync::mpsc::channel(16);
 
         start_video_encode_process(
             self.remote_device_id.clone(),
             self.exit_tx.clone(),
-            self.exit_rx.clone(),
+            self.exit_tx.subscribe(),
             width as i32,
             height as i32,
             fps as i32,
             capture_frame_rx,
             self.packet_tx.clone(),
+        )?;
+
+        start_desktop_capture_process(
+            self.remote_device_id.clone(),
+            self.exit_tx.clone(),
+            self.exit_tx.subscribe(),
+            capture_frame_tx,
+            display_id,
+            fps,
         )?;
 
         let _ = self.monitor.set(monitor.clone());
@@ -256,13 +360,13 @@ impl EndPoint {
         video_texture_ptr: i64,
         update_frame_callback_ptr: i64,
     ) -> Result<(), MirrorXError> {
-        let (video_frame_tx, video_frame_rx) = crossbeam::channel::bounded(16);
+        let (video_frame_tx, video_frame_rx) = tokio::sync::mpsc::channel(16);
         let (decoded_frame_tx, decoded_frame_rx) = crossbeam::channel::bounded(16);
 
         start_video_decode_process(
             self.remote_device_id.clone(),
             self.exit_tx.clone(),
-            self.exit_rx.clone(),
+            self.exit_tx.subscribe(),
             width,
             height,
             fps,
@@ -320,13 +424,19 @@ impl EndPoint {
     }
 
     pub fn enqueue_video_frame(&self, video_frame: VideoFrame) {
+        info!(
+            "enqueue before video {}",
+            chrono::Utc::now().timestamp_millis()
+        );
         if let Some(tx) = self.video_frame_tx.get() {
-            if let Err(err) = tx.try_send(video_frame) {
-                if err.is_full() {
-                    warn!(remote_device_id = ?self.remote_device_id, "video frame queue is full");
-                }
+            if let Err(tokio::sync::mpsc::error::TrySendError::Full(_)) = tx.try_send(video_frame) {
+                warn!(remote_device_id = ?self.remote_device_id, "video frame queue is full");
             }
         }
+        info!(
+            "enqueue before video {}",
+            chrono::Utc::now().timestamp_millis()
+        );
     }
 
     pub fn enqueue_audio_frame(&self, audio_frame: AudioFrame) {
@@ -368,110 +478,6 @@ impl Drop for EndPoint {
     }
 }
 
-pub async fn connect<A>(
-    addr: A,
-    is_active_side: bool,
-    local_device_id: String,
-    remote_device_id: String,
-    opening_key: OpeningKey<NonceValue>,
-    sealing_key: SealingKey<NonceValue>,
-) -> Result<(), MirrorXError>
-where
-    A: ToSocketAddrs,
-{
-    let mut stream = timeout(Duration::from_secs(10), TcpStream::connect(addr))
-        .await
-        .map_err(|_| MirrorXError::Timeout)?
-        .map_err(|err| MirrorXError::IO(err))?;
-
-    stream
-        .set_nodelay(true)
-        .map_err(|err| MirrorXError::IO(err))?;
-
-    // handshake for endpoint
-
-    let (active_device_id, passive_device_id) = if is_active_side {
-        (
-            format!("{:0>10}", local_device_id),
-            format!("{:0>10}", remote_device_id),
-        )
-    } else {
-        (
-            format!("{:0>10}", remote_device_id),
-            format!("{:0>10}", local_device_id),
-        )
-    };
-
-    let active_device_id_buf = active_device_id.as_bytes();
-    if active_device_id_buf.len() != 10 {
-        return Err(MirrorXError::Other(anyhow::anyhow!(
-            "active device id bytes length is not 10"
-        )));
-    }
-
-    let passive_device_id_buf = passive_device_id.as_bytes();
-    if passive_device_id_buf.len() != 10 {
-        return Err(MirrorXError::Other(anyhow::anyhow!(
-            "passive device id bytes length is not 10"
-        )));
-    }
-
-    stream
-        .write(active_device_id_buf)
-        .await
-        .map_err(|err| MirrorXError::IO(err))?;
-    stream
-        .write(passive_device_id_buf)
-        .await
-        .map_err(|err| MirrorXError::IO(err))?;
-
-    let mut handshake_response_buf = [0u8; 1];
-    timeout(
-        Duration::from_secs(60),
-        stream.read_exact(&mut handshake_response_buf),
-    )
-    .await
-    .map_err(|_| MirrorXError::Timeout)?
-    .map_err(|err| MirrorXError::IO(err))?;
-
-    if handshake_response_buf[0] != 1 {
-        return Err(MirrorXError::EndPointError(String::from(
-            "handshake failed",
-        )));
-    }
-
-    let framed_stream = LengthDelimitedCodec::builder()
-        .little_endian()
-        .max_frame_length(16 * 1024 * 1024)
-        .new_framed(stream);
-
-    let (sink, stream) = framed_stream.split();
-
-    let (packet_tx, packet_rx) = tokio::sync::mpsc::channel(128);
-
-    let (exit_tx, exit_rx) = crossbeam::channel::unbounded();
-
-    let endpoint = Arc::new(EndPoint {
-        monitor: OnceCell::new(),
-        local_device_id,
-        remote_device_id: remote_device_id.clone(),
-        atomic_call_id: AtomicU16::new(0),
-        call_reply_tx_map: DashMap::new(),
-        packet_tx,
-        video_frame_tx: OnceCell::new(),
-        audio_frame_tx: OnceCell::new(),
-        exit_tx,
-        exit_rx,
-    });
-
-    serve_reader(endpoint.clone(), stream, opening_key);
-    serve_writer(remote_device_id.clone(), packet_rx, sink, sealing_key);
-
-    ENDPOINTS.insert(remote_device_id, endpoint);
-
-    Ok(())
-}
-
 fn serve_reader(
     endpoint: Arc<EndPoint>,
     mut stream: SplitStream<Framed<TcpStream, LengthDelimitedCodec>>,
@@ -479,6 +485,7 @@ fn serve_reader(
 ) {
     TOKIO_RUNTIME.spawn(async move {
         loop {
+            info!("receive network before {}",chrono::Utc::now().timestamp_millis());
             let mut packet_bytes = match stream.next().await {
                 Some(res) => match res {
                     Ok(packet_bytes) => packet_bytes,
@@ -492,7 +499,9 @@ fn serve_reader(
                     break;
                 }
             };
+            info!("receive network after {}",chrono::Utc::now().timestamp_millis());
 
+            info!("decrypt network before {}",chrono::Utc::now().timestamp_millis());
             let opened_packet_bytes =
                 match opening_key.open_in_place(ring::aead::Aad::empty(), &mut packet_bytes) {
                     Ok(v) => v,
@@ -501,7 +510,9 @@ fn serve_reader(
                         break;
                     }
                 };
+            info!("decrypt network after {}",chrono::Utc::now().timestamp_millis());
 
+            info!("deserialize before {}",chrono::Utc::now().timestamp_millis());
             let packet = match BINCODE_SERIALIZER
                 .deserialize::<EndPointMessagePacket>(&opened_packet_bytes)
             {
@@ -511,9 +522,18 @@ fn serve_reader(
                     break;
                 }
             };
+            info!("deserialize after {}",chrono::Utc::now().timestamp_millis());
 
+            info!(
+            "before spawn {}",
+            chrono::Utc::now().timestamp_millis()
+        );
             let endpoint = endpoint.clone();
             TOKIO_RUNTIME.spawn(async move {
+                info!(
+            "after spawn {}",
+            chrono::Utc::now().timestamp_millis()
+        );
                 handle_message(endpoint, packet).await;
             });
         }
