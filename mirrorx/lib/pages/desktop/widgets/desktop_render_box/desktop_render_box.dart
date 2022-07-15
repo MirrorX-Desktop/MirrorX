@@ -39,60 +39,50 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
           height: widget.height.floorToDouble(),
           child: _buildTexture(),
         ),
-        // Positioned(
-        //   right: 0,
-        //   width: 6,
-        //   child: LayoutBuilder(builder: (context, constraints) {
-        //     return DesktopRenderBoxScrollBar(
-        //       maxTrunkWidth: widget.height.floorToDouble(),
-        //       axis: Axis.vertical,
-        //       trunkWidth: constraints.maxHeight,
-        //       onScroll: (offset) {
-        //         setState(() {
-        //           offsetY = -offset;
-        //           if ((offsetY + constraints.maxHeight) > widget.height) {
-        //             offsetY = widget.height - constraints.maxHeight;
-        //           }
-        //         });
-        //       },
-        //     );
-        //   }),
-        // ),
-        // Positioned(
-        //   bottom: 0,
-        //   height: 6,
-        //   child: LayoutBuilder(builder: (context, constraints) {
-        //     return DesktopRenderBoxScrollBar(
-        //       maxTrunkWidth: widget.width.floorToDouble(),
-        //       axis: Axis.horizontal,
-        //       trunkWidth: constraints.maxWidth,
-        //       onScroll: (offset) {
-        //         setState(() {
-        //           offsetX = -offset;
-        //           if ((offsetX + constraints.maxWidth) > widget.width) {
-        //             offsetX = widget.width - constraints.maxWidth;
-        //           }
-        //         });
-        //       },
-        //     );
-        //   }),
-        // )
+        LayoutBuilder(builder: (context, constraints) {
+          return DesktopRenderBoxScrollBar(
+            maxTrunkWidth: widget.height.floorToDouble(),
+            axis: Axis.vertical,
+            trunkWidth: constraints.maxHeight,
+            onScroll: (offset) {
+              setState(() {
+                offsetY = -offset;
+                if ((offsetY + constraints.maxHeight) > widget.height) {
+                  offsetY = widget.height - constraints.maxHeight;
+                }
+              });
+            },
+          );
+        }),
+        LayoutBuilder(builder: (context, constraints) {
+          return DesktopRenderBoxScrollBar(
+            maxTrunkWidth: widget.width.floorToDouble(),
+            axis: Axis.horizontal,
+            trunkWidth: constraints.maxWidth,
+            onScroll: (offset) {
+              setState(() {
+                offsetX = -offset;
+                if ((offsetX + constraints.maxWidth) > widget.width) {
+                  offsetX = widget.width - constraints.maxWidth;
+                }
+              });
+            },
+          );
+        })
       ],
     );
   }
 
   Widget _buildTexture() {
-    return
-        // RepaintBoundary(
-        // child: Listener(
-        //   behavior: HitTestBehavior.opaque,
-        //   onPointerDown: _handlePointerDown,
-        //   onPointerUp: _handlePointerUp,
-        //   onPointerHover: _handlePointerHover,
-        //   onPointerMove: _handlePointerMove,
-        //   onPointerSignal: _handlePointerSignal,
-        // child:
-        Container(
+    return RepaintBoundary(
+      child: Listener(
+        behavior: HitTestBehavior.opaque,
+        onPointerDown: _handlePointerDown,
+        onPointerUp: _handlePointerUp,
+        onPointerHover: _handlePointerHover,
+        onPointerMove: _handlePointerMove,
+        onPointerSignal: _handlePointerSignal,
+        child: Container(
             color: Colors.black,
             child: Center(
               child: AspectRatio(
@@ -103,10 +93,9 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
                   filterQuality: FilterQuality.high,
                 ),
               ),
-            )
-            // ),
-            // ),
-            );
+            )),
+      ),
+    );
   }
 
   void _handlePointerDown(PointerDownEvent event) {
