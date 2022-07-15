@@ -6,6 +6,7 @@ use crate::{
     error::MirrorXError,
     ffi::ffmpeg::avutil::av_gettime_relative,
     service::endpoint::ffi::create_callback_fn,
+    utility::runtime::TOKIO_RUNTIME,
 };
 use crossbeam::channel::{Receiver, Sender, TryRecvError, TrySendError};
 use scopeguard::defer;
@@ -15,76 +16,73 @@ use tracing::{error, info, trace};
 #[cfg(target_os = "windows")]
 pub fn start_desktop_capture_process(
     remote_device_id: String,
-    exit_tx: Sender<()>,
-    exit_rx: Receiver<()>,
-    capture_frame_tx: Sender<Frame>,
+    exit_tx: tokio::sync::broadcast::Sender<()>,
+    mut exit_rx: tokio::sync::broadcast::Receiver<()>,
+    capture_frame_tx: tokio::sync::mpsc::Sender<Frame>,
     display_id: &str,
     fps: u8,
 ) -> Result<(), MirrorXError> {
+    use tokio::select;
+
+    use crate::utility::runtime::TOKIO_RUNTIME;
+
     let mut duplicator = Duplicator::new(display_id)?;
 
     let expected_wait_time = Duration::from_secs_f32(1f32 / (fps as f32));
 
-    let _ = std::thread::Builder::new()
-        .name(format!("desktop_capture_process:{}", remote_device_id))
-        .spawn(move || {
-            defer! {
-                let _ = exit_tx.send(());
-            }
+    TOKIO_RUNTIME.spawn(async move {
+        defer! {
+            let _ = exit_tx.send(());
+            info!(?remote_device_id, "desktop capture process exit");
+        }
 
-            let epoch = unsafe { av_gettime_relative() };
+        let mut interval = tokio::time::interval(expected_wait_time);
+        let epoch = unsafe { av_gettime_relative() };
 
-            loop {
-                let process_time_start = std::time::Instant::now();
+        loop {
+            let process_time_start = std::time::Instant::now();
 
-                match exit_rx.try_recv() {
-                    Ok(_) => {
-                        info!("process exit channel received signal");
-                        break;
-                    }
-                    Err(err) => {
-                        if err == TryRecvError::Disconnected {
-                            info!("process exit channel disconnected");
-                            break;
+            select! {
+                biased;
+
+                _ = exit_rx.recv() => {
+                    return;
+                }
+
+                _ = interval.tick() => {
+                    match duplicator.capture() {
+                        Ok(mut frame) => unsafe {
+                            frame.capture_time = av_gettime_relative() - epoch;
+
+                            trace!(
+                                width=?frame.width,
+                                height=?frame.height,
+                                chrominance_len=?frame.chrominance_buffer.len(),
+                                chrominance_stride=?frame.chrominance_stride,
+                                luminance_len=?frame.luminance_buffer.len(),
+                                luminance_stride=?frame.luminance_stride,
+                                capture_time=?frame.capture_time,
+                                "desktop capture frame",
+                            );
+
+                            if let Err(_) = capture_frame_tx.try_send(frame) {
+                                info!("desktop frame channel disconnected");
+                                return;
+                            }
+                        },
+                        Err(err) => {
+                            error!(?err, "capture desktop frame failed");
+                            return;
                         }
-                    }
-                };
+                    };
+                }
 
-                match duplicator.capture() {
-                    Ok(mut frame) => unsafe {
-                        frame.capture_time = av_gettime_relative() - epoch;
-
-                        trace!(
-                            width=?frame.width,
-                            height=?frame.height,
-                            chrominance_len=?frame.chrominance_buffer.len(),
-                            chrominance_stride=?frame.chrominance_stride,
-                            luminance_len=?frame.luminance_buffer.len(),
-                            luminance_stride=?frame.luminance_stride,
-                            capture_time=?frame.capture_time,
-                            "desktop capture frame",
-                        );
-
-                        if let Err(_) = capture_frame_tx.send(frame) {
-                            info!("desktop frame channel disconnected");
-                            break;
-                        }
-                    },
-                    Err(err) => {
-                        error!(?err, "capture desktop frame failed");
-                        break;
-                    }
-                };
-
-                if let Some(actual_wait_time) =
-                    expected_wait_time.checked_sub(process_time_start.elapsed())
-                {
-                    std::thread::sleep(actual_wait_time);
+                else => {
+                    break;
                 }
             }
-
-            info!(?remote_device_id, "desktop capture process exit");
-        });
+        }
+    });
 
     Ok(())
 }
