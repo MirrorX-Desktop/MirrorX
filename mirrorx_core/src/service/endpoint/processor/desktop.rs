@@ -23,6 +23,7 @@ pub fn start_desktop_capture_process(
     fps: u8,
 ) -> Result<(), MirrorXError> {
     use tokio::select;
+    use tracing::warn;
 
     use crate::utility::runtime::TOKIO_RUNTIME;
 
@@ -65,9 +66,14 @@ pub fn start_desktop_capture_process(
                                 "desktop capture frame",
                             );
 
-                            if let Err(_) = capture_frame_tx.try_send(frame) {
-                                info!("desktop frame channel disconnected");
-                                return;
+                            if let Err(err) = capture_frame_tx.try_send(frame) {
+                                match err {
+                                    tokio::sync::mpsc::error::TrySendError::Full(_) => warn!("capture frame channel is full"),
+                                    tokio::sync::mpsc::error::TrySendError::Closed(_) => {
+                                        info!("desktop frame channel disconnected");
+                                        return;
+                                    },
+                                }
                             }
                         },
                         Err(err) => {
