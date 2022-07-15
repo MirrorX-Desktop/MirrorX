@@ -6,52 +6,44 @@ use crate::{
     error::MirrorXError,
     ffi::ffmpeg::avutil::av_gettime_relative,
     service::endpoint::ffi::create_callback_fn,
-    utility::runtime::TOKIO_RUNTIME,
 };
-use crossbeam::channel::{Receiver, Sender, TryRecvError, TrySendError};
+use crossbeam::channel::{Receiver, Sender};
 use scopeguard::defer;
 use std::{os::raw::c_void, time::Duration};
-use tracing::{error, info, trace};
+use tracing::{error, info, trace, warn};
 
 #[cfg(target_os = "windows")]
 pub fn start_desktop_capture_process(
     remote_device_id: String,
-    exit_tx: tokio::sync::broadcast::Sender<()>,
-    mut exit_rx: tokio::sync::broadcast::Receiver<()>,
-    capture_frame_tx: tokio::sync::mpsc::Sender<Frame>,
+    exit_tx: Sender<()>,
+    exit_rx: Receiver<()>,
+    capture_frame_tx: Sender<Frame>,
     display_id: &str,
     fps: u8,
 ) -> Result<(), MirrorXError> {
-    use tokio::select;
-    use tracing::warn;
-
-    use crate::utility::runtime::TOKIO_RUNTIME;
+    use crossbeam::select;
 
     let mut duplicator = Duplicator::new(display_id)?;
 
     let expected_wait_time = Duration::from_secs_f32(1f32 / (fps as f32));
 
-    TOKIO_RUNTIME.spawn(async move {
-        defer! {
-            let _ = exit_tx.send(());
-            info!(?remote_device_id, "desktop capture process exit");
-        }
+    std::thread::Builder::new()
+        .name(format!("desktop_render_process:{}", remote_device_id))
+        .spawn(move || {
+            defer! {
+                info!(?remote_device_id, "desktop capture process exit");
+                let _ = exit_tx.send(());
+            }
 
-        let mut interval = tokio::time::interval(expected_wait_time);
-        let epoch = unsafe { av_gettime_relative() };
+            let interval = crossbeam::channel::tick(expected_wait_time);
+            let epoch = unsafe { av_gettime_relative() };
 
-        loop {
-            let process_time_start = std::time::Instant::now();
-
-            select! {
-                biased;
-
-                _ = exit_rx.recv() => {
-                    return;
-                }
-
-                _ = interval.tick() => {
-                    match duplicator.capture() {
+            loop {
+                select! {
+                    recv(exit_rx) -> _ => {
+                        return;
+                    },
+                    recv(interval) -> _ =>  match duplicator.capture() {
                         Ok(mut frame) => unsafe {
                             frame.capture_time = av_gettime_relative() - epoch;
 
@@ -66,27 +58,24 @@ pub fn start_desktop_capture_process(
                                 "desktop capture frame",
                             );
 
-                            if let Err(err) = capture_frame_tx.try_send(frame) {
-                                match err {
-                                    tokio::sync::mpsc::error::TrySendError::Full(_) => warn!("capture frame channel is full"),
-                                    tokio::sync::mpsc::error::TrySendError::Closed(_) => {
-                                        info!("desktop frame channel disconnected");
-                                        return;
-                                    },
-                                }
+                            if let Err(_) = capture_frame_tx.send(frame) {
+                                return;
                             }
                         },
                         Err(err) => {
                             error!(?err, "capture desktop frame failed");
                             return;
                         }
-                    };
+                    }
                 }
             }
-        }
-    });
-
-    Ok(())
+        })
+        .and_then(|_| Ok(()))
+        .map_err(|err| {
+            MirrorXError::Other(anyhow::anyhow!(
+                "spawn desktop capture process failed ({err})"
+            ))
+        })
 }
 
 #[cfg(target_os = "macos")]
