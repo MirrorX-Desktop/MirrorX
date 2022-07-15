@@ -92,33 +92,37 @@ pub fn start_desktop_capture_process(
 #[cfg(target_os = "macos")]
 pub fn start_desktop_capture_process(
     remote_device_id: String,
-    exit_tx: tokio::sync::broadcast::Sender<()>,
-    mut exit_rx: tokio::sync::broadcast::Receiver<()>,
-    capture_frame_tx: tokio::sync::mpsc::Sender<Frame>,
+    exit_tx: Sender<()>,
+    exit_rx: Receiver<()>,
+    capture_frame_tx: Sender<Frame>,
     display_id: &str,
     fps: u8,
 ) -> Result<(), MirrorXError> {
-    use crate::utility::runtime::TOKIO_RUNTIME;
-
     let mut duplicator = Duplicator::new(capture_frame_tx, display_id, fps)?;
 
-    TOKIO_RUNTIME.spawn(async move {
-        defer! {
-            let _ = exit_tx.send(());
-            info!(?remote_device_id, "desktop capture process exit");
-        }
+    std::thread::Builder::new()
+        .name(format!("desktop_capture_process:{}", remote_device_id))
+        .spawn(move || {
+            defer! {
+                info!(?remote_device_id, "desktop capture process exit");
+                let _ = exit_tx.send(());
+            }
 
-        if let Err(err) = duplicator.start() {
-            error!(?err, "duplicator start failed");
-            return;
-        }
+            if let Err(err) = duplicator.start() {
+                error!(?err, "duplicator start failed");
+                return;
+            }
 
-        let _ = exit_rx.recv().await;
+            let _ = exit_rx.recv();
 
-        duplicator.stop();
-    });
-
-    Ok(())
+            duplicator.stop();
+        })
+        .and_then(|_| Ok(()))
+        .map_err(|err| {
+            MirrorXError::Other(anyhow::anyhow!(
+                "spawn desktop capture process failed ({err})"
+            ))
+        })
 }
 
 pub fn start_desktop_render_process(
@@ -127,11 +131,11 @@ pub fn start_desktop_render_process(
     texture_id: i64,
     video_texture_ptr: i64,
     update_frame_callback_ptr: i64,
-) {
+) -> Result<(), MirrorXError> {
     let update_callback_fn = unsafe { create_callback_fn(update_frame_callback_ptr) };
 
-    let _ = std::thread::Builder::new()
-        .name(format!("video_render_process:{}", remote_device_id))
+    std::thread::Builder::new()
+        .name(format!("desktop_render_process:{}", remote_device_id))
         .spawn(move || {
             loop {
                 let decoded_video_frame = match decoded_video_frame_rx.recv() {
@@ -171,5 +175,11 @@ pub fn start_desktop_render_process(
             }
 
             info!(?remote_device_id, "video render process exit");
-        });
+        })
+        .and_then(|_| Ok(()))
+        .map_err(|err| {
+            MirrorXError::Other(anyhow::anyhow!(
+                "spawn desktop render process failed ({err})"
+            ))
+        })
 }

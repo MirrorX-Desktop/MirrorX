@@ -15,11 +15,7 @@ pub struct Duplicator {
 unsafe impl Send for Duplicator {}
 
 impl Duplicator {
-    pub fn new(
-        capture_frame_tx: tokio::sync::mpsc::Sender<Frame>,
-        display_id: &str,
-        fps: u8,
-    ) -> anyhow::Result<Self> {
+    pub fn new(capture_frame_tx: Sender<Frame>, display_id: &str, fps: u8) -> anyhow::Result<Self> {
         let display_id: u32 = match display_id.parse() {
             Ok(v) => v,
             Err(_) => return Err(anyhow::anyhow!("convert display id failed")),

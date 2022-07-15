@@ -18,7 +18,7 @@ use crate::{
 use anyhow::anyhow;
 use bincode::Options;
 use bytes::Bytes;
-use crossbeam::channel::Sender;
+use crossbeam::channel::{Receiver, Sender, TrySendError};
 use dashmap::DashMap;
 use futures::{
     stream::{SplitSink, SplitStream},
@@ -110,10 +110,10 @@ pub struct EndPoint {
     atomic_call_id: AtomicU16,
     call_reply_tx_map: DashMap<u16, tokio::sync::oneshot::Sender<EndPointMessage>>,
     packet_tx: tokio::sync::mpsc::Sender<EndPointMessagePacket>,
-    video_frame_tx: OnceCell<tokio::sync::mpsc::Sender<VideoFrame>>,
+    video_frame_tx: OnceCell<Sender<VideoFrame>>,
     audio_frame_tx: OnceCell<Sender<AudioFrame>>,
-    exit_tx: tokio::sync::broadcast::Sender<()>,
-    exit_rx: tokio::sync::broadcast::Receiver<()>,
+    exit_tx: Sender<()>,
+    exit_rx: Receiver<()>,
 }
 
 pub async fn connect<A>(
@@ -197,7 +197,7 @@ where
 
     let (packet_tx, packet_rx) = tokio::sync::mpsc::channel(128);
 
-    let (exit_tx, exit_rx) = tokio::sync::broadcast::channel(1);
+    let (exit_tx, exit_rx) = crossbeam::channel::unbounded();
 
     let endpoint = Arc::new(EndPoint {
         monitor: OnceCell::new(),
@@ -324,12 +324,12 @@ impl EndPoint {
         let height = monitor.height;
         let fps = monitor.refresh_rate.min(except_fps);
 
-        let (capture_frame_tx, capture_frame_rx) = tokio::sync::mpsc::channel(600);
+        let (capture_frame_tx, capture_frame_rx) = crossbeam::channel::bounded(600);
 
         start_video_encode_process(
             self.remote_device_id.clone(),
             self.exit_tx.clone(),
-            self.exit_tx.subscribe(),
+            self.exit_rx.clone(),
             width as i32,
             height as i32,
             fps as i32,
@@ -340,7 +340,7 @@ impl EndPoint {
         start_desktop_capture_process(
             self.remote_device_id.clone(),
             self.exit_tx.clone(),
-            self.exit_tx.subscribe(),
+            self.exit_rx.clone(),
             capture_frame_tx,
             display_id,
             fps,
@@ -360,13 +360,13 @@ impl EndPoint {
         video_texture_ptr: i64,
         update_frame_callback_ptr: i64,
     ) -> Result<(), MirrorXError> {
-        let (video_frame_tx, video_frame_rx) = tokio::sync::mpsc::channel(600);
+        let (video_frame_tx, video_frame_rx) = crossbeam::channel::bounded(600);
         let (decoded_frame_tx, decoded_frame_rx) = crossbeam::channel::bounded(600);
 
         start_video_decode_process(
             self.remote_device_id.clone(),
             self.exit_tx.clone(),
-            self.exit_tx.subscribe(),
+            self.exit_rx.clone(),
             width,
             height,
             fps,
@@ -380,7 +380,7 @@ impl EndPoint {
             texture_id,
             video_texture_ptr,
             update_frame_callback_ptr,
-        );
+        )?;
 
         let _ = self.video_frame_tx.set(video_frame_tx);
 
@@ -429,7 +429,7 @@ impl EndPoint {
             chrono::Utc::now().timestamp_millis()
         );
         if let Some(tx) = self.video_frame_tx.get() {
-            if let Err(tokio::sync::mpsc::error::TrySendError::Full(_)) = tx.try_send(video_frame) {
+            if let Err(TrySendError::Full(_)) = tx.try_send(video_frame) {
                 warn!(remote_device_id = ?self.remote_device_id, "video frame queue is full");
             }
         }
@@ -474,6 +474,7 @@ impl EndPoint {
 
 impl Drop for EndPoint {
     fn drop(&mut self) {
+        let _ = self.exit_tx.send(());
         info!(remote_device_id = ?self.remote_device_id, "endpoint dropped");
     }
 }
