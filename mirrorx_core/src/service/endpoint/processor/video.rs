@@ -71,10 +71,6 @@ pub fn start_video_encode_process(
                         return;
                     }
                 },
-
-                else => {
-                    break;
-                }
             }
         }
     });
@@ -132,10 +128,6 @@ pub fn start_video_decode_process(
                         return;
                     }
                 },
-
-                else => {
-                    break;
-                }
             };
 
             // match exit_rx.try_recv() {

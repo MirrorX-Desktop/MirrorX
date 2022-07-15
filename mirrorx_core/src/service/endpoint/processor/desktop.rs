@@ -76,10 +76,6 @@ pub fn start_desktop_capture_process(
                         }
                     };
                 }
-
-                else => {
-                    break;
-                }
             }
         }
     });
