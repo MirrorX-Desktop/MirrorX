@@ -45,23 +45,19 @@ unsafe impl Send for Duplicator {}
 impl Duplicator {
     pub fn new(monitor_id: &str) -> Result<Duplicator, MirrorXError> {
         unsafe {
-            // let current_desktop = OpenInputDesktop(0, false, GENERIC_ALL).map_err(|err| {
-            //     MirrorXError::Other(anyhow::anyhow!("OpenInputDesktop failed ({})", err))
-            // })?;
+            let current_desktop = OpenInputDesktop(0, false, GENERIC_ALL).map_err(|err| {
+                MirrorXError::Other(anyhow::anyhow!("OpenInputDesktop failed ({})", err))
+            })?;
 
-            // let previous_desktop = GetThreadDesktop(GetCurrentThreadId()).map_err(|err| {
-            //     MirrorXError::Other(anyhow::anyhow!("OpenInputDesktop failed ({})", err))
-            // })?;
+            defer! {
+                let _ = CloseDesktop(current_desktop);
+            }
 
-            // if !SetThreadDesktop(current_desktop).as_bool() {
-            //     return Err(MirrorXError::Other(anyhow::anyhow!(
-            //         "SetThreadDesktop failed"
-            //     )));
-            // }
-
-            // if !CloseDesktop(previous_desktop).as_bool() {
-            //     return Err(MirrorXError::Other(anyhow::anyhow!("CloseDesktop failed")));
-            // }
+            if !SetThreadDesktop(current_desktop).as_bool() {
+                return Err(MirrorXError::Other(anyhow::anyhow!(
+                    "SetThreadDesktop failed"
+                )));
+            }
 
             let dx = DX::new()?;
             let (output_desc, output_duplication) = init_output_duplication(&dx, monitor_id)?;
