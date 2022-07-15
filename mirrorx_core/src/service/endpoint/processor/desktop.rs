@@ -134,10 +134,6 @@ pub fn start_desktop_render_process(
                     }
                 };
 
-                info!(
-                    "begin render frame {}",
-                    chrono::Utc::now().timestamp_millis()
-                );
                 #[cfg(target_os = "macos")]
                 unsafe {
                     update_callback_fn(
@@ -146,10 +142,6 @@ pub fn start_desktop_render_process(
                         decoded_video_frame.0,
                     );
                 }
-                info!(
-                    "begin render frame {}",
-                    chrono::Utc::now().timestamp_millis()
-                );
 
                 #[cfg(target_os = "windows")]
                 unsafe {
