@@ -20,6 +20,7 @@ pub fn start_desktop_capture_process(
     display_id: &str,
     fps: u8,
 ) -> Result<(), MirrorXError> {
+    use crate::ffi::ffmpeg::avutil::av_gettime_relative;
     use crossbeam::select;
 
     let mut duplicator = Duplicator::new(display_id)?;
