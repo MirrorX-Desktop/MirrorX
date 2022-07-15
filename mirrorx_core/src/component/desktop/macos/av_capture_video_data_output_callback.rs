@@ -7,7 +7,7 @@ use crate::{
         CVPixelBufferLockBaseAddress, CVPixelBufferUnlockBaseAddress,
     },
 };
-use crossbeam::channel::{Receiver, Sender};
+use crossbeam::channel::Sender;
 use objc::{
     class,
     declare::ClassDecl,

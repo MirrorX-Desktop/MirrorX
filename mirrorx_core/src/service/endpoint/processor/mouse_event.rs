@@ -1,7 +1,7 @@
 use crate::{
     component::{self, monitor::Monitor},
     error::MirrorXError,
-    service::endpoint::message::{MouseEventFrame, MouseKey},
+    service::endpoint::message::MouseKey,
 };
 
 pub fn mouse_up(

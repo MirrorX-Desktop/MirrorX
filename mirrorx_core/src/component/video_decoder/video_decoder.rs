@@ -6,7 +6,6 @@ use crate::{
 };
 use anyhow::anyhow;
 use crossbeam::channel::Sender;
-use scopeguard::defer;
 use std::{
     collections::HashMap,
     ffi::{CStr, CString},
@@ -215,11 +214,6 @@ impl VideoDecoder {
 
             // av_packet_rescale_ts(self.packet, AV_TIME_BASE_Q, (*self.codec_ctx).pkt_timebase);
 
-            info!(
-                "decoded frame before send packet {}",
-                chrono::Utc::now().timestamp_millis()
-            );
-
             let mut ret = avcodec_send_packet(self.codec_ctx, self.packet);
 
             if ret == AVERROR(libc::EAGAIN) {
@@ -231,16 +225,7 @@ impl VideoDecoder {
                 return Err(MirrorXError::MediaVideoDecoderSendPacketFailed(ret));
             }
 
-            info!(
-                "decoded frame after send packet {}",
-                chrono::Utc::now().timestamp_millis()
-            );
-
             loop {
-                info!(
-                    "decoded frame before receive frame {}",
-                    chrono::Utc::now().timestamp_millis()
-                );
                 ret = avcodec_receive_frame(self.codec_ctx, self.decode_frame);
                 if ret == AVERROR(libc::EAGAIN) || ret == AVERROR_EOF {
                     return Ok(());
@@ -248,19 +233,10 @@ impl VideoDecoder {
                     return Err(MirrorXError::MediaVideoDecoderReceiveFrameFailed(ret));
                 }
 
-                info!(
-                    "decoded frame after receive frame {}",
-                    chrono::Utc::now().timestamp_millis()
-                );
-
                 if !self.parser_ctx.is_null() {
                 } else {
                     match self.send_native_frame() {
                         Ok(frame) => {
-                            info!(
-                                "decoded frame before send {}",
-                                chrono::Utc::now().timestamp_millis()
-                            );
                             if let Err(err) = tx.try_send(frame) {
                                 match err {
                                     crossbeam::channel::TrySendError::Full(_) => {
@@ -273,10 +249,6 @@ impl VideoDecoder {
                                     }
                                 }
                             }
-                            info!(
-                                "decoded frame send finish {}",
-                                chrono::Utc::now().timestamp_millis()
-                            );
                         }
                         Err(err) => return Err(err),
                     };
@@ -370,24 +342,5 @@ impl Drop for VideoDecoder {
                 avcodec_free_context(&mut self.codec_ctx);
             }
         }
-    }
-}
-
-extern "C" fn get_format(
-    ctx: *mut AVCodecContext,
-    mut pix_fmts: *const AVPixelFormat,
-) -> AVPixelFormat {
-    unsafe {
-        while *pix_fmts != AV_PIX_FMT_NONE {
-            if *pix_fmts == AV_PIX_FMT_QSV {
-                return AV_PIX_FMT_QSV;
-            }
-
-            pix_fmts = pix_fmts.offset(1);
-        }
-
-        error!("The QSV pixel format not offered in get_format()");
-
-        return AV_PIX_FMT_NONE;
     }
 }

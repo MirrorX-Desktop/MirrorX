@@ -324,7 +324,7 @@ impl EndPoint {
         let height = monitor.height;
         let fps = monitor.refresh_rate.min(except_fps);
 
-        let (capture_frame_tx, capture_frame_rx) = crossbeam::channel::bounded(600);
+        let (capture_frame_tx, capture_frame_rx) = crossbeam::channel::bounded(1);
 
         start_video_encode_process(
             self.remote_device_id.clone(),
@@ -424,19 +424,11 @@ impl EndPoint {
     }
 
     pub fn enqueue_video_frame(&self, video_frame: VideoFrame) {
-        info!(
-            "enqueue before video {}",
-            chrono::Utc::now().timestamp_millis()
-        );
         if let Some(tx) = self.video_frame_tx.get() {
             if let Err(TrySendError::Full(_)) = tx.try_send(video_frame) {
                 warn!(remote_device_id = ?self.remote_device_id, "video frame queue is full");
             }
         }
-        info!(
-            "enqueue before video {}",
-            chrono::Utc::now().timestamp_millis()
-        );
     }
 
     pub fn enqueue_audio_frame(&self, audio_frame: AudioFrame) {
@@ -486,7 +478,6 @@ fn serve_reader(
 ) {
     TOKIO_RUNTIME.spawn(async move {
         loop {
-            info!("receive network before {}",chrono::Utc::now().timestamp_millis());
             let mut packet_bytes = match stream.next().await {
                 Some(res) => match res {
                     Ok(packet_bytes) => packet_bytes,
@@ -500,9 +491,7 @@ fn serve_reader(
                     break;
                 }
             };
-            info!("receive network after {}",chrono::Utc::now().timestamp_millis());
 
-            info!("decrypt network before {}",chrono::Utc::now().timestamp_millis());
             let opened_packet_bytes =
                 match opening_key.open_in_place(ring::aead::Aad::empty(), &mut packet_bytes) {
                     Ok(v) => v,
@@ -511,9 +500,7 @@ fn serve_reader(
                         break;
                     }
                 };
-            info!("decrypt network after {}",chrono::Utc::now().timestamp_millis());
 
-            info!("deserialize before {}",chrono::Utc::now().timestamp_millis());
             let packet = match BINCODE_SERIALIZER
                 .deserialize::<EndPointMessagePacket>(&opened_packet_bytes)
             {
@@ -523,18 +510,9 @@ fn serve_reader(
                     break;
                 }
             };
-            info!("deserialize after {}",chrono::Utc::now().timestamp_millis());
 
-            info!(
-            "before spawn {}",
-            chrono::Utc::now().timestamp_millis()
-        );
             let endpoint = endpoint.clone();
             TOKIO_RUNTIME.spawn(async move {
-                info!(
-            "after spawn {}",
-            chrono::Utc::now().timestamp_millis()
-        );
                 handle_message(endpoint, packet).await;
             });
         }

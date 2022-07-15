@@ -11,7 +11,6 @@ use tokio::sync::mpsc::Sender;
 use tracing::warn;
 
 pub struct VideoEncoder {
-    codec: *const AVCodec,
     codec_ctx: *mut AVCodecContext,
     frame: *mut AVFrame,
     packet: *mut AVPacket,
@@ -74,7 +73,6 @@ impl VideoEncoder {
             }
 
             Ok(VideoEncoder {
-                codec,
                 codec_ctx,
                 frame: std::ptr::null_mut(),
                 packet: std::ptr::null_mut(),

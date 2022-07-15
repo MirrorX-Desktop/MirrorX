@@ -1,16 +1,9 @@
 use crate::error::MirrorXError;
 use core_graphics::display::CGDirectDisplayID;
-use objc::{
-    class, msg_send,
-    runtime::{Class, Object},
-    sel, sel_impl,
-};
-use objc_foundation::{
-    INSArray, INSObject, INSString, NSArray, NSDictionary, NSObject, NSString, NSValue,
-};
-use objc_id::{Id, Owned, Shared};
-use scopeguard::defer;
-use std::ops::{Deref, Index};
+use objc::{class, msg_send, runtime::Class, sel, sel_impl};
+use objc_foundation::{INSArray, INSObject, INSString, NSArray, NSDictionary, NSObject, NSString};
+use objc_id::{Id, Owned};
+use std::ops::Index;
 
 struct NSScreenClass {}
 

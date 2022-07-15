@@ -30,13 +30,8 @@ pub fn mouse_up(
             position.0,
             position.1,
             move |event_source, point| {
-                CGEvent::new_mouse_event(
-                    event_source,
-                    event_type,
-                    CGPoint::new(position.0 as f64, position.1 as f64),
-                    mouse_button,
-                )
-                .map_err(|_| MirrorXError::Other(anyhow::anyhow!("create CGEvent failed")))
+                CGEvent::new_mouse_event(event_source, event_type, point, mouse_button)
+                    .map_err(|_| MirrorXError::Other(anyhow::anyhow!("create CGEvent failed")))
             },
         )
     }
@@ -117,7 +112,7 @@ pub fn mouse_scroll_whell(
             display_id,
             position.0,
             position.1,
-            move |event_source, point| {
+            move |event_source, _| {
                 CGEvent::new_scroll_event(
                     event_source,
                     ScrollEventUnit::PIXEL,

@@ -4,7 +4,6 @@ use crate::{
         video_decoder::DecodedFrame,
     },
     error::MirrorXError,
-    ffi::ffmpeg::avutil::av_gettime_relative,
     service::endpoint::ffi::create_callback_fn,
 };
 use crossbeam::channel::{Receiver, Sender};
