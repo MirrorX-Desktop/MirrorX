@@ -324,7 +324,7 @@ impl EndPoint {
         let height = monitor.height;
         let fps = monitor.refresh_rate.min(except_fps);
 
-        let (capture_frame_tx, capture_frame_rx) = tokio::sync::mpsc::channel(1);
+        let (capture_frame_tx, capture_frame_rx) = tokio::sync::mpsc::channel(600);
 
         start_video_encode_process(
             self.remote_device_id.clone(),
@@ -360,8 +360,8 @@ impl EndPoint {
         video_texture_ptr: i64,
         update_frame_callback_ptr: i64,
     ) -> Result<(), MirrorXError> {
-        let (video_frame_tx, video_frame_rx) = tokio::sync::mpsc::channel(16);
-        let (decoded_frame_tx, decoded_frame_rx) = crossbeam::channel::bounded(16);
+        let (video_frame_tx, video_frame_rx) = tokio::sync::mpsc::channel(600);
+        let (decoded_frame_tx, decoded_frame_rx) = crossbeam::channel::bounded(600);
 
         start_video_decode_process(
             self.remote_device_id.clone(),
