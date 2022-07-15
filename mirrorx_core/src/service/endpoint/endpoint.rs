@@ -324,7 +324,7 @@ impl EndPoint {
         let height = monitor.height;
         let fps = monitor.refresh_rate.min(except_fps);
 
-        let (capture_frame_tx, capture_frame_rx) = tokio::sync::mpsc::channel(16);
+        let (capture_frame_tx, capture_frame_rx) = tokio::sync::mpsc::channel(1);
 
         start_video_encode_process(
             self.remote_device_id.clone(),
