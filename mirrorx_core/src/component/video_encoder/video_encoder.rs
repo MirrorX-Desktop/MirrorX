@@ -184,11 +184,12 @@ impl VideoEncoder {
             (*self.frame).linesize[0] = frame.luminance_stride as i32;
             (*self.frame).data[1] = frame.chrominance_buffer.as_ptr() as *mut _;
             (*self.frame).linesize[1] = frame.chrominance_stride as i32;
-            (*self.frame).pts = av_rescale_q(
-                frame.capture_time,
-                AV_TIME_BASE_Q,
-                (*self.codec_ctx).time_base,
-            );
+            // (*self.frame).pts = av_rescale_q(
+            //     frame.capture_time,
+            //     AV_TIME_BASE_Q,
+            //     (*self.codec_ctx).time_base,
+            // );
+            (*self.frame).pts = chrono::Utc::now().timestamp_millis();
 
             ret = avcodec_send_frame(self.codec_ctx, self.frame);
 
