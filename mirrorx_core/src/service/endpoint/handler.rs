@@ -85,19 +85,17 @@ pub async fn handle_mouse_event_frame(
     if let Some(monitor) = endpoint.monitor() {
         match mouse_event_frame.event {
             MouseEvent::Up(key) => {
-                processor::mouse_event::mouse_up(monitor, key, mouse_event_frame.position)
+                processor::input::mouse_up(monitor, key, mouse_event_frame.position)
             }
             MouseEvent::Down(key) => {
-                processor::mouse_event::mouse_down(monitor, key, mouse_event_frame.position)
+                processor::input::mouse_down(monitor, key, mouse_event_frame.position)
             }
             MouseEvent::Move(key) => {
-                processor::mouse_event::mouse_move(monitor, key, mouse_event_frame.position)
+                processor::input::mouse_move(monitor, key, mouse_event_frame.position)
             }
-            MouseEvent::ScrollWheel(delta) => processor::mouse_event::mouse_scroll_whell(
-                monitor,
-                delta,
-                mouse_event_frame.position,
-            ),
+            MouseEvent::ScrollWheel(delta) => {
+                processor::input::mouse_scroll_whell(monitor, delta, mouse_event_frame.position)
+            }
         }
     } else {
         Err(MirrorXError::Other(anyhow::anyhow!(

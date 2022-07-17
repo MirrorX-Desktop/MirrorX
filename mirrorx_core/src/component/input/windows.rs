@@ -103,6 +103,12 @@ pub fn mouse_scroll_whell(
     }
 }
 
+pub fn keyboard_down(monitor: &Monitor, key: MouseKey, position: (f32, f32)) {
+    let a = INPUT {
+        r#type: INPUT_KEYBOARD,
+    };
+}
+
 unsafe fn send_input(
     args: &[(i32, MOUSE_EVENT_FLAGS)],
     left: u16,

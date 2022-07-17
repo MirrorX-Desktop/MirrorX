@@ -23,10 +23,10 @@ class DesktopRenderBox extends StatefulWidget {
 }
 
 class _DesktopRenderBoxState extends State<DesktopRenderBox> {
-  double offsetY = 0.0;
-  double offsetX = 0.0;
-  Map<int, int> downButtons = {};
-  FocusNode focusNode = FocusNode();
+  double _offsetY = 0.0;
+  double _offsetX = 0.0;
+  final Map<int, int> _downButtons = {};
+  final FocusNode _focusNode = FocusNode();
 
   // @override
   // void initState() {
@@ -35,11 +35,12 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
   //   focusNode.requestFocus();
   // }
   //
-  // @override
-  // void dispose() {
-  //   focusNode.dispose();
-  //   super.dispose();
-  // }
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -47,8 +48,8 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
     return Stack(
       children: [
         Positioned(
-          top: offsetY,
-          left: offsetX,
+          top: _offsetY,
+          left: _offsetX,
           width: widget.width.floorToDouble(),
           height: widget.height.floorToDouble(),
           child: _buildTexture(),
@@ -60,9 +61,9 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
             trunkWidth: constraints.maxHeight,
             onScroll: (offset) {
               setState(() {
-                offsetY = -offset;
-                if ((offsetY + constraints.maxHeight) > widget.height) {
-                  offsetY = widget.height - constraints.maxHeight;
+                _offsetY = -offset;
+                if ((_offsetY + constraints.maxHeight) > widget.height) {
+                  _offsetY = widget.height - constraints.maxHeight;
                 }
               });
             },
@@ -75,9 +76,9 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
             trunkWidth: constraints.maxWidth,
             onScroll: (offset) {
               setState(() {
-                offsetX = -offset;
-                if ((offsetX + constraints.maxWidth) > widget.width) {
-                  offsetX = widget.width - constraints.maxWidth;
+                _offsetX = -offset;
+                if ((_offsetX + constraints.maxWidth) > widget.width) {
+                  _offsetX = widget.width - constraints.maxWidth;
                 }
               });
             },
@@ -88,21 +89,24 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
   }
 
   Widget _buildTexture() {
-    return Focus(
-      onKey: _handleKeyboardEvent,
-      child: Listener(
-        behavior: HitTestBehavior.opaque,
-        onPointerDown: _handlePointerDown,
-        onPointerUp: _handlePointerUp,
-        onPointerHover: _handlePointerHover,
-        onPointerMove: _handlePointerMove,
-        onPointerSignal: _handlePointerSignal,
+    return Listener(
+      behavior: HitTestBehavior.opaque,
+      onPointerDown: _handlePointerDown,
+      onPointerUp: _handlePointerUp,
+      onPointerHover: _handlePointerHover,
+      onPointerMove: _handlePointerMove,
+      onPointerSignal: _handlePointerSignal,
+      child: Focus(
+        focusNode: _focusNode,
+        autofocus: true,
+        onKey: _handleKeyboardEvent,
         child: RepaintBoundary(
           child: Container(
               color: Colors.black,
               child: Center(
                 child: AspectRatio(
-                  aspectRatio: widget.width.toDouble() / widget.height.toDouble(),
+                  aspectRatio:
+                      widget.width.toDouble() / widget.height.toDouble(),
                   child: Texture(
                     textureId: widget.model.textureID,
                     freeze: true,
@@ -138,11 +142,11 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
       y: event.localPosition.dy,
     );
 
-    downButtons[event.pointer] = event.buttons;
+    _downButtons[event.pointer] = event.buttons;
   }
 
   void _handlePointerUp(PointerUpEvent event) {
-    final button = downButtons.remove(event.pointer);
+    final button = _downButtons.remove(event.pointer);
     if (button == null) {
       return;
     }
