@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use crate::component::input::key::{KeyboardKey, MouseKey};
+
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub enum EndPointMessagePacketType {
     Request,
@@ -23,7 +25,7 @@ pub enum EndPointMessage {
     GetDisplayInfoResponse(GetDisplayInfoResponse),
     VideoFrame(VideoFrame),
     AudioFrame(AudioFrame),
-    MouseEventFrame(MouseEventFrame),
+    Input(Input),
 }
 //
 // #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
@@ -80,27 +82,30 @@ pub struct AudioFrame {
     #[serde(with = "serde_bytes")]
     pub buffer: Vec<u8>,
     pub frame_size_per_channel: u16,
-    pub elpased: u128,
-}
-
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-pub enum MouseKey {
-    None,
-    Left,
-    Right,
-    Wheel,
+    pub elapsed: u128,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub enum MouseEvent {
-    Up(MouseKey),
-    Down(MouseKey),
-    Move(MouseKey),
-    ScrollWheel(f32),
+    MouseUp(MouseKey, f32, f32),
+    MouseDown(MouseKey, f32, f32),
+    MouseMove(MouseKey, f32, f32),
+    MouseScrollWheel(f32),
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-pub struct MouseEventFrame {
-    pub event: MouseEvent,
-    pub position: (f32, f32),
+pub enum KeyboardEvent {
+    KeyUp(KeyboardKey),
+    KeyDown(KeyboardKey),
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+pub enum InputEvent {
+    Mouse(MouseEvent),
+    Keyboard(KeyboardEvent),
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+pub struct Input {
+    pub event: InputEvent,
 }

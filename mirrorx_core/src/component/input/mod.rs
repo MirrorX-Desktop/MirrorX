@@ -1,3 +1,5 @@
+pub mod key;
+
 #[cfg(target_os = "macos")]
 mod macos;
 

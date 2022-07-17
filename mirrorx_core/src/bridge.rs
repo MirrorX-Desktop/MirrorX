@@ -15,10 +15,13 @@ use flutter_rust_bridge::*;
 
 // Section: imports
 
+use crate::component::input::key::KeyboardKey;
+use crate::component::input::key::MouseKey;
 use crate::service::endpoint::message::DisplayInfo;
 use crate::service::endpoint::message::GetDisplayInfoResponse;
+use crate::service::endpoint::message::InputEvent;
+use crate::service::endpoint::message::KeyboardEvent;
 use crate::service::endpoint::message::MouseEvent;
-use crate::service::endpoint::message::MouseKey;
 use crate::service::endpoint::message::StartMediaTransmissionResponse;
 
 // Section: wire functions
@@ -222,25 +225,21 @@ pub extern "C" fn wire_endpoint_start_media_transmission(
 }
 
 #[no_mangle]
-pub extern "C" fn wire_endpoint_mouse_event(
+pub extern "C" fn wire_endpoint_input(
     port_: i64,
     remote_device_id: *mut wire_uint_8_list,
-    event: *mut wire_MouseEvent,
-    x: f32,
-    y: f32,
+    event: *mut wire_InputEvent,
 ) {
     FLUTTER_RUST_BRIDGE_HANDLER.wrap(
         WrapInfo {
-            debug_name: "endpoint_mouse_event",
+            debug_name: "endpoint_input",
             port: Some(port_),
             mode: FfiCallMode::Normal,
         },
         move || {
             let api_remote_device_id = remote_device_id.wire2api();
             let api_event = event.wire2api();
-            let api_x = x.wire2api();
-            let api_y = y.wire2api();
-            move |task_callback| endpoint_mouse_event(api_remote_device_id, api_event, api_x, api_y)
+            move |task_callback| endpoint_input(api_remote_device_id, api_event)
         },
     )
 }
@@ -256,6 +255,55 @@ pub struct wire_uint_8_list {
 
 #[repr(C)]
 #[derive(Clone)]
+pub struct wire_InputEvent {
+    tag: i32,
+    kind: *mut InputEventKind,
+}
+
+#[repr(C)]
+pub union InputEventKind {
+    Mouse: *mut InputEvent_Mouse,
+    Keyboard: *mut InputEvent_Keyboard,
+}
+
+#[repr(C)]
+#[derive(Clone)]
+pub struct InputEvent_Mouse {
+    field0: *mut wire_MouseEvent,
+}
+
+#[repr(C)]
+#[derive(Clone)]
+pub struct InputEvent_Keyboard {
+    field0: *mut wire_KeyboardEvent,
+}
+#[repr(C)]
+#[derive(Clone)]
+pub struct wire_KeyboardEvent {
+    tag: i32,
+    kind: *mut KeyboardEventKind,
+}
+
+#[repr(C)]
+pub union KeyboardEventKind {
+    KeyUp: *mut KeyboardEvent_KeyUp,
+    KeyDown: *mut KeyboardEvent_KeyDown,
+}
+
+#[repr(C)]
+#[derive(Clone)]
+pub struct KeyboardEvent_KeyUp {
+    field0: i32,
+}
+
+#[repr(C)]
+#[derive(Clone)]
+pub struct KeyboardEvent_KeyDown {
+    field0: i32,
+}
+
+#[repr(C)]
+#[derive(Clone)]
 pub struct wire_MouseEvent {
     tag: i32,
     kind: *mut MouseEventKind,
@@ -263,33 +311,39 @@ pub struct wire_MouseEvent {
 
 #[repr(C)]
 pub union MouseEventKind {
-    Up: *mut MouseEvent_Up,
-    Down: *mut MouseEvent_Down,
-    Move: *mut MouseEvent_Move,
-    ScrollWheel: *mut MouseEvent_ScrollWheel,
+    MouseUp: *mut MouseEvent_MouseUp,
+    MouseDown: *mut MouseEvent_MouseDown,
+    MouseMove: *mut MouseEvent_MouseMove,
+    MouseScrollWheel: *mut MouseEvent_MouseScrollWheel,
 }
 
 #[repr(C)]
 #[derive(Clone)]
-pub struct MouseEvent_Up {
+pub struct MouseEvent_MouseUp {
     field0: i32,
+    field1: f32,
+    field2: f32,
 }
 
 #[repr(C)]
 #[derive(Clone)]
-pub struct MouseEvent_Down {
+pub struct MouseEvent_MouseDown {
     field0: i32,
+    field1: f32,
+    field2: f32,
 }
 
 #[repr(C)]
 #[derive(Clone)]
-pub struct MouseEvent_Move {
+pub struct MouseEvent_MouseMove {
     field0: i32,
+    field1: f32,
+    field2: f32,
 }
 
 #[repr(C)]
 #[derive(Clone)]
-pub struct MouseEvent_ScrollWheel {
+pub struct MouseEvent_MouseScrollWheel {
     field0: f32,
 }
 
@@ -298,6 +352,16 @@ pub struct MouseEvent_ScrollWheel {
 // Section: static checks
 
 // Section: allocate functions
+
+#[no_mangle]
+pub extern "C" fn new_box_autoadd_input_event_0() -> *mut wire_InputEvent {
+    support::new_leak_box_ptr(wire_InputEvent::new_with_null_ptr())
+}
+
+#[no_mangle]
+pub extern "C" fn new_box_autoadd_keyboard_event_0() -> *mut wire_KeyboardEvent {
+    support::new_leak_box_ptr(wire_KeyboardEvent::new_with_null_ptr())
+}
 
 #[no_mangle]
 pub extern "C" fn new_box_autoadd_mouse_event_0() -> *mut wire_MouseEvent {
@@ -339,6 +403,20 @@ impl Wire2Api<String> for *mut wire_uint_8_list {
     }
 }
 
+impl Wire2Api<InputEvent> for *mut wire_InputEvent {
+    fn wire2api(self) -> InputEvent {
+        let wrap = unsafe { support::box_from_leak_ptr(self) };
+        Wire2Api::<InputEvent>::wire2api(*wrap).into()
+    }
+}
+
+impl Wire2Api<KeyboardEvent> for *mut wire_KeyboardEvent {
+    fn wire2api(self) -> KeyboardEvent {
+        let wrap = unsafe { support::box_from_leak_ptr(self) };
+        Wire2Api::<KeyboardEvent>::wire2api(*wrap).into()
+    }
+}
+
 impl Wire2Api<MouseEvent> for *mut wire_MouseEvent {
     fn wire2api(self) -> MouseEvent {
         let wrap = unsafe { support::box_from_leak_ptr(self) };
@@ -364,28 +442,189 @@ impl Wire2Api<i64> for i64 {
     }
 }
 
+impl Wire2Api<InputEvent> for wire_InputEvent {
+    fn wire2api(self) -> InputEvent {
+        match self.tag {
+            0 => unsafe {
+                let ans = support::box_from_leak_ptr(self.kind);
+                let ans = support::box_from_leak_ptr(ans.Mouse);
+                InputEvent::Mouse(ans.field0.wire2api())
+            },
+            1 => unsafe {
+                let ans = support::box_from_leak_ptr(self.kind);
+                let ans = support::box_from_leak_ptr(ans.Keyboard);
+                InputEvent::Keyboard(ans.field0.wire2api())
+            },
+            _ => unreachable!(),
+        }
+    }
+}
+
+impl Wire2Api<KeyboardEvent> for wire_KeyboardEvent {
+    fn wire2api(self) -> KeyboardEvent {
+        match self.tag {
+            0 => unsafe {
+                let ans = support::box_from_leak_ptr(self.kind);
+                let ans = support::box_from_leak_ptr(ans.KeyUp);
+                KeyboardEvent::KeyUp(ans.field0.wire2api())
+            },
+            1 => unsafe {
+                let ans = support::box_from_leak_ptr(self.kind);
+                let ans = support::box_from_leak_ptr(ans.KeyDown);
+                KeyboardEvent::KeyDown(ans.field0.wire2api())
+            },
+            _ => unreachable!(),
+        }
+    }
+}
+
+impl Wire2Api<KeyboardKey> for i32 {
+    fn wire2api(self) -> KeyboardKey {
+        match self {
+            0 => KeyboardKey::A,
+            1 => KeyboardKey::B,
+            2 => KeyboardKey::C,
+            3 => KeyboardKey::D,
+            4 => KeyboardKey::E,
+            5 => KeyboardKey::F,
+            6 => KeyboardKey::G,
+            7 => KeyboardKey::H,
+            8 => KeyboardKey::I,
+            9 => KeyboardKey::J,
+            10 => KeyboardKey::K,
+            11 => KeyboardKey::L,
+            12 => KeyboardKey::M,
+            13 => KeyboardKey::N,
+            14 => KeyboardKey::O,
+            15 => KeyboardKey::P,
+            16 => KeyboardKey::Q,
+            17 => KeyboardKey::R,
+            18 => KeyboardKey::S,
+            19 => KeyboardKey::T,
+            20 => KeyboardKey::U,
+            21 => KeyboardKey::V,
+            22 => KeyboardKey::W,
+            23 => KeyboardKey::X,
+            24 => KeyboardKey::Y,
+            25 => KeyboardKey::Z,
+            26 => KeyboardKey::BackQuote,
+            27 => KeyboardKey::Digit0,
+            28 => KeyboardKey::Digit1,
+            29 => KeyboardKey::Digit2,
+            30 => KeyboardKey::Digit3,
+            31 => KeyboardKey::Digit4,
+            32 => KeyboardKey::Digit5,
+            33 => KeyboardKey::Digit6,
+            34 => KeyboardKey::Digit7,
+            35 => KeyboardKey::Digit8,
+            36 => KeyboardKey::Digit9,
+            37 => KeyboardKey::Minus,
+            38 => KeyboardKey::Equal,
+            39 => KeyboardKey::Tab,
+            40 => KeyboardKey::CapsLock,
+            41 => KeyboardKey::LeftShift,
+            42 => KeyboardKey::LeftControl,
+            43 => KeyboardKey::LeftAlt,
+            44 => KeyboardKey::LeftMeta,
+            45 => KeyboardKey::Space,
+            46 => KeyboardKey::RightMeta,
+            47 => KeyboardKey::RightControl,
+            48 => KeyboardKey::RightAlt,
+            49 => KeyboardKey::RightShift,
+            50 => KeyboardKey::Comma,
+            51 => KeyboardKey::Period,
+            52 => KeyboardKey::Slash,
+            53 => KeyboardKey::Semicolon,
+            54 => KeyboardKey::QuoteSingle,
+            55 => KeyboardKey::Enter,
+            56 => KeyboardKey::BracketLeft,
+            57 => KeyboardKey::BracketRight,
+            58 => KeyboardKey::BackSlash,
+            59 => KeyboardKey::Backspace,
+            60 => KeyboardKey::NumLock,
+            61 => KeyboardKey::NumpadEquals,
+            62 => KeyboardKey::NumpadDivide,
+            63 => KeyboardKey::NumpadMultiply,
+            64 => KeyboardKey::NumpadSubtract,
+            65 => KeyboardKey::NumpadAdd,
+            66 => KeyboardKey::NumpadEnter,
+            67 => KeyboardKey::Numpad0,
+            68 => KeyboardKey::Numpad1,
+            69 => KeyboardKey::Numpad2,
+            70 => KeyboardKey::Numpad3,
+            71 => KeyboardKey::Numpad4,
+            72 => KeyboardKey::Numpad5,
+            73 => KeyboardKey::Numpad6,
+            74 => KeyboardKey::Numpad7,
+            75 => KeyboardKey::Numpad8,
+            76 => KeyboardKey::Numpad9,
+            77 => KeyboardKey::NumpadDecimal,
+            78 => KeyboardKey::ArrowLeft,
+            79 => KeyboardKey::ArrowUp,
+            80 => KeyboardKey::ArrowRight,
+            81 => KeyboardKey::ArrowDown,
+            82 => KeyboardKey::Escape,
+            83 => KeyboardKey::PrintScreen,
+            84 => KeyboardKey::ScrollLock,
+            85 => KeyboardKey::Pause,
+            86 => KeyboardKey::Insert,
+            87 => KeyboardKey::Delete,
+            88 => KeyboardKey::Home,
+            89 => KeyboardKey::End,
+            90 => KeyboardKey::PageUp,
+            91 => KeyboardKey::PageDown,
+            92 => KeyboardKey::F1,
+            93 => KeyboardKey::F2,
+            94 => KeyboardKey::F3,
+            95 => KeyboardKey::F4,
+            96 => KeyboardKey::F5,
+            97 => KeyboardKey::F6,
+            98 => KeyboardKey::F7,
+            99 => KeyboardKey::F8,
+            100 => KeyboardKey::F9,
+            101 => KeyboardKey::F10,
+            102 => KeyboardKey::F11,
+            103 => KeyboardKey::F12,
+            104 => KeyboardKey::Fn,
+            _ => unreachable!("Invalid variant for KeyboardKey: {}", self),
+        }
+    }
+}
+
 impl Wire2Api<MouseEvent> for wire_MouseEvent {
     fn wire2api(self) -> MouseEvent {
         match self.tag {
             0 => unsafe {
                 let ans = support::box_from_leak_ptr(self.kind);
-                let ans = support::box_from_leak_ptr(ans.Up);
-                MouseEvent::Up(ans.field0.wire2api())
+                let ans = support::box_from_leak_ptr(ans.MouseUp);
+                MouseEvent::MouseUp(
+                    ans.field0.wire2api(),
+                    ans.field1.wire2api(),
+                    ans.field2.wire2api(),
+                )
             },
             1 => unsafe {
                 let ans = support::box_from_leak_ptr(self.kind);
-                let ans = support::box_from_leak_ptr(ans.Down);
-                MouseEvent::Down(ans.field0.wire2api())
+                let ans = support::box_from_leak_ptr(ans.MouseDown);
+                MouseEvent::MouseDown(
+                    ans.field0.wire2api(),
+                    ans.field1.wire2api(),
+                    ans.field2.wire2api(),
+                )
             },
             2 => unsafe {
                 let ans = support::box_from_leak_ptr(self.kind);
-                let ans = support::box_from_leak_ptr(ans.Move);
-                MouseEvent::Move(ans.field0.wire2api())
+                let ans = support::box_from_leak_ptr(ans.MouseMove);
+                MouseEvent::MouseMove(
+                    ans.field0.wire2api(),
+                    ans.field1.wire2api(),
+                    ans.field2.wire2api(),
+                )
             },
             3 => unsafe {
                 let ans = support::box_from_leak_ptr(self.kind);
-                let ans = support::box_from_leak_ptr(ans.ScrollWheel);
-                MouseEvent::ScrollWheel(ans.field0.wire2api())
+                let ans = support::box_from_leak_ptr(ans.MouseScrollWheel);
+                MouseEvent::MouseScrollWheel(ans.field0.wire2api())
             },
             _ => unreachable!(),
         }
@@ -399,6 +638,8 @@ impl Wire2Api<MouseKey> for i32 {
             1 => MouseKey::Left,
             2 => MouseKey::Right,
             3 => MouseKey::Wheel,
+            4 => MouseKey::SideForward,
+            5 => MouseKey::SideBack,
             _ => unreachable!("Invalid variant for MouseKey: {}", self),
         }
     }
@@ -431,6 +672,60 @@ impl<T> NewWithNullPtr for *mut T {
     }
 }
 
+impl NewWithNullPtr for wire_InputEvent {
+    fn new_with_null_ptr() -> Self {
+        Self {
+            tag: -1,
+            kind: core::ptr::null_mut(),
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn inflate_InputEvent_Mouse() -> *mut InputEventKind {
+    support::new_leak_box_ptr(InputEventKind {
+        Mouse: support::new_leak_box_ptr(InputEvent_Mouse {
+            field0: core::ptr::null_mut(),
+        }),
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn inflate_InputEvent_Keyboard() -> *mut InputEventKind {
+    support::new_leak_box_ptr(InputEventKind {
+        Keyboard: support::new_leak_box_ptr(InputEvent_Keyboard {
+            field0: core::ptr::null_mut(),
+        }),
+    })
+}
+
+impl NewWithNullPtr for wire_KeyboardEvent {
+    fn new_with_null_ptr() -> Self {
+        Self {
+            tag: -1,
+            kind: core::ptr::null_mut(),
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn inflate_KeyboardEvent_KeyUp() -> *mut KeyboardEventKind {
+    support::new_leak_box_ptr(KeyboardEventKind {
+        KeyUp: support::new_leak_box_ptr(KeyboardEvent_KeyUp {
+            field0: Default::default(),
+        }),
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn inflate_KeyboardEvent_KeyDown() -> *mut KeyboardEventKind {
+    support::new_leak_box_ptr(KeyboardEventKind {
+        KeyDown: support::new_leak_box_ptr(KeyboardEvent_KeyDown {
+            field0: Default::default(),
+        }),
+    })
+}
+
 impl NewWithNullPtr for wire_MouseEvent {
     fn new_with_null_ptr() -> Self {
         Self {
@@ -441,36 +736,42 @@ impl NewWithNullPtr for wire_MouseEvent {
 }
 
 #[no_mangle]
-pub extern "C" fn inflate_MouseEvent_Up() -> *mut MouseEventKind {
+pub extern "C" fn inflate_MouseEvent_MouseUp() -> *mut MouseEventKind {
     support::new_leak_box_ptr(MouseEventKind {
-        Up: support::new_leak_box_ptr(MouseEvent_Up {
+        MouseUp: support::new_leak_box_ptr(MouseEvent_MouseUp {
             field0: Default::default(),
+            field1: Default::default(),
+            field2: Default::default(),
         }),
     })
 }
 
 #[no_mangle]
-pub extern "C" fn inflate_MouseEvent_Down() -> *mut MouseEventKind {
+pub extern "C" fn inflate_MouseEvent_MouseDown() -> *mut MouseEventKind {
     support::new_leak_box_ptr(MouseEventKind {
-        Down: support::new_leak_box_ptr(MouseEvent_Down {
+        MouseDown: support::new_leak_box_ptr(MouseEvent_MouseDown {
             field0: Default::default(),
+            field1: Default::default(),
+            field2: Default::default(),
         }),
     })
 }
 
 #[no_mangle]
-pub extern "C" fn inflate_MouseEvent_Move() -> *mut MouseEventKind {
+pub extern "C" fn inflate_MouseEvent_MouseMove() -> *mut MouseEventKind {
     support::new_leak_box_ptr(MouseEventKind {
-        Move: support::new_leak_box_ptr(MouseEvent_Move {
+        MouseMove: support::new_leak_box_ptr(MouseEvent_MouseMove {
             field0: Default::default(),
+            field1: Default::default(),
+            field2: Default::default(),
         }),
     })
 }
 
 #[no_mangle]
-pub extern "C" fn inflate_MouseEvent_ScrollWheel() -> *mut MouseEventKind {
+pub extern "C" fn inflate_MouseEvent_MouseScrollWheel() -> *mut MouseEventKind {
     support::new_leak_box_ptr(MouseEventKind {
-        ScrollWheel: support::new_leak_box_ptr(MouseEvent_ScrollWheel {
+        MouseScrollWheel: support::new_leak_box_ptr(MouseEvent_MouseScrollWheel {
             field0: Default::default(),
         }),
     })

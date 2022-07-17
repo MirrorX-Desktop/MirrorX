@@ -1,0 +1,120 @@
+use serde::{Deserialize, Serialize};
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+pub enum MouseKey {
+    None,
+    Left,
+    Right,
+    Wheel,
+    SideForward,
+    SideBack,
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+pub enum KeyboardKey {
+    A,
+    B,
+    C,
+    D,
+    E,
+    F,
+    G,
+    H,
+    I,
+    J,
+    K,
+    L,
+    M,
+    N,
+    O,
+    P,
+    Q,
+    R,
+    S,
+    T,
+    U,
+    V,
+    W,
+    X,
+    Y,
+    Z,
+    BackQuote, // `
+    Digit0,
+    Digit1,
+    Digit2,
+    Digit3,
+    Digit4,
+    Digit5,
+    Digit6,
+    Digit7,
+    Digit8,
+    Digit9,
+    Minus, // -
+    Equal, // =
+    Tab,
+    CapsLock,
+    LeftShift,
+    LeftControl,
+    LeftAlt,
+    LeftMeta, // macOS -> Option, Windows -> Windows Flag
+    Space,
+    RightMeta,
+    RightControl,
+    RightAlt,
+    RightShift,
+    Comma,       // < ,
+    Period,      // > .
+    Slash,       // / ?
+    Semicolon,   // ; :
+    QuoteSingle, // ' "
+    Enter,
+    BracketLeft,  // [ {
+    BracketRight, // ] }
+    BackSlash,    // \ |
+    Backspace,
+    NumLock,
+    NumpadEquals,
+    NumpadDivide,
+    NumpadMultiply,
+    NumpadSubtract,
+    NumpadAdd,
+    NumpadEnter,
+    Numpad0,
+    Numpad1,
+    Numpad2,
+    Numpad3,
+    Numpad4,
+    Numpad5,
+    Numpad6,
+    Numpad7,
+    Numpad8,
+    Numpad9,
+    NumpadDecimal,
+    ArrowLeft,
+    ArrowUp,
+    ArrowRight,
+    ArrowDown,
+    Escape,
+    PrintScreen, // macOS -> F13, Windows -> PrintScreen
+    ScrollLock,  // macOS -> F14, Windows -> ScrollLock
+    Pause,       // macOS -> F15, Windows -> Pause
+    Insert,
+    Delete,
+    Home,
+    End,
+    PageUp,
+    PageDown,
+    F1,
+    F2,
+    F3,
+    F4,
+    F5,
+    F6,
+    F7,
+    F8,
+    F9,
+    F10,
+    F11,
+    F12,
+    Fn,
+}

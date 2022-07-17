@@ -87,7 +87,7 @@ pub fn mouse_move(
     }
 }
 
-pub fn mouse_scroll_whell(
+pub fn mouse_scroll_wheel(
     monitor: &Monitor,
     delta: f32,
     position: (f32, f32),
@@ -103,11 +103,11 @@ pub fn mouse_scroll_whell(
     }
 }
 
-pub fn keyboard_down(monitor: &Monitor, key: MouseKey, position: (f32, f32)) {
-    let a = INPUT {
-        r#type: INPUT_KEYBOARD,
-    };
-}
+// pub fn keyboard_down(monitor: &Monitor, key: MouseKey, position: (f32, f32)) {
+//     let a = INPUT {
+//         r#type: INPUT_KEYBOARD,
+//     };
+// }
 
 unsafe fn send_input(
     args: &[(i32, MOUSE_EVENT_FLAGS)],

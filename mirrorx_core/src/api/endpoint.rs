@@ -1,7 +1,7 @@
 use crate::{
     error::MirrorXError,
     service::endpoint::message::{
-        GetDisplayInfoRequest, GetDisplayInfoResponse, MouseEvent, MouseEventFrame,
+        GetDisplayInfoRequest, GetDisplayInfoResponse, Input, InputEvent, MouseEvent,
         StartMediaTransmissionRequest, StartMediaTransmissionResponse,
     },
     utility::nonce_value::NonceValue,
@@ -73,21 +73,11 @@ pub async fn start_media_transmission(
     Ok(resp)
 }
 
-pub async fn mouse_event(
-    remote_device_id: String,
-    event: MouseEvent,
-    x: f32,
-    y: f32,
-) -> Result<(), MirrorXError> {
+pub async fn input(remote_device_id: String, event: InputEvent) -> Result<(), MirrorXError> {
     let endpoint = match crate::service::endpoint::ENDPOINTS.get(&remote_device_id) {
         Some(pair) => pair,
         None => return Err(MirrorXError::EndPointNotFound(remote_device_id)),
     };
 
-    endpoint
-        .trigger_mouse_event(MouseEventFrame {
-            event: event,
-            position: (x, y),
-        })
-        .await
+    endpoint.trigger_input(Input { event }).await
 }

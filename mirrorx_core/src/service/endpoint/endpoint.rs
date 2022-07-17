@@ -5,14 +5,9 @@ use super::{
     processor::{desktop::start_desktop_render_process, video::*},
 };
 use crate::{
-    component::{
-        monitor::{self, Monitor},
-        video_decoder::{DecodedFrame, VideoDecoder},
-    },
+    component::monitor::{self, Monitor},
     error::MirrorXError,
-    service::endpoint::handler::{
-        handle_audio_frame, handle_mouse_event_frame, handle_video_frame,
-    },
+    service::endpoint::handler::{handle_audio_frame, handle_input, handle_video_frame},
     utility::{nonce_value::NonceValue, runtime::TOKIO_RUNTIME, serializer::BINCODE_SERIALIZER},
 };
 use anyhow::anyhow;
@@ -29,7 +24,6 @@ use ring::aead::{OpeningKey, SealingKey};
 use rtrb::RingBuffer;
 use scopeguard::defer;
 use std::{
-    collections::HashMap,
     sync::{
         atomic::{AtomicU16, Ordering},
         Arc,
@@ -457,11 +451,7 @@ impl EndPoint {
         EndPointMessage::GetDisplayInfoResponse
     );
 
-    make_endpoint_push!(
-        trigger_mouse_event,
-        MouseEventFrame,
-        EndPointMessage::MouseEventFrame
-    );
+    make_endpoint_push!(trigger_input, Input, EndPointMessage::Input);
 }
 
 impl Drop for EndPoint {
@@ -601,8 +591,8 @@ async fn handle_message(endpoint: Arc<EndPoint>, packet: EndPointMessagePacket) 
             EndPointMessage::AudioFrame(req) => {
                 handle_push_message!(&endpoint, req, handle_audio_frame);
             }
-            EndPointMessage::MouseEventFrame(req) => {
-                handle_push_message!(&endpoint, req, handle_mouse_event_frame);
+            EndPointMessage::Input(req) => {
+                handle_push_message!(&endpoint, req, handle_input);
             }
             _ => error!("handle_message: received unknown push message"),
         },

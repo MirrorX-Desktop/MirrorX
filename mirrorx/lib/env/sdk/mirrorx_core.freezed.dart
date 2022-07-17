@@ -15,54 +15,740 @@ final _privateConstructorUsedError = UnsupportedError(
     'It seems like you constructed your class using `MyClass._()`. This constructor is only meant to be used by freezed and you are not supposed to need it nor use it.\nPlease check the documentation here for more information: https://github.com/rrousselGit/freezed#custom-getters-and-methods');
 
 /// @nodoc
-mixin _$MouseEvent {
+mixin _$InputEvent {
   @optionalTypeArgs
   TResult when<TResult extends Object?>({
-    required TResult Function(MouseKey field0) up,
-    required TResult Function(MouseKey field0) down,
-    required TResult Function(MouseKey field0) move,
-    required TResult Function(double field0) scrollWheel,
+    required TResult Function(MouseEvent field0) mouse,
+    required TResult Function(KeyboardEvent field0) keyboard,
   }) =>
       throw _privateConstructorUsedError;
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>({
-    TResult Function(MouseKey field0)? up,
-    TResult Function(MouseKey field0)? down,
-    TResult Function(MouseKey field0)? move,
-    TResult Function(double field0)? scrollWheel,
+    TResult Function(MouseEvent field0)? mouse,
+    TResult Function(KeyboardEvent field0)? keyboard,
   }) =>
       throw _privateConstructorUsedError;
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>({
-    TResult Function(MouseKey field0)? up,
-    TResult Function(MouseKey field0)? down,
-    TResult Function(MouseKey field0)? move,
-    TResult Function(double field0)? scrollWheel,
+    TResult Function(MouseEvent field0)? mouse,
+    TResult Function(KeyboardEvent field0)? keyboard,
     required TResult orElse(),
   }) =>
       throw _privateConstructorUsedError;
   @optionalTypeArgs
   TResult map<TResult extends Object?>({
-    required TResult Function(Up value) up,
-    required TResult Function(Down value) down,
-    required TResult Function(Move value) move,
-    required TResult Function(ScrollWheel value) scrollWheel,
+    required TResult Function(Mouse value) mouse,
+    required TResult Function(Keyboard value) keyboard,
   }) =>
       throw _privateConstructorUsedError;
   @optionalTypeArgs
   TResult? mapOrNull<TResult extends Object?>({
-    TResult Function(Up value)? up,
-    TResult Function(Down value)? down,
-    TResult Function(Move value)? move,
-    TResult Function(ScrollWheel value)? scrollWheel,
+    TResult Function(Mouse value)? mouse,
+    TResult Function(Keyboard value)? keyboard,
   }) =>
       throw _privateConstructorUsedError;
   @optionalTypeArgs
   TResult maybeMap<TResult extends Object?>({
-    TResult Function(Up value)? up,
-    TResult Function(Down value)? down,
-    TResult Function(Move value)? move,
-    TResult Function(ScrollWheel value)? scrollWheel,
+    TResult Function(Mouse value)? mouse,
+    TResult Function(Keyboard value)? keyboard,
+    required TResult orElse(),
+  }) =>
+      throw _privateConstructorUsedError;
+}
+
+/// @nodoc
+abstract class $InputEventCopyWith<$Res> {
+  factory $InputEventCopyWith(
+          InputEvent value, $Res Function(InputEvent) then) =
+      _$InputEventCopyWithImpl<$Res>;
+}
+
+/// @nodoc
+class _$InputEventCopyWithImpl<$Res> implements $InputEventCopyWith<$Res> {
+  _$InputEventCopyWithImpl(this._value, this._then);
+
+  final InputEvent _value;
+  // ignore: unused_field
+  final $Res Function(InputEvent) _then;
+}
+
+/// @nodoc
+abstract class _$$MouseCopyWith<$Res> {
+  factory _$$MouseCopyWith(_$Mouse value, $Res Function(_$Mouse) then) =
+      __$$MouseCopyWithImpl<$Res>;
+  $Res call({MouseEvent field0});
+
+  $MouseEventCopyWith<$Res> get field0;
+}
+
+/// @nodoc
+class __$$MouseCopyWithImpl<$Res> extends _$InputEventCopyWithImpl<$Res>
+    implements _$$MouseCopyWith<$Res> {
+  __$$MouseCopyWithImpl(_$Mouse _value, $Res Function(_$Mouse) _then)
+      : super(_value, (v) => _then(v as _$Mouse));
+
+  @override
+  _$Mouse get _value => super._value as _$Mouse;
+
+  @override
+  $Res call({
+    Object? field0 = freezed,
+  }) {
+    return _then(_$Mouse(
+      field0 == freezed
+          ? _value.field0
+          : field0 // ignore: cast_nullable_to_non_nullable
+              as MouseEvent,
+    ));
+  }
+
+  @override
+  $MouseEventCopyWith<$Res> get field0 {
+    return $MouseEventCopyWith<$Res>(_value.field0, (value) {
+      return _then(_value.copyWith(field0: value));
+    });
+  }
+}
+
+/// @nodoc
+
+class _$Mouse implements Mouse {
+  const _$Mouse(this.field0);
+
+  @override
+  final MouseEvent field0;
+
+  @override
+  String toString() {
+    return 'InputEvent.mouse(field0: $field0)';
+  }
+
+  @override
+  bool operator ==(dynamic other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _$Mouse &&
+            const DeepCollectionEquality().equals(other.field0, field0));
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(runtimeType, const DeepCollectionEquality().hash(field0));
+
+  @JsonKey(ignore: true)
+  @override
+  _$$MouseCopyWith<_$Mouse> get copyWith =>
+      __$$MouseCopyWithImpl<_$Mouse>(this, _$identity);
+
+  @override
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>({
+    required TResult Function(MouseEvent field0) mouse,
+    required TResult Function(KeyboardEvent field0) keyboard,
+  }) {
+    return mouse(field0);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>({
+    TResult Function(MouseEvent field0)? mouse,
+    TResult Function(KeyboardEvent field0)? keyboard,
+  }) {
+    return mouse?.call(field0);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>({
+    TResult Function(MouseEvent field0)? mouse,
+    TResult Function(KeyboardEvent field0)? keyboard,
+    required TResult orElse(),
+  }) {
+    if (mouse != null) {
+      return mouse(field0);
+    }
+    return orElse();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>({
+    required TResult Function(Mouse value) mouse,
+    required TResult Function(Keyboard value) keyboard,
+  }) {
+    return mouse(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>({
+    TResult Function(Mouse value)? mouse,
+    TResult Function(Keyboard value)? keyboard,
+  }) {
+    return mouse?.call(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>({
+    TResult Function(Mouse value)? mouse,
+    TResult Function(Keyboard value)? keyboard,
+    required TResult orElse(),
+  }) {
+    if (mouse != null) {
+      return mouse(this);
+    }
+    return orElse();
+  }
+}
+
+abstract class Mouse implements InputEvent {
+  const factory Mouse(final MouseEvent field0) = _$Mouse;
+
+  MouseEvent get field0;
+  @JsonKey(ignore: true)
+  _$$MouseCopyWith<_$Mouse> get copyWith => throw _privateConstructorUsedError;
+}
+
+/// @nodoc
+abstract class _$$KeyboardCopyWith<$Res> {
+  factory _$$KeyboardCopyWith(
+          _$Keyboard value, $Res Function(_$Keyboard) then) =
+      __$$KeyboardCopyWithImpl<$Res>;
+  $Res call({KeyboardEvent field0});
+
+  $KeyboardEventCopyWith<$Res> get field0;
+}
+
+/// @nodoc
+class __$$KeyboardCopyWithImpl<$Res> extends _$InputEventCopyWithImpl<$Res>
+    implements _$$KeyboardCopyWith<$Res> {
+  __$$KeyboardCopyWithImpl(_$Keyboard _value, $Res Function(_$Keyboard) _then)
+      : super(_value, (v) => _then(v as _$Keyboard));
+
+  @override
+  _$Keyboard get _value => super._value as _$Keyboard;
+
+  @override
+  $Res call({
+    Object? field0 = freezed,
+  }) {
+    return _then(_$Keyboard(
+      field0 == freezed
+          ? _value.field0
+          : field0 // ignore: cast_nullable_to_non_nullable
+              as KeyboardEvent,
+    ));
+  }
+
+  @override
+  $KeyboardEventCopyWith<$Res> get field0 {
+    return $KeyboardEventCopyWith<$Res>(_value.field0, (value) {
+      return _then(_value.copyWith(field0: value));
+    });
+  }
+}
+
+/// @nodoc
+
+class _$Keyboard implements Keyboard {
+  const _$Keyboard(this.field0);
+
+  @override
+  final KeyboardEvent field0;
+
+  @override
+  String toString() {
+    return 'InputEvent.keyboard(field0: $field0)';
+  }
+
+  @override
+  bool operator ==(dynamic other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _$Keyboard &&
+            const DeepCollectionEquality().equals(other.field0, field0));
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(runtimeType, const DeepCollectionEquality().hash(field0));
+
+  @JsonKey(ignore: true)
+  @override
+  _$$KeyboardCopyWith<_$Keyboard> get copyWith =>
+      __$$KeyboardCopyWithImpl<_$Keyboard>(this, _$identity);
+
+  @override
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>({
+    required TResult Function(MouseEvent field0) mouse,
+    required TResult Function(KeyboardEvent field0) keyboard,
+  }) {
+    return keyboard(field0);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>({
+    TResult Function(MouseEvent field0)? mouse,
+    TResult Function(KeyboardEvent field0)? keyboard,
+  }) {
+    return keyboard?.call(field0);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>({
+    TResult Function(MouseEvent field0)? mouse,
+    TResult Function(KeyboardEvent field0)? keyboard,
+    required TResult orElse(),
+  }) {
+    if (keyboard != null) {
+      return keyboard(field0);
+    }
+    return orElse();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>({
+    required TResult Function(Mouse value) mouse,
+    required TResult Function(Keyboard value) keyboard,
+  }) {
+    return keyboard(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>({
+    TResult Function(Mouse value)? mouse,
+    TResult Function(Keyboard value)? keyboard,
+  }) {
+    return keyboard?.call(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>({
+    TResult Function(Mouse value)? mouse,
+    TResult Function(Keyboard value)? keyboard,
+    required TResult orElse(),
+  }) {
+    if (keyboard != null) {
+      return keyboard(this);
+    }
+    return orElse();
+  }
+}
+
+abstract class Keyboard implements InputEvent {
+  const factory Keyboard(final KeyboardEvent field0) = _$Keyboard;
+
+  KeyboardEvent get field0;
+  @JsonKey(ignore: true)
+  _$$KeyboardCopyWith<_$Keyboard> get copyWith =>
+      throw _privateConstructorUsedError;
+}
+
+/// @nodoc
+mixin _$KeyboardEvent {
+  KeyboardKey get field0 => throw _privateConstructorUsedError;
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>({
+    required TResult Function(KeyboardKey field0) keyUp,
+    required TResult Function(KeyboardKey field0) keyDown,
+  }) =>
+      throw _privateConstructorUsedError;
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>({
+    TResult Function(KeyboardKey field0)? keyUp,
+    TResult Function(KeyboardKey field0)? keyDown,
+  }) =>
+      throw _privateConstructorUsedError;
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>({
+    TResult Function(KeyboardKey field0)? keyUp,
+    TResult Function(KeyboardKey field0)? keyDown,
+    required TResult orElse(),
+  }) =>
+      throw _privateConstructorUsedError;
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>({
+    required TResult Function(KeyUp value) keyUp,
+    required TResult Function(KeyDown value) keyDown,
+  }) =>
+      throw _privateConstructorUsedError;
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>({
+    TResult Function(KeyUp value)? keyUp,
+    TResult Function(KeyDown value)? keyDown,
+  }) =>
+      throw _privateConstructorUsedError;
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>({
+    TResult Function(KeyUp value)? keyUp,
+    TResult Function(KeyDown value)? keyDown,
+    required TResult orElse(),
+  }) =>
+      throw _privateConstructorUsedError;
+
+  @JsonKey(ignore: true)
+  $KeyboardEventCopyWith<KeyboardEvent> get copyWith =>
+      throw _privateConstructorUsedError;
+}
+
+/// @nodoc
+abstract class $KeyboardEventCopyWith<$Res> {
+  factory $KeyboardEventCopyWith(
+          KeyboardEvent value, $Res Function(KeyboardEvent) then) =
+      _$KeyboardEventCopyWithImpl<$Res>;
+  $Res call({KeyboardKey field0});
+}
+
+/// @nodoc
+class _$KeyboardEventCopyWithImpl<$Res>
+    implements $KeyboardEventCopyWith<$Res> {
+  _$KeyboardEventCopyWithImpl(this._value, this._then);
+
+  final KeyboardEvent _value;
+  // ignore: unused_field
+  final $Res Function(KeyboardEvent) _then;
+
+  @override
+  $Res call({
+    Object? field0 = freezed,
+  }) {
+    return _then(_value.copyWith(
+      field0: field0 == freezed
+          ? _value.field0
+          : field0 // ignore: cast_nullable_to_non_nullable
+              as KeyboardKey,
+    ));
+  }
+}
+
+/// @nodoc
+abstract class _$$KeyUpCopyWith<$Res> implements $KeyboardEventCopyWith<$Res> {
+  factory _$$KeyUpCopyWith(_$KeyUp value, $Res Function(_$KeyUp) then) =
+      __$$KeyUpCopyWithImpl<$Res>;
+  @override
+  $Res call({KeyboardKey field0});
+}
+
+/// @nodoc
+class __$$KeyUpCopyWithImpl<$Res> extends _$KeyboardEventCopyWithImpl<$Res>
+    implements _$$KeyUpCopyWith<$Res> {
+  __$$KeyUpCopyWithImpl(_$KeyUp _value, $Res Function(_$KeyUp) _then)
+      : super(_value, (v) => _then(v as _$KeyUp));
+
+  @override
+  _$KeyUp get _value => super._value as _$KeyUp;
+
+  @override
+  $Res call({
+    Object? field0 = freezed,
+  }) {
+    return _then(_$KeyUp(
+      field0 == freezed
+          ? _value.field0
+          : field0 // ignore: cast_nullable_to_non_nullable
+              as KeyboardKey,
+    ));
+  }
+}
+
+/// @nodoc
+
+class _$KeyUp implements KeyUp {
+  const _$KeyUp(this.field0);
+
+  @override
+  final KeyboardKey field0;
+
+  @override
+  String toString() {
+    return 'KeyboardEvent.keyUp(field0: $field0)';
+  }
+
+  @override
+  bool operator ==(dynamic other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _$KeyUp &&
+            const DeepCollectionEquality().equals(other.field0, field0));
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(runtimeType, const DeepCollectionEquality().hash(field0));
+
+  @JsonKey(ignore: true)
+  @override
+  _$$KeyUpCopyWith<_$KeyUp> get copyWith =>
+      __$$KeyUpCopyWithImpl<_$KeyUp>(this, _$identity);
+
+  @override
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>({
+    required TResult Function(KeyboardKey field0) keyUp,
+    required TResult Function(KeyboardKey field0) keyDown,
+  }) {
+    return keyUp(field0);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>({
+    TResult Function(KeyboardKey field0)? keyUp,
+    TResult Function(KeyboardKey field0)? keyDown,
+  }) {
+    return keyUp?.call(field0);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>({
+    TResult Function(KeyboardKey field0)? keyUp,
+    TResult Function(KeyboardKey field0)? keyDown,
+    required TResult orElse(),
+  }) {
+    if (keyUp != null) {
+      return keyUp(field0);
+    }
+    return orElse();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>({
+    required TResult Function(KeyUp value) keyUp,
+    required TResult Function(KeyDown value) keyDown,
+  }) {
+    return keyUp(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>({
+    TResult Function(KeyUp value)? keyUp,
+    TResult Function(KeyDown value)? keyDown,
+  }) {
+    return keyUp?.call(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>({
+    TResult Function(KeyUp value)? keyUp,
+    TResult Function(KeyDown value)? keyDown,
+    required TResult orElse(),
+  }) {
+    if (keyUp != null) {
+      return keyUp(this);
+    }
+    return orElse();
+  }
+}
+
+abstract class KeyUp implements KeyboardEvent {
+  const factory KeyUp(final KeyboardKey field0) = _$KeyUp;
+
+  @override
+  KeyboardKey get field0;
+  @override
+  @JsonKey(ignore: true)
+  _$$KeyUpCopyWith<_$KeyUp> get copyWith => throw _privateConstructorUsedError;
+}
+
+/// @nodoc
+abstract class _$$KeyDownCopyWith<$Res>
+    implements $KeyboardEventCopyWith<$Res> {
+  factory _$$KeyDownCopyWith(_$KeyDown value, $Res Function(_$KeyDown) then) =
+      __$$KeyDownCopyWithImpl<$Res>;
+  @override
+  $Res call({KeyboardKey field0});
+}
+
+/// @nodoc
+class __$$KeyDownCopyWithImpl<$Res> extends _$KeyboardEventCopyWithImpl<$Res>
+    implements _$$KeyDownCopyWith<$Res> {
+  __$$KeyDownCopyWithImpl(_$KeyDown _value, $Res Function(_$KeyDown) _then)
+      : super(_value, (v) => _then(v as _$KeyDown));
+
+  @override
+  _$KeyDown get _value => super._value as _$KeyDown;
+
+  @override
+  $Res call({
+    Object? field0 = freezed,
+  }) {
+    return _then(_$KeyDown(
+      field0 == freezed
+          ? _value.field0
+          : field0 // ignore: cast_nullable_to_non_nullable
+              as KeyboardKey,
+    ));
+  }
+}
+
+/// @nodoc
+
+class _$KeyDown implements KeyDown {
+  const _$KeyDown(this.field0);
+
+  @override
+  final KeyboardKey field0;
+
+  @override
+  String toString() {
+    return 'KeyboardEvent.keyDown(field0: $field0)';
+  }
+
+  @override
+  bool operator ==(dynamic other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _$KeyDown &&
+            const DeepCollectionEquality().equals(other.field0, field0));
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(runtimeType, const DeepCollectionEquality().hash(field0));
+
+  @JsonKey(ignore: true)
+  @override
+  _$$KeyDownCopyWith<_$KeyDown> get copyWith =>
+      __$$KeyDownCopyWithImpl<_$KeyDown>(this, _$identity);
+
+  @override
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>({
+    required TResult Function(KeyboardKey field0) keyUp,
+    required TResult Function(KeyboardKey field0) keyDown,
+  }) {
+    return keyDown(field0);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>({
+    TResult Function(KeyboardKey field0)? keyUp,
+    TResult Function(KeyboardKey field0)? keyDown,
+  }) {
+    return keyDown?.call(field0);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>({
+    TResult Function(KeyboardKey field0)? keyUp,
+    TResult Function(KeyboardKey field0)? keyDown,
+    required TResult orElse(),
+  }) {
+    if (keyDown != null) {
+      return keyDown(field0);
+    }
+    return orElse();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>({
+    required TResult Function(KeyUp value) keyUp,
+    required TResult Function(KeyDown value) keyDown,
+  }) {
+    return keyDown(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>({
+    TResult Function(KeyUp value)? keyUp,
+    TResult Function(KeyDown value)? keyDown,
+  }) {
+    return keyDown?.call(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>({
+    TResult Function(KeyUp value)? keyUp,
+    TResult Function(KeyDown value)? keyDown,
+    required TResult orElse(),
+  }) {
+    if (keyDown != null) {
+      return keyDown(this);
+    }
+    return orElse();
+  }
+}
+
+abstract class KeyDown implements KeyboardEvent {
+  const factory KeyDown(final KeyboardKey field0) = _$KeyDown;
+
+  @override
+  KeyboardKey get field0;
+  @override
+  @JsonKey(ignore: true)
+  _$$KeyDownCopyWith<_$KeyDown> get copyWith =>
+      throw _privateConstructorUsedError;
+}
+
+/// @nodoc
+mixin _$MouseEvent {
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>({
+    required TResult Function(MouseKey field0, double field1, double field2)
+        mouseUp,
+    required TResult Function(MouseKey field0, double field1, double field2)
+        mouseDown,
+    required TResult Function(MouseKey field0, double field1, double field2)
+        mouseMove,
+    required TResult Function(double field0) mouseScrollWheel,
+  }) =>
+      throw _privateConstructorUsedError;
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>({
+    TResult Function(MouseKey field0, double field1, double field2)? mouseUp,
+    TResult Function(MouseKey field0, double field1, double field2)? mouseDown,
+    TResult Function(MouseKey field0, double field1, double field2)? mouseMove,
+    TResult Function(double field0)? mouseScrollWheel,
+  }) =>
+      throw _privateConstructorUsedError;
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>({
+    TResult Function(MouseKey field0, double field1, double field2)? mouseUp,
+    TResult Function(MouseKey field0, double field1, double field2)? mouseDown,
+    TResult Function(MouseKey field0, double field1, double field2)? mouseMove,
+    TResult Function(double field0)? mouseScrollWheel,
+    required TResult orElse(),
+  }) =>
+      throw _privateConstructorUsedError;
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>({
+    required TResult Function(MouseUp value) mouseUp,
+    required TResult Function(MouseDown value) mouseDown,
+    required TResult Function(MouseMove value) mouseMove,
+    required TResult Function(MouseScrollWheel value) mouseScrollWheel,
+  }) =>
+      throw _privateConstructorUsedError;
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>({
+    TResult Function(MouseUp value)? mouseUp,
+    TResult Function(MouseDown value)? mouseDown,
+    TResult Function(MouseMove value)? mouseMove,
+    TResult Function(MouseScrollWheel value)? mouseScrollWheel,
+  }) =>
+      throw _privateConstructorUsedError;
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>({
+    TResult Function(MouseUp value)? mouseUp,
+    TResult Function(MouseDown value)? mouseDown,
+    TResult Function(MouseMove value)? mouseMove,
+    TResult Function(MouseScrollWheel value)? mouseScrollWheel,
     required TResult orElse(),
   }) =>
       throw _privateConstructorUsedError;
@@ -85,97 +771,119 @@ class _$MouseEventCopyWithImpl<$Res> implements $MouseEventCopyWith<$Res> {
 }
 
 /// @nodoc
-abstract class _$$UpCopyWith<$Res> {
-  factory _$$UpCopyWith(_$Up value, $Res Function(_$Up) then) =
-      __$$UpCopyWithImpl<$Res>;
-  $Res call({MouseKey field0});
+abstract class _$$MouseUpCopyWith<$Res> {
+  factory _$$MouseUpCopyWith(_$MouseUp value, $Res Function(_$MouseUp) then) =
+      __$$MouseUpCopyWithImpl<$Res>;
+  $Res call({MouseKey field0, double field1, double field2});
 }
 
 /// @nodoc
-class __$$UpCopyWithImpl<$Res> extends _$MouseEventCopyWithImpl<$Res>
-    implements _$$UpCopyWith<$Res> {
-  __$$UpCopyWithImpl(_$Up _value, $Res Function(_$Up) _then)
-      : super(_value, (v) => _then(v as _$Up));
+class __$$MouseUpCopyWithImpl<$Res> extends _$MouseEventCopyWithImpl<$Res>
+    implements _$$MouseUpCopyWith<$Res> {
+  __$$MouseUpCopyWithImpl(_$MouseUp _value, $Res Function(_$MouseUp) _then)
+      : super(_value, (v) => _then(v as _$MouseUp));
 
   @override
-  _$Up get _value => super._value as _$Up;
+  _$MouseUp get _value => super._value as _$MouseUp;
 
   @override
   $Res call({
     Object? field0 = freezed,
+    Object? field1 = freezed,
+    Object? field2 = freezed,
   }) {
-    return _then(_$Up(
+    return _then(_$MouseUp(
       field0 == freezed
           ? _value.field0
           : field0 // ignore: cast_nullable_to_non_nullable
               as MouseKey,
+      field1 == freezed
+          ? _value.field1
+          : field1 // ignore: cast_nullable_to_non_nullable
+              as double,
+      field2 == freezed
+          ? _value.field2
+          : field2 // ignore: cast_nullable_to_non_nullable
+              as double,
     ));
   }
 }
 
 /// @nodoc
 
-class _$Up implements Up {
-  const _$Up(this.field0);
+class _$MouseUp implements MouseUp {
+  const _$MouseUp(this.field0, this.field1, this.field2);
 
   @override
   final MouseKey field0;
+  @override
+  final double field1;
+  @override
+  final double field2;
 
   @override
   String toString() {
-    return 'MouseEvent.up(field0: $field0)';
+    return 'MouseEvent.mouseUp(field0: $field0, field1: $field1, field2: $field2)';
   }
 
   @override
   bool operator ==(dynamic other) {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
-            other is _$Up &&
-            const DeepCollectionEquality().equals(other.field0, field0));
+            other is _$MouseUp &&
+            const DeepCollectionEquality().equals(other.field0, field0) &&
+            const DeepCollectionEquality().equals(other.field1, field1) &&
+            const DeepCollectionEquality().equals(other.field2, field2));
   }
 
   @override
-  int get hashCode =>
-      Object.hash(runtimeType, const DeepCollectionEquality().hash(field0));
+  int get hashCode => Object.hash(
+      runtimeType,
+      const DeepCollectionEquality().hash(field0),
+      const DeepCollectionEquality().hash(field1),
+      const DeepCollectionEquality().hash(field2));
 
   @JsonKey(ignore: true)
   @override
-  _$$UpCopyWith<_$Up> get copyWith =>
-      __$$UpCopyWithImpl<_$Up>(this, _$identity);
+  _$$MouseUpCopyWith<_$MouseUp> get copyWith =>
+      __$$MouseUpCopyWithImpl<_$MouseUp>(this, _$identity);
 
   @override
   @optionalTypeArgs
   TResult when<TResult extends Object?>({
-    required TResult Function(MouseKey field0) up,
-    required TResult Function(MouseKey field0) down,
-    required TResult Function(MouseKey field0) move,
-    required TResult Function(double field0) scrollWheel,
+    required TResult Function(MouseKey field0, double field1, double field2)
+        mouseUp,
+    required TResult Function(MouseKey field0, double field1, double field2)
+        mouseDown,
+    required TResult Function(MouseKey field0, double field1, double field2)
+        mouseMove,
+    required TResult Function(double field0) mouseScrollWheel,
   }) {
-    return up(field0);
+    return mouseUp(field0, field1, field2);
   }
 
   @override
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>({
-    TResult Function(MouseKey field0)? up,
-    TResult Function(MouseKey field0)? down,
-    TResult Function(MouseKey field0)? move,
-    TResult Function(double field0)? scrollWheel,
+    TResult Function(MouseKey field0, double field1, double field2)? mouseUp,
+    TResult Function(MouseKey field0, double field1, double field2)? mouseDown,
+    TResult Function(MouseKey field0, double field1, double field2)? mouseMove,
+    TResult Function(double field0)? mouseScrollWheel,
   }) {
-    return up?.call(field0);
+    return mouseUp?.call(field0, field1, field2);
   }
 
   @override
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>({
-    TResult Function(MouseKey field0)? up,
-    TResult Function(MouseKey field0)? down,
-    TResult Function(MouseKey field0)? move,
-    TResult Function(double field0)? scrollWheel,
+    TResult Function(MouseKey field0, double field1, double field2)? mouseUp,
+    TResult Function(MouseKey field0, double field1, double field2)? mouseDown,
+    TResult Function(MouseKey field0, double field1, double field2)? mouseMove,
+    TResult Function(double field0)? mouseScrollWheel,
     required TResult orElse(),
   }) {
-    if (up != null) {
-      return up(field0);
+    if (mouseUp != null) {
+      return mouseUp(field0, field1, field2);
     }
     return orElse();
   }
@@ -183,141 +891,170 @@ class _$Up implements Up {
   @override
   @optionalTypeArgs
   TResult map<TResult extends Object?>({
-    required TResult Function(Up value) up,
-    required TResult Function(Down value) down,
-    required TResult Function(Move value) move,
-    required TResult Function(ScrollWheel value) scrollWheel,
+    required TResult Function(MouseUp value) mouseUp,
+    required TResult Function(MouseDown value) mouseDown,
+    required TResult Function(MouseMove value) mouseMove,
+    required TResult Function(MouseScrollWheel value) mouseScrollWheel,
   }) {
-    return up(this);
+    return mouseUp(this);
   }
 
   @override
   @optionalTypeArgs
   TResult? mapOrNull<TResult extends Object?>({
-    TResult Function(Up value)? up,
-    TResult Function(Down value)? down,
-    TResult Function(Move value)? move,
-    TResult Function(ScrollWheel value)? scrollWheel,
+    TResult Function(MouseUp value)? mouseUp,
+    TResult Function(MouseDown value)? mouseDown,
+    TResult Function(MouseMove value)? mouseMove,
+    TResult Function(MouseScrollWheel value)? mouseScrollWheel,
   }) {
-    return up?.call(this);
+    return mouseUp?.call(this);
   }
 
   @override
   @optionalTypeArgs
   TResult maybeMap<TResult extends Object?>({
-    TResult Function(Up value)? up,
-    TResult Function(Down value)? down,
-    TResult Function(Move value)? move,
-    TResult Function(ScrollWheel value)? scrollWheel,
+    TResult Function(MouseUp value)? mouseUp,
+    TResult Function(MouseDown value)? mouseDown,
+    TResult Function(MouseMove value)? mouseMove,
+    TResult Function(MouseScrollWheel value)? mouseScrollWheel,
     required TResult orElse(),
   }) {
-    if (up != null) {
-      return up(this);
+    if (mouseUp != null) {
+      return mouseUp(this);
     }
     return orElse();
   }
 }
 
-abstract class Up implements MouseEvent {
-  const factory Up(final MouseKey field0) = _$Up;
+abstract class MouseUp implements MouseEvent {
+  const factory MouseUp(
+          final MouseKey field0, final double field1, final double field2) =
+      _$MouseUp;
 
   MouseKey get field0;
+  double get field1;
+  double get field2;
   @JsonKey(ignore: true)
-  _$$UpCopyWith<_$Up> get copyWith => throw _privateConstructorUsedError;
+  _$$MouseUpCopyWith<_$MouseUp> get copyWith =>
+      throw _privateConstructorUsedError;
 }
 
 /// @nodoc
-abstract class _$$DownCopyWith<$Res> {
-  factory _$$DownCopyWith(_$Down value, $Res Function(_$Down) then) =
-      __$$DownCopyWithImpl<$Res>;
-  $Res call({MouseKey field0});
+abstract class _$$MouseDownCopyWith<$Res> {
+  factory _$$MouseDownCopyWith(
+          _$MouseDown value, $Res Function(_$MouseDown) then) =
+      __$$MouseDownCopyWithImpl<$Res>;
+  $Res call({MouseKey field0, double field1, double field2});
 }
 
 /// @nodoc
-class __$$DownCopyWithImpl<$Res> extends _$MouseEventCopyWithImpl<$Res>
-    implements _$$DownCopyWith<$Res> {
-  __$$DownCopyWithImpl(_$Down _value, $Res Function(_$Down) _then)
-      : super(_value, (v) => _then(v as _$Down));
+class __$$MouseDownCopyWithImpl<$Res> extends _$MouseEventCopyWithImpl<$Res>
+    implements _$$MouseDownCopyWith<$Res> {
+  __$$MouseDownCopyWithImpl(
+      _$MouseDown _value, $Res Function(_$MouseDown) _then)
+      : super(_value, (v) => _then(v as _$MouseDown));
 
   @override
-  _$Down get _value => super._value as _$Down;
+  _$MouseDown get _value => super._value as _$MouseDown;
 
   @override
   $Res call({
     Object? field0 = freezed,
+    Object? field1 = freezed,
+    Object? field2 = freezed,
   }) {
-    return _then(_$Down(
+    return _then(_$MouseDown(
       field0 == freezed
           ? _value.field0
           : field0 // ignore: cast_nullable_to_non_nullable
               as MouseKey,
+      field1 == freezed
+          ? _value.field1
+          : field1 // ignore: cast_nullable_to_non_nullable
+              as double,
+      field2 == freezed
+          ? _value.field2
+          : field2 // ignore: cast_nullable_to_non_nullable
+              as double,
     ));
   }
 }
 
 /// @nodoc
 
-class _$Down implements Down {
-  const _$Down(this.field0);
+class _$MouseDown implements MouseDown {
+  const _$MouseDown(this.field0, this.field1, this.field2);
 
   @override
   final MouseKey field0;
+  @override
+  final double field1;
+  @override
+  final double field2;
 
   @override
   String toString() {
-    return 'MouseEvent.down(field0: $field0)';
+    return 'MouseEvent.mouseDown(field0: $field0, field1: $field1, field2: $field2)';
   }
 
   @override
   bool operator ==(dynamic other) {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
-            other is _$Down &&
-            const DeepCollectionEquality().equals(other.field0, field0));
+            other is _$MouseDown &&
+            const DeepCollectionEquality().equals(other.field0, field0) &&
+            const DeepCollectionEquality().equals(other.field1, field1) &&
+            const DeepCollectionEquality().equals(other.field2, field2));
   }
 
   @override
-  int get hashCode =>
-      Object.hash(runtimeType, const DeepCollectionEquality().hash(field0));
+  int get hashCode => Object.hash(
+      runtimeType,
+      const DeepCollectionEquality().hash(field0),
+      const DeepCollectionEquality().hash(field1),
+      const DeepCollectionEquality().hash(field2));
 
   @JsonKey(ignore: true)
   @override
-  _$$DownCopyWith<_$Down> get copyWith =>
-      __$$DownCopyWithImpl<_$Down>(this, _$identity);
+  _$$MouseDownCopyWith<_$MouseDown> get copyWith =>
+      __$$MouseDownCopyWithImpl<_$MouseDown>(this, _$identity);
 
   @override
   @optionalTypeArgs
   TResult when<TResult extends Object?>({
-    required TResult Function(MouseKey field0) up,
-    required TResult Function(MouseKey field0) down,
-    required TResult Function(MouseKey field0) move,
-    required TResult Function(double field0) scrollWheel,
+    required TResult Function(MouseKey field0, double field1, double field2)
+        mouseUp,
+    required TResult Function(MouseKey field0, double field1, double field2)
+        mouseDown,
+    required TResult Function(MouseKey field0, double field1, double field2)
+        mouseMove,
+    required TResult Function(double field0) mouseScrollWheel,
   }) {
-    return down(field0);
+    return mouseDown(field0, field1, field2);
   }
 
   @override
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>({
-    TResult Function(MouseKey field0)? up,
-    TResult Function(MouseKey field0)? down,
-    TResult Function(MouseKey field0)? move,
-    TResult Function(double field0)? scrollWheel,
+    TResult Function(MouseKey field0, double field1, double field2)? mouseUp,
+    TResult Function(MouseKey field0, double field1, double field2)? mouseDown,
+    TResult Function(MouseKey field0, double field1, double field2)? mouseMove,
+    TResult Function(double field0)? mouseScrollWheel,
   }) {
-    return down?.call(field0);
+    return mouseDown?.call(field0, field1, field2);
   }
 
   @override
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>({
-    TResult Function(MouseKey field0)? up,
-    TResult Function(MouseKey field0)? down,
-    TResult Function(MouseKey field0)? move,
-    TResult Function(double field0)? scrollWheel,
+    TResult Function(MouseKey field0, double field1, double field2)? mouseUp,
+    TResult Function(MouseKey field0, double field1, double field2)? mouseDown,
+    TResult Function(MouseKey field0, double field1, double field2)? mouseMove,
+    TResult Function(double field0)? mouseScrollWheel,
     required TResult orElse(),
   }) {
-    if (down != null) {
-      return down(field0);
+    if (mouseDown != null) {
+      return mouseDown(field0, field1, field2);
     }
     return orElse();
   }
@@ -325,141 +1062,170 @@ class _$Down implements Down {
   @override
   @optionalTypeArgs
   TResult map<TResult extends Object?>({
-    required TResult Function(Up value) up,
-    required TResult Function(Down value) down,
-    required TResult Function(Move value) move,
-    required TResult Function(ScrollWheel value) scrollWheel,
+    required TResult Function(MouseUp value) mouseUp,
+    required TResult Function(MouseDown value) mouseDown,
+    required TResult Function(MouseMove value) mouseMove,
+    required TResult Function(MouseScrollWheel value) mouseScrollWheel,
   }) {
-    return down(this);
+    return mouseDown(this);
   }
 
   @override
   @optionalTypeArgs
   TResult? mapOrNull<TResult extends Object?>({
-    TResult Function(Up value)? up,
-    TResult Function(Down value)? down,
-    TResult Function(Move value)? move,
-    TResult Function(ScrollWheel value)? scrollWheel,
+    TResult Function(MouseUp value)? mouseUp,
+    TResult Function(MouseDown value)? mouseDown,
+    TResult Function(MouseMove value)? mouseMove,
+    TResult Function(MouseScrollWheel value)? mouseScrollWheel,
   }) {
-    return down?.call(this);
+    return mouseDown?.call(this);
   }
 
   @override
   @optionalTypeArgs
   TResult maybeMap<TResult extends Object?>({
-    TResult Function(Up value)? up,
-    TResult Function(Down value)? down,
-    TResult Function(Move value)? move,
-    TResult Function(ScrollWheel value)? scrollWheel,
+    TResult Function(MouseUp value)? mouseUp,
+    TResult Function(MouseDown value)? mouseDown,
+    TResult Function(MouseMove value)? mouseMove,
+    TResult Function(MouseScrollWheel value)? mouseScrollWheel,
     required TResult orElse(),
   }) {
-    if (down != null) {
-      return down(this);
+    if (mouseDown != null) {
+      return mouseDown(this);
     }
     return orElse();
   }
 }
 
-abstract class Down implements MouseEvent {
-  const factory Down(final MouseKey field0) = _$Down;
+abstract class MouseDown implements MouseEvent {
+  const factory MouseDown(
+          final MouseKey field0, final double field1, final double field2) =
+      _$MouseDown;
 
   MouseKey get field0;
+  double get field1;
+  double get field2;
   @JsonKey(ignore: true)
-  _$$DownCopyWith<_$Down> get copyWith => throw _privateConstructorUsedError;
+  _$$MouseDownCopyWith<_$MouseDown> get copyWith =>
+      throw _privateConstructorUsedError;
 }
 
 /// @nodoc
-abstract class _$$MoveCopyWith<$Res> {
-  factory _$$MoveCopyWith(_$Move value, $Res Function(_$Move) then) =
-      __$$MoveCopyWithImpl<$Res>;
-  $Res call({MouseKey field0});
+abstract class _$$MouseMoveCopyWith<$Res> {
+  factory _$$MouseMoveCopyWith(
+          _$MouseMove value, $Res Function(_$MouseMove) then) =
+      __$$MouseMoveCopyWithImpl<$Res>;
+  $Res call({MouseKey field0, double field1, double field2});
 }
 
 /// @nodoc
-class __$$MoveCopyWithImpl<$Res> extends _$MouseEventCopyWithImpl<$Res>
-    implements _$$MoveCopyWith<$Res> {
-  __$$MoveCopyWithImpl(_$Move _value, $Res Function(_$Move) _then)
-      : super(_value, (v) => _then(v as _$Move));
+class __$$MouseMoveCopyWithImpl<$Res> extends _$MouseEventCopyWithImpl<$Res>
+    implements _$$MouseMoveCopyWith<$Res> {
+  __$$MouseMoveCopyWithImpl(
+      _$MouseMove _value, $Res Function(_$MouseMove) _then)
+      : super(_value, (v) => _then(v as _$MouseMove));
 
   @override
-  _$Move get _value => super._value as _$Move;
+  _$MouseMove get _value => super._value as _$MouseMove;
 
   @override
   $Res call({
     Object? field0 = freezed,
+    Object? field1 = freezed,
+    Object? field2 = freezed,
   }) {
-    return _then(_$Move(
+    return _then(_$MouseMove(
       field0 == freezed
           ? _value.field0
           : field0 // ignore: cast_nullable_to_non_nullable
               as MouseKey,
+      field1 == freezed
+          ? _value.field1
+          : field1 // ignore: cast_nullable_to_non_nullable
+              as double,
+      field2 == freezed
+          ? _value.field2
+          : field2 // ignore: cast_nullable_to_non_nullable
+              as double,
     ));
   }
 }
 
 /// @nodoc
 
-class _$Move implements Move {
-  const _$Move(this.field0);
+class _$MouseMove implements MouseMove {
+  const _$MouseMove(this.field0, this.field1, this.field2);
 
   @override
   final MouseKey field0;
+  @override
+  final double field1;
+  @override
+  final double field2;
 
   @override
   String toString() {
-    return 'MouseEvent.move(field0: $field0)';
+    return 'MouseEvent.mouseMove(field0: $field0, field1: $field1, field2: $field2)';
   }
 
   @override
   bool operator ==(dynamic other) {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
-            other is _$Move &&
-            const DeepCollectionEquality().equals(other.field0, field0));
+            other is _$MouseMove &&
+            const DeepCollectionEquality().equals(other.field0, field0) &&
+            const DeepCollectionEquality().equals(other.field1, field1) &&
+            const DeepCollectionEquality().equals(other.field2, field2));
   }
 
   @override
-  int get hashCode =>
-      Object.hash(runtimeType, const DeepCollectionEquality().hash(field0));
+  int get hashCode => Object.hash(
+      runtimeType,
+      const DeepCollectionEquality().hash(field0),
+      const DeepCollectionEquality().hash(field1),
+      const DeepCollectionEquality().hash(field2));
 
   @JsonKey(ignore: true)
   @override
-  _$$MoveCopyWith<_$Move> get copyWith =>
-      __$$MoveCopyWithImpl<_$Move>(this, _$identity);
+  _$$MouseMoveCopyWith<_$MouseMove> get copyWith =>
+      __$$MouseMoveCopyWithImpl<_$MouseMove>(this, _$identity);
 
   @override
   @optionalTypeArgs
   TResult when<TResult extends Object?>({
-    required TResult Function(MouseKey field0) up,
-    required TResult Function(MouseKey field0) down,
-    required TResult Function(MouseKey field0) move,
-    required TResult Function(double field0) scrollWheel,
+    required TResult Function(MouseKey field0, double field1, double field2)
+        mouseUp,
+    required TResult Function(MouseKey field0, double field1, double field2)
+        mouseDown,
+    required TResult Function(MouseKey field0, double field1, double field2)
+        mouseMove,
+    required TResult Function(double field0) mouseScrollWheel,
   }) {
-    return move(field0);
+    return mouseMove(field0, field1, field2);
   }
 
   @override
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>({
-    TResult Function(MouseKey field0)? up,
-    TResult Function(MouseKey field0)? down,
-    TResult Function(MouseKey field0)? move,
-    TResult Function(double field0)? scrollWheel,
+    TResult Function(MouseKey field0, double field1, double field2)? mouseUp,
+    TResult Function(MouseKey field0, double field1, double field2)? mouseDown,
+    TResult Function(MouseKey field0, double field1, double field2)? mouseMove,
+    TResult Function(double field0)? mouseScrollWheel,
   }) {
-    return move?.call(field0);
+    return mouseMove?.call(field0, field1, field2);
   }
 
   @override
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>({
-    TResult Function(MouseKey field0)? up,
-    TResult Function(MouseKey field0)? down,
-    TResult Function(MouseKey field0)? move,
-    TResult Function(double field0)? scrollWheel,
+    TResult Function(MouseKey field0, double field1, double field2)? mouseUp,
+    TResult Function(MouseKey field0, double field1, double field2)? mouseDown,
+    TResult Function(MouseKey field0, double field1, double field2)? mouseMove,
+    TResult Function(double field0)? mouseScrollWheel,
     required TResult orElse(),
   }) {
-    if (move != null) {
-      return move(field0);
+    if (mouseMove != null) {
+      return mouseMove(field0, field1, field2);
     }
     return orElse();
   }
@@ -467,72 +1233,78 @@ class _$Move implements Move {
   @override
   @optionalTypeArgs
   TResult map<TResult extends Object?>({
-    required TResult Function(Up value) up,
-    required TResult Function(Down value) down,
-    required TResult Function(Move value) move,
-    required TResult Function(ScrollWheel value) scrollWheel,
+    required TResult Function(MouseUp value) mouseUp,
+    required TResult Function(MouseDown value) mouseDown,
+    required TResult Function(MouseMove value) mouseMove,
+    required TResult Function(MouseScrollWheel value) mouseScrollWheel,
   }) {
-    return move(this);
+    return mouseMove(this);
   }
 
   @override
   @optionalTypeArgs
   TResult? mapOrNull<TResult extends Object?>({
-    TResult Function(Up value)? up,
-    TResult Function(Down value)? down,
-    TResult Function(Move value)? move,
-    TResult Function(ScrollWheel value)? scrollWheel,
+    TResult Function(MouseUp value)? mouseUp,
+    TResult Function(MouseDown value)? mouseDown,
+    TResult Function(MouseMove value)? mouseMove,
+    TResult Function(MouseScrollWheel value)? mouseScrollWheel,
   }) {
-    return move?.call(this);
+    return mouseMove?.call(this);
   }
 
   @override
   @optionalTypeArgs
   TResult maybeMap<TResult extends Object?>({
-    TResult Function(Up value)? up,
-    TResult Function(Down value)? down,
-    TResult Function(Move value)? move,
-    TResult Function(ScrollWheel value)? scrollWheel,
+    TResult Function(MouseUp value)? mouseUp,
+    TResult Function(MouseDown value)? mouseDown,
+    TResult Function(MouseMove value)? mouseMove,
+    TResult Function(MouseScrollWheel value)? mouseScrollWheel,
     required TResult orElse(),
   }) {
-    if (move != null) {
-      return move(this);
+    if (mouseMove != null) {
+      return mouseMove(this);
     }
     return orElse();
   }
 }
 
-abstract class Move implements MouseEvent {
-  const factory Move(final MouseKey field0) = _$Move;
+abstract class MouseMove implements MouseEvent {
+  const factory MouseMove(
+          final MouseKey field0, final double field1, final double field2) =
+      _$MouseMove;
 
   MouseKey get field0;
+  double get field1;
+  double get field2;
   @JsonKey(ignore: true)
-  _$$MoveCopyWith<_$Move> get copyWith => throw _privateConstructorUsedError;
+  _$$MouseMoveCopyWith<_$MouseMove> get copyWith =>
+      throw _privateConstructorUsedError;
 }
 
 /// @nodoc
-abstract class _$$ScrollWheelCopyWith<$Res> {
-  factory _$$ScrollWheelCopyWith(
-          _$ScrollWheel value, $Res Function(_$ScrollWheel) then) =
-      __$$ScrollWheelCopyWithImpl<$Res>;
+abstract class _$$MouseScrollWheelCopyWith<$Res> {
+  factory _$$MouseScrollWheelCopyWith(
+          _$MouseScrollWheel value, $Res Function(_$MouseScrollWheel) then) =
+      __$$MouseScrollWheelCopyWithImpl<$Res>;
   $Res call({double field0});
 }
 
 /// @nodoc
-class __$$ScrollWheelCopyWithImpl<$Res> extends _$MouseEventCopyWithImpl<$Res>
-    implements _$$ScrollWheelCopyWith<$Res> {
-  __$$ScrollWheelCopyWithImpl(
-      _$ScrollWheel _value, $Res Function(_$ScrollWheel) _then)
-      : super(_value, (v) => _then(v as _$ScrollWheel));
+class __$$MouseScrollWheelCopyWithImpl<$Res>
+    extends _$MouseEventCopyWithImpl<$Res>
+    implements _$$MouseScrollWheelCopyWith<$Res> {
+  __$$MouseScrollWheelCopyWithImpl(
+      _$MouseScrollWheel _value, $Res Function(_$MouseScrollWheel) _then)
+      : super(_value, (v) => _then(v as _$MouseScrollWheel));
 
   @override
-  _$ScrollWheel get _value => super._value as _$ScrollWheel;
+  _$MouseScrollWheel get _value => super._value as _$MouseScrollWheel;
 
   @override
   $Res call({
     Object? field0 = freezed,
   }) {
-    return _then(_$ScrollWheel(
+    return _then(_$MouseScrollWheel(
       field0 == freezed
           ? _value.field0
           : field0 // ignore: cast_nullable_to_non_nullable
@@ -543,22 +1315,22 @@ class __$$ScrollWheelCopyWithImpl<$Res> extends _$MouseEventCopyWithImpl<$Res>
 
 /// @nodoc
 
-class _$ScrollWheel implements ScrollWheel {
-  const _$ScrollWheel(this.field0);
+class _$MouseScrollWheel implements MouseScrollWheel {
+  const _$MouseScrollWheel(this.field0);
 
   @override
   final double field0;
 
   @override
   String toString() {
-    return 'MouseEvent.scrollWheel(field0: $field0)';
+    return 'MouseEvent.mouseScrollWheel(field0: $field0)';
   }
 
   @override
   bool operator ==(dynamic other) {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
-            other is _$ScrollWheel &&
+            other is _$MouseScrollWheel &&
             const DeepCollectionEquality().equals(other.field0, field0));
   }
 
@@ -568,42 +1340,45 @@ class _$ScrollWheel implements ScrollWheel {
 
   @JsonKey(ignore: true)
   @override
-  _$$ScrollWheelCopyWith<_$ScrollWheel> get copyWith =>
-      __$$ScrollWheelCopyWithImpl<_$ScrollWheel>(this, _$identity);
+  _$$MouseScrollWheelCopyWith<_$MouseScrollWheel> get copyWith =>
+      __$$MouseScrollWheelCopyWithImpl<_$MouseScrollWheel>(this, _$identity);
 
   @override
   @optionalTypeArgs
   TResult when<TResult extends Object?>({
-    required TResult Function(MouseKey field0) up,
-    required TResult Function(MouseKey field0) down,
-    required TResult Function(MouseKey field0) move,
-    required TResult Function(double field0) scrollWheel,
+    required TResult Function(MouseKey field0, double field1, double field2)
+        mouseUp,
+    required TResult Function(MouseKey field0, double field1, double field2)
+        mouseDown,
+    required TResult Function(MouseKey field0, double field1, double field2)
+        mouseMove,
+    required TResult Function(double field0) mouseScrollWheel,
   }) {
-    return scrollWheel(field0);
+    return mouseScrollWheel(field0);
   }
 
   @override
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>({
-    TResult Function(MouseKey field0)? up,
-    TResult Function(MouseKey field0)? down,
-    TResult Function(MouseKey field0)? move,
-    TResult Function(double field0)? scrollWheel,
+    TResult Function(MouseKey field0, double field1, double field2)? mouseUp,
+    TResult Function(MouseKey field0, double field1, double field2)? mouseDown,
+    TResult Function(MouseKey field0, double field1, double field2)? mouseMove,
+    TResult Function(double field0)? mouseScrollWheel,
   }) {
-    return scrollWheel?.call(field0);
+    return mouseScrollWheel?.call(field0);
   }
 
   @override
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>({
-    TResult Function(MouseKey field0)? up,
-    TResult Function(MouseKey field0)? down,
-    TResult Function(MouseKey field0)? move,
-    TResult Function(double field0)? scrollWheel,
+    TResult Function(MouseKey field0, double field1, double field2)? mouseUp,
+    TResult Function(MouseKey field0, double field1, double field2)? mouseDown,
+    TResult Function(MouseKey field0, double field1, double field2)? mouseMove,
+    TResult Function(double field0)? mouseScrollWheel,
     required TResult orElse(),
   }) {
-    if (scrollWheel != null) {
-      return scrollWheel(field0);
+    if (mouseScrollWheel != null) {
+      return mouseScrollWheel(field0);
     }
     return orElse();
   }
@@ -611,46 +1386,46 @@ class _$ScrollWheel implements ScrollWheel {
   @override
   @optionalTypeArgs
   TResult map<TResult extends Object?>({
-    required TResult Function(Up value) up,
-    required TResult Function(Down value) down,
-    required TResult Function(Move value) move,
-    required TResult Function(ScrollWheel value) scrollWheel,
+    required TResult Function(MouseUp value) mouseUp,
+    required TResult Function(MouseDown value) mouseDown,
+    required TResult Function(MouseMove value) mouseMove,
+    required TResult Function(MouseScrollWheel value) mouseScrollWheel,
   }) {
-    return scrollWheel(this);
+    return mouseScrollWheel(this);
   }
 
   @override
   @optionalTypeArgs
   TResult? mapOrNull<TResult extends Object?>({
-    TResult Function(Up value)? up,
-    TResult Function(Down value)? down,
-    TResult Function(Move value)? move,
-    TResult Function(ScrollWheel value)? scrollWheel,
+    TResult Function(MouseUp value)? mouseUp,
+    TResult Function(MouseDown value)? mouseDown,
+    TResult Function(MouseMove value)? mouseMove,
+    TResult Function(MouseScrollWheel value)? mouseScrollWheel,
   }) {
-    return scrollWheel?.call(this);
+    return mouseScrollWheel?.call(this);
   }
 
   @override
   @optionalTypeArgs
   TResult maybeMap<TResult extends Object?>({
-    TResult Function(Up value)? up,
-    TResult Function(Down value)? down,
-    TResult Function(Move value)? move,
-    TResult Function(ScrollWheel value)? scrollWheel,
+    TResult Function(MouseUp value)? mouseUp,
+    TResult Function(MouseDown value)? mouseDown,
+    TResult Function(MouseMove value)? mouseMove,
+    TResult Function(MouseScrollWheel value)? mouseScrollWheel,
     required TResult orElse(),
   }) {
-    if (scrollWheel != null) {
-      return scrollWheel(this);
+    if (mouseScrollWheel != null) {
+      return mouseScrollWheel(this);
     }
     return orElse();
   }
 }
 
-abstract class ScrollWheel implements MouseEvent {
-  const factory ScrollWheel(final double field0) = _$ScrollWheel;
+abstract class MouseScrollWheel implements MouseEvent {
+  const factory MouseScrollWheel(final double field0) = _$MouseScrollWheel;
 
   double get field0;
   @JsonKey(ignore: true)
-  _$$ScrollWheelCopyWith<_$ScrollWheel> get copyWith =>
+  _$$MouseScrollWheelCopyWith<_$MouseScrollWheel> get copyWith =>
       throw _privateConstructorUsedError;
 }

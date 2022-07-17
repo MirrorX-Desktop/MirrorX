@@ -74,14 +74,12 @@ abstract class MirrorXCore {
 
   FlutterRustBridgeTaskConstMeta get kEndpointStartMediaTransmissionConstMeta;
 
-  Future<void> endpointMouseEvent(
+  Future<void> endpointInput(
       {required String remoteDeviceId,
-      required MouseEvent event,
-      required double x,
-      required double y,
+      required InputEvent event,
       dynamic hint});
 
-  FlutterRustBridgeTaskConstMeta get kEndpointMouseEventConstMeta;
+  FlutterRustBridgeTaskConstMeta get kEndpointInputConstMeta;
 }
 
 class DisplayInfo {
@@ -113,19 +111,153 @@ class GetDisplayInfoResponse {
 }
 
 @freezed
+class InputEvent with _$InputEvent {
+  const factory InputEvent.mouse(
+    MouseEvent field0,
+  ) = Mouse;
+  const factory InputEvent.keyboard(
+    KeyboardEvent field0,
+  ) = Keyboard;
+}
+
+@freezed
+class KeyboardEvent with _$KeyboardEvent {
+  const factory KeyboardEvent.keyUp(
+    KeyboardKey field0,
+  ) = KeyUp;
+  const factory KeyboardEvent.keyDown(
+    KeyboardKey field0,
+  ) = KeyDown;
+}
+
+enum KeyboardKey {
+  A,
+  B,
+  C,
+  D,
+  E,
+  F,
+  G,
+  H,
+  I,
+  J,
+  K,
+  L,
+  M,
+  N,
+  O,
+  P,
+  Q,
+  R,
+  S,
+  T,
+  U,
+  V,
+  W,
+  X,
+  Y,
+  Z,
+  BackQuote,
+  Digit0,
+  Digit1,
+  Digit2,
+  Digit3,
+  Digit4,
+  Digit5,
+  Digit6,
+  Digit7,
+  Digit8,
+  Digit9,
+  Minus,
+  Equal,
+  Tab,
+  CapsLock,
+  LeftShift,
+  LeftControl,
+  LeftAlt,
+  LeftMeta,
+  Space,
+  RightMeta,
+  RightControl,
+  RightAlt,
+  RightShift,
+  Comma,
+  Period,
+  Slash,
+  Semicolon,
+  QuoteSingle,
+  Enter,
+  BracketLeft,
+  BracketRight,
+  BackSlash,
+  Backspace,
+  NumLock,
+  NumpadEquals,
+  NumpadDivide,
+  NumpadMultiply,
+  NumpadSubtract,
+  NumpadAdd,
+  NumpadEnter,
+  Numpad0,
+  Numpad1,
+  Numpad2,
+  Numpad3,
+  Numpad4,
+  Numpad5,
+  Numpad6,
+  Numpad7,
+  Numpad8,
+  Numpad9,
+  NumpadDecimal,
+  ArrowLeft,
+  ArrowUp,
+  ArrowRight,
+  ArrowDown,
+  Escape,
+  PrintScreen,
+  ScrollLock,
+  Pause,
+  Insert,
+  Delete,
+  Home,
+  End,
+  PageUp,
+  PageDown,
+  F1,
+  F2,
+  F3,
+  F4,
+  F5,
+  F6,
+  F7,
+  F8,
+  F9,
+  F10,
+  F11,
+  F12,
+  Fn,
+}
+
+@freezed
 class MouseEvent with _$MouseEvent {
-  const factory MouseEvent.up(
+  const factory MouseEvent.mouseUp(
     MouseKey field0,
-  ) = Up;
-  const factory MouseEvent.down(
+    double field1,
+    double field2,
+  ) = MouseUp;
+  const factory MouseEvent.mouseDown(
     MouseKey field0,
-  ) = Down;
-  const factory MouseEvent.move(
+    double field1,
+    double field2,
+  ) = MouseDown;
+  const factory MouseEvent.mouseMove(
     MouseKey field0,
-  ) = Move;
-  const factory MouseEvent.scrollWheel(
+    double field1,
+    double field2,
+  ) = MouseMove;
+  const factory MouseEvent.mouseScrollWheel(
     double field0,
-  ) = ScrollWheel;
+  ) = MouseScrollWheel;
 }
 
 enum MouseKey {
@@ -133,6 +265,8 @@ enum MouseKey {
   Left,
   Right,
   Wheel,
+  SideForward,
+  SideBack,
 }
 
 class StartMediaTransmissionResponse {
@@ -371,34 +505,44 @@ class MirrorXCoreImpl extends FlutterRustBridgeBase<MirrorXCoreWire>
         ],
       );
 
-  Future<void> endpointMouseEvent(
+  Future<void> endpointInput(
           {required String remoteDeviceId,
-          required MouseEvent event,
-          required double x,
-          required double y,
+          required InputEvent event,
           dynamic hint}) =>
       executeNormal(FlutterRustBridgeTask(
-        callFfi: (port_) => inner.wire_endpoint_mouse_event(
+        callFfi: (port_) => inner.wire_endpoint_input(
             port_,
             _api2wire_String(remoteDeviceId),
-            _api2wire_box_autoadd_mouse_event(event),
-            _api2wire_f32(x),
-            _api2wire_f32(y)),
+            _api2wire_box_autoadd_input_event(event)),
         parseSuccessData: _wire2api_unit,
-        constMeta: kEndpointMouseEventConstMeta,
-        argValues: [remoteDeviceId, event, x, y],
+        constMeta: kEndpointInputConstMeta,
+        argValues: [remoteDeviceId, event],
         hint: hint,
       ));
 
-  FlutterRustBridgeTaskConstMeta get kEndpointMouseEventConstMeta =>
+  FlutterRustBridgeTaskConstMeta get kEndpointInputConstMeta =>
       const FlutterRustBridgeTaskConstMeta(
-        debugName: "endpoint_mouse_event",
-        argNames: ["remoteDeviceId", "event", "x", "y"],
+        debugName: "endpoint_input",
+        argNames: ["remoteDeviceId", "event"],
       );
 
   // Section: api2wire
   ffi.Pointer<wire_uint_8_list> _api2wire_String(String raw) {
     return _api2wire_uint_8_list(utf8.encoder.convert(raw));
+  }
+
+  ffi.Pointer<wire_InputEvent> _api2wire_box_autoadd_input_event(
+      InputEvent raw) {
+    final ptr = inner.new_box_autoadd_input_event_0();
+    _api_fill_to_wire_input_event(raw, ptr.ref);
+    return ptr;
+  }
+
+  ffi.Pointer<wire_KeyboardEvent> _api2wire_box_autoadd_keyboard_event(
+      KeyboardEvent raw) {
+    final ptr = inner.new_box_autoadd_keyboard_event_0();
+    _api_fill_to_wire_keyboard_event(raw, ptr.ref);
+    return ptr;
   }
 
   ffi.Pointer<wire_MouseEvent> _api2wire_box_autoadd_mouse_event(
@@ -420,6 +564,10 @@ class MirrorXCoreImpl extends FlutterRustBridgeBase<MirrorXCoreWire>
     return raw;
   }
 
+  int _api2wire_keyboard_key(KeyboardKey raw) {
+    return _api2wire_i32(raw.index);
+  }
+
   int _api2wire_mouse_key(MouseKey raw) {
     return _api2wire_i32(raw.index);
   }
@@ -436,32 +584,82 @@ class MirrorXCoreImpl extends FlutterRustBridgeBase<MirrorXCoreWire>
 
   // Section: api_fill_to_wire
 
+  void _api_fill_to_wire_box_autoadd_input_event(
+      InputEvent apiObj, ffi.Pointer<wire_InputEvent> wireObj) {
+    _api_fill_to_wire_input_event(apiObj, wireObj.ref);
+  }
+
+  void _api_fill_to_wire_box_autoadd_keyboard_event(
+      KeyboardEvent apiObj, ffi.Pointer<wire_KeyboardEvent> wireObj) {
+    _api_fill_to_wire_keyboard_event(apiObj, wireObj.ref);
+  }
+
   void _api_fill_to_wire_box_autoadd_mouse_event(
       MouseEvent apiObj, ffi.Pointer<wire_MouseEvent> wireObj) {
     _api_fill_to_wire_mouse_event(apiObj, wireObj.ref);
   }
 
+  void _api_fill_to_wire_input_event(
+      InputEvent apiObj, wire_InputEvent wireObj) {
+    if (apiObj is Mouse) {
+      wireObj.tag = 0;
+      wireObj.kind = inner.inflate_InputEvent_Mouse();
+      wireObj.kind.ref.Mouse.ref.field0 =
+          _api2wire_box_autoadd_mouse_event(apiObj.field0);
+    }
+    if (apiObj is Keyboard) {
+      wireObj.tag = 1;
+      wireObj.kind = inner.inflate_InputEvent_Keyboard();
+      wireObj.kind.ref.Keyboard.ref.field0 =
+          _api2wire_box_autoadd_keyboard_event(apiObj.field0);
+    }
+  }
+
+  void _api_fill_to_wire_keyboard_event(
+      KeyboardEvent apiObj, wire_KeyboardEvent wireObj) {
+    if (apiObj is KeyUp) {
+      wireObj.tag = 0;
+      wireObj.kind = inner.inflate_KeyboardEvent_KeyUp();
+      wireObj.kind.ref.KeyUp.ref.field0 = _api2wire_keyboard_key(apiObj.field0);
+    }
+    if (apiObj is KeyDown) {
+      wireObj.tag = 1;
+      wireObj.kind = inner.inflate_KeyboardEvent_KeyDown();
+      wireObj.kind.ref.KeyDown.ref.field0 =
+          _api2wire_keyboard_key(apiObj.field0);
+    }
+  }
+
   void _api_fill_to_wire_mouse_event(
       MouseEvent apiObj, wire_MouseEvent wireObj) {
-    if (apiObj is Up) {
+    if (apiObj is MouseUp) {
       wireObj.tag = 0;
-      wireObj.kind = inner.inflate_MouseEvent_Up();
-      wireObj.kind.ref.Up.ref.field0 = _api2wire_mouse_key(apiObj.field0);
+      wireObj.kind = inner.inflate_MouseEvent_MouseUp();
+      wireObj.kind.ref.MouseUp.ref.field0 = _api2wire_mouse_key(apiObj.field0);
+      wireObj.kind.ref.MouseUp.ref.field1 = _api2wire_f32(apiObj.field1);
+      wireObj.kind.ref.MouseUp.ref.field2 = _api2wire_f32(apiObj.field2);
     }
-    if (apiObj is Down) {
+    if (apiObj is MouseDown) {
       wireObj.tag = 1;
-      wireObj.kind = inner.inflate_MouseEvent_Down();
-      wireObj.kind.ref.Down.ref.field0 = _api2wire_mouse_key(apiObj.field0);
+      wireObj.kind = inner.inflate_MouseEvent_MouseDown();
+      wireObj.kind.ref.MouseDown.ref.field0 =
+          _api2wire_mouse_key(apiObj.field0);
+      wireObj.kind.ref.MouseDown.ref.field1 = _api2wire_f32(apiObj.field1);
+      wireObj.kind.ref.MouseDown.ref.field2 = _api2wire_f32(apiObj.field2);
     }
-    if (apiObj is Move) {
+    if (apiObj is MouseMove) {
       wireObj.tag = 2;
-      wireObj.kind = inner.inflate_MouseEvent_Move();
-      wireObj.kind.ref.Move.ref.field0 = _api2wire_mouse_key(apiObj.field0);
+      wireObj.kind = inner.inflate_MouseEvent_MouseMove();
+      wireObj.kind.ref.MouseMove.ref.field0 =
+          _api2wire_mouse_key(apiObj.field0);
+      wireObj.kind.ref.MouseMove.ref.field1 = _api2wire_f32(apiObj.field1);
+      wireObj.kind.ref.MouseMove.ref.field2 = _api2wire_f32(apiObj.field2);
     }
-    if (apiObj is ScrollWheel) {
+    if (apiObj is MouseScrollWheel) {
       wireObj.tag = 3;
-      wireObj.kind = inner.inflate_MouseEvent_ScrollWheel();
-      wireObj.kind.ref.ScrollWheel.ref.field0 = _api2wire_f32(apiObj.field0);
+      wireObj.kind = inner.inflate_MouseEvent_MouseScrollWheel();
+      wireObj.kind.ref.MouseScrollWheel.ref.field0 =
+          _api2wire_f32(apiObj.field0);
     }
   }
 }
@@ -784,34 +982,46 @@ class MirrorXCoreWire implements FlutterRustBridgeWireBase {
           void Function(int, ffi.Pointer<wire_uint_8_list>, int,
               ffi.Pointer<wire_uint_8_list>, int, int, int)>();
 
-  void wire_endpoint_mouse_event(
+  void wire_endpoint_input(
     int port_,
     ffi.Pointer<wire_uint_8_list> remote_device_id,
-    ffi.Pointer<wire_MouseEvent> event,
-    double x,
-    double y,
+    ffi.Pointer<wire_InputEvent> event,
   ) {
-    return _wire_endpoint_mouse_event(
+    return _wire_endpoint_input(
       port_,
       remote_device_id,
       event,
-      x,
-      y,
     );
   }
 
-  late final _wire_endpoint_mouse_eventPtr = _lookup<
+  late final _wire_endpoint_inputPtr = _lookup<
       ffi.NativeFunction<
-          ffi.Void Function(
-              ffi.Int64,
-              ffi.Pointer<wire_uint_8_list>,
-              ffi.Pointer<wire_MouseEvent>,
-              ffi.Float,
-              ffi.Float)>>('wire_endpoint_mouse_event');
-  late final _wire_endpoint_mouse_event =
-      _wire_endpoint_mouse_eventPtr.asFunction<
-          void Function(int, ffi.Pointer<wire_uint_8_list>,
-              ffi.Pointer<wire_MouseEvent>, double, double)>();
+          ffi.Void Function(ffi.Int64, ffi.Pointer<wire_uint_8_list>,
+              ffi.Pointer<wire_InputEvent>)>>('wire_endpoint_input');
+  late final _wire_endpoint_input = _wire_endpoint_inputPtr.asFunction<
+      void Function(
+          int, ffi.Pointer<wire_uint_8_list>, ffi.Pointer<wire_InputEvent>)>();
+
+  ffi.Pointer<wire_InputEvent> new_box_autoadd_input_event_0() {
+    return _new_box_autoadd_input_event_0();
+  }
+
+  late final _new_box_autoadd_input_event_0Ptr =
+      _lookup<ffi.NativeFunction<ffi.Pointer<wire_InputEvent> Function()>>(
+          'new_box_autoadd_input_event_0');
+  late final _new_box_autoadd_input_event_0 = _new_box_autoadd_input_event_0Ptr
+      .asFunction<ffi.Pointer<wire_InputEvent> Function()>();
+
+  ffi.Pointer<wire_KeyboardEvent> new_box_autoadd_keyboard_event_0() {
+    return _new_box_autoadd_keyboard_event_0();
+  }
+
+  late final _new_box_autoadd_keyboard_event_0Ptr =
+      _lookup<ffi.NativeFunction<ffi.Pointer<wire_KeyboardEvent> Function()>>(
+          'new_box_autoadd_keyboard_event_0');
+  late final _new_box_autoadd_keyboard_event_0 =
+      _new_box_autoadd_keyboard_event_0Ptr
+          .asFunction<ffi.Pointer<wire_KeyboardEvent> Function()>();
 
   ffi.Pointer<wire_MouseEvent> new_box_autoadd_mouse_event_0() {
     return _new_box_autoadd_mouse_event_0();
@@ -838,45 +1048,85 @@ class MirrorXCoreWire implements FlutterRustBridgeWireBase {
   late final _new_uint_8_list_0 = _new_uint_8_list_0Ptr
       .asFunction<ffi.Pointer<wire_uint_8_list> Function(int)>();
 
-  ffi.Pointer<MouseEventKind> inflate_MouseEvent_Up() {
-    return _inflate_MouseEvent_Up();
+  ffi.Pointer<InputEventKind> inflate_InputEvent_Mouse() {
+    return _inflate_InputEvent_Mouse();
   }
 
-  late final _inflate_MouseEvent_UpPtr =
+  late final _inflate_InputEvent_MousePtr =
+      _lookup<ffi.NativeFunction<ffi.Pointer<InputEventKind> Function()>>(
+          'inflate_InputEvent_Mouse');
+  late final _inflate_InputEvent_Mouse = _inflate_InputEvent_MousePtr
+      .asFunction<ffi.Pointer<InputEventKind> Function()>();
+
+  ffi.Pointer<InputEventKind> inflate_InputEvent_Keyboard() {
+    return _inflate_InputEvent_Keyboard();
+  }
+
+  late final _inflate_InputEvent_KeyboardPtr =
+      _lookup<ffi.NativeFunction<ffi.Pointer<InputEventKind> Function()>>(
+          'inflate_InputEvent_Keyboard');
+  late final _inflate_InputEvent_Keyboard = _inflate_InputEvent_KeyboardPtr
+      .asFunction<ffi.Pointer<InputEventKind> Function()>();
+
+  ffi.Pointer<KeyboardEventKind> inflate_KeyboardEvent_KeyUp() {
+    return _inflate_KeyboardEvent_KeyUp();
+  }
+
+  late final _inflate_KeyboardEvent_KeyUpPtr =
+      _lookup<ffi.NativeFunction<ffi.Pointer<KeyboardEventKind> Function()>>(
+          'inflate_KeyboardEvent_KeyUp');
+  late final _inflate_KeyboardEvent_KeyUp = _inflate_KeyboardEvent_KeyUpPtr
+      .asFunction<ffi.Pointer<KeyboardEventKind> Function()>();
+
+  ffi.Pointer<KeyboardEventKind> inflate_KeyboardEvent_KeyDown() {
+    return _inflate_KeyboardEvent_KeyDown();
+  }
+
+  late final _inflate_KeyboardEvent_KeyDownPtr =
+      _lookup<ffi.NativeFunction<ffi.Pointer<KeyboardEventKind> Function()>>(
+          'inflate_KeyboardEvent_KeyDown');
+  late final _inflate_KeyboardEvent_KeyDown = _inflate_KeyboardEvent_KeyDownPtr
+      .asFunction<ffi.Pointer<KeyboardEventKind> Function()>();
+
+  ffi.Pointer<MouseEventKind> inflate_MouseEvent_MouseUp() {
+    return _inflate_MouseEvent_MouseUp();
+  }
+
+  late final _inflate_MouseEvent_MouseUpPtr =
       _lookup<ffi.NativeFunction<ffi.Pointer<MouseEventKind> Function()>>(
-          'inflate_MouseEvent_Up');
-  late final _inflate_MouseEvent_Up = _inflate_MouseEvent_UpPtr
+          'inflate_MouseEvent_MouseUp');
+  late final _inflate_MouseEvent_MouseUp = _inflate_MouseEvent_MouseUpPtr
       .asFunction<ffi.Pointer<MouseEventKind> Function()>();
 
-  ffi.Pointer<MouseEventKind> inflate_MouseEvent_Down() {
-    return _inflate_MouseEvent_Down();
+  ffi.Pointer<MouseEventKind> inflate_MouseEvent_MouseDown() {
+    return _inflate_MouseEvent_MouseDown();
   }
 
-  late final _inflate_MouseEvent_DownPtr =
+  late final _inflate_MouseEvent_MouseDownPtr =
       _lookup<ffi.NativeFunction<ffi.Pointer<MouseEventKind> Function()>>(
-          'inflate_MouseEvent_Down');
-  late final _inflate_MouseEvent_Down = _inflate_MouseEvent_DownPtr
+          'inflate_MouseEvent_MouseDown');
+  late final _inflate_MouseEvent_MouseDown = _inflate_MouseEvent_MouseDownPtr
       .asFunction<ffi.Pointer<MouseEventKind> Function()>();
 
-  ffi.Pointer<MouseEventKind> inflate_MouseEvent_Move() {
-    return _inflate_MouseEvent_Move();
+  ffi.Pointer<MouseEventKind> inflate_MouseEvent_MouseMove() {
+    return _inflate_MouseEvent_MouseMove();
   }
 
-  late final _inflate_MouseEvent_MovePtr =
+  late final _inflate_MouseEvent_MouseMovePtr =
       _lookup<ffi.NativeFunction<ffi.Pointer<MouseEventKind> Function()>>(
-          'inflate_MouseEvent_Move');
-  late final _inflate_MouseEvent_Move = _inflate_MouseEvent_MovePtr
+          'inflate_MouseEvent_MouseMove');
+  late final _inflate_MouseEvent_MouseMove = _inflate_MouseEvent_MouseMovePtr
       .asFunction<ffi.Pointer<MouseEventKind> Function()>();
 
-  ffi.Pointer<MouseEventKind> inflate_MouseEvent_ScrollWheel() {
-    return _inflate_MouseEvent_ScrollWheel();
+  ffi.Pointer<MouseEventKind> inflate_MouseEvent_MouseScrollWheel() {
+    return _inflate_MouseEvent_MouseScrollWheel();
   }
 
-  late final _inflate_MouseEvent_ScrollWheelPtr =
+  late final _inflate_MouseEvent_MouseScrollWheelPtr =
       _lookup<ffi.NativeFunction<ffi.Pointer<MouseEventKind> Function()>>(
-          'inflate_MouseEvent_ScrollWheel');
-  late final _inflate_MouseEvent_ScrollWheel =
-      _inflate_MouseEvent_ScrollWheelPtr
+          'inflate_MouseEvent_MouseScrollWheel');
+  late final _inflate_MouseEvent_MouseScrollWheel =
+      _inflate_MouseEvent_MouseScrollWheelPtr
           .asFunction<ffi.Pointer<MouseEventKind> Function()>();
 
   void free_WireSyncReturnStruct(
@@ -915,34 +1165,52 @@ class wire_uint_8_list extends ffi.Struct {
   external int len;
 }
 
-class MouseEvent_Up extends ffi.Struct {
+class MouseEvent_MouseUp extends ffi.Struct {
   @ffi.Int32()
   external int field0;
+
+  @ffi.Float()
+  external double field1;
+
+  @ffi.Float()
+  external double field2;
 }
 
-class MouseEvent_Down extends ffi.Struct {
+class MouseEvent_MouseDown extends ffi.Struct {
   @ffi.Int32()
   external int field0;
+
+  @ffi.Float()
+  external double field1;
+
+  @ffi.Float()
+  external double field2;
 }
 
-class MouseEvent_Move extends ffi.Struct {
+class MouseEvent_MouseMove extends ffi.Struct {
   @ffi.Int32()
   external int field0;
+
+  @ffi.Float()
+  external double field1;
+
+  @ffi.Float()
+  external double field2;
 }
 
-class MouseEvent_ScrollWheel extends ffi.Struct {
+class MouseEvent_MouseScrollWheel extends ffi.Struct {
   @ffi.Float()
   external double field0;
 }
 
 class MouseEventKind extends ffi.Union {
-  external ffi.Pointer<MouseEvent_Up> Up;
+  external ffi.Pointer<MouseEvent_MouseUp> MouseUp;
 
-  external ffi.Pointer<MouseEvent_Down> Down;
+  external ffi.Pointer<MouseEvent_MouseDown> MouseDown;
 
-  external ffi.Pointer<MouseEvent_Move> Move;
+  external ffi.Pointer<MouseEvent_MouseMove> MouseMove;
 
-  external ffi.Pointer<MouseEvent_ScrollWheel> ScrollWheel;
+  external ffi.Pointer<MouseEvent_MouseScrollWheel> MouseScrollWheel;
 }
 
 class wire_MouseEvent extends ffi.Struct {
@@ -952,6 +1220,288 @@ class wire_MouseEvent extends ffi.Struct {
   external ffi.Pointer<MouseEventKind> kind;
 }
 
+class InputEvent_Mouse extends ffi.Struct {
+  external ffi.Pointer<wire_MouseEvent> field0;
+}
+
+class KeyboardEvent_KeyUp extends ffi.Struct {
+  @ffi.Int32()
+  external int field0;
+}
+
+class KeyboardEvent_KeyDown extends ffi.Struct {
+  @ffi.Int32()
+  external int field0;
+}
+
+class KeyboardEventKind extends ffi.Union {
+  external ffi.Pointer<KeyboardEvent_KeyUp> KeyUp;
+
+  external ffi.Pointer<KeyboardEvent_KeyDown> KeyDown;
+}
+
+class wire_KeyboardEvent extends ffi.Struct {
+  @ffi.Int32()
+  external int tag;
+
+  external ffi.Pointer<KeyboardEventKind> kind;
+}
+
+class InputEvent_Keyboard extends ffi.Struct {
+  external ffi.Pointer<wire_KeyboardEvent> field0;
+}
+
+class InputEventKind extends ffi.Union {
+  external ffi.Pointer<InputEvent_Mouse> Mouse;
+
+  external ffi.Pointer<InputEvent_Keyboard> Keyboard;
+}
+
+class wire_InputEvent extends ffi.Struct {
+  @ffi.Int32()
+  external int tag;
+
+  external ffi.Pointer<InputEventKind> kind;
+}
+
 typedef DartPostCObjectFnType = ffi.Pointer<
     ffi.NativeFunction<ffi.Bool Function(DartPort, ffi.Pointer<ffi.Void>)>>;
 typedef DartPort = ffi.Int64;
+
+const int kVK_ANSI_A = 0;
+
+const int kVK_ANSI_S = 1;
+
+const int kVK_ANSI_D = 2;
+
+const int kVK_ANSI_F = 3;
+
+const int kVK_ANSI_H = 4;
+
+const int kVK_ANSI_G = 5;
+
+const int kVK_ANSI_Z = 6;
+
+const int kVK_ANSI_X = 7;
+
+const int kVK_ANSI_C = 8;
+
+const int kVK_ANSI_V = 9;
+
+const int kVK_ANSI_B = 11;
+
+const int kVK_ANSI_Q = 12;
+
+const int kVK_ANSI_W = 13;
+
+const int kVK_ANSI_E = 14;
+
+const int kVK_ANSI_R = 15;
+
+const int kVK_ANSI_Y = 16;
+
+const int kVK_ANSI_T = 17;
+
+const int kVK_ANSI_1 = 18;
+
+const int kVK_ANSI_2 = 19;
+
+const int kVK_ANSI_3 = 20;
+
+const int kVK_ANSI_4 = 21;
+
+const int kVK_ANSI_6 = 22;
+
+const int kVK_ANSI_5 = 23;
+
+const int kVK_ANSI_Equal = 24;
+
+const int kVK_ANSI_9 = 25;
+
+const int kVK_ANSI_7 = 26;
+
+const int kVK_ANSI_Minus = 27;
+
+const int kVK_ANSI_8 = 28;
+
+const int kVK_ANSI_0 = 29;
+
+const int kVK_ANSI_RightBracket = 30;
+
+const int kVK_ANSI_O = 31;
+
+const int kVK_ANSI_U = 32;
+
+const int kVK_ANSI_LeftBracket = 33;
+
+const int kVK_ANSI_I = 34;
+
+const int kVK_ANSI_P = 35;
+
+const int kVK_ANSI_L = 37;
+
+const int kVK_ANSI_J = 38;
+
+const int kVK_ANSI_Quote = 39;
+
+const int kVK_ANSI_K = 40;
+
+const int kVK_ANSI_Semicolon = 41;
+
+const int kVK_ANSI_Backslash = 42;
+
+const int kVK_ANSI_Comma = 43;
+
+const int kVK_ANSI_Slash = 44;
+
+const int kVK_ANSI_N = 45;
+
+const int kVK_ANSI_M = 46;
+
+const int kVK_ANSI_Period = 47;
+
+const int kVK_ANSI_Grave = 50;
+
+const int kVK_ANSI_KeypadDecimal = 65;
+
+const int kVK_ANSI_KeypadMultiply = 67;
+
+const int kVK_ANSI_KeypadPlus = 69;
+
+const int kVK_ANSI_KeypadClear = 71;
+
+const int kVK_ANSI_KeypadDivide = 75;
+
+const int kVK_ANSI_KeypadEnter = 76;
+
+const int kVK_ANSI_KeypadMinus = 78;
+
+const int kVK_ANSI_KeypadEquals = 81;
+
+const int kVK_ANSI_Keypad0 = 82;
+
+const int kVK_ANSI_Keypad1 = 83;
+
+const int kVK_ANSI_Keypad2 = 84;
+
+const int kVK_ANSI_Keypad3 = 85;
+
+const int kVK_ANSI_Keypad4 = 86;
+
+const int kVK_ANSI_Keypad5 = 87;
+
+const int kVK_ANSI_Keypad6 = 88;
+
+const int kVK_ANSI_Keypad7 = 89;
+
+const int kVK_ANSI_Keypad8 = 91;
+
+const int kVK_ANSI_Keypad9 = 92;
+
+const int kVK_Return = 36;
+
+const int kVK_Tab = 48;
+
+const int kVK_Space = 49;
+
+const int kVK_Delete = 51;
+
+const int kVK_Escape = 53;
+
+const int kVK_Command = 55;
+
+const int kVK_Shift = 56;
+
+const int kVK_CapsLock = 57;
+
+const int kVK_Option = 58;
+
+const int kVK_Control = 59;
+
+const int kVK_RightCommand = 54;
+
+const int kVK_RightShift = 60;
+
+const int kVK_RightOption = 61;
+
+const int kVK_RightControl = 62;
+
+const int kVK_Function = 63;
+
+const int kVK_F17 = 64;
+
+const int kVK_VolumeUp = 72;
+
+const int kVK_VolumeDown = 73;
+
+const int kVK_Mute = 74;
+
+const int kVK_F18 = 79;
+
+const int kVK_F19 = 80;
+
+const int kVK_F20 = 90;
+
+const int kVK_F5 = 96;
+
+const int kVK_F6 = 97;
+
+const int kVK_F7 = 98;
+
+const int kVK_F3 = 99;
+
+const int kVK_F8 = 100;
+
+const int kVK_F9 = 101;
+
+const int kVK_F11 = 103;
+
+const int kVK_F13 = 105;
+
+const int kVK_F16 = 106;
+
+const int kVK_F14 = 107;
+
+const int kVK_F10 = 109;
+
+const int kVK_F12 = 111;
+
+const int kVK_F15 = 113;
+
+const int kVK_Help = 114;
+
+const int kVK_Home = 115;
+
+const int kVK_PageUp = 116;
+
+const int kVK_ForwardDelete = 117;
+
+const int kVK_F4 = 118;
+
+const int kVK_End = 119;
+
+const int kVK_F2 = 120;
+
+const int kVK_PageDown = 121;
+
+const int kVK_F1 = 122;
+
+const int kVK_LeftArrow = 123;
+
+const int kVK_RightArrow = 124;
+
+const int kVK_DownArrow = 125;
+
+const int kVK_UpArrow = 126;
+
+const int kVK_ISO_Section = 10;
+
+const int kVK_JIS_Yen = 93;
+
+const int kVK_JIS_Underscore = 94;
+
+const int kVK_JIS_KeypadComma = 95;
+
+const int kVK_JIS_Eisu = 102;
+
+const int kVK_JIS_Kana = 104;

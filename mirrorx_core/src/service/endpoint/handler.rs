@@ -1,14 +1,21 @@
-use tokio::process;
-
 use super::{
     endpoint::EndPoint,
     message::{
-        AudioFrame, DisplayInfo, GetDisplayInfoRequest, GetDisplayInfoResponse, MouseEvent,
-        MouseEventFrame, StartMediaTransmissionResponse, VideoFrame,
+        AudioFrame, DisplayInfo, GetDisplayInfoRequest, GetDisplayInfoResponse,
+        StartMediaTransmissionResponse, VideoFrame,
     },
     processor,
 };
-use crate::{error::MirrorXError, service::endpoint::message::StartMediaTransmissionRequest};
+use crate::{
+    error::MirrorXError,
+    service::endpoint::message::{
+        Input,
+        InputEvent::{Keyboard, Mouse},
+        KeyboardEvent,
+        MouseEvent::{MouseDown, MouseMove, MouseScrollWheel, MouseUp},
+        StartMediaTransmissionRequest,
+    },
+};
 
 pub async fn handle_get_display_info_request(
     endpoint: &EndPoint,
@@ -78,28 +85,25 @@ pub async fn handle_audio_frame(
     Ok(())
 }
 
-pub async fn handle_mouse_event_frame(
-    endpoint: &EndPoint,
-    mouse_event_frame: MouseEventFrame,
-) -> Result<(), MirrorXError> {
-    if let Some(monitor) = endpoint.monitor() {
-        match mouse_event_frame.event {
-            MouseEvent::Up(key) => {
-                processor::input::mouse_up(monitor, key, mouse_event_frame.position)
-            }
-            MouseEvent::Down(key) => {
-                processor::input::mouse_down(monitor, key, mouse_event_frame.position)
-            }
-            MouseEvent::Move(key) => {
-                processor::input::mouse_move(monitor, key, mouse_event_frame.position)
-            }
-            MouseEvent::ScrollWheel(delta) => {
-                processor::input::mouse_scroll_whell(monitor, delta, mouse_event_frame.position)
+pub async fn handle_input(endpoint: &EndPoint, input: Input) -> Result<(), MirrorXError> {
+    match input.event {
+        Mouse(event) => {
+            if let Some(monitor) = endpoint.monitor() {
+                match event {
+                    MouseUp(key, x, y) => processor::input::mouse_up(monitor, key, x, y),
+                    MouseDown(key, x, y) => processor::input::mouse_down(monitor, key, x, y),
+                    MouseMove(key, x, y) => processor::input::mouse_move(monitor, key, x, y),
+                    MouseScrollWheel(delta) => processor::input::mouse_scroll_whell(monitor, delta),
+                }
+            } else {
+                Err(MirrorXError::Other(anyhow::anyhow!(
+                    "no associate monitor with current session"
+                )))
             }
         }
-    } else {
-        Err(MirrorXError::Other(anyhow::anyhow!(
-            "no associate monitor with current session"
-        )))
+        Keyboard(event) => match event {
+            KeyboardEvent::KeyUp(key) => processor::input::keyboard_up(key),
+            KeyboardEvent::KeyDown(key) => processor::input::keyboard_down(key),
+        },
     }
 }

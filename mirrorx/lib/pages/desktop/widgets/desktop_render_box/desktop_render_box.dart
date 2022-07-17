@@ -1,8 +1,10 @@
 import 'dart:developer';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:mirrorx/env/sdk/mirrorx_core.dart';
 import 'package:mirrorx/env/sdk/mirrorx_core_sdk.dart';
+import 'package:mirrorx/env/utility/key_map.dart';
 import 'package:mirrorx/model/desktop.dart';
 import 'package:mirrorx/pages/desktop/widgets/desktop_render_box/desktop_render_box_scrollbar.dart';
 
@@ -135,11 +137,15 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
         mouseKey = MouseKey.Wheel;
     }
 
-    MirrorXCoreSDK.instance.endpointMouseEvent(
+    MirrorXCoreSDK.instance.endpointInput(
       remoteDeviceId: widget.model.remoteDeviceID,
-      event: MouseEvent.down(mouseKey),
-      x: event.localPosition.dx,
-      y: event.localPosition.dy,
+      event: InputEvent.mouse(
+        MouseEvent.mouseDown(
+          mouseKey,
+          event.localPosition.dx,
+          event.localPosition.dy,
+        ),
+      ),
     );
 
     _downButtons[event.pointer] = event.buttons;
@@ -164,11 +170,15 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
         mouseKey = MouseKey.Wheel;
     }
 
-    MirrorXCoreSDK.instance.endpointMouseEvent(
+    MirrorXCoreSDK.instance.endpointInput(
       remoteDeviceId: widget.model.remoteDeviceID,
-      event: MouseEvent.up(mouseKey),
-      x: event.localPosition.dx,
-      y: event.localPosition.dy,
+      event: InputEvent.mouse(
+        MouseEvent.mouseUp(
+          mouseKey,
+          event.localPosition.dx,
+          event.localPosition.dy,
+        ),
+      ),
     );
   }
 
@@ -191,38 +201,60 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
         return;
     }
 
-    MirrorXCoreSDK.instance.endpointMouseEvent(
+    MirrorXCoreSDK.instance.endpointInput(
       remoteDeviceId: widget.model.remoteDeviceID,
-      event: MouseEvent.move(mouseKey),
-      x: event.localPosition.dx,
-      y: event.localPosition.dy,
+      event: InputEvent.mouse(
+        MouseEvent.mouseMove(
+          mouseKey,
+          event.localPosition.dx,
+          event.localPosition.dy,
+        ),
+      ),
     );
   }
 
   void _handlePointerHover(PointerHoverEvent event) {
     log("pointer hover ${event.buttons} ${event.localPosition}");
 
-    MirrorXCoreSDK.instance.endpointMouseEvent(
+    MirrorXCoreSDK.instance.endpointInput(
       remoteDeviceId: widget.model.remoteDeviceID,
-      event: const MouseEvent.move(MouseKey.None),
-      x: event.localPosition.dx,
-      y: event.localPosition.dy,
+      event: InputEvent.mouse(
+        MouseEvent.mouseMove(
+          MouseKey.None,
+          event.localPosition.dx,
+          event.localPosition.dy,
+        ),
+      ),
     );
   }
 
   void _handlePointerSignal(PointerSignalEvent event) {
     if (event is PointerScrollEvent) {
-      MirrorXCoreSDK.instance.endpointMouseEvent(
+      MirrorXCoreSDK.instance.endpointInput(
         remoteDeviceId: widget.model.remoteDeviceID,
-        event: MouseEvent.scrollWheel(event.scrollDelta.dy),
-        x: event.localPosition.dx,
-        y: event.localPosition.dy,
+        event: InputEvent.mouse(
+          MouseEvent.mouseScrollWheel(event.scrollDelta.dy),
+        ),
       );
     }
   }
 
   KeyEventResult _handleKeyboardEvent(FocusNode _, RawKeyEvent event) {
-    log("alt:${event.isAltPressed} control:${event.isControlPressed} meta:${event.isMetaPressed} shift:${event.isShiftPressed} repeat:${event.repeat} logical:${event.logicalKey}");
+    final key = mapLogicalKey(event.logicalKey);
+    if (key == null) {
+      log("alt:${event.isAltPressed} control:${event.isControlPressed} meta:${event.isMetaPressed} shift:${event.isShiftPressed} repeat:${event.repeat} logical:${event.logicalKey} character:${event.character}");
+      return KeyEventResult.ignored;
+    }
+
+    var keyboardEvent = KeyboardEvent.keyUp(key);
+    if (event.isKeyPressed(event.logicalKey)) {
+      keyboardEvent = KeyboardEvent.keyDown(key);
+    }
+
+    MirrorXCoreSDK.instance.endpointInput(
+      remoteDeviceId: widget.model.remoteDeviceID,
+      event: InputEvent.keyboard(keyboardEvent),
+    );
 
     return KeyEventResult.handled;
   }

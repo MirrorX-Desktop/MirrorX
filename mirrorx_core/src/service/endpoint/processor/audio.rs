@@ -285,7 +285,7 @@ pub fn start_audio_encode_process(
                     message: EndPointMessage::AudioFrame(AudioFrame {
                         buffer: encoded_frame,
                         frame_size_per_channel: (pcm_buffer.len() as isize / channels) as u16,
-                        elpased,
+                        elapsed: elpased,
                     }),
                 });
             }
