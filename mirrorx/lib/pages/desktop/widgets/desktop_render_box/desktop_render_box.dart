@@ -240,6 +240,10 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
   }
 
   KeyEventResult _handleKeyboardEvent(FocusNode _, RawKeyEvent event) {
+    if (event.repeat) {
+      return KeyEventResult.handled;
+    }
+
     final key = mapLogicalKey(event.logicalKey);
     if (key == null) {
       log("alt:${event.isAltPressed} control:${event.isControlPressed} meta:${event.isMetaPressed} shift:${event.isShiftPressed} repeat:${event.repeat} logical:${event.logicalKey} character:${event.character}");
