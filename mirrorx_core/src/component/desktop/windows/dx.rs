@@ -13,6 +13,7 @@ pub struct DX {
     device_context: ID3D11DeviceContext,
     vertex_shader: ID3D11VertexShader,
     buffer: ID3D11Buffer,
+    pixel_shader: ID3D11PixelShader,
     pixel_shader_lumina: ID3D11PixelShader,
     pixel_shader_chrominance: ID3D11PixelShader,
     input_layout: ID3D11InputLayout,
@@ -142,6 +143,15 @@ impl DX {
             device_context.IASetVertexBuffers(0, 1, &Some(buffer.clone()), &VERTEX_STRIDES, &0);
             device_context.IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
+            let pixel_shader =
+            device.CreatePixelShader(shader::PIXEL_SHADER_BYTES, None).map_err(|err| {
+                anyhow::anyhow!(
+                    r#"Duplication: ID3D11Device::CreatePixelShader failed {{"shader_name":"{}", "error": "{:?}"}}"#,
+                    "pixel_shader",
+                    err.code()
+                )
+            })?;
+
             let pixel_shader_lumina =
                     device.CreatePixelShader(shader::PIXEL_SHADER_LUMINA_BYTES, None).map_err(|err| {
                         anyhow::anyhow!(
@@ -196,6 +206,7 @@ impl DX {
                 device_context,
                 vertex_shader,
                 buffer,
+                pixel_shader,
                 pixel_shader_lumina,
                 pixel_shader_chrominance,
                 input_layout,
@@ -203,31 +214,31 @@ impl DX {
         }
     }
 
-    /// Get a reference to the dxresource's device.
     #[must_use]
     pub fn device(&self) -> &ID3D11Device {
         &self.device
     }
 
-    /// Get a reference to the dxresource's device context.
     #[must_use]
     pub fn device_context(&self) -> &ID3D11DeviceContext {
         &self.device_context
     }
 
-    /// Get a reference to the dxresource's vertex shader.
     #[must_use]
     pub fn vertex_shader(&self) -> &ID3D11VertexShader {
         &self.vertex_shader
     }
 
-    /// Get a reference to the dxresource's pixel shader lumina.
+    #[must_use]
+    pub fn pixel_shader(&self) -> &ID3D11PixelShader {
+        &self.pixel_shader
+    }
+
     #[must_use]
     pub fn pixel_shader_lumina(&self) -> &ID3D11PixelShader {
         &self.pixel_shader_lumina
     }
 
-    /// Get a reference to the dxresource's pixel shader chrominance.
     #[must_use]
     pub fn pixel_shader_chrominance(&self) -> &ID3D11PixelShader {
         &self.pixel_shader_chrominance

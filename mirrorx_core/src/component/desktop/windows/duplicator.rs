@@ -1,8 +1,17 @@
-use super::{dx::DX, dx_math::VERTICES};
+use super::{
+    dx::DX,
+    dx_math::{BPP, VERTEX, VERTICES},
+};
 use crate::{component::desktop::Frame, error::MirrorXError, utility::wide_char::FromWide};
 use anyhow::bail;
 use scopeguard::defer;
-use std::{ffi::OsString, mem::zeroed, ptr::null};
+use std::{
+    borrow::Borrow,
+    ffi::OsString,
+    mem::zeroed,
+    os::raw::c_void,
+    ptr::{null, null_mut},
+};
 use tracing::info;
 use windows::{
     core::Interface,
@@ -38,6 +47,8 @@ pub struct Duplicator {
     view_port_chrominance: D3D11_VIEWPORT,
     render_target_view_lumina: ID3D11RenderTargetView,
     render_target_view_chrominance: ID3D11RenderTargetView,
+    sampler_linear: [Option<ID3D11SamplerState>; 1],
+    blend_state: ID3D11BlendState,
 }
 
 unsafe impl Send for Duplicator {}
@@ -180,6 +191,38 @@ impl Duplicator {
                 )
             })?;
 
+            let mut samp_desc: D3D11_SAMPLER_DESC = zeroed();
+            samp_desc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+            samp_desc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+            samp_desc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+            samp_desc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+            samp_desc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+            samp_desc.MinLOD = 0f32;
+            samp_desc.MaxLOD = D3D11_FLOAT32_MAX;
+
+            let sampler_linear = dx
+                .device()
+                .CreateSamplerState(&samp_desc)
+                .map_err(|err| anyhow::anyhow!(err))?;
+
+            let mut blend_state_desc: D3D11_BLEND_DESC = zeroed();
+            blend_state_desc.AlphaToCoverageEnable = false.into();
+            blend_state_desc.IndependentBlendEnable = false.into();
+            blend_state_desc.RenderTarget[0].BlendEnable = true.into();
+            blend_state_desc.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
+            blend_state_desc.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+            blend_state_desc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
+            blend_state_desc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
+            blend_state_desc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
+            blend_state_desc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+            blend_state_desc.RenderTarget[0].RenderTargetWriteMask =
+                D3D11_COLOR_WRITE_ENABLE_ALL.0 as u8;
+
+            let blend_state = dx
+                .device()
+                .CreateBlendState(&blend_state_desc)
+                .map_err(|err| anyhow::anyhow!(err))?;
+
             Ok(Duplicator {
                 dx,
                 output_desc,
@@ -193,6 +236,8 @@ impl Duplicator {
                 view_port_chrominance,
                 render_target_view_lumina,
                 render_target_view_chrominance,
+                sampler_linear: [Some(sampler_linear); 1],
+                blend_state,
             })
         }
     }
@@ -323,6 +368,24 @@ impl Duplicator {
                 None=>bail!("Duplication: IDXGIOutputDuplication::AcquireNextFrame success but referenced IDXGIResource is null"),
             };
 
+        // draw mouse
+
+        let mut pointer_shape_buffer =
+            Vec::<u8>::with_capacity(dxgi_outdupl_frame_info.PointerShapeBufferSize as usize);
+        let mut pointer_shape_buffer_required = 0u32;
+        let mut pointer_shape_info: DXGI_OUTDUPL_POINTER_SHAPE_INFO = zeroed();
+
+        self.output_duplication
+            .GetFramePointerShape(
+                dxgi_outdupl_frame_info.PointerShapeBufferSize,
+                &mut pointer_shape_buffer as *mut _ as *mut std::os::raw::c_void,
+                &mut pointer_shape_buffer_required,
+                &mut pointer_shape_info,
+            )
+            .map_err(|err| anyhow::anyhow!(err))?;
+
+        pointer_shape_buffer.set_len(pointer_shape_buffer_required as usize);
+
         self.dx
             .device_context()
             .CopyResource(&self.backend_texture, frame_texture);
@@ -384,6 +447,184 @@ impl Duplicator {
             .device_context()
             .RSSetViewports(&[self.view_port_chrominance]);
         self.dx.device_context().Draw(VERTICES.len() as u32, 0);
+
+        Ok(())
+    }
+
+    unsafe fn DrawMouse(
+        &self,
+        m_SharedSurf: &ID3D11Texture2D,
+        x: u32,
+        y: u32,
+        Buffer: &[u8],
+        ShapeInfo: &DXGI_OUTDUPL_POINTER_SHAPE_INFO,
+    ) -> anyhow::Result<()> {
+        let mut FullDesc: D3D11_TEXTURE2D_DESC = zeroed();
+        m_SharedSurf.GetDesc(&mut FullDesc);
+        let DesktopWidth = FullDesc.Width;
+        let DesktopHeight = FullDesc.Height;
+
+        // Center of desktop dimensions
+        let CenterX = (DesktopWidth as f32) / 2f32;
+        let CenterY = (DesktopHeight as f32) / 2f32;
+
+        // Clipping adjusted coordinates / dimensions
+        let mut PtrWidth = 0;
+        let mut PtrHeight = 0;
+        let mut PtrLeft = 0;
+        let mut PtrTop = 0;
+
+        // Buffer used if necessary (in case of monochrome or masked pointer)
+        let InitBuffer: *mut u8 = null_mut();
+
+        // Used for copying pixels
+        let mut Box: D3D11_BOX = zeroed();
+        Box.front = 0;
+        Box.back = 1;
+
+        let mut Desc: D3D11_TEXTURE2D_DESC = zeroed();
+        Desc.MipLevels = 1;
+        Desc.ArraySize = 1;
+        Desc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+        Desc.SampleDesc.Count = 1;
+        Desc.SampleDesc.Quality = 0;
+        Desc.Usage = D3D11_USAGE_DEFAULT;
+        Desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+        Desc.CPUAccessFlags = D3D11_CPU_ACCESS_FLAG::default();
+        Desc.MiscFlags = D3D11_RESOURCE_MISC_FLAG::default();
+
+        // Set shader resource properties
+        let mut SDesc: D3D11_SHADER_RESOURCE_VIEW_DESC = zeroed();
+        SDesc.Format = Desc.Format;
+        SDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+        SDesc.Anonymous.Texture2D.MostDetailedMip = Desc.MipLevels - 1;
+        SDesc.Anonymous.Texture2D.MipLevels = Desc.MipLevels;
+
+        if ShapeInfo.Type == DXGI_OUTDUPL_POINTER_SHAPE_TYPE_COLOR.0 as u32 {
+            PtrLeft = x;
+            PtrTop = y;
+            PtrWidth = ShapeInfo.Width;
+            PtrHeight = ShapeInfo.Height;
+        } else if ShapeInfo.Type == DXGI_OUTDUPL_POINTER_SHAPE_TYPE_MONOCHROME.0 as u32 {
+            // ProcessMonoMask(true, PtrInfo, &PtrWidth, &PtrHeight, &PtrLeft, &PtrTop, &InitBuffer, &Box);
+        } else if ShapeInfo.Type == DXGI_OUTDUPL_POINTER_SHAPE_TYPE_MASKED_COLOR.0 as u32 {
+            // ProcessMonoMask(false, PtrInfo, &PtrWidth, &PtrHeight, &PtrLeft, &PtrTop, &InitBuffer, &Box);
+        } else {
+            return Err(anyhow::anyhow!("type wrong"));
+        }
+
+        // Position will be changed based on mouse position
+        let mut Vertices = VERTICES.clone();
+        Vertices[0].pos.x = (PtrLeft as f32 - CenterX) / CenterX;
+        Vertices[0].pos.y = -1f32 * ((PtrTop as f32 + PtrHeight as f32) - CenterY) as f32 / CenterY;
+        Vertices[1].pos.x = (PtrLeft as f32 - CenterX) / CenterX;
+        Vertices[1].pos.y = -1f32 * (PtrTop as f32 - CenterY) / CenterY;
+        Vertices[2].pos.x = ((PtrLeft as f32 + PtrWidth as f32) - CenterX) / CenterX;
+        Vertices[2].pos.y = -1f32 * ((PtrTop as f32 + PtrHeight as f32) - CenterY) / CenterY;
+        Vertices[3].pos.x = Vertices[2].pos.x;
+        Vertices[3].pos.y = Vertices[2].pos.y;
+        Vertices[4].pos.x = Vertices[1].pos.x;
+        Vertices[4].pos.y = Vertices[1].pos.y;
+        Vertices[5].pos.x = ((PtrLeft as f32 + PtrWidth as f32) - CenterX) / CenterX;
+        Vertices[5].pos.y = -1f32 * (PtrTop as f32 - CenterY) / CenterY;
+
+        // Set texture properties
+        Desc.Width = PtrWidth;
+        Desc.Height = PtrHeight;
+
+        // Set up init data
+        let mut InitData: D3D11_SUBRESOURCE_DATA = zeroed();
+
+        InitData.pSysMem = if ShapeInfo.Type == DXGI_OUTDUPL_POINTER_SHAPE_TYPE_COLOR.0 as u32 {
+            Buffer.as_ptr() as *const c_void
+        } else {
+            InitBuffer as *const _ as *const c_void
+        };
+
+        InitData.SysMemPitch = if ShapeInfo.Type == DXGI_OUTDUPL_POINTER_SHAPE_TYPE_COLOR.0 as u32 {
+            ShapeInfo.Pitch
+        } else {
+            PtrWidth * BPP
+        };
+
+        InitData.SysMemSlicePitch = 0;
+
+        // Create mouseshape as texture
+        let MouseTex = self
+            .dx
+            .device()
+            .CreateTexture2D(&Desc, &InitData)
+            .map_err(|err| anyhow::anyhow!(err))?;
+
+        // Create shader resource from texture
+        let ShaderRes = self
+            .dx
+            .device()
+            .CreateShaderResourceView(MouseTex, &SDesc)
+            .map_err(|err| anyhow::anyhow!(err))?;
+
+        let mut BDesc: D3D11_BUFFER_DESC = zeroed();
+        BDesc.Usage = D3D11_USAGE_DEFAULT;
+        BDesc.ByteWidth = (std::mem::size_of::<VERTEX>() * Vertices.len()) as u32;
+        BDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER.0;
+        BDesc.CPUAccessFlags = 0;
+
+        InitData = zeroed();
+        InitData.pSysMem = Vertices.as_ptr() as *const c_void;
+
+        // Create vertex buffer
+        let VertexBufferMouse = self
+            .dx
+            .device()
+            .CreateBuffer(&BDesc, &InitData)
+            .map_err(|err| anyhow::anyhow!(err))?;
+
+        // Set resources
+        let BlendFactor = [0f32; 4];
+        let Stride = std::mem::size_of::<VERTEX>() as u32;
+        let Offset = 0;
+
+        let rtv = self
+            .dx
+            .device()
+            .CreateRenderTargetView(m_SharedSurf, null())
+            .map_err(|err| anyhow::anyhow!(err))?;
+
+        self.dx.device_context().IASetVertexBuffers(
+            0,
+            1,
+            [Some(VertexBufferMouse)].as_ptr(),
+            &Stride,
+            &Offset,
+        );
+
+        self.dx.device_context().OMSetBlendState(
+            &self.blend_state,
+            BlendFactor.as_ptr(),
+            0xFFFFFFFF,
+        );
+
+        self.dx
+            .device_context()
+            .OMSetRenderTargets(&[Some(rtv)], None);
+
+        self.dx
+            .device_context()
+            .VSSetShader(self.dx.vertex_shader(), &[]);
+
+        self.dx
+            .device_context()
+            .PSSetShader(self.dx.pixel_shader(), &[]);
+
+        self.dx
+            .device_context()
+            .PSSetShaderResources(0, &[Some(ShaderRes)]);
+
+        self.dx
+            .device_context()
+            .PSSetSamplers(0, self.sampler_linear.as_ref());
+
+        self.dx.device_context().Draw(Vertices.len() as u32, 0);
 
         Ok(())
     }

@@ -1,10 +1,12 @@
 #[repr(C)]
+#[derive(Clone)]
 pub struct XMFLOAT2 {
     pub x: f32,
     pub y: f32,
 }
 
 #[repr(C)]
+#[derive(Clone)]
 pub struct XMFLOAT3 {
     pub x: f32,
     pub y: f32,
@@ -12,6 +14,7 @@ pub struct XMFLOAT3 {
 }
 
 #[repr(C)]
+#[derive(Clone)]
 pub struct VERTEX {
     pub pos: XMFLOAT3,
     pub tex_coord: XMFLOAT2,
@@ -69,3 +72,5 @@ pub static VERTICES: [VERTEX; 6] = [
         tex_coord: XMFLOAT2 { x: 1.0, y: 0.0 },
     },
 ];
+
+pub const BPP: u32 = 4;
