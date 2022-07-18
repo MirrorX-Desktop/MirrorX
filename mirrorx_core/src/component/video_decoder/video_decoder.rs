@@ -250,10 +250,7 @@ impl VideoDecoder {
                                 }
 
                                 #[cfg(target_os = "macos")]
-                                {
-                                    use os::CVPixelBufferRelease;
-                                    CVPixelBufferRelease(err.into_inner().0);
-                                }
+                                crate::ffi::os::CVPixelBufferRelease(err.into_inner().0);
                             }
                         }
                         Err(err) => return Err(err),

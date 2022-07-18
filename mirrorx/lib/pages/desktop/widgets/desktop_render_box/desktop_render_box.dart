@@ -30,15 +30,17 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
   double _offsetY = 0.0;
   double _offsetX = 0.0;
   final Map<int, int> _downButtons = {};
-  final FocusNode _focusNode = FocusNode();
+  late FocusNode _focusNode;
 
-  // @override
-  // void initState() {
-  //   super.initState();
-  //   focusAttachment = focusNode.attach(context, onKey: _handleKeyboardEvent);
-  //   focusNode.requestFocus();
-  // }
-  //
+  @override
+  void initState() {
+    super.initState();
+    _focusNode = FocusNode(
+      skipTraversal: true,
+      descendantsAreFocusable: true,
+      onKey: _handleKeyboardEvent,
+    );
+  }
 
   @override
   void dispose() {
@@ -103,11 +105,9 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
         onPointerHover: _handlePointerHover,
         onPointerMove: _handlePointerMove,
         onPointerSignal: _handlePointerSignal,
-        child: Focus(
+        child: RawKeyboardListener(
           focusNode: _focusNode,
           autofocus: true,
-          skipTraversal: true,
-          onKey: _handleKeyboardEvent,
           child: RepaintBoundary(
             child: SizedBox(
               width: widget.width.floorToDouble(),
