@@ -23,6 +23,7 @@ class DesktopPage extends StatefulWidget {
 
 class _DesktopPageState extends State<DesktopPage> {
   StartMediaTransmissionResponse? _startMediaTransmissionResponse;
+  BoxFit _fit = BoxFit.none;
 
   @override
   Widget build(BuildContext context) {
@@ -105,18 +106,45 @@ class _DesktopPageState extends State<DesktopPage> {
 
   Widget _buildDesktopSurface(int width, int height) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Row(
           children: [
-            TextButton(onPressed: () {}, child: Text("AAA")),
-            TextButton(onPressed: () {}, child: Text("BBB"))
+            // Text(widget.model.remoteDeviceID),
+            // VerticalDivider(),
+            Tooltip(
+              message: "Raw Resolution",
+              child: Container(
+                width: 36,
+                height: 36,
+                padding: const EdgeInsets.all(3.0),
+                child: TextButton(
+                  onPressed: _handleBoxFitClick,
+                  style: ButtonStyle(
+                    shape: MaterialStateProperty.all(
+                      RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(4.0)),
+                    ),
+                    padding: MaterialStateProperty.all(EdgeInsets.zero),
+                    foregroundColor: MaterialStateProperty.all(Colors.black),
+                  ),
+                  child: _fit == BoxFit.none
+                      ? const Icon(Icons.aspect_ratio)
+                      : const Icon(Icons.fit_screen),
+                ),
+              ),
+            ),
           ],
         ),
         Expanded(
-          child: DesktopRenderBox(
-            model: widget.model,
-            width: width,
-            height: height,
+          child: Container(
+            color: Colors.black,
+            child: DesktopRenderBox(
+              model: widget.model,
+              width: width,
+              height: height,
+              fit: _fit,
+            ),
           ),
         )
       ],
@@ -158,6 +186,16 @@ class _DesktopPageState extends State<DesktopPage> {
       },
       transitionDuration: kThemeAnimationDuration * 2,
     );
+  }
+
+  void _handleBoxFitClick() {
+    setState(() {
+      if (_fit == BoxFit.none) {
+        _fit = BoxFit.scaleDown;
+      } else {
+        _fit = BoxFit.none;
+      }
+    });
   }
 }
 

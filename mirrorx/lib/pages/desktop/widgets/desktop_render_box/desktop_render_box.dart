@@ -14,11 +14,13 @@ class DesktopRenderBox extends StatefulWidget {
     required this.model,
     required this.width,
     required this.height,
+    required this.fit,
   }) : super(key: key);
 
   final DesktopModel model;
   final int width;
   final int height;
+  final BoxFit fit;
 
   @override
   _DesktopRenderBoxState createState() => _DesktopRenderBoxState();
@@ -46,14 +48,15 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
 
   @override
   Widget build(BuildContext context) {
-    // focusAttachment.reparent();
+    return widget.fit == BoxFit.none ? _buildFitBox() : _buildTexture();
+  }
+
+  Widget _buildFitBox() {
     return Stack(
       children: [
         Positioned(
           top: _offsetY,
           left: _offsetX,
-          width: widget.width.floorToDouble(),
-          height: widget.height.floorToDouble(),
           child: _buildTexture(),
         ),
         LayoutBuilder(builder: (context, constraints) {
@@ -91,20 +94,24 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
   }
 
   Widget _buildTexture() {
-    return Listener(
-      behavior: HitTestBehavior.opaque,
-      onPointerDown: _handlePointerDown,
-      onPointerUp: _handlePointerUp,
-      onPointerHover: _handlePointerHover,
-      onPointerMove: _handlePointerMove,
-      onPointerSignal: _handlePointerSignal,
-      child: Focus(
-        focusNode: _focusNode,
-        autofocus: true,
-        onKey: _handleKeyboardEvent,
-        child: RepaintBoundary(
-          child: Container(
-              color: Colors.black,
+    return FittedBox(
+      fit: widget.fit,
+      child: Listener(
+        behavior: HitTestBehavior.opaque,
+        onPointerDown: _handlePointerDown,
+        onPointerUp: _handlePointerUp,
+        onPointerHover: _handlePointerHover,
+        onPointerMove: _handlePointerMove,
+        onPointerSignal: _handlePointerSignal,
+        child: Focus(
+          focusNode: _focusNode,
+          autofocus: true,
+          skipTraversal: true,
+          onKey: _handleKeyboardEvent,
+          child: RepaintBoundary(
+            child: SizedBox(
+              width: widget.width.floorToDouble(),
+              height: widget.height.floorToDouble(),
               child: Center(
                 child: AspectRatio(
                   aspectRatio:
@@ -115,7 +122,9 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
                     filterQuality: FilterQuality.high,
                   ),
                 ),
-              )),
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -254,6 +263,8 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
     if (event.isKeyPressed(event.logicalKey)) {
       keyboardEvent = KeyboardEvent.keyDown(key);
     }
+
+    log("press ${keyboardEvent}");
 
     MirrorXCoreSDK.instance.endpointInput(
       remoteDeviceId: widget.model.remoteDeviceID,

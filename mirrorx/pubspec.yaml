@@ -53,6 +53,7 @@ dependencies:
   card_swiper: ^2.0.4
 
   freezed_annotation: ^2.0.3
+  marquee: ^2.2.3
   
 dev_dependencies:
   flutter_test:

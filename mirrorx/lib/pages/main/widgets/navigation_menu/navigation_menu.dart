@@ -1,3 +1,4 @@
+import 'package:marquee/marquee.dart';
 import 'package:mirrorx/env/langs/tr.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -21,26 +22,31 @@ class NavigationMenu extends StatelessWidget {
                 pageTag: "Connect",
                 icon: Icons.screen_share,
                 title: Tr.of(context).connectPageTitle,
+                isStatic: true,
               ),
               _NavigationMenuItem(
                 pageTag: "Intranet",
                 icon: Icons.lan,
                 title: Tr.of(context).intranetPageTitle,
+                isStatic: true,
               ),
               _NavigationMenuItem(
                 pageTag: "Files",
                 icon: Icons.drive_file_move_rtl,
                 title: Tr.of(context).filesPageTitle,
+                isStatic: true,
               ),
               _NavigationMenuItem(
                 pageTag: "History",
                 icon: Icons.history,
                 title: Tr.of(context).historyPageTitle,
+                isStatic: true,
               ),
               _NavigationMenuItem(
                 pageTag: "Settings",
                 icon: Icons.settings,
                 title: Tr.of(context).settingsPageTitle,
+                isStatic: true,
               ),
             ],
           ),
@@ -67,6 +73,7 @@ class NavigationMenu extends StatelessWidget {
                           pageTag: model.remoteDeviceID,
                           icon: Icons.apple,
                           title: model.remoteDeviceID,
+                          isStatic: false,
                         ),
                       ),
                     )
@@ -86,11 +93,13 @@ class _NavigationMenuItem extends StatefulWidget {
     required this.pageTag,
     required this.icon,
     required this.title,
+    required this.isStatic,
   }) : super(key: key);
 
   final String pageTag;
   final IconData icon;
   final String title;
+  final bool isStatic;
 
   @override
   _NavigationMenuItemState createState() => _NavigationMenuItemState();
@@ -197,9 +206,30 @@ class _NavigationMenuItemState extends State<_NavigationMenuItem>
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Icon(widget.icon, color: color),
-                              Text(widget.title,
-                                  style: TextStyle(
-                                      fontSize: 12, height: 1.33, color: color))
+                              widget.isStatic
+                                  ? Text(widget.title,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        height: 1.33,
+                                        color: color,
+                                      ))
+                                  : SizedBox(
+                                      width: 36,
+                                      height: 16,
+                                      child: Marquee(
+                                        text:
+                                            "${widget.title.substring(0, 2)}-${widget.title.substring(2, 6)}-${widget.title.substring(6, 10)}",
+                                        fadingEdgeStartFraction: 0.2,
+                                        fadingEdgeEndFraction: 0.2,
+                                        velocity: 10,
+                                        blankSpace: 10,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          height: 1.33,
+                                          color: color,
+                                        ),
+                                      ),
+                                    ),
                             ],
                           )
                         ]));
