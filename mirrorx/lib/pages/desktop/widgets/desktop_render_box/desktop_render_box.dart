@@ -30,21 +30,16 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
   double _offsetY = 0.0;
   double _offsetX = 0.0;
   final Map<int, int> _downButtons = {};
-  late FocusNode _focusNode;
 
   @override
   void initState() {
     super.initState();
-    _focusNode = FocusNode(
-      skipTraversal: true,
-      descendantsAreFocusable: true,
-      onKey: _handleKeyboardEvent,
-    );
+    HardwareKeyboard.instance.addHandler(_handleKeyboardEvent);
   }
 
   @override
   void dispose() {
-    _focusNode.dispose();
+    HardwareKeyboard.instance.addHandler(_handleKeyboardEvent);
     super.dispose();
   }
 
@@ -105,22 +100,17 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
         onPointerHover: _handlePointerHover,
         onPointerMove: _handlePointerMove,
         onPointerSignal: _handlePointerSignal,
-        child: RawKeyboardListener(
-          focusNode: _focusNode,
-          autofocus: true,
-          child: RepaintBoundary(
-            child: SizedBox(
-              width: widget.width.floorToDouble(),
-              height: widget.height.floorToDouble(),
-              child: Center(
-                child: AspectRatio(
-                  aspectRatio:
-                      widget.width.toDouble() / widget.height.toDouble(),
-                  child: Texture(
-                    textureId: widget.model.textureID,
-                    freeze: true,
-                    filterQuality: FilterQuality.high,
-                  ),
+        child: RepaintBoundary(
+          child: SizedBox(
+            width: widget.width.floorToDouble(),
+            height: widget.height.floorToDouble(),
+            child: Center(
+              child: AspectRatio(
+                aspectRatio: widget.width.toDouble() / widget.height.toDouble(),
+                child: Texture(
+                  textureId: widget.model.textureID,
+                  freeze: true,
+                  filterQuality: FilterQuality.high,
                 ),
               ),
             ),
@@ -161,6 +151,8 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
   }
 
   void _handlePointerUp(PointerUpEvent event) {
+    log("pointer up ${event.buttons} ${event.pointer}");
+
     final button = _downButtons.remove(event.pointer);
     if (button == null) {
       return;
@@ -248,29 +240,35 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
     }
   }
 
-  KeyEventResult _handleKeyboardEvent(FocusNode _, RawKeyEvent event) {
-    if (event.repeat) {
-      return KeyEventResult.handled;
+  bool _handleKeyboardEvent(KeyEvent event) {
+    if (event is KeyRepeatEvent) {
+      return true;
     }
 
     final key = mapLogicalKey(event.logicalKey);
     if (key == null) {
-      log("alt:${event.isAltPressed} control:${event.isControlPressed} meta:${event.isMetaPressed} shift:${event.isShiftPressed} repeat:${event.repeat} logical:${event.logicalKey} character:${event.character}");
-      return KeyEventResult.ignored;
+      return true;
     }
 
-    var keyboardEvent = KeyboardEvent.keyUp(key);
-    if (event.isKeyPressed(event.logicalKey)) {
+    KeyboardEvent keyboardEvent;
+    if (event is KeyDownEvent) {
       keyboardEvent = KeyboardEvent.keyDown(key);
+    } else if (event is KeyUpEvent) {
+      keyboardEvent = KeyboardEvent.keyUp(key);
+    } else if (event is KeyRepeatEvent) {
+      keyboardEvent = KeyboardEvent.keyDown(key);
+    } else {
+      log("unhandled keyboard event ${event.runtimeType.toString()}");
+      return true;
     }
 
-    log("press ${keyboardEvent}");
+    log("press $keyboardEvent");
 
     MirrorXCoreSDK.instance.endpointInput(
       remoteDeviceId: widget.model.remoteDeviceID,
       event: InputEvent.keyboard(keyboardEvent),
     );
 
-    return KeyEventResult.handled;
+    return true;
   }
 }
