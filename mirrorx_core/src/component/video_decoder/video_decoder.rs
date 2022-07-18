@@ -1,10 +1,7 @@
 use super::frame::DecodedFrame;
 use crate::{
     error::MirrorXError,
-    ffi::{
-        ffmpeg::{avcodec::*, avutil::*},
-        os::CVPixelBufferRelease,
-    },
+    ffi::ffmpeg::{avcodec::*, avutil::*},
     service::endpoint::message::VideoFrame,
 };
 use anyhow::anyhow;
@@ -253,7 +250,10 @@ impl VideoDecoder {
                                 }
 
                                 #[cfg(target_os = "macos")]
-                                CVPixelBufferRelease(err.into_inner().0);
+                                {
+                                    use os::CVPixelBufferRelease;
+                                    CVPixelBufferRelease(err.into_inner().0);
+                                }
                             }
                         }
                         Err(err) => return Err(err),
