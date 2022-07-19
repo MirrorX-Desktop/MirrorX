@@ -6,30 +6,23 @@ use crate::{component::desktop::Frame, error::MirrorXError, utility::wide_char::
 use anyhow::bail;
 use scopeguard::defer;
 use std::{
-    borrow::Borrow,
     ffi::OsString,
     mem::zeroed,
+    ops::{Shr, ShrAssign},
     os::raw::c_void,
-    ptr::{null, null_mut},
+    ptr::null,
 };
 use tracing::info;
 use windows::{
     core::Interface,
     Win32::{
         Graphics::{
-            Direct3D::D3D11_SRV_DIMENSION_TEXTURE2D,
+            Direct3D::*,
             Direct3D11::*,
             Dxgi::{Common::*, *},
-            Gdi::{EnumDisplayDevicesW, DISPLAY_DEVICEW, DISPLAY_DEVICE_ATTACHED_TO_DESKTOP},
+            Gdi::*,
         },
-        System::{
-            StationsAndDesktops::{
-                CloseDesktop, GetThreadDesktop, OpenInputDesktop, SetThreadDesktop,
-            },
-            SystemServices::*,
-            Threading::GetCurrentThreadId,
-            WindowsProgramming::INFINITE,
-        },
+        System::{StationsAndDesktops::*, SystemServices::*, WindowsProgramming::INFINITE},
         UI::WindowsAndMessaging::*,
     },
 };
@@ -358,7 +351,7 @@ impl Duplicator {
             }
         }
 
-        let frame_texture :ID3D11Texture2D = match dxgi_resource{
+        let desktop_texture :ID3D11Texture2D = match dxgi_resource{
                 Some(resource)=>resource.cast().map_err(|err|{
                     anyhow::anyhow!(
                         r#"Duplication: IDXGIResource::QueryInterface for ID3D11Texture2D failed {{"error": "{:?}"}}"#,         
@@ -369,26 +362,11 @@ impl Duplicator {
             };
 
         // draw mouse
-
-        let mut pointer_shape_buffer =
-            Vec::<u8>::with_capacity(dxgi_outdupl_frame_info.PointerShapeBufferSize as usize);
-        let mut pointer_shape_buffer_required = 0u32;
-        let mut pointer_shape_info: DXGI_OUTDUPL_POINTER_SHAPE_INFO = zeroed();
-
-        self.output_duplication
-            .GetFramePointerShape(
-                dxgi_outdupl_frame_info.PointerShapeBufferSize,
-                &mut pointer_shape_buffer as *mut _ as *mut std::os::raw::c_void,
-                &mut pointer_shape_buffer_required,
-                &mut pointer_shape_info,
-            )
-            .map_err(|err| anyhow::anyhow!(err))?;
-
-        pointer_shape_buffer.set_len(pointer_shape_buffer_required as usize);
+        self.draw_mouse(&desktop_texture, &dxgi_outdupl_frame_info)?;
 
         self.dx
             .device_context()
-            .CopyResource(&self.backend_texture, frame_texture);
+            .CopyResource(&self.backend_texture, desktop_texture);
 
         self.output_duplication.ReleaseFrame().map_err(|err| {
             anyhow::anyhow!(
@@ -451,156 +429,201 @@ impl Duplicator {
         Ok(())
     }
 
-    unsafe fn DrawMouse(
+    unsafe fn draw_mouse(
         &self,
-        m_SharedSurf: &ID3D11Texture2D,
-        x: u32,
-        y: u32,
-        Buffer: &[u8],
-        ShapeInfo: &DXGI_OUTDUPL_POINTER_SHAPE_INFO,
+        desktop_texture: &ID3D11Texture2D,
+        dxgi_outdupl_frame_info: &DXGI_OUTDUPL_FRAME_INFO,
     ) -> anyhow::Result<()> {
-        let mut FullDesc: D3D11_TEXTURE2D_DESC = zeroed();
-        m_SharedSurf.GetDesc(&mut FullDesc);
-        let DesktopWidth = FullDesc.Width;
-        let DesktopHeight = FullDesc.Height;
+        let mut cursor_shape_buffer =
+            Vec::<u8>::with_capacity(dxgi_outdupl_frame_info.PointerShapeBufferSize as usize);
+        let mut cursor_shape_buffer_length = 0u32;
+        let mut cursor_shape_info: DXGI_OUTDUPL_POINTER_SHAPE_INFO = zeroed();
+
+        self.output_duplication
+            .GetFramePointerShape(
+                dxgi_outdupl_frame_info.PointerShapeBufferSize,
+                &mut cursor_shape_buffer as *mut _ as *mut std::os::raw::c_void,
+                &mut cursor_shape_buffer_length,
+                &mut cursor_shape_info,
+            )
+            .map_err(|err| anyhow::anyhow!(err))?;
+
+        cursor_shape_buffer.set_len(cursor_shape_buffer_length as usize);
+
+        let mut desktop_texture_desc: D3D11_TEXTURE2D_DESC = zeroed();
+
+        desktop_texture.GetDesc(&mut desktop_texture_desc);
+
+        let desktop_width = desktop_texture_desc.Width;
+        let desktop_height = desktop_texture_desc.Height;
 
         // Center of desktop dimensions
-        let CenterX = (DesktopWidth as f32) / 2f32;
-        let CenterY = (DesktopHeight as f32) / 2f32;
-
-        // Clipping adjusted coordinates / dimensions
-        let mut PtrWidth = 0;
-        let mut PtrHeight = 0;
-        let mut PtrLeft = 0;
-        let mut PtrTop = 0;
+        let center_x = (desktop_width as f32) / 2f32;
+        let center_y = (desktop_height as f32) / 2f32;
 
         // Buffer used if necessary (in case of monochrome or masked pointer)
-        let InitBuffer: *mut u8 = null_mut();
+        let mut init_buffer = Vec::<u8>::new();
 
-        // Used for copying pixels
-        let mut Box: D3D11_BOX = zeroed();
-        Box.front = 0;
-        Box.back = 1;
-
-        let mut Desc: D3D11_TEXTURE2D_DESC = zeroed();
-        Desc.MipLevels = 1;
-        Desc.ArraySize = 1;
-        Desc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
-        Desc.SampleDesc.Count = 1;
-        Desc.SampleDesc.Quality = 0;
-        Desc.Usage = D3D11_USAGE_DEFAULT;
-        Desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-        Desc.CPUAccessFlags = D3D11_CPU_ACCESS_FLAG::default();
-        Desc.MiscFlags = D3D11_RESOURCE_MISC_FLAG::default();
+        let mut cursor_texture_desc: D3D11_TEXTURE2D_DESC = zeroed();
+        cursor_texture_desc.MipLevels = 1;
+        cursor_texture_desc.ArraySize = 1;
+        cursor_texture_desc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+        cursor_texture_desc.SampleDesc.Count = 1;
+        cursor_texture_desc.SampleDesc.Quality = 0;
+        cursor_texture_desc.Usage = D3D11_USAGE_DEFAULT;
+        cursor_texture_desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+        cursor_texture_desc.CPUAccessFlags = D3D11_CPU_ACCESS_FLAG::default();
+        cursor_texture_desc.MiscFlags = D3D11_RESOURCE_MISC_FLAG::default();
 
         // Set shader resource properties
-        let mut SDesc: D3D11_SHADER_RESOURCE_VIEW_DESC = zeroed();
-        SDesc.Format = Desc.Format;
-        SDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-        SDesc.Anonymous.Texture2D.MostDetailedMip = Desc.MipLevels - 1;
-        SDesc.Anonymous.Texture2D.MipLevels = Desc.MipLevels;
+        let mut cursor_shader_resource_view_desc: D3D11_SHADER_RESOURCE_VIEW_DESC = zeroed();
+        cursor_shader_resource_view_desc.Format = cursor_texture_desc.Format;
+        cursor_shader_resource_view_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+        cursor_shader_resource_view_desc
+            .Anonymous
+            .Texture2D
+            .MostDetailedMip = cursor_texture_desc.MipLevels - 1;
+        cursor_shader_resource_view_desc
+            .Anonymous
+            .Texture2D
+            .MipLevels = cursor_texture_desc.MipLevels;
 
-        if ShapeInfo.Type == DXGI_OUTDUPL_POINTER_SHAPE_TYPE_COLOR.0 as u32 {
-            PtrLeft = x;
-            PtrTop = y;
-            PtrWidth = ShapeInfo.Width;
-            PtrHeight = ShapeInfo.Height;
-        } else if ShapeInfo.Type == DXGI_OUTDUPL_POINTER_SHAPE_TYPE_MONOCHROME.0 as u32 {
-            // ProcessMonoMask(true, PtrInfo, &PtrWidth, &PtrHeight, &PtrLeft, &PtrTop, &InitBuffer, &Box);
-        } else if ShapeInfo.Type == DXGI_OUTDUPL_POINTER_SHAPE_TYPE_MASKED_COLOR.0 as u32 {
-            // ProcessMonoMask(false, PtrInfo, &PtrWidth, &PtrHeight, &PtrLeft, &PtrTop, &InitBuffer, &Box);
-        } else {
-            return Err(anyhow::anyhow!("type wrong"));
+        let cursor_left = dxgi_outdupl_frame_info.PointerPosition.Position.x as u32;
+        let cursor_top = dxgi_outdupl_frame_info.PointerPosition.Position.y as u32;
+        let cursor_width = cursor_shape_info.Width;
+        let mut cursor_height = cursor_shape_info.Height;
+
+        // Used for copying pixels
+        let mut cursor_box: D3D11_BOX = zeroed();
+        cursor_box.front = 0;
+        cursor_box.back = 1;
+
+        if cursor_shape_info.Type == DXGI_OUTDUPL_POINTER_SHAPE_TYPE_MONOCHROME.0 as u32 {
+            cursor_height /= 2;
+
+            self.process_mono_mask(
+                true,
+                desktop_texture,
+                cursor_left,
+                cursor_top,
+                cursor_width,
+                cursor_height,
+                cursor_shape_info.Pitch,
+                &cursor_shape_buffer,
+                &mut cursor_box,
+                &mut init_buffer,
+            )?;
+        } else if cursor_shape_info.Type == DXGI_OUTDUPL_POINTER_SHAPE_TYPE_MASKED_COLOR.0 as u32 {
+            self.process_mono_mask(
+                false,
+                desktop_texture,
+                cursor_left,
+                cursor_top,
+                cursor_width,
+                cursor_height,
+                cursor_shape_info.Pitch,
+                &cursor_shape_buffer,
+                &mut cursor_box,
+                &mut init_buffer,
+            )?;
         }
 
         // Position will be changed based on mouse position
-        let mut Vertices = VERTICES.clone();
-        Vertices[0].pos.x = (PtrLeft as f32 - CenterX) / CenterX;
-        Vertices[0].pos.y = -1f32 * ((PtrTop as f32 + PtrHeight as f32) - CenterY) as f32 / CenterY;
-        Vertices[1].pos.x = (PtrLeft as f32 - CenterX) / CenterX;
-        Vertices[1].pos.y = -1f32 * (PtrTop as f32 - CenterY) / CenterY;
-        Vertices[2].pos.x = ((PtrLeft as f32 + PtrWidth as f32) - CenterX) / CenterX;
-        Vertices[2].pos.y = -1f32 * ((PtrTop as f32 + PtrHeight as f32) - CenterY) / CenterY;
-        Vertices[3].pos.x = Vertices[2].pos.x;
-        Vertices[3].pos.y = Vertices[2].pos.y;
-        Vertices[4].pos.x = Vertices[1].pos.x;
-        Vertices[4].pos.y = Vertices[1].pos.y;
-        Vertices[5].pos.x = ((PtrLeft as f32 + PtrWidth as f32) - CenterX) / CenterX;
-        Vertices[5].pos.y = -1f32 * (PtrTop as f32 - CenterY) / CenterY;
+        let mut vertices = VERTICES.clone();
+
+        vertices[0].pos.x = (cursor_left as f32 - center_x) / center_x;
+        vertices[0].pos.y = -1f32 * ((cursor_top + cursor_height) as f32 - center_y) / center_y;
+
+        vertices[1].pos.x = (cursor_left as f32 - center_x) / center_x;
+        vertices[1].pos.y = -1f32 * (cursor_top as f32 - center_y) / center_y;
+
+        vertices[2].pos.x = ((cursor_left + cursor_width) as f32 - center_x) / center_x;
+        vertices[2].pos.y = -1f32 * ((cursor_top + cursor_height) as f32 - center_y) / center_y;
+
+        vertices[3].pos.x = vertices[2].pos.x;
+        vertices[3].pos.y = vertices[2].pos.y;
+
+        vertices[4].pos.x = vertices[1].pos.x;
+        vertices[4].pos.y = vertices[1].pos.y;
+
+        vertices[5].pos.x = ((cursor_left + cursor_width) as f32 - center_x) / center_x;
+        vertices[5].pos.y = -1f32 * (cursor_top as f32 - center_y) / center_y;
 
         // Set texture properties
-        Desc.Width = PtrWidth;
-        Desc.Height = PtrHeight;
+        cursor_texture_desc.Width = cursor_width;
+        cursor_texture_desc.Height = cursor_height;
 
         // Set up init data
-        let mut InitData: D3D11_SUBRESOURCE_DATA = zeroed();
+        let mut init_data: D3D11_SUBRESOURCE_DATA = zeroed();
 
-        InitData.pSysMem = if ShapeInfo.Type == DXGI_OUTDUPL_POINTER_SHAPE_TYPE_COLOR.0 as u32 {
-            Buffer.as_ptr() as *const c_void
-        } else {
-            InitBuffer as *const _ as *const c_void
-        };
+        init_data.pSysMem =
+            if cursor_shape_info.Type == DXGI_OUTDUPL_POINTER_SHAPE_TYPE_COLOR.0 as u32 {
+                cursor_shape_buffer.as_ptr() as *const c_void
+            } else {
+                &init_buffer as *const _ as *const c_void
+            };
 
-        InitData.SysMemPitch = if ShapeInfo.Type == DXGI_OUTDUPL_POINTER_SHAPE_TYPE_COLOR.0 as u32 {
-            ShapeInfo.Pitch
-        } else {
-            PtrWidth * BPP
-        };
+        init_data.SysMemPitch =
+            if cursor_shape_info.Type == DXGI_OUTDUPL_POINTER_SHAPE_TYPE_COLOR.0 as u32 {
+                cursor_shape_info.Pitch
+            } else {
+                cursor_width * BPP
+            };
 
-        InitData.SysMemSlicePitch = 0;
+        init_data.SysMemSlicePitch = 0;
 
         // Create mouseshape as texture
-        let MouseTex = self
+        let mouse_tex = self
             .dx
             .device()
-            .CreateTexture2D(&Desc, &InitData)
+            .CreateTexture2D(&cursor_texture_desc, &init_data)
             .map_err(|err| anyhow::anyhow!(err))?;
 
         // Create shader resource from texture
-        let ShaderRes = self
+        let shader_res = self
             .dx
             .device()
-            .CreateShaderResourceView(MouseTex, &SDesc)
+            .CreateShaderResourceView(mouse_tex, &cursor_shader_resource_view_desc)
             .map_err(|err| anyhow::anyhow!(err))?;
 
-        let mut BDesc: D3D11_BUFFER_DESC = zeroed();
-        BDesc.Usage = D3D11_USAGE_DEFAULT;
-        BDesc.ByteWidth = (std::mem::size_of::<VERTEX>() * Vertices.len()) as u32;
-        BDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER.0;
-        BDesc.CPUAccessFlags = 0;
+        let mut buffer_desc: D3D11_BUFFER_DESC = zeroed();
+        buffer_desc.Usage = D3D11_USAGE_DEFAULT;
+        buffer_desc.ByteWidth = (std::mem::size_of::<VERTEX>() * vertices.len()) as u32;
+        buffer_desc.BindFlags = D3D11_BIND_VERTEX_BUFFER.0;
+        buffer_desc.CPUAccessFlags = 0;
 
-        InitData = zeroed();
-        InitData.pSysMem = Vertices.as_ptr() as *const c_void;
+        init_data = zeroed();
+        init_data.pSysMem = vertices.as_ptr() as *const c_void;
 
         // Create vertex buffer
-        let VertexBufferMouse = self
+        let mouse_vertex_buffer = self
             .dx
             .device()
-            .CreateBuffer(&BDesc, &InitData)
+            .CreateBuffer(&buffer_desc, &init_data)
             .map_err(|err| anyhow::anyhow!(err))?;
 
         // Set resources
-        let BlendFactor = [0f32; 4];
-        let Stride = std::mem::size_of::<VERTEX>() as u32;
-        let Offset = 0;
+        let blend_factor = [0f32; 4];
+        let stride = std::mem::size_of::<VERTEX>() as u32;
+        let offset = 0;
 
         let rtv = self
             .dx
             .device()
-            .CreateRenderTargetView(m_SharedSurf, null())
+            .CreateRenderTargetView(desktop_texture, null())
             .map_err(|err| anyhow::anyhow!(err))?;
 
         self.dx.device_context().IASetVertexBuffers(
             0,
             1,
-            [Some(VertexBufferMouse)].as_ptr(),
-            &Stride,
-            &Offset,
+            [Some(mouse_vertex_buffer)].as_ptr(),
+            &stride,
+            &offset,
         );
 
         self.dx.device_context().OMSetBlendState(
             &self.blend_state,
-            BlendFactor.as_ptr(),
+            blend_factor.as_ptr(),
             0xFFFFFFFF,
         );
 
@@ -618,13 +641,135 @@ impl Duplicator {
 
         self.dx
             .device_context()
-            .PSSetShaderResources(0, &[Some(ShaderRes)]);
+            .PSSetShaderResources(0, &[Some(shader_res)]);
 
         self.dx
             .device_context()
             .PSSetSamplers(0, self.sampler_linear.as_ref());
 
-        self.dx.device_context().Draw(Vertices.len() as u32, 0);
+        self.dx.device_context().Draw(vertices.len() as u32, 0);
+
+        Ok(())
+    }
+
+    unsafe fn process_mono_mask(
+        &self,
+        is_mono: bool,
+        desktop_texture: &ID3D11Texture2D,
+        cursor_position_x: u32,
+        cursor_position_y: u32,
+        cursor_width: u32,
+        cursor_height: u32,
+        cursor_shape_pitch: u32,
+        cursor_shape_buffer: &[u8],
+        cursor_box: &mut D3D11_BOX,
+        init_buffer: &mut Vec<u8>,
+    ) -> anyhow::Result<()> {
+        let mut copy_buffer_desc: D3D11_TEXTURE2D_DESC = zeroed();
+        copy_buffer_desc.Width = cursor_width;
+        copy_buffer_desc.Height = cursor_height;
+        copy_buffer_desc.MipLevels = 1;
+        copy_buffer_desc.ArraySize = 1;
+        copy_buffer_desc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+        copy_buffer_desc.SampleDesc.Count = 1;
+        copy_buffer_desc.SampleDesc.Quality = 0;
+        copy_buffer_desc.Usage = D3D11_USAGE_STAGING;
+        copy_buffer_desc.BindFlags = D3D11_BIND_FLAG::default();
+        copy_buffer_desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+        copy_buffer_desc.MiscFlags = D3D11_RESOURCE_MISC_FLAG::default();
+
+        let copy_buffer = self
+            .dx
+            .device()
+            .CreateTexture2D(&copy_buffer_desc, null())
+            .map_err(|err| anyhow::anyhow!(err))?;
+
+        cursor_box.left = cursor_position_x;
+        cursor_box.top = cursor_position_y;
+        cursor_box.right = cursor_position_x + cursor_width;
+        cursor_box.bottom = cursor_position_y + cursor_height;
+
+        self.dx.device_context().CopySubresourceRegion(
+            &copy_buffer,
+            0,
+            0,
+            0,
+            0,
+            desktop_texture,
+            0,
+            cursor_box,
+        );
+
+        let copy_surface: IDXGISurface = copy_buffer.cast().map_err(|err| anyhow::anyhow!(err))?;
+
+        let mut mapped_surface: DXGI_MAPPED_RECT = zeroed();
+
+        copy_surface
+            .Map(&mut mapped_surface, DXGI_MAP_READ)
+            .map_err(|err| anyhow::anyhow!(err))?;
+
+        init_buffer.resize((cursor_width * cursor_height * BPP) as usize, 0);
+
+        let init_buffer_32 = init_buffer.as_mut_ptr() as *mut _ as *mut u32;
+        let desktop_32 = mapped_surface.pBits as *mut _ as *mut u32;
+        let desktop_pitch_in_pixels = mapped_surface.Pitch as u32 / 4;
+
+        if is_mono {
+            for x in 0..cursor_height {
+                let mut mask = (0x80 >> 8) as u8;
+
+                for y in 0..cursor_width {
+                    let and_mask =
+                        cursor_shape_buffer[(y / 8 + x * cursor_shape_pitch) as usize] & mask;
+
+                    let xor_mask = cursor_shape_buffer
+                        [(y / 8 + (x + cursor_width) * cursor_shape_pitch) as usize]
+                        & mask;
+
+                    let and_mask_32: u32 = if and_mask > 0 { 0xFFFFFFFF } else { 0xFF000000 };
+
+                    let xor_mask_32: u32 = if xor_mask > 0 { 0x00FFFFFF } else { 0x00000000 };
+
+                    let mut val = *desktop_32.add((x * desktop_pitch_in_pixels + y) as usize);
+                    val &= and_mask_32;
+                    val ^= xor_mask_32;
+
+                    *init_buffer_32.add((x * cursor_width + y) as usize) = val;
+
+                    if mask == 0x01 {
+                        mask = 0x80;
+                    } else {
+                        mask = mask >> 1;
+                    }
+                }
+            }
+        } else {
+            let buffer_32: &[u32] = std::mem::transmute(cursor_shape_buffer);
+
+            for x in 0..cursor_height {
+                for y in 0..cursor_width {
+                    let mask_val: u32 =
+                        0xFF000000 & buffer_32[(y + x * cursor_shape_pitch / 4) as usize];
+
+                    if mask_val > 0 {
+                        // Mask was 0xFF
+                        let mut val = *desktop_32.add((x * desktop_pitch_in_pixels + y) as usize);
+                        val ^= buffer_32[(y + x * cursor_shape_pitch / 4) as usize];
+                        val |= 0xFF000000;
+
+                        *init_buffer_32.add((x * cursor_width + y) as usize) = val;
+                    } else {
+                        // Mask was 0x00
+                        let mut val = buffer_32[(y + x * cursor_shape_pitch / 4) as usize];
+                        val |= 0xFF000000;
+
+                        *init_buffer_32.add((x * cursor_width + y) as usize) = val;
+                    }
+                }
+            }
+        }
+
+        copy_surface.Unmap().map_err(|err| anyhow::anyhow!(err))?;
 
         Ok(())
     }
