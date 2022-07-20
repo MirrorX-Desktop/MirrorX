@@ -286,7 +286,7 @@ impl VideoDecoder {
         let mut abgr_frame = Vec::<u8>::with_capacity(abgr_frame_size);
 
         // the actual AVFrame format is NV12, but in the libyuv, function 'NV12ToABGRMatrix' is a macro to function 'NV21ToARGBMatrix'
-        // and Rust FFI can't convert macro so we directly use it's result function 'NV21ToARGBMatrix' and yuvconstants
+        // and Rust FFI can't convert macro so we directly use function 'NV21ToARGBMatrix' and yuvconstants
         let ret = NV21ToARGBMatrix(
             (*self.hw_decode_frame).data[0],
             (*self.hw_decode_frame).linesize[0] as isize,
