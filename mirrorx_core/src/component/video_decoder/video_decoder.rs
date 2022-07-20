@@ -256,8 +256,6 @@ impl VideoDecoder {
                         Err(err) => return Err(err),
                     };
                 }
-
-                av_frame_unref((*self).decode_frame);
             }
         }
     }
