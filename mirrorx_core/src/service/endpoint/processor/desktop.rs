@@ -28,7 +28,7 @@ pub fn start_desktop_capture_process(
     let expected_wait_time = Duration::from_secs_f32(1f32 / (fps as f32));
 
     std::thread::Builder::new()
-        .name(format!("desktop_render_process:{}", remote_device_id))
+        .name(format!("desktop_capture_process:{}", remote_device_id))
         .spawn(move || {
             defer! {
                 info!(?remote_device_id, "desktop capture process exit");
