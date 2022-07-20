@@ -1,12 +1,17 @@
+import 'package:mirrorx/env/sdk/mirrorx_core.dart';
+
 class DesktopModel {
-  final String remoteDeviceID;
+  final String remoteDeviceId;
+  final int monitorWidth;
+  final int monitorHeight;
   final int textureID;
   final int videoTexturePointer;
   final int updateFrameCallbackPointer;
-  bool alreadyPrepared = false;
 
   DesktopModel({
-    required this.remoteDeviceID,
+    required this.remoteDeviceId,
+    required this.monitorWidth,
+    required this.monitorHeight,
     required this.textureID,
     required this.videoTexturePointer,
     required this.updateFrameCallbackPointer,

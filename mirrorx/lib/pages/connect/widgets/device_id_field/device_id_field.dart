@@ -26,7 +26,7 @@ class DeviceIdField extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  Tr.of(context).connectPageDeviceIDTitle,
+                  tr.connectPageDeviceIDTitle,
                   style: const TextStyle(fontSize: 27),
                 ),
                 BlocBuilder<ProfileStateCubit, ProfileState>(
@@ -35,15 +35,14 @@ class DeviceIdField extends StatelessWidget {
                       Clipboard.setData(ClipboardData(text: state.deviceID))
                           .then(
                         (_) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                            content: Text(Tr.of(context)
+                            content: Text(tr
                                 .connectPageDeviceIDButtonCopySnackbarContent))),
                       );
                     },
                     icon: const Icon(Icons.copy),
                     splashRadius: 20,
                     hoverColor: Colors.yellow,
-                    tooltip:
-                        Tr.of(context).connectPageDeviceIDButtonCopyTooltip,
+                    tooltip: tr.connectPageDeviceIDButtonCopyTooltip,
                   ),
                 ),
               ],

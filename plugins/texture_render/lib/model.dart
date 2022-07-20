@@ -15,6 +15,8 @@ class DeregisterTextureRequest {
 
   DeregisterTextureRequest(this.textureID, this.videoTexturePointer);
 
-  Map toMap(int textureID, int videoTexturePointer) =>
-      {"texture_id": textureID, "video_texture_ptr": videoTexturePointer};
+  Map toMap() => {
+        "texture_id": textureID,
+        "video_texture_ptr": videoTexturePointer,
+      };
 }

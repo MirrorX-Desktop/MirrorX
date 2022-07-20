@@ -16,7 +16,7 @@ class DesktopManagerCubit extends Cubit<DesktopManagerState> {
   void removeDesktop(String remoteDeviceID) {
     emit(state.copyWith(
         desktopModels: List.from(state.desktopModels)
-          ..removeWhere((e) => e.remoteDeviceID != remoteDeviceID)));
+          ..removeWhere((e) => e.remoteDeviceId != remoteDeviceID)));
   }
 }
 

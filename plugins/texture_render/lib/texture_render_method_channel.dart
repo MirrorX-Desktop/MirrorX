@@ -21,9 +21,7 @@ class MethodChannelTextureRender extends TextureRenderPlatform {
 
   @override
   Future<void> deregisterTexture(int textureID, int videoTexturePointer) async {
-    await methodChannel.invokeMethod(
-        'deregister_texture',
-        DeregisterTextureRequest(textureID, videoTexturePointer)
-            .toMap(textureID, videoTexturePointer));
+    await methodChannel.invokeMethod('deregister_texture',
+        DeregisterTextureRequest(textureID, videoTexturePointer).toMap());
   }
 }

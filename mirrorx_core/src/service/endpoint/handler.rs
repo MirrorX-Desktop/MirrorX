@@ -47,7 +47,7 @@ pub async fn handle_start_media_transmission_request(
 ) -> Result<StartMediaTransmissionResponse, MirrorXError> {
     // endpoint.start_audio_capture().await?;
 
-    endpoint
+    let monitor = endpoint
         .start_video_capture(&req.expect_display_id, req.expect_fps)
         .await?;
 
@@ -60,8 +60,8 @@ pub async fn handle_start_media_transmission_request(
             .get()
             .map(|v| v.clone())
             .unwrap_or(String::from("unknown")),
-        screen_width: 1920,
-        screen_height: 1080,
+        screen_width: monitor.width,
+        screen_height: monitor.height,
         video_type: String::from("todo"),
         audio_type: String::from("todo"),
     };

@@ -4,12 +4,8 @@
     "dialogCancel": "Cancel",
     "dialogYes": "Yes",
     "dialogNo": "No",
-    "dialogConnectRemoteErrorPrefix": "Connect Remote Error: {error_message}",
-    "@dialogConnectRemoteErrorPrefix": {
-        "placeholders": {
-            "error_message": {}
-        }
-    },
+    "dialogConnectRemoteError": "An error occurs while connecting to the remote device",
+    "dialogConnectRemoteOffline": "The remote device is offline",
     "dialogContentInputDevicePassword": "Please enter the password for the remote device",
     "connectPageTitle": "Connect",
     "connectPageDeviceIDTitle": "Device ID",

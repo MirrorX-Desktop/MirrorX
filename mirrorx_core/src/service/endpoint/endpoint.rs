@@ -299,7 +299,7 @@ impl EndPoint {
         &self,
         display_id: &str,
         except_fps: u8,
-    ) -> Result<(), MirrorXError> {
+    ) -> Result<Monitor, MirrorXError> {
         let monitors = monitor::get_active_monitors()?;
 
         let monitor = match monitors.iter().find(|m| m.id == display_id) {
@@ -342,7 +342,7 @@ impl EndPoint {
 
         let _ = self.monitor.set(monitor.clone());
 
-        Ok(())
+        Ok(monitor.clone())
     }
 
     pub async fn start_video_render(

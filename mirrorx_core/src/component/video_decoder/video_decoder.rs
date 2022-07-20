@@ -1,4 +1,5 @@
 use super::frame::DecodedFrame;
+use crate::ffi::libyuv::*;
 use crate::{
     error::MirrorXError,
     ffi::ffmpeg::{avcodec::*, avutil::*},
@@ -81,9 +82,9 @@ impl VideoDecoder {
             // (*decoder.codec_ctx).pkt_timebase = AVRational { num: 1, den: fps };
             (*decoder.codec_ctx).pix_fmt = AV_PIX_FMT_NV12;
             (*decoder.codec_ctx).color_range = AVCOL_RANGE_JPEG;
-            (*decoder.codec_ctx).color_primaries = AVCOL_PRI_BT709;
-            (*decoder.codec_ctx).color_trc = AVCOL_TRC_BT709;
-            (*decoder.codec_ctx).colorspace = AVCOL_SPC_BT709;
+            // (*decoder.codec_ctx).color_primaries = AVCOL_PRI_BT709;
+            // (*decoder.codec_ctx).color_trc = AVCOL_TRC_GAMMA22;
+            // (*decoder.codec_ctx).colorspace = AVCOL_SPC_BT709;
             (*decoder.codec_ctx).flags |= AV_CODEC_FLAG_LOW_DELAY;
 
             for (k, v) in options {
@@ -235,7 +236,7 @@ impl VideoDecoder {
 
                 if !self.parser_ctx.is_null() {
                 } else {
-                    match self.send_native_frame() {
+                    match self.convert_yuv_to_rgb() {
                         Ok(frame) => {
                             if let Err(err) = tx.try_send(frame) {
                                 match err {
@@ -248,9 +249,6 @@ impl VideoDecoder {
                                         )));
                                     }
                                 }
-
-                                #[cfg(target_os = "macos")]
-                                crate::ffi::os::CVPixelBufferRelease(err.into_inner().0);
                             }
                         }
                         Err(err) => return Err(err),
@@ -260,19 +258,7 @@ impl VideoDecoder {
         }
     }
 
-    #[cfg(target_os = "macos")]
-    unsafe fn send_native_frame(&self) -> Result<DecodedFrame, MirrorXError> {
-        use crate::ffi::os::{CVPixelBufferRef, CVPixelBufferRetain};
-
-        let native_frame = CVPixelBufferRetain((*self.decode_frame).data[3] as CVPixelBufferRef);
-
-        Ok(DecodedFrame(native_frame))
-    }
-
-    #[cfg(target_os = "windows")]
-    unsafe fn send_native_frame(&self) -> Result<DecodedFrame, MirrorXError> {
-        use crate::ffi::libyuv::*;
-
+    unsafe fn convert_yuv_to_rgb(&self) -> Result<DecodedFrame, MirrorXError> {
         let ret = av_hwframe_transfer_data(self.hw_decode_frame, self.decode_frame, 0);
         if ret < 0 {
             error!(ret = ret, "av_hwframe_transfer_data failed");
@@ -285,9 +271,8 @@ impl VideoDecoder {
 
         let mut abgr_frame = Vec::<u8>::with_capacity(abgr_frame_size);
 
-        // the actual AVFrame format is NV12, but in the libyuv, function 'NV12ToABGRMatrix' is a macro to function 'NV21ToARGBMatrix'
-        // and Rust FFI can't convert macro so we directly use function 'NV21ToARGBMatrix' and yuvconstants
-        let ret = NV21ToARGBMatrix(
+        let ti = std::time::Instant::now();
+        let ret = NV12ToARGBMatrix(
             (*self.hw_decode_frame).data[0],
             (*self.hw_decode_frame).linesize[0] as isize,
             (*self.hw_decode_frame).data[1],
@@ -299,6 +284,8 @@ impl VideoDecoder {
             (*self.hw_decode_frame).height as isize,
         );
 
+        info!("instant: {:?}", ti.elapsed());
+
         if ret != 0 {
             return Err(MirrorXError::Other(anyhow::anyhow!(
                 "libyuv::NV21ToARGBMatrix returns {}",
@@ -307,9 +294,16 @@ impl VideoDecoder {
         }
 
         abgr_frame.set_len(abgr_frame_size);
+
+        let decoded_frame = DecodedFrame {
+            buffer: abgr_frame,
+            width: (*self.hw_decode_frame).width as u32,
+            height: (*self.hw_decode_frame).height as u32,
+        };
+
         av_frame_unref((*self).hw_decode_frame);
 
-        Ok(DecodedFrame(abgr_frame))
+        Ok(decoded_frame)
     }
 }
 

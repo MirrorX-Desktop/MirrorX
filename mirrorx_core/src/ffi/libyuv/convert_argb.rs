@@ -10,7 +10,8 @@ extern "C" {
 }
 
 extern "C" {
-    pub fn NV21ToARGBMatrix(
+    #[link(kind = "static")]
+    pub fn NV12ToARGBMatrix(
         src_y: *const u8,
         src_stride_y: isize,
         src_uv: *const u8,

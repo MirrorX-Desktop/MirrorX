@@ -12,14 +12,10 @@ class DesktopRenderBox extends StatefulWidget {
   const DesktopRenderBox({
     Key? key,
     required this.model,
-    required this.width,
-    required this.height,
     required this.fit,
   }) : super(key: key);
 
   final DesktopModel model;
-  final int width;
-  final int height;
   final BoxFit fit;
 
   @override
@@ -58,14 +54,15 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
         ),
         LayoutBuilder(builder: (context, constraints) {
           return DesktopRenderBoxScrollBar(
-            maxTrunkWidth: widget.height.floorToDouble(),
+            maxTrunkWidth: widget.model.monitorHeight.floorToDouble(),
             axis: Axis.vertical,
             trunkWidth: constraints.maxHeight,
             onScroll: (offset) {
               setState(() {
                 _offsetY = -offset;
-                if ((_offsetY + constraints.maxHeight) > widget.height) {
-                  _offsetY = widget.height - constraints.maxHeight;
+                if ((_offsetY + constraints.maxHeight) >
+                    widget.model.monitorHeight) {
+                  _offsetY = widget.model.monitorHeight - constraints.maxHeight;
                 }
               });
             },
@@ -73,14 +70,15 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
         }),
         LayoutBuilder(builder: (context, constraints) {
           return DesktopRenderBoxScrollBar(
-            maxTrunkWidth: widget.width.floorToDouble(),
+            maxTrunkWidth: widget.model.monitorWidth.floorToDouble(),
             axis: Axis.horizontal,
             trunkWidth: constraints.maxWidth,
             onScroll: (offset) {
               setState(() {
                 _offsetX = -offset;
-                if ((_offsetX + constraints.maxWidth) > widget.width) {
-                  _offsetX = widget.width - constraints.maxWidth;
+                if ((_offsetX + constraints.maxWidth) >
+                    widget.model.monitorWidth) {
+                  _offsetX = widget.model.monitorWidth - constraints.maxWidth;
                 }
               });
             },
@@ -102,15 +100,16 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
         onPointerSignal: _handlePointerSignal,
         child: RepaintBoundary(
           child: SizedBox(
-            width: widget.width.floorToDouble(),
-            height: widget.height.floorToDouble(),
+            width: widget.model.monitorWidth.floorToDouble(),
+            height: widget.model.monitorHeight.floorToDouble(),
             child: Center(
               child: AspectRatio(
-                aspectRatio: widget.width.toDouble() / widget.height.toDouble(),
+                aspectRatio: widget.model.monitorWidth.toDouble() /
+                    widget.model.monitorHeight.toDouble(),
                 child: Texture(
                   textureId: widget.model.textureID,
                   freeze: true,
-                  filterQuality: FilterQuality.high,
+                  filterQuality: FilterQuality.medium,
                 ),
               ),
             ),
@@ -137,7 +136,7 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
     }
 
     MirrorXCoreSDK.instance.endpointInput(
-      remoteDeviceId: widget.model.remoteDeviceID,
+      remoteDeviceId: widget.model.remoteDeviceId,
       event: InputEvent.mouse(
         MouseEvent.mouseDown(
           mouseKey,
@@ -172,7 +171,7 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
     }
 
     MirrorXCoreSDK.instance.endpointInput(
-      remoteDeviceId: widget.model.remoteDeviceID,
+      remoteDeviceId: widget.model.remoteDeviceId,
       event: InputEvent.mouse(
         MouseEvent.mouseUp(
           mouseKey,
@@ -203,7 +202,7 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
     }
 
     MirrorXCoreSDK.instance.endpointInput(
-      remoteDeviceId: widget.model.remoteDeviceID,
+      remoteDeviceId: widget.model.remoteDeviceId,
       event: InputEvent.mouse(
         MouseEvent.mouseMove(
           mouseKey,
@@ -218,7 +217,7 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
     log("pointer hover ${event.buttons} ${event.localPosition}");
 
     MirrorXCoreSDK.instance.endpointInput(
-      remoteDeviceId: widget.model.remoteDeviceID,
+      remoteDeviceId: widget.model.remoteDeviceId,
       event: InputEvent.mouse(
         MouseEvent.mouseMove(
           MouseKey.None,
@@ -232,7 +231,7 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
   void _handlePointerSignal(PointerSignalEvent event) {
     if (event is PointerScrollEvent) {
       MirrorXCoreSDK.instance.endpointInput(
-        remoteDeviceId: widget.model.remoteDeviceID,
+        remoteDeviceId: widget.model.remoteDeviceId,
         event: InputEvent.mouse(
           MouseEvent.mouseScrollWheel(event.scrollDelta.dy),
         ),
@@ -265,7 +264,7 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
     log("press $keyboardEvent");
 
     MirrorXCoreSDK.instance.endpointInput(
-      remoteDeviceId: widget.model.remoteDeviceID,
+      remoteDeviceId: widget.model.remoteDeviceId,
       event: InputEvent.keyboard(keyboardEvent),
     );
 

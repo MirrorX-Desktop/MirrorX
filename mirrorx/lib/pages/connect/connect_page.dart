@@ -13,8 +13,8 @@ class ConnectPage extends StatelessWidget {
       children: [
         DecoratedBox(
           decoration: const BoxDecoration(
-              border:
-                  Border(right: BorderSide(color: Colors.black, width: 1.0))),
+            border: Border(right: BorderSide(color: Colors.black, width: 1.0)),
+          ),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 26, 16, 0),
             child: Column(

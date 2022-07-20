@@ -36,7 +36,7 @@ class _DevicePasswordFieldState extends State<DevicePasswordField> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  Tr.of(context).connectPagePasswordTitle,
+                  tr.connectPagePasswordTitle,
                   style: const TextStyle(fontSize: 27),
                 ),
                 _buildTopButton(),
@@ -112,15 +112,15 @@ class _DevicePasswordFieldState extends State<DevicePasswordField> {
             autovalidateMode: AutovalidateMode.always,
             validator: (text) {
               if (text == null || text.isEmpty || text.length < 8) {
-                return Tr.of(context).connectPagePasswordValidationErrorLength;
+                return tr.connectPagePasswordValidationErrorLength;
               }
 
               if (!RegExp(r'[A-Z]').hasMatch(text)) {
-                return Tr.of(context).connectPagePasswordValidationErrorUpper;
+                return tr.connectPagePasswordValidationErrorUpper;
               }
 
               if (!RegExp(r'[@#$%^*?!=+<>(){}]').hasMatch(text)) {
-                return Tr.of(context).connectPagePasswordValidationErrorSpecial(
+                return tr.connectPagePasswordValidationErrorSpecial(
                   r'@#$%^*?!=+<>(){}',
                 );
               }
@@ -167,8 +167,8 @@ class _DevicePasswordFieldState extends State<DevicePasswordField> {
       splashRadius: 20,
       hoverColor: Colors.yellow,
       tooltip: _isEditing
-          ? Tr.of(context).connectPagePasswordButtonCommitTooltip
-          : Tr.of(context).connectPagePasswordButtonEditTooltip,
+          ? tr.connectPagePasswordButtonCommitTooltip
+          : tr.connectPagePasswordButtonEditTooltip,
     );
   }
 
@@ -192,10 +192,10 @@ class _DevicePasswordFieldState extends State<DevicePasswordField> {
               ? Icons.visibility_off
               : Icons.visibility),
       tooltip: _isEditing
-          ? Tr.of(context).connectPagePasswordButtonRandomGenerateTooltip
+          ? tr.connectPagePasswordButtonRandomGenerateTooltip
           : _isVisible
-              ? Tr.of(context).connectPagePasswordVisibilityToggleHideTooltip
-              : Tr.of(context).connectPagePasswordVisibilityToggleShowTooltip,
+              ? tr.connectPagePasswordVisibilityToggleHideTooltip
+              : tr.connectPagePasswordVisibilityToggleShowTooltip,
     );
   }
 

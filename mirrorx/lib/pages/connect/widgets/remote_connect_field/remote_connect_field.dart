@@ -3,13 +3,17 @@ import 'dart:developer';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:mirrorx/env/langs/tr.dart';
+import 'package:mirrorx/env/sdk/mirrorx_core.dart';
 import 'package:mirrorx/env/sdk/mirrorx_core_sdk.dart';
+import 'package:mirrorx/env/utility/dialog.dart';
 import 'package:mirrorx/model/desktop.dart';
+import 'package:mirrorx/pages/connect/widgets/connect_progress_dialog/connect_progress_dialog.dart';
 import 'package:mirrorx/pages/connect/widgets/remote_connect_field/digit_input.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mirrorx/pages/desktop/desktop_page.dart';
 import 'package:mirrorx/state/desktop_manager/desktop_manager_cubit.dart';
+import 'package:mirrorx/state/navigator_key.dart';
 import 'package:mirrorx/state/page_manager/page_manager_cubit.dart';
 import 'package:mirrorx/state/profile/profile_state_cubit.dart';
 import 'package:texture_render/texture_render.dart';
@@ -25,6 +29,7 @@ class _RemoteConnectFieldState extends State<RemoteConnectField> {
   final List<TextEditingController> _textControllers = [];
   late FocusScopeNode _focusScopeNode;
   bool _connectButtonDisabled = true;
+  bool _connectHandshake = false;
 
   @override
   void initState() {
@@ -85,25 +90,20 @@ class _RemoteConnectFieldState extends State<RemoteConnectField> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  Tr.of(context).connectPageConnectRemoteTitle,
+                  tr.connectPageConnectRemoteTitle,
                   style: const TextStyle(fontSize: 27),
                 ),
-                IconButton(
-                  onPressed: _connectButtonDisabled
-                      ? null
-                      : () {
-                          _connect(
-                            context.read<PageManagerCubit>(),
-                            context.read<DesktopManagerCubit>(),
-                          );
-                        },
-                  icon: const Icon(Icons.login),
-                  splashRadius: 20,
-                  hoverColor: Colors.yellow,
-                  disabledColor: Colors.grey,
-                  tooltip: Tr.of(context)
-                      .connectPageConnectRemoteButtonConnectTooltip,
-                ),
+                _connectHandshake
+                    ? const CircularProgressIndicator()
+                    : IconButton(
+                        onPressed: _connectButtonDisabled ? null : _connect,
+                        icon: const Icon(Icons.login),
+                        splashRadius: 20,
+                        hoverColor: Colors.yellow,
+                        disabledColor: Colors.grey,
+                        tooltip:
+                            tr.connectPageConnectRemoteButtonConnectTooltip,
+                      ),
               ],
             ),
             Expanded(
@@ -152,103 +152,59 @@ class _RemoteConnectFieldState extends State<RemoteConnectField> {
     );
   }
 
-  void _connect(
-    PageManagerCubit pageManagerCubit,
-    DesktopManagerCubit desktopManagerCubit,
-  ) async {
+  void _connect() async {
+    _updateHandshakeState(true);
+
+    final remoteDeviceId = _textControllers.map((e) => e.text).join();
+    log(remoteDeviceId);
     try {
-      final remoteDeviceID =
-          _textControllers.map((e) => e.text).toList().join();
+      final success = await MirrorXCoreSDK.instance
+          .signalingConnect(remoteDeviceId: remoteDeviceId);
 
-      log("remote device id: $remoteDeviceID");
-
-      // handshake with remote device
-      await MirrorXCoreSDK.instance
-          .signalingConnect(remoteDeviceId: remoteDeviceID);
-
-      final password = await _popupInputPasswordDialog();
-      if (password == null || password.isEmpty) {
-        return;
-      }
-
-      // auth password
-      await MirrorXCoreSDK.instance.signalingConnectionKeyExchange(
-          remoteDeviceId: remoteDeviceID, password: password);
-
-      // switch to desktop page
-      final resp = await TextureRender.instance.registerTexture();
-
-      desktopManagerCubit.addDesktop(
-        DesktopModel(
-          remoteDeviceID: remoteDeviceID,
-          textureID: resp.textureID,
-          videoTexturePointer: resp.videoTexturePointer,
-          updateFrameCallbackPointer: resp.updateFrameCallbackPointer,
-        ),
-      );
-
-      pageManagerCubit.switchPage(remoteDeviceID);
-    } catch (e) {
-      showDialog(
-          context: context,
-          builder: (context) {
-            return AlertDialog(
-              title: const Text(
-                "MirrorX",
-                textAlign: TextAlign.center,
-              ),
-              content: Text(Tr.of(context).dialogConnectRemoteErrorPrefix(e)),
-              actions: <Widget>[
-                TextButton(
-                  child: Text(Tr.of(context).dialogOK),
-                  onPressed: () => Navigator.of(context).pop(), //关闭对话框
-                ),
-              ],
-            );
-          });
-      log("error: $e");
-    }
-  }
-
-  Future<String?> _popupInputPasswordDialog() {
-    final textController = TextEditingController();
-    return showGeneralDialog<String?>(
-      context: context,
-      pageBuilder: (context, animationValue1, animationValue2) {
-        return AlertDialog(
-          title: const Text("MirrorX", textAlign: TextAlign.center),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(Tr.of(context).dialogContentInputDevicePassword),
-              TextField(
-                textAlign: TextAlign.center,
-                textAlignVertical: TextAlignVertical.center,
-                controller: textController,
-                maxLines: 1,
-                maxLength: 8,
-                keyboardType: TextInputType.text,
-              ),
-            ],
-          ),
-          actions: <Widget>[
+      if (!success) {
+        _updateHandshakeState(false);
+        await popupDialog(
+          content: Text(tr.dialogConnectRemoteOffline),
+          actions: [
             TextButton(
-              child: Text(Tr.of(context).dialogOK),
               onPressed: () {
-                final value = textController.text;
-                textController.dispose();
-                Navigator.of(context).pop(value.isEmpty ? null : value);
+                navigatorKey.currentState?.pop(null);
               },
-            ),
-            TextButton(
-              child: Text(Tr.of(context).dialogCancel),
-              onPressed: () {
-                textController.dispose();
-                Navigator.of(context).pop(null);
-              },
-            ),
+              child: Text(tr.dialogOK),
+            )
           ],
         );
+        return;
+      }
+    } catch (e) {
+      _updateHandshakeState(false);
+      await popupDialog(
+          content: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(tr.dialogConnectRemoteError),
+              Text(e.toString()),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                navigatorKey.currentState?.pop(null);
+              },
+              child: Text(tr.dialogOK),
+            )
+          ]);
+      return;
+    }
+
+    _updateHandshakeState(false);
+
+    await showGeneralDialog(
+      context: context,
+      pageBuilder: (context, animationValue1, animationValue2) {
+        return StatefulBuilder(builder: (context, setter) {
+          return ConnectProgressStateDialog(remoteDeviceId: remoteDeviceId);
+        });
       },
       barrierDismissible: false,
       transitionBuilder: (context, animationValue1, animationValue2, child) {
@@ -262,6 +218,12 @@ class _RemoteConnectFieldState extends State<RemoteConnectField> {
       },
       transitionDuration: kThemeAnimationDuration * 2,
     );
+  }
+
+  void _updateHandshakeState(bool isHandshaking) {
+    setState(() {
+      _connectHandshake = isHandshaking;
+    });
   }
 
   @override

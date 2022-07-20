@@ -20,14 +20,7 @@ class MainPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MultiBlocProvider(
-      providers: [
-        BlocProvider(create: (context) => ProfileStateCubit()),
-        BlocProvider(create: (context) => PageManagerCubit()),
-        BlocProvider(create: (context) => DesktopManagerCubit()),
-      ],
-      child: const _LayoutView(),
-    );
+    return const _LayoutView();
   }
 }
 
@@ -103,7 +96,7 @@ class _LayoutPageBuilderState extends State<_LayoutPageBuilder>
       default:
         for (final desktopModel
             in context.read<DesktopManagerCubit>().state.desktopModels) {
-          if (desktopModel.remoteDeviceID == pageTag) {
+          if (desktopModel.remoteDeviceId == pageTag) {
             return DesktopPage(model: desktopModel);
           }
         }

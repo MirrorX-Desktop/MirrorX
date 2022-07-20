@@ -21,31 +21,31 @@ class NavigationMenu extends StatelessWidget {
               _NavigationMenuItem(
                 pageTag: "Connect",
                 icon: Icons.screen_share,
-                title: Tr.of(context).connectPageTitle,
+                title: tr.connectPageTitle,
                 isStatic: true,
               ),
               _NavigationMenuItem(
                 pageTag: "Intranet",
                 icon: Icons.lan,
-                title: Tr.of(context).intranetPageTitle,
+                title: tr.intranetPageTitle,
                 isStatic: true,
               ),
               _NavigationMenuItem(
                 pageTag: "Files",
                 icon: Icons.drive_file_move_rtl,
-                title: Tr.of(context).filesPageTitle,
+                title: tr.filesPageTitle,
                 isStatic: true,
               ),
               _NavigationMenuItem(
                 pageTag: "History",
                 icon: Icons.history,
-                title: Tr.of(context).historyPageTitle,
+                title: tr.historyPageTitle,
                 isStatic: true,
               ),
               _NavigationMenuItem(
                 pageTag: "Settings",
                 icon: Icons.settings,
-                title: Tr.of(context).settingsPageTitle,
+                title: tr.settingsPageTitle,
                 isStatic: true,
               ),
             ],
@@ -70,9 +70,9 @@ class NavigationMenu extends StatelessWidget {
                       (model) => Padding(
                         padding: const EdgeInsets.symmetric(vertical: 2.0),
                         child: _NavigationMenuItem(
-                          pageTag: model.remoteDeviceID,
+                          pageTag: model.remoteDeviceId,
                           icon: Icons.apple,
-                          title: model.remoteDeviceID,
+                          title: model.remoteDeviceId,
                           isStatic: false,
                         ),
                       ),
