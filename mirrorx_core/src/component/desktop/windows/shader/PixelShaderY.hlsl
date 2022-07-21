@@ -30,15 +30,15 @@ static const float3x1 RGBtoYCoeffVector =
 	// for BT.709 HDTV color conversion matrix
 	// https://mymusing.co/bt-709-yuv-to-rgb-conversion-color/
 	// Section: Computer RGB To YCbCr
-	1.0 / 256.0 * 46.742,
-	1.0 / 256.0 * 157.243,
-	1.0 / 256.0 * 15.874,
+	0.1826f, // 0.182585f, // 0.2126f * 219 / 255,
+	0.6142f, // 0.614230f, //0.7152f,
+	0.0722f, // 0.062007f, //0.0722f,
 };
 
 float CalculateY(float3 rgb)
 {
 	float y = mul(rgb, RGBtoYCoeffVector);
-	y += 0.062745f;// 0.062745 = 16/255
+	y += 0.0625f;
 	return saturate(y);
 }
 

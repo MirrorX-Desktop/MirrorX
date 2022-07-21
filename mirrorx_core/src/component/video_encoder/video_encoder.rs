@@ -59,9 +59,9 @@ impl VideoEncoder {
             (*codec_ctx).pix_fmt = AV_PIX_FMT_NV12;
             (*codec_ctx).flags |= AV_CODEC_FLAG2_LOCAL_HEADER;
             (*codec_ctx).color_range = AVCOL_RANGE_JPEG;
-            // (*codec_ctx).color_primaries = AVCOL_PRI_BT709;
-            // (*codec_ctx).color_trc = AVCOL_TRC_BT709;
-            // (*codec_ctx).colorspace = AVCOL_SPC_BT709;
+            (*codec_ctx).color_primaries = AVCOL_PRI_BT709;
+            (*codec_ctx).color_trc = AVCOL_TRC_BT709;
+            (*codec_ctx).colorspace = AVCOL_SPC_BT709;
 
             for (k, v) in options {
                 Self::set_opt(codec_ctx, k, v, 0)?;
