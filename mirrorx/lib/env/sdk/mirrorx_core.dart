@@ -80,6 +80,11 @@ abstract class MirrorXCore {
       dynamic hint});
 
   FlutterRustBridgeTaskConstMeta get kEndpointInputConstMeta;
+
+  Stream<void> endpointCloseNotify(
+      {required String remoteDeviceId, dynamic hint});
+
+  FlutterRustBridgeTaskConstMeta get kEndpointCloseNotifyConstMeta;
 }
 
 class DisplayInfo {
@@ -524,6 +529,23 @@ class MirrorXCoreImpl extends FlutterRustBridgeBase<MirrorXCoreWire>
       const FlutterRustBridgeTaskConstMeta(
         debugName: "endpoint_input",
         argNames: ["remoteDeviceId", "event"],
+      );
+
+  Stream<void> endpointCloseNotify(
+          {required String remoteDeviceId, dynamic hint}) =>
+      executeStream(FlutterRustBridgeTask(
+        callFfi: (port_) => inner.wire_endpoint_close_notify(
+            port_, _api2wire_String(remoteDeviceId)),
+        parseSuccessData: _wire2api_unit,
+        constMeta: kEndpointCloseNotifyConstMeta,
+        argValues: [remoteDeviceId],
+        hint: hint,
+      ));
+
+  FlutterRustBridgeTaskConstMeta get kEndpointCloseNotifyConstMeta =>
+      const FlutterRustBridgeTaskConstMeta(
+        debugName: "endpoint_close_notify",
+        argNames: ["remoteDeviceId"],
       );
 
   // Section: api2wire
@@ -1002,6 +1024,23 @@ class MirrorXCoreWire implements FlutterRustBridgeWireBase {
       void Function(
           int, ffi.Pointer<wire_uint_8_list>, ffi.Pointer<wire_InputEvent>)>();
 
+  void wire_endpoint_close_notify(
+    int port_,
+    ffi.Pointer<wire_uint_8_list> remote_device_id,
+  ) {
+    return _wire_endpoint_close_notify(
+      port_,
+      remote_device_id,
+    );
+  }
+
+  late final _wire_endpoint_close_notifyPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Void Function(ffi.Int64,
+              ffi.Pointer<wire_uint_8_list>)>>('wire_endpoint_close_notify');
+  late final _wire_endpoint_close_notify = _wire_endpoint_close_notifyPtr
+      .asFunction<void Function(int, ffi.Pointer<wire_uint_8_list>)>();
+
   ffi.Pointer<wire_InputEvent> new_box_autoadd_input_event_0() {
     return _new_box_autoadd_input_event_0();
   }
@@ -1267,6 +1306,8 @@ class wire_InputEvent extends ffi.Struct {
 typedef DartPostCObjectFnType = ffi.Pointer<
     ffi.NativeFunction<ffi.Bool Function(DartPort, ffi.Pointer<ffi.Void>)>>;
 typedef DartPort = ffi.Int64;
+
+const int BPP = 4;
 
 const int kVK_ANSI_A = 0;
 

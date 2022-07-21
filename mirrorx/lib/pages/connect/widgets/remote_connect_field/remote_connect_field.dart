@@ -164,12 +164,10 @@ class _RemoteConnectFieldState extends State<RemoteConnectField> {
       if (!success) {
         _updateHandshakeState(false);
         await popupDialog(
-          content: Text(tr.dialogConnectRemoteOffline),
-          actions: [
+          contentBuilder: (_) => Text(tr.dialogConnectRemoteOffline),
+          actionBuilder: (navigatorState) => [
             TextButton(
-              onPressed: () {
-                navigatorKey.currentState?.pop(null);
-              },
+              onPressed: navigatorState.pop,
               child: Text(tr.dialogOK),
             )
           ],
@@ -179,21 +177,20 @@ class _RemoteConnectFieldState extends State<RemoteConnectField> {
     } catch (e) {
       _updateHandshakeState(false);
       await popupDialog(
-          content: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(tr.dialogConnectRemoteError),
-              Text(e.toString()),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                navigatorKey.currentState?.pop(null);
-              },
-              child: Text(tr.dialogOK),
-            )
-          ]);
+        contentBuilder: (_) => Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(tr.dialogConnectRemoteError),
+            Text(e.toString()),
+          ],
+        ),
+        actionBuilder: (navigatorState) => [
+          TextButton(
+            onPressed: navigatorState.pop,
+            child: Text(tr.dialogOK),
+          )
+        ],
+      );
       return;
     }
 

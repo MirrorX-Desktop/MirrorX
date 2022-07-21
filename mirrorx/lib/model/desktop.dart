@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:mirrorx/env/sdk/mirrorx_core.dart';
 
 class DesktopModel {
@@ -7,6 +9,7 @@ class DesktopModel {
   final int textureID;
   final int videoTexturePointer;
   final int updateFrameCallbackPointer;
+  final StreamSubscription<void> subscription;
 
   DesktopModel({
     required this.remoteDeviceId,
@@ -15,5 +18,6 @@ class DesktopModel {
     required this.textureID,
     required this.videoTexturePointer,
     required this.updateFrameCallbackPointer,
+    required this.subscription,
   });
 }

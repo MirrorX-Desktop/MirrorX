@@ -226,6 +226,10 @@ impl EndPoint {
     pub fn monitor(&self) -> Option<&Monitor> {
         self.monitor.get()
     }
+
+    pub fn subscribe_exit(&self) -> Receiver<()> {
+        self.exit_rx.clone()
+    }
 }
 
 impl EndPoint {

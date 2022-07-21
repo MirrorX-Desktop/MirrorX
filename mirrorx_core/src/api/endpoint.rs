@@ -81,3 +81,14 @@ pub async fn input(remote_device_id: String, event: InputEvent) -> Result<(), Mi
 
     endpoint.trigger_input(Input { event }).await
 }
+
+pub fn register_close_notificaton(
+    remote_device_id: String,
+) -> Result<crossbeam::channel::Receiver<()>, MirrorXError> {
+    let endpoint = match crate::service::endpoint::ENDPOINTS.get(&remote_device_id) {
+        Some(pair) => pair,
+        None => return Err(MirrorXError::EndPointNotFound(remote_device_id)),
+    };
+
+    Ok(endpoint.subscribe_exit())
+}

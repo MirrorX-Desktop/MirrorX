@@ -6,8 +6,12 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mirrorx/env/langs/tr.dart';
 import 'package:mirrorx/env/sdk/mirrorx_core.dart';
 import 'package:mirrorx/env/sdk/mirrorx_core_sdk.dart';
+import 'package:mirrorx/env/utility/dialog.dart';
 import 'package:mirrorx/model/desktop.dart';
 import 'package:mirrorx/pages/desktop/widgets/desktop_render_box/desktop_render_box.dart';
+import 'package:mirrorx/state/desktop_manager/desktop_manager_cubit.dart';
+import 'package:mirrorx/state/navigator_key.dart';
+import 'package:mirrorx/state/page_manager/page_manager_cubit.dart';
 import 'package:texture_render/model.dart';
 import 'package:texture_render/texture_render_platform_interface.dart';
 import 'package:flutter/foundation.dart';
@@ -26,7 +30,30 @@ class _DesktopPageState extends State<DesktopPage> {
 
   @override
   Widget build(BuildContext context) {
-    return _buildDesktopSurface();
+    return BlocListener<DesktopManagerCubit, DesktopManagerState>(
+      listenWhen: ((previous, current) {
+        return !previous.closedDesktops.contains(widget.model.remoteDeviceId) &&
+            current.closedDesktops.contains(widget.model.remoteDeviceId);
+      }),
+      listener: (context, state) {
+        context
+            .read<DesktopManagerCubit>()
+            .removeDesktop(widget.model.remoteDeviceId);
+
+        context.read<PageManagerCubit>().switchPage("Connect");
+
+        popupDialog(
+          contentBuilder: (_) => Text("远程设备中断了连接", textAlign: TextAlign.center),
+          actionBuilder: (navigatorState) => [
+            TextButton(
+              onPressed: navigatorState.pop,
+              child: Text(tr.dialogOK),
+            ),
+          ],
+        );
+      },
+      child: _buildDesktopSurface(),
+    );
   }
 
   Widget _buildDesktopSurface() {

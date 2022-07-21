@@ -14,34 +14,20 @@ class DesktopManagerCubit extends Cubit<DesktopManagerState> {
   }
 
   void removeDesktop(String remoteDeviceID) {
-    emit(state.copyWith(
+    emit(
+      state.copyWith(
         desktopModels: List.from(state.desktopModels)
-          ..removeWhere((e) => e.remoteDeviceId != remoteDeviceID)));
+          ..removeWhere((e) => e.remoteDeviceId == remoteDeviceID),
+        closedDesktops: List.from(state.closedDesktops)..remove(remoteDeviceID),
+      ),
+    );
+  }
+
+  void markDeskopClosed(String remoteDeviceID) {
+    if (!state.closedDesktops.contains(remoteDeviceID)) {
+      emit(state.copyWith(
+          closedDesktops: List.from(state.closedDesktops)
+            ..add(remoteDeviceID)));
+    }
   }
 }
-
-// final removePageIndex = state.desktopModels
-//         .indexWhere((element) => element.remoteDeviceID == desktopPageTag);
-//     if (removePageIndex == -1) {
-//       return;
-//     }
-
-//     String switchPageTag;
-//     if (state.desktopModels.length == 1) {
-//       switchPageTag = "Connect";
-//     } else {
-//       if (removePageIndex == state.desktopModels.length - 1) {
-//         // remove the last page, switch to the previous page
-//         switchPageTag = state.desktopModels[removePageIndex - 1].remoteDeviceID;
-//       } else {
-//         // remove the first or middle page, switch to the next page
-//         switchPageTag = state.desktopModels[removePageIndex + 1].remoteDeviceID;
-//       }
-//     }
-
-//     switchPage(switchPageTag);
-
-//     emit(state.copyWith(
-//         desktopModels: List.from(state.desktopModels)
-//           ..removeWhere(
-//               (element) => element.remoteDeviceID == desktopPageTag)));

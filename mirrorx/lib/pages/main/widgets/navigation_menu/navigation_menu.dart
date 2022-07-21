@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:marquee/marquee.dart';
 import 'package:mirrorx/env/langs/tr.dart';
 import 'package:flutter/material.dart';
@@ -23,30 +25,35 @@ class NavigationMenu extends StatelessWidget {
                 icon: Icons.screen_share,
                 title: tr.connectPageTitle,
                 isStatic: true,
+                isClosed: false,
               ),
               _NavigationMenuItem(
                 pageTag: "Intranet",
                 icon: Icons.lan,
                 title: tr.intranetPageTitle,
                 isStatic: true,
+                isClosed: false,
               ),
               _NavigationMenuItem(
                 pageTag: "Files",
                 icon: Icons.drive_file_move_rtl,
                 title: tr.filesPageTitle,
                 isStatic: true,
+                isClosed: false,
               ),
               _NavigationMenuItem(
                 pageTag: "History",
                 icon: Icons.history,
                 title: tr.historyPageTitle,
                 isStatic: true,
+                isClosed: false,
               ),
               _NavigationMenuItem(
                 pageTag: "Settings",
                 icon: Icons.settings,
                 title: tr.settingsPageTitle,
                 isStatic: true,
+                isClosed: false,
               ),
             ],
           ),
@@ -74,6 +81,8 @@ class NavigationMenu extends StatelessWidget {
                           icon: Icons.apple,
                           title: model.remoteDeviceId,
                           isStatic: false,
+                          isClosed: state.closedDesktops
+                              .contains(model.remoteDeviceId),
                         ),
                       ),
                     )
@@ -94,12 +103,14 @@ class _NavigationMenuItem extends StatefulWidget {
     required this.icon,
     required this.title,
     required this.isStatic,
+    required this.isClosed,
   }) : super(key: key);
 
   final String pageTag;
   final IconData icon;
   final String title;
   final bool isStatic;
+  final bool isClosed;
 
   @override
   _NavigationMenuItemState createState() => _NavigationMenuItemState();
@@ -205,7 +216,28 @@ class _NavigationMenuItemState extends State<_NavigationMenuItem>
                           Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(widget.icon, color: color),
+                              Stack(
+                                alignment: AlignmentDirectional.center,
+                                children: [
+                                  Icon(
+                                    widget.icon,
+                                    color: color,
+                                    size: 32,
+                                  ),
+                                  Visibility(
+                                    visible: widget.isClosed,
+                                    child: const Positioned(
+                                      right: 18,
+                                      bottom: 18,
+                                      child: Icon(
+                                        Icons.desktop_access_disabled,
+                                        size: 16,
+                                        color: Colors.red,
+                                      ),
+                                    ),
+                                  )
+                                ],
+                              ),
                               widget.isStatic
                                   ? Text(widget.title,
                                       style: TextStyle(

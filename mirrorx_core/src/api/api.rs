@@ -3,6 +3,7 @@ use crate::service::endpoint::message::{
 };
 use crate::utility::runtime::TOKIO_RUNTIME;
 use crate::{api, service::endpoint::message::StartMediaTransmissionResponse};
+use futures::FutureExt;
 use std::sync::{atomic::AtomicBool, Once};
 use tracing::info;
 
@@ -120,4 +121,15 @@ pub fn endpoint_input(remote_device_id: String, event: InputEvent) -> anyhow::Re
     async_block_on! {
         api::endpoint::input(remote_device_id, event)
     }
+}
+
+pub fn endpoint_close_notify(
+    remote_device_id: String,
+    sink: flutter_rust_bridge::StreamSink<()>,
+) -> anyhow::Result<()> {
+    let rx = api::endpoint::register_close_notificaton(remote_device_id)
+        .map_err(|err| anyhow::anyhow!(err))?;
+    let _ = rx.recv();
+    sink.add(());
+    Ok(())
 }

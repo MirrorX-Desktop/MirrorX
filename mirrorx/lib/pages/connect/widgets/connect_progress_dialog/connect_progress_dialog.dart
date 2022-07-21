@@ -106,7 +106,7 @@ class _ConnectProgressStateDialogState
       ),
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
-          return _buildAlertDialog(const CircularProgressIndicator());
+          return _buildProgressAndTip("正在进行端到端密钥交换");
         }
 
         if (snapshot.hasError) {
@@ -140,7 +140,7 @@ class _ConnectProgressStateDialogState
           .endpointGetDisplayInfo(remoteDeviceId: widget.remoteDeviceId),
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
-          return _buildAlertDialog(const CircularProgressIndicator());
+          return _buildProgressAndTip("正在获取远程设备屏幕列表");
         }
 
         if (snapshot.hasError) {
@@ -200,10 +200,10 @@ class _ConnectProgressStateDialogState
 
   Widget _buildPrepareMediaPanel() {
     return FutureBuilder(
-      future: prepareMediaTransmission(),
+      future: prepareMediaTransmission(context.read<DesktopManagerCubit>()),
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
-          return _buildAlertDialog(const CircularProgressIndicator());
+          return _buildProgressAndTip("准备视频数据中");
         }
 
         if (snapshot.hasError) {
@@ -239,7 +239,8 @@ class _ConnectProgressStateDialogState
     );
   }
 
-  Future<DesktopModel> prepareMediaTransmission() async {
+  Future<DesktopModel> prepareMediaTransmission(
+      DesktopManagerCubit cubit) async {
     final registerTextureResponse =
         await TextureRender.instance.registerTexture();
 
@@ -254,6 +255,18 @@ class _ConnectProgressStateDialogState
           registerTextureResponse.updateFrameCallbackPointer,
     );
 
+    final closeNotifyStream = MirrorXCoreSDK.instance
+        .endpointCloseNotify(remoteDeviceId: widget.remoteDeviceId);
+
+    final subscription = closeNotifyStream.listen(
+      (event) {
+        cubit.markDeskopClosed(widget.remoteDeviceId);
+      },
+      onDone: () {
+        cubit.markDeskopClosed(widget.remoteDeviceId);
+      },
+    );
+
     return DesktopModel(
       remoteDeviceId: widget.remoteDeviceId,
       monitorWidth: startMediaTransmissionResponse.screenWidth,
@@ -262,6 +275,7 @@ class _ConnectProgressStateDialogState
       videoTexturePointer: registerTextureResponse.videoTexturePointer,
       updateFrameCallbackPointer:
           registerTextureResponse.updateFrameCallbackPointer,
+      subscription: subscription,
     );
   }
 
@@ -271,5 +285,24 @@ class _ConnectProgressStateDialogState
       content: content,
       actions: actions,
     );
+  }
+
+  Widget _buildProgressAndTip(String tip) {
+    return _buildAlertDialog(SizedBox(
+      width: 80,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const CircularProgressIndicator(),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Text(
+              tip,
+              textAlign: TextAlign.center,
+            ),
+          )
+        ],
+      ),
+    ));
   }
 }
