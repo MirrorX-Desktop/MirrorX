@@ -3,8 +3,8 @@ use super::YuvConstants;
 extern "C" {
     // pub static kYuvI601Constants: c_void;
     // pub static kYuvJPEGConstants: c_void;
-    pub static kYvuH709Constants: YuvConstants;
-    pub static kYvuF709Constants: YuvConstants;
+    pub static kYuvH709Constants: YuvConstants;
+    pub static kYuvF709Constants: YuvConstants;
     // pub static kYuv2020Constants: c_void;
     // pub static kYuvV2020Constants: c_void;
 }

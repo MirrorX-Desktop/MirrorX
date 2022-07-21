@@ -83,7 +83,7 @@ impl VideoDecoder {
             (*decoder.codec_ctx).pix_fmt = AV_PIX_FMT_NV12;
             (*decoder.codec_ctx).color_range = AVCOL_RANGE_JPEG;
             // (*decoder.codec_ctx).color_primaries = AVCOL_PRI_BT709;
-            // (*decoder.codec_ctx).color_trc = AVCOL_TRC_GAMMA22;
+            // (*decoder.codec_ctx).color_trc = AVCOL_TRC_BT709;
             // (*decoder.codec_ctx).colorspace = AVCOL_SPC_BT709;
             (*decoder.codec_ctx).flags |= AV_CODEC_FLAG_LOW_DELAY;
 
@@ -279,7 +279,7 @@ impl VideoDecoder {
             (*self.hw_decode_frame).linesize[1] as isize,
             abgr_frame.as_mut_ptr(),
             ((*self.hw_decode_frame).width as isize) * 4,
-            &kYvuF709Constants,
+            &kYuvH709Constants,
             (*self.hw_decode_frame).width as isize,
             (*self.hw_decode_frame).height as isize,
         );
