@@ -74,7 +74,7 @@ fn test_capture_and_encode_and_decode() -> anyhow::Result<()> {
         match decoded_frame_rx.recv() {
             Ok(frame) => {
                 #[cfg(not(target_os = "macos"))]
-                info!(len=?frame.0.len(),"decodec frame size");
+                info!(len=?frame.buffer.len(),"decodec frame size");
             }
             Err(err) => panic!("receive decoded frame failed ({})", err),
         }
