@@ -35,7 +35,7 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
 
   @override
   void dispose() {
-    HardwareKeyboard.instance.addHandler(_handleKeyboardEvent);
+    HardwareKeyboard.instance.removeHandler(_handleKeyboardEvent);
     super.dispose();
   }
 
