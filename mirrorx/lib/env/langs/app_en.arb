@@ -7,6 +7,8 @@
     "dialogConnectRemoteError": "An error occurs while connecting to the remote device",
     "dialogConnectRemoteOffline": "The remote device is offline",
     "dialogContentInputDevicePassword": "Please enter the password for the remote device",
+    "dialogContentSelectMonitor": "Please select the monitor",
+    "dialogContentConnectionDisconnected": "The remote device connect is disconnected",
     "connectPageTitle": "Connect",
     "connectPageDeviceIDTitle": "Device ID",
     "connectPageDeviceIDButtonCopyTooltip": "Copy Device ID",
@@ -29,9 +31,17 @@
     },
     "connectPageConnectRemoteTitle": "Connect Remote",
     "connectPageConnectRemoteButtonConnectTooltip": "Connect to Remote",
+    "connectPageConnectProgressTipKeyExchange": "E2EE KeyExchange ...",
+    "connectPageConnectProgressTipKeyExchangeFailed": "E2EE KeyExchange Failed",
+    "connectPageConnectProgressTipListMonitors": "Listing Monitors ...",
+    "connectPageConnectProgressTipListMonitorsFailed": "List Monitors Failed",
+    "connectPageConnectProgressTipPrepareMedia": "Prepare Media ...",
+    "connectPageConnectProgressTipPrepareMediaFailed": "Prepare Media Failed",
     "intranetPageTitle": "Intranet",
     "filesPageTitle": "Files",
     "historyPageTitle": "History",
     "settingsPageTitle": "Settings",
-    "desktopPagePreparing": "Preparing Desktop"
+    "desktopPagePreparing": "Preparing Desktop",
+    "desktopPageToolbarButtonTooltipScale": "Scale Screen",
+    "desktopPageToolbarButtonTooltipNoneScale": "Original Size"
 }

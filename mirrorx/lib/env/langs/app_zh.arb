@@ -7,6 +7,8 @@
     "dialogConnectRemoteError": "连接远程设备时发生了一个错误",
     "dialogConnectRemoteOffline": "远程设备不在线",
     "dialogContentInputDevicePassword": "请输入远程设备密码",
+    "dialogContentSelectMonitor": "请选择屏幕",
+    "dialogContentConnectionDisconnected": "远程设备的连接已断开",
     "connectPageTitle": "连接",
     "connectPageDeviceIDTitle": "设备ID",
     "connectPageDeviceIDButtonCopyTooltip": "拷贝设备ID",
@@ -29,9 +31,16 @@
     },
     "connectPageConnectRemoteTitle": "连接远程设备",
     "connectPageConnectRemoteButtonConnectTooltip": "连接到远程设备",
+    "connectPageConnectProgressTipKeyExchange": "端到端密钥交换中 ...",
+    "connectPageConnectProgressTipKeyExchangeFailed": "端到端密钥交换失败",
+    "connectPageConnectProgressTipListMonitors": "获取屏幕中 ...",
+    "connectPageConnectProgressTipListMonitorsFailed": "获取屏幕失败",
+    "connectPageConnectProgressTipPrepareMedia": "准备媒体数据中 ...",
+    "connectPageConnectProgressTipPrepareMediaFailed": "准备媒体数据失败",
     "intranetPageTitle": "局域网",
     "filesPageTitle": "文件",
     "historyPageTitle": "历史",
     "settingsPageTitle": "设置",
-    "desktopPagePreparing": "桌面准备中"
+    "desktopPageToolbarButtonTooltipScale": "缩放屏幕",
+    "desktopPageToolbarButtonTooltipNoneScale": "原始分辨率"
 }

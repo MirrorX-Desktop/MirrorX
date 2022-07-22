@@ -35,7 +35,6 @@ class _ConnectProgressStateDialogState
     extends State<ConnectProgressStateDialog> {
   late TextEditingController _textController;
   late ConnectStep _connectStep;
-  bool _visiable = true;
   DisplayInfo? _selectedDisplayInfo;
 
   @override
@@ -106,7 +105,8 @@ class _ConnectProgressStateDialogState
       ),
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
-          return _buildProgressAndTip("正在进行端到端密钥交换");
+          return _buildProgressAndTip(
+              tr.connectPageConnectProgressTipKeyExchange);
         }
 
         if (snapshot.hasError) {
@@ -114,7 +114,7 @@ class _ConnectProgressStateDialogState
             Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text("auth password has an error"),
+                Text(tr.connectPageConnectProgressTipKeyExchangeFailed),
                 Text(snapshot.error.toString())
               ],
             ),
@@ -140,7 +140,8 @@ class _ConnectProgressStateDialogState
           .endpointGetDisplayInfo(remoteDeviceId: widget.remoteDeviceId),
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
-          return _buildProgressAndTip("正在获取远程设备屏幕列表");
+          return _buildProgressAndTip(
+              tr.connectPageConnectProgressTipListMonitors);
         }
 
         if (snapshot.hasError) {
@@ -148,7 +149,7 @@ class _ConnectProgressStateDialogState
             Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text("auth password has an error"),
+                Text(tr.connectPageConnectProgressTipListMonitorsFailed),
                 Text(snapshot.error.toString())
               ],
             ),
@@ -175,7 +176,7 @@ class _ConnectProgressStateDialogState
       Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text("选择显示器"),
+          Text(tr.dialogContentSelectMonitor),
           ScreenShotSwiper(
             displays: resp.displays,
             selectCallback: (displayInfo) {
@@ -203,7 +204,8 @@ class _ConnectProgressStateDialogState
       future: prepareMediaTransmission(context.read<DesktopManagerCubit>()),
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
-          return _buildProgressAndTip("准备视频数据中");
+          return _buildProgressAndTip(
+              tr.connectPageConnectProgressTipPrepareMedia);
         }
 
         if (snapshot.hasError) {
@@ -211,7 +213,7 @@ class _ConnectProgressStateDialogState
             Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text("prepare media has an error"),
+                Text(tr.connectPageConnectProgressTipPrepareMediaFailed),
                 Text(snapshot.error.toString())
               ],
             ),

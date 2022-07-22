@@ -67,7 +67,7 @@ class _ScreenShotSwiperState extends State<ScreenShotSwiper> {
                             boxShadow: [
                               BoxShadow(
                                 color: Colors.black.withOpacity(0.1),
-                                blurRadius: 3,
+                                blurRadius: 1,
                                 spreadRadius: 1.2,
                               ),
                             ],

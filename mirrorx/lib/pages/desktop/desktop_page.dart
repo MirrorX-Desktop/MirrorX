@@ -43,7 +43,8 @@ class _DesktopPageState extends State<DesktopPage> {
         context.read<PageManagerCubit>().switchPage("Connect");
 
         popupDialog(
-          contentBuilder: (_) => Text("远程设备中断了连接", textAlign: TextAlign.center),
+          contentBuilder: (_) => Text(tr.dialogContentConnectionDisconnected,
+              textAlign: TextAlign.center),
           actionBuilder: (navigatorState) => [
             TextButton(
               onPressed: navigatorState.pop,
@@ -65,7 +66,9 @@ class _DesktopPageState extends State<DesktopPage> {
             // Text(widget.model.remoteDeviceID),
             // VerticalDivider(),
             Tooltip(
-              message: "Raw Resolution",
+              message: _fit == BoxFit.none
+                  ? tr.desktopPageToolbarButtonTooltipScale
+                  : tr.desktopPageToolbarButtonTooltipNoneScale,
               child: Container(
                 width: 36,
                 height: 36,
