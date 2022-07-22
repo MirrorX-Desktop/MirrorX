@@ -28,11 +28,9 @@ class App extends StatelessWidget {
       ],
       child: BlocBuilder<ProfileStateCubit, ProfileState>(
         builder: (context, state) {
-          log("${state.locale}");
-
           return MaterialApp(
             showPerformanceOverlay: false,
-            locale: state.locale,
+            locale: state.locale ?? ui.window.locale,
             debugShowCheckedModeBanner: false,
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,

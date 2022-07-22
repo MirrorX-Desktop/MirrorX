@@ -68,7 +68,6 @@ class ProfileStateCubit extends Cubit<ProfileState> {
   }
 
   void changeLocale(Locale? locale) {
-    log("change locale ${locale}");
     emit(state.copyWith(locale: locale));
   }
 }
