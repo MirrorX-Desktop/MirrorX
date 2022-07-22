@@ -24,19 +24,18 @@ macro_rules! async_block_on {
     }};
 }
 
-pub fn init(os_type: String, os_version: String, config_dir: String) -> anyhow::Result<()> {
+pub fn init(os_version: String, config_dir: String) -> anyhow::Result<()> {
     LOGGER_INIT_ONCE.call_once(|| {
         tracing_subscriber::fmt::init();
     });
 
-    info!(?os_type, ?os_version, ?config_dir, "init",);
+    info!(?os_version, ?config_dir, "init",);
 
     if INIT_SUCCESS.load(std::sync::atomic::Ordering::SeqCst) {
         return Ok(());
     }
 
-    crate::constants::OS_TYPE.get_or_init(|| os_type);
-    crate::constants::OS_VERSION.get_or_init(|| os_version);
+    crate::constants::os::OS_VERSION.get_or_init(|| os_version);
 
     api::config::init(config_dir)?;
     async_block_on!(api::signaling::init("192.168.0.101:28000"))?;

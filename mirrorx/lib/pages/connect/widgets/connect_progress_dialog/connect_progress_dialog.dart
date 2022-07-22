@@ -271,6 +271,7 @@ class _ConnectProgressStateDialogState
 
     return DesktopModel(
       remoteDeviceId: widget.remoteDeviceId,
+      osType: startMediaTransmissionResponse.osType,
       monitorWidth: startMediaTransmissionResponse.screenWidth,
       monitorHeight: startMediaTransmissionResponse.screenHeight,
       textureID: registerTextureResponse.textureID,

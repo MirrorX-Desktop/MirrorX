@@ -62,7 +62,7 @@ pub struct StartMediaTransmissionRequest {
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct StartMediaTransmissionResponse {
-    pub os_name: String,
+    pub os_type: crate::constants::os::OperatingSystemType,
     pub os_version: String,
     pub screen_width: u16,
     pub screen_height: u16,

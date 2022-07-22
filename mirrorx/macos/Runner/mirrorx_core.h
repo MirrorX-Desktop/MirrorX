@@ -328,7 +328,6 @@ typedef bool (*DartPostCObjectFnType)(DartPort port_id, void *message);
 #define kVK_JIS_Kana 104
 
 void wire_init(int64_t port_,
-               struct wire_uint_8_list *os_type,
                struct wire_uint_8_list *os_version,
                struct wire_uint_8_list *config_dir);
 

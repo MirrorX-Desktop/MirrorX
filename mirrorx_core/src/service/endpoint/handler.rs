@@ -52,11 +52,8 @@ pub async fn handle_start_media_transmission_request(
         .await?;
 
     let reply = StartMediaTransmissionResponse {
-        os_name: crate::constants::OS_TYPE
-            .get()
-            .map(|v| v.clone())
-            .unwrap_or(String::from("unknown")),
-        os_version: crate::constants::OS_VERSION
+        os_type: crate::constants::os::OS_TYPE.clone(),
+        os_version: crate::constants::os::OS_VERSION
             .get()
             .map(|v| v.clone())
             .unwrap_or(String::from("unknown")),

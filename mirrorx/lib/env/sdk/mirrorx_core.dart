@@ -16,10 +16,7 @@ part 'mirrorx_core.freezed.dart';
 
 abstract class MirrorXCore {
   Future<void> init(
-      {required String osType,
-      required String osVersion,
-      required String configDir,
-      dynamic hint});
+      {required String osVersion, required String configDir, dynamic hint});
 
   FlutterRustBridgeTaskConstMeta get kInitConstMeta;
 
@@ -243,6 +240,15 @@ enum KeyboardKey {
   Fn,
 }
 
+enum LinuxType {
+  CentOS,
+  Fedora,
+  Redhat,
+  openSUSE,
+  Ubuntu,
+  Other,
+}
+
 @freezed
 class MouseEvent with _$MouseEvent {
   const factory MouseEvent.mouseUp(
@@ -274,8 +280,20 @@ enum MouseKey {
   SideBack,
 }
 
+@freezed
+class OperatingSystemType with _$OperatingSystemType {
+  const factory OperatingSystemType.windows() = Windows;
+  const factory OperatingSystemType.macOs() = macOS;
+  const factory OperatingSystemType.iOs() = iOS;
+  const factory OperatingSystemType.android() = Android;
+  const factory OperatingSystemType.linux(
+    LinuxType field0,
+  ) = Linux;
+  const factory OperatingSystemType.unknown() = Unknown;
+}
+
 class StartMediaTransmissionResponse {
-  final String osName;
+  final OperatingSystemType osType;
   final String osVersion;
   final int screenWidth;
   final int screenHeight;
@@ -283,7 +301,7 @@ class StartMediaTransmissionResponse {
   final String audioType;
 
   StartMediaTransmissionResponse({
-    required this.osName,
+    required this.osType,
     required this.osVersion,
     required this.screenWidth,
     required this.screenHeight,
@@ -300,23 +318,22 @@ class MirrorXCoreImpl extends FlutterRustBridgeBase<MirrorXCoreWire>
   MirrorXCoreImpl.raw(MirrorXCoreWire inner) : super(inner);
 
   Future<void> init(
-          {required String osType,
-          required String osVersion,
+          {required String osVersion,
           required String configDir,
           dynamic hint}) =>
       executeNormal(FlutterRustBridgeTask(
-        callFfi: (port_) => inner.wire_init(port_, _api2wire_String(osType),
-            _api2wire_String(osVersion), _api2wire_String(configDir)),
+        callFfi: (port_) => inner.wire_init(
+            port_, _api2wire_String(osVersion), _api2wire_String(configDir)),
         parseSuccessData: _wire2api_unit,
         constMeta: kInitConstMeta,
-        argValues: [osType, osVersion, configDir],
+        argValues: [osVersion, configDir],
         hint: hint,
       ));
 
   FlutterRustBridgeTaskConstMeta get kInitConstMeta =>
       const FlutterRustBridgeTaskConstMeta(
         debugName: "init",
-        argNames: ["osType", "osVersion", "configDir"],
+        argNames: ["osVersion", "configDir"],
       );
 
   Future<String?> configReadDeviceId({dynamic hint}) =>
@@ -723,8 +740,37 @@ GetDisplayInfoResponse _wire2api_get_display_info_response(dynamic raw) {
   );
 }
 
+int _wire2api_i32(dynamic raw) {
+  return raw as int;
+}
+
+LinuxType _wire2api_linux_type(dynamic raw) {
+  return LinuxType.values[raw];
+}
+
 List<DisplayInfo> _wire2api_list_display_info(dynamic raw) {
   return (raw as List<dynamic>).map(_wire2api_display_info).toList();
+}
+
+OperatingSystemType _wire2api_operating_system_type(dynamic raw) {
+  switch (raw[0]) {
+    case 0:
+      return Windows();
+    case 1:
+      return macOS();
+    case 2:
+      return iOS();
+    case 3:
+      return Android();
+    case 4:
+      return Linux(
+        _wire2api_linux_type(raw[1]),
+      );
+    case 5:
+      return Unknown();
+    default:
+      throw Exception("unreachable");
+  }
 }
 
 String? _wire2api_opt_String(dynamic raw) {
@@ -741,7 +787,7 @@ StartMediaTransmissionResponse _wire2api_start_media_transmission_response(
   if (arr.length != 6)
     throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
   return StartMediaTransmissionResponse(
-    osName: _wire2api_String(arr[0]),
+    osType: _wire2api_operating_system_type(arr[0]),
     osVersion: _wire2api_String(arr[1]),
     screenWidth: _wire2api_u16(arr[2]),
     screenHeight: _wire2api_u16(arr[3]),
@@ -794,13 +840,11 @@ class MirrorXCoreWire implements FlutterRustBridgeWireBase {
 
   void wire_init(
     int port_,
-    ffi.Pointer<wire_uint_8_list> os_type,
     ffi.Pointer<wire_uint_8_list> os_version,
     ffi.Pointer<wire_uint_8_list> config_dir,
   ) {
     return _wire_init(
       port_,
-      os_type,
       os_version,
       config_dir,
     );
@@ -808,14 +852,11 @@ class MirrorXCoreWire implements FlutterRustBridgeWireBase {
 
   late final _wire_initPtr = _lookup<
       ffi.NativeFunction<
-          ffi.Void Function(
-              ffi.Int64,
-              ffi.Pointer<wire_uint_8_list>,
-              ffi.Pointer<wire_uint_8_list>,
+          ffi.Void Function(ffi.Int64, ffi.Pointer<wire_uint_8_list>,
               ffi.Pointer<wire_uint_8_list>)>>('wire_init');
   late final _wire_init = _wire_initPtr.asFunction<
-      void Function(int, ffi.Pointer<wire_uint_8_list>,
-          ffi.Pointer<wire_uint_8_list>, ffi.Pointer<wire_uint_8_list>)>();
+      void Function(
+          int, ffi.Pointer<wire_uint_8_list>, ffi.Pointer<wire_uint_8_list>)>();
 
   void wire_config_read_device_id(
     int port_,

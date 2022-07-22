@@ -37,7 +37,6 @@ class LoadingPage extends StatelessWidget {
       log("prepare init: applicationSupportDir='${applicationSupportDir.path}' osName='${Platform.operatingSystem}' osVersion='${Platform.operatingSystemVersion}'");
 
       await MirrorXCoreSDK.instance.init(
-        osType: Platform.operatingSystem,
         osVersion: Platform.operatingSystemVersion,
         configDir: applicationSupportDir.path,
       );

@@ -17,6 +17,8 @@ use flutter_rust_bridge::*;
 
 use crate::component::input::key::KeyboardKey;
 use crate::component::input::key::MouseKey;
+use crate::constants::os::LinuxType;
+use crate::constants::os::OperatingSystemType;
 use crate::service::endpoint::message::DisplayInfo;
 use crate::service::endpoint::message::GetDisplayInfoResponse;
 use crate::service::endpoint::message::InputEvent;
@@ -29,7 +31,6 @@ use crate::service::endpoint::message::StartMediaTransmissionResponse;
 #[no_mangle]
 pub extern "C" fn wire_init(
     port_: i64,
-    os_type: *mut wire_uint_8_list,
     os_version: *mut wire_uint_8_list,
     config_dir: *mut wire_uint_8_list,
 ) {
@@ -40,10 +41,9 @@ pub extern "C" fn wire_init(
             mode: FfiCallMode::Normal,
         },
         move || {
-            let api_os_type = os_type.wire2api();
             let api_os_version = os_version.wire2api();
             let api_config_dir = config_dir.wire2api();
-            move |task_callback| init(api_os_type, api_os_version, api_config_dir)
+            move |task_callback| init(api_os_version, api_config_dir)
         },
     )
 }
@@ -819,10 +819,39 @@ impl support::IntoDart for GetDisplayInfoResponse {
 }
 impl support::IntoDartExceptPrimitive for GetDisplayInfoResponse {}
 
+impl support::IntoDart for LinuxType {
+    fn into_dart(self) -> support::DartCObject {
+        match self {
+            Self::CentOS => 0,
+            Self::Fedora => 1,
+            Self::Redhat => 2,
+            Self::openSUSE => 3,
+            Self::Ubuntu => 4,
+            Self::Other => 5,
+        }
+        .into_dart()
+    }
+}
+
+impl support::IntoDart for OperatingSystemType {
+    fn into_dart(self) -> support::DartCObject {
+        match self {
+            Self::Windows => vec![0.into_dart()],
+            Self::macOS => vec![1.into_dart()],
+            Self::iOS => vec![2.into_dart()],
+            Self::Android => vec![3.into_dart()],
+            Self::Linux(field0) => vec![4.into_dart(), field0.into_dart()],
+            Self::Unknown => vec![5.into_dart()],
+        }
+        .into_dart()
+    }
+}
+impl support::IntoDartExceptPrimitive for OperatingSystemType {}
+
 impl support::IntoDart for StartMediaTransmissionResponse {
     fn into_dart(self) -> support::DartCObject {
         vec![
-            self.os_name.into_dart(),
+            self.os_type.into_dart(),
             self.os_version.into_dart(),
             self.screen_width.into_dart(),
             self.screen_height.into_dart(),

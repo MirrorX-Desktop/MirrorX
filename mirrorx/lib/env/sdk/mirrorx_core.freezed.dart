@@ -1429,3 +1429,875 @@ abstract class MouseScrollWheel implements MouseEvent {
   _$$MouseScrollWheelCopyWith<_$MouseScrollWheel> get copyWith =>
       throw _privateConstructorUsedError;
 }
+
+/// @nodoc
+mixin _$OperatingSystemType {
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>({
+    required TResult Function() windows,
+    required TResult Function() macOs,
+    required TResult Function() iOs,
+    required TResult Function() android,
+    required TResult Function(LinuxType field0) linux,
+    required TResult Function() unknown,
+  }) =>
+      throw _privateConstructorUsedError;
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>({
+    TResult Function()? windows,
+    TResult Function()? macOs,
+    TResult Function()? iOs,
+    TResult Function()? android,
+    TResult Function(LinuxType field0)? linux,
+    TResult Function()? unknown,
+  }) =>
+      throw _privateConstructorUsedError;
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>({
+    TResult Function()? windows,
+    TResult Function()? macOs,
+    TResult Function()? iOs,
+    TResult Function()? android,
+    TResult Function(LinuxType field0)? linux,
+    TResult Function()? unknown,
+    required TResult orElse(),
+  }) =>
+      throw _privateConstructorUsedError;
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>({
+    required TResult Function(Windows value) windows,
+    required TResult Function(macOS value) macOs,
+    required TResult Function(iOS value) iOs,
+    required TResult Function(Android value) android,
+    required TResult Function(Linux value) linux,
+    required TResult Function(Unknown value) unknown,
+  }) =>
+      throw _privateConstructorUsedError;
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>({
+    TResult Function(Windows value)? windows,
+    TResult Function(macOS value)? macOs,
+    TResult Function(iOS value)? iOs,
+    TResult Function(Android value)? android,
+    TResult Function(Linux value)? linux,
+    TResult Function(Unknown value)? unknown,
+  }) =>
+      throw _privateConstructorUsedError;
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>({
+    TResult Function(Windows value)? windows,
+    TResult Function(macOS value)? macOs,
+    TResult Function(iOS value)? iOs,
+    TResult Function(Android value)? android,
+    TResult Function(Linux value)? linux,
+    TResult Function(Unknown value)? unknown,
+    required TResult orElse(),
+  }) =>
+      throw _privateConstructorUsedError;
+}
+
+/// @nodoc
+abstract class $OperatingSystemTypeCopyWith<$Res> {
+  factory $OperatingSystemTypeCopyWith(
+          OperatingSystemType value, $Res Function(OperatingSystemType) then) =
+      _$OperatingSystemTypeCopyWithImpl<$Res>;
+}
+
+/// @nodoc
+class _$OperatingSystemTypeCopyWithImpl<$Res>
+    implements $OperatingSystemTypeCopyWith<$Res> {
+  _$OperatingSystemTypeCopyWithImpl(this._value, this._then);
+
+  final OperatingSystemType _value;
+  // ignore: unused_field
+  final $Res Function(OperatingSystemType) _then;
+}
+
+/// @nodoc
+abstract class _$$WindowsCopyWith<$Res> {
+  factory _$$WindowsCopyWith(_$Windows value, $Res Function(_$Windows) then) =
+      __$$WindowsCopyWithImpl<$Res>;
+}
+
+/// @nodoc
+class __$$WindowsCopyWithImpl<$Res>
+    extends _$OperatingSystemTypeCopyWithImpl<$Res>
+    implements _$$WindowsCopyWith<$Res> {
+  __$$WindowsCopyWithImpl(_$Windows _value, $Res Function(_$Windows) _then)
+      : super(_value, (v) => _then(v as _$Windows));
+
+  @override
+  _$Windows get _value => super._value as _$Windows;
+}
+
+/// @nodoc
+
+class _$Windows implements Windows {
+  const _$Windows();
+
+  @override
+  String toString() {
+    return 'OperatingSystemType.windows()';
+  }
+
+  @override
+  bool operator ==(dynamic other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType && other is _$Windows);
+  }
+
+  @override
+  int get hashCode => runtimeType.hashCode;
+
+  @override
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>({
+    required TResult Function() windows,
+    required TResult Function() macOs,
+    required TResult Function() iOs,
+    required TResult Function() android,
+    required TResult Function(LinuxType field0) linux,
+    required TResult Function() unknown,
+  }) {
+    return windows();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>({
+    TResult Function()? windows,
+    TResult Function()? macOs,
+    TResult Function()? iOs,
+    TResult Function()? android,
+    TResult Function(LinuxType field0)? linux,
+    TResult Function()? unknown,
+  }) {
+    return windows?.call();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>({
+    TResult Function()? windows,
+    TResult Function()? macOs,
+    TResult Function()? iOs,
+    TResult Function()? android,
+    TResult Function(LinuxType field0)? linux,
+    TResult Function()? unknown,
+    required TResult orElse(),
+  }) {
+    if (windows != null) {
+      return windows();
+    }
+    return orElse();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>({
+    required TResult Function(Windows value) windows,
+    required TResult Function(macOS value) macOs,
+    required TResult Function(iOS value) iOs,
+    required TResult Function(Android value) android,
+    required TResult Function(Linux value) linux,
+    required TResult Function(Unknown value) unknown,
+  }) {
+    return windows(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>({
+    TResult Function(Windows value)? windows,
+    TResult Function(macOS value)? macOs,
+    TResult Function(iOS value)? iOs,
+    TResult Function(Android value)? android,
+    TResult Function(Linux value)? linux,
+    TResult Function(Unknown value)? unknown,
+  }) {
+    return windows?.call(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>({
+    TResult Function(Windows value)? windows,
+    TResult Function(macOS value)? macOs,
+    TResult Function(iOS value)? iOs,
+    TResult Function(Android value)? android,
+    TResult Function(Linux value)? linux,
+    TResult Function(Unknown value)? unknown,
+    required TResult orElse(),
+  }) {
+    if (windows != null) {
+      return windows(this);
+    }
+    return orElse();
+  }
+}
+
+abstract class Windows implements OperatingSystemType {
+  const factory Windows() = _$Windows;
+}
+
+/// @nodoc
+abstract class _$$macOSCopyWith<$Res> {
+  factory _$$macOSCopyWith(_$macOS value, $Res Function(_$macOS) then) =
+      __$$macOSCopyWithImpl<$Res>;
+}
+
+/// @nodoc
+class __$$macOSCopyWithImpl<$Res>
+    extends _$OperatingSystemTypeCopyWithImpl<$Res>
+    implements _$$macOSCopyWith<$Res> {
+  __$$macOSCopyWithImpl(_$macOS _value, $Res Function(_$macOS) _then)
+      : super(_value, (v) => _then(v as _$macOS));
+
+  @override
+  _$macOS get _value => super._value as _$macOS;
+}
+
+/// @nodoc
+
+class _$macOS implements macOS {
+  const _$macOS();
+
+  @override
+  String toString() {
+    return 'OperatingSystemType.macOs()';
+  }
+
+  @override
+  bool operator ==(dynamic other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType && other is _$macOS);
+  }
+
+  @override
+  int get hashCode => runtimeType.hashCode;
+
+  @override
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>({
+    required TResult Function() windows,
+    required TResult Function() macOs,
+    required TResult Function() iOs,
+    required TResult Function() android,
+    required TResult Function(LinuxType field0) linux,
+    required TResult Function() unknown,
+  }) {
+    return macOs();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>({
+    TResult Function()? windows,
+    TResult Function()? macOs,
+    TResult Function()? iOs,
+    TResult Function()? android,
+    TResult Function(LinuxType field0)? linux,
+    TResult Function()? unknown,
+  }) {
+    return macOs?.call();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>({
+    TResult Function()? windows,
+    TResult Function()? macOs,
+    TResult Function()? iOs,
+    TResult Function()? android,
+    TResult Function(LinuxType field0)? linux,
+    TResult Function()? unknown,
+    required TResult orElse(),
+  }) {
+    if (macOs != null) {
+      return macOs();
+    }
+    return orElse();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>({
+    required TResult Function(Windows value) windows,
+    required TResult Function(macOS value) macOs,
+    required TResult Function(iOS value) iOs,
+    required TResult Function(Android value) android,
+    required TResult Function(Linux value) linux,
+    required TResult Function(Unknown value) unknown,
+  }) {
+    return macOs(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>({
+    TResult Function(Windows value)? windows,
+    TResult Function(macOS value)? macOs,
+    TResult Function(iOS value)? iOs,
+    TResult Function(Android value)? android,
+    TResult Function(Linux value)? linux,
+    TResult Function(Unknown value)? unknown,
+  }) {
+    return macOs?.call(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>({
+    TResult Function(Windows value)? windows,
+    TResult Function(macOS value)? macOs,
+    TResult Function(iOS value)? iOs,
+    TResult Function(Android value)? android,
+    TResult Function(Linux value)? linux,
+    TResult Function(Unknown value)? unknown,
+    required TResult orElse(),
+  }) {
+    if (macOs != null) {
+      return macOs(this);
+    }
+    return orElse();
+  }
+}
+
+abstract class macOS implements OperatingSystemType {
+  const factory macOS() = _$macOS;
+}
+
+/// @nodoc
+abstract class _$$iOSCopyWith<$Res> {
+  factory _$$iOSCopyWith(_$iOS value, $Res Function(_$iOS) then) =
+      __$$iOSCopyWithImpl<$Res>;
+}
+
+/// @nodoc
+class __$$iOSCopyWithImpl<$Res> extends _$OperatingSystemTypeCopyWithImpl<$Res>
+    implements _$$iOSCopyWith<$Res> {
+  __$$iOSCopyWithImpl(_$iOS _value, $Res Function(_$iOS) _then)
+      : super(_value, (v) => _then(v as _$iOS));
+
+  @override
+  _$iOS get _value => super._value as _$iOS;
+}
+
+/// @nodoc
+
+class _$iOS implements iOS {
+  const _$iOS();
+
+  @override
+  String toString() {
+    return 'OperatingSystemType.iOs()';
+  }
+
+  @override
+  bool operator ==(dynamic other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType && other is _$iOS);
+  }
+
+  @override
+  int get hashCode => runtimeType.hashCode;
+
+  @override
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>({
+    required TResult Function() windows,
+    required TResult Function() macOs,
+    required TResult Function() iOs,
+    required TResult Function() android,
+    required TResult Function(LinuxType field0) linux,
+    required TResult Function() unknown,
+  }) {
+    return iOs();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>({
+    TResult Function()? windows,
+    TResult Function()? macOs,
+    TResult Function()? iOs,
+    TResult Function()? android,
+    TResult Function(LinuxType field0)? linux,
+    TResult Function()? unknown,
+  }) {
+    return iOs?.call();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>({
+    TResult Function()? windows,
+    TResult Function()? macOs,
+    TResult Function()? iOs,
+    TResult Function()? android,
+    TResult Function(LinuxType field0)? linux,
+    TResult Function()? unknown,
+    required TResult orElse(),
+  }) {
+    if (iOs != null) {
+      return iOs();
+    }
+    return orElse();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>({
+    required TResult Function(Windows value) windows,
+    required TResult Function(macOS value) macOs,
+    required TResult Function(iOS value) iOs,
+    required TResult Function(Android value) android,
+    required TResult Function(Linux value) linux,
+    required TResult Function(Unknown value) unknown,
+  }) {
+    return iOs(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>({
+    TResult Function(Windows value)? windows,
+    TResult Function(macOS value)? macOs,
+    TResult Function(iOS value)? iOs,
+    TResult Function(Android value)? android,
+    TResult Function(Linux value)? linux,
+    TResult Function(Unknown value)? unknown,
+  }) {
+    return iOs?.call(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>({
+    TResult Function(Windows value)? windows,
+    TResult Function(macOS value)? macOs,
+    TResult Function(iOS value)? iOs,
+    TResult Function(Android value)? android,
+    TResult Function(Linux value)? linux,
+    TResult Function(Unknown value)? unknown,
+    required TResult orElse(),
+  }) {
+    if (iOs != null) {
+      return iOs(this);
+    }
+    return orElse();
+  }
+}
+
+abstract class iOS implements OperatingSystemType {
+  const factory iOS() = _$iOS;
+}
+
+/// @nodoc
+abstract class _$$AndroidCopyWith<$Res> {
+  factory _$$AndroidCopyWith(_$Android value, $Res Function(_$Android) then) =
+      __$$AndroidCopyWithImpl<$Res>;
+}
+
+/// @nodoc
+class __$$AndroidCopyWithImpl<$Res>
+    extends _$OperatingSystemTypeCopyWithImpl<$Res>
+    implements _$$AndroidCopyWith<$Res> {
+  __$$AndroidCopyWithImpl(_$Android _value, $Res Function(_$Android) _then)
+      : super(_value, (v) => _then(v as _$Android));
+
+  @override
+  _$Android get _value => super._value as _$Android;
+}
+
+/// @nodoc
+
+class _$Android implements Android {
+  const _$Android();
+
+  @override
+  String toString() {
+    return 'OperatingSystemType.android()';
+  }
+
+  @override
+  bool operator ==(dynamic other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType && other is _$Android);
+  }
+
+  @override
+  int get hashCode => runtimeType.hashCode;
+
+  @override
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>({
+    required TResult Function() windows,
+    required TResult Function() macOs,
+    required TResult Function() iOs,
+    required TResult Function() android,
+    required TResult Function(LinuxType field0) linux,
+    required TResult Function() unknown,
+  }) {
+    return android();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>({
+    TResult Function()? windows,
+    TResult Function()? macOs,
+    TResult Function()? iOs,
+    TResult Function()? android,
+    TResult Function(LinuxType field0)? linux,
+    TResult Function()? unknown,
+  }) {
+    return android?.call();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>({
+    TResult Function()? windows,
+    TResult Function()? macOs,
+    TResult Function()? iOs,
+    TResult Function()? android,
+    TResult Function(LinuxType field0)? linux,
+    TResult Function()? unknown,
+    required TResult orElse(),
+  }) {
+    if (android != null) {
+      return android();
+    }
+    return orElse();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>({
+    required TResult Function(Windows value) windows,
+    required TResult Function(macOS value) macOs,
+    required TResult Function(iOS value) iOs,
+    required TResult Function(Android value) android,
+    required TResult Function(Linux value) linux,
+    required TResult Function(Unknown value) unknown,
+  }) {
+    return android(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>({
+    TResult Function(Windows value)? windows,
+    TResult Function(macOS value)? macOs,
+    TResult Function(iOS value)? iOs,
+    TResult Function(Android value)? android,
+    TResult Function(Linux value)? linux,
+    TResult Function(Unknown value)? unknown,
+  }) {
+    return android?.call(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>({
+    TResult Function(Windows value)? windows,
+    TResult Function(macOS value)? macOs,
+    TResult Function(iOS value)? iOs,
+    TResult Function(Android value)? android,
+    TResult Function(Linux value)? linux,
+    TResult Function(Unknown value)? unknown,
+    required TResult orElse(),
+  }) {
+    if (android != null) {
+      return android(this);
+    }
+    return orElse();
+  }
+}
+
+abstract class Android implements OperatingSystemType {
+  const factory Android() = _$Android;
+}
+
+/// @nodoc
+abstract class _$$LinuxCopyWith<$Res> {
+  factory _$$LinuxCopyWith(_$Linux value, $Res Function(_$Linux) then) =
+      __$$LinuxCopyWithImpl<$Res>;
+  $Res call({LinuxType field0});
+}
+
+/// @nodoc
+class __$$LinuxCopyWithImpl<$Res>
+    extends _$OperatingSystemTypeCopyWithImpl<$Res>
+    implements _$$LinuxCopyWith<$Res> {
+  __$$LinuxCopyWithImpl(_$Linux _value, $Res Function(_$Linux) _then)
+      : super(_value, (v) => _then(v as _$Linux));
+
+  @override
+  _$Linux get _value => super._value as _$Linux;
+
+  @override
+  $Res call({
+    Object? field0 = freezed,
+  }) {
+    return _then(_$Linux(
+      field0 == freezed
+          ? _value.field0
+          : field0 // ignore: cast_nullable_to_non_nullable
+              as LinuxType,
+    ));
+  }
+}
+
+/// @nodoc
+
+class _$Linux implements Linux {
+  const _$Linux(this.field0);
+
+  @override
+  final LinuxType field0;
+
+  @override
+  String toString() {
+    return 'OperatingSystemType.linux(field0: $field0)';
+  }
+
+  @override
+  bool operator ==(dynamic other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _$Linux &&
+            const DeepCollectionEquality().equals(other.field0, field0));
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(runtimeType, const DeepCollectionEquality().hash(field0));
+
+  @JsonKey(ignore: true)
+  @override
+  _$$LinuxCopyWith<_$Linux> get copyWith =>
+      __$$LinuxCopyWithImpl<_$Linux>(this, _$identity);
+
+  @override
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>({
+    required TResult Function() windows,
+    required TResult Function() macOs,
+    required TResult Function() iOs,
+    required TResult Function() android,
+    required TResult Function(LinuxType field0) linux,
+    required TResult Function() unknown,
+  }) {
+    return linux(field0);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>({
+    TResult Function()? windows,
+    TResult Function()? macOs,
+    TResult Function()? iOs,
+    TResult Function()? android,
+    TResult Function(LinuxType field0)? linux,
+    TResult Function()? unknown,
+  }) {
+    return linux?.call(field0);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>({
+    TResult Function()? windows,
+    TResult Function()? macOs,
+    TResult Function()? iOs,
+    TResult Function()? android,
+    TResult Function(LinuxType field0)? linux,
+    TResult Function()? unknown,
+    required TResult orElse(),
+  }) {
+    if (linux != null) {
+      return linux(field0);
+    }
+    return orElse();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>({
+    required TResult Function(Windows value) windows,
+    required TResult Function(macOS value) macOs,
+    required TResult Function(iOS value) iOs,
+    required TResult Function(Android value) android,
+    required TResult Function(Linux value) linux,
+    required TResult Function(Unknown value) unknown,
+  }) {
+    return linux(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>({
+    TResult Function(Windows value)? windows,
+    TResult Function(macOS value)? macOs,
+    TResult Function(iOS value)? iOs,
+    TResult Function(Android value)? android,
+    TResult Function(Linux value)? linux,
+    TResult Function(Unknown value)? unknown,
+  }) {
+    return linux?.call(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>({
+    TResult Function(Windows value)? windows,
+    TResult Function(macOS value)? macOs,
+    TResult Function(iOS value)? iOs,
+    TResult Function(Android value)? android,
+    TResult Function(Linux value)? linux,
+    TResult Function(Unknown value)? unknown,
+    required TResult orElse(),
+  }) {
+    if (linux != null) {
+      return linux(this);
+    }
+    return orElse();
+  }
+}
+
+abstract class Linux implements OperatingSystemType {
+  const factory Linux(final LinuxType field0) = _$Linux;
+
+  LinuxType get field0;
+  @JsonKey(ignore: true)
+  _$$LinuxCopyWith<_$Linux> get copyWith => throw _privateConstructorUsedError;
+}
+
+/// @nodoc
+abstract class _$$UnknownCopyWith<$Res> {
+  factory _$$UnknownCopyWith(_$Unknown value, $Res Function(_$Unknown) then) =
+      __$$UnknownCopyWithImpl<$Res>;
+}
+
+/// @nodoc
+class __$$UnknownCopyWithImpl<$Res>
+    extends _$OperatingSystemTypeCopyWithImpl<$Res>
+    implements _$$UnknownCopyWith<$Res> {
+  __$$UnknownCopyWithImpl(_$Unknown _value, $Res Function(_$Unknown) _then)
+      : super(_value, (v) => _then(v as _$Unknown));
+
+  @override
+  _$Unknown get _value => super._value as _$Unknown;
+}
+
+/// @nodoc
+
+class _$Unknown implements Unknown {
+  const _$Unknown();
+
+  @override
+  String toString() {
+    return 'OperatingSystemType.unknown()';
+  }
+
+  @override
+  bool operator ==(dynamic other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType && other is _$Unknown);
+  }
+
+  @override
+  int get hashCode => runtimeType.hashCode;
+
+  @override
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>({
+    required TResult Function() windows,
+    required TResult Function() macOs,
+    required TResult Function() iOs,
+    required TResult Function() android,
+    required TResult Function(LinuxType field0) linux,
+    required TResult Function() unknown,
+  }) {
+    return unknown();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>({
+    TResult Function()? windows,
+    TResult Function()? macOs,
+    TResult Function()? iOs,
+    TResult Function()? android,
+    TResult Function(LinuxType field0)? linux,
+    TResult Function()? unknown,
+  }) {
+    return unknown?.call();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>({
+    TResult Function()? windows,
+    TResult Function()? macOs,
+    TResult Function()? iOs,
+    TResult Function()? android,
+    TResult Function(LinuxType field0)? linux,
+    TResult Function()? unknown,
+    required TResult orElse(),
+  }) {
+    if (unknown != null) {
+      return unknown();
+    }
+    return orElse();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>({
+    required TResult Function(Windows value) windows,
+    required TResult Function(macOS value) macOs,
+    required TResult Function(iOS value) iOs,
+    required TResult Function(Android value) android,
+    required TResult Function(Linux value) linux,
+    required TResult Function(Unknown value) unknown,
+  }) {
+    return unknown(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>({
+    TResult Function(Windows value)? windows,
+    TResult Function(macOS value)? macOs,
+    TResult Function(iOS value)? iOs,
+    TResult Function(Android value)? android,
+    TResult Function(Linux value)? linux,
+    TResult Function(Unknown value)? unknown,
+  }) {
+    return unknown?.call(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>({
+    TResult Function(Windows value)? windows,
+    TResult Function(macOS value)? macOs,
+    TResult Function(iOS value)? iOs,
+    TResult Function(Android value)? android,
+    TResult Function(Linux value)? linux,
+    TResult Function(Unknown value)? unknown,
+    required TResult orElse(),
+  }) {
+    if (unknown != null) {
+      return unknown(this);
+    }
+    return orElse();
+  }
+}
+
+abstract class Unknown implements OperatingSystemType {
+  const factory Unknown() = _$Unknown;
+}
