@@ -1,4 +1,7 @@
+import 'dart:developer';
+
 import 'package:equatable/equatable.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mirrorx/env/sdk/mirrorx_core_sdk.dart';
 import 'package:mirrorx/env/utility/rng.dart';
@@ -62,5 +65,10 @@ class ProfileStateCubit extends Cubit<ProfileState> {
     } catch (error) {
       return Future.error(error);
     }
+  }
+
+  void changeLocale(Locale? locale) {
+    log("change locale ${locale}");
+    emit(state.copyWith(locale: locale));
   }
 }

@@ -1,10 +1,10 @@
 import 'dart:developer';
 
-import 'package:mirrorx/env/langs/tr.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:mirrorx/state/profile/profile_state_cubit.dart';
 
 class DevicePasswordField extends StatefulWidget {
@@ -36,7 +36,7 @@ class _DevicePasswordFieldState extends State<DevicePasswordField> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  tr.connectPagePasswordTitle,
+                  AppLocalizations.of(context)!.connectPagePasswordTitle,
                   style: const TextStyle(fontSize: 27),
                 ),
                 _buildTopButton(),
@@ -112,15 +112,18 @@ class _DevicePasswordFieldState extends State<DevicePasswordField> {
             autovalidateMode: AutovalidateMode.always,
             validator: (text) {
               if (text == null || text.isEmpty || text.length < 8) {
-                return tr.connectPagePasswordValidationErrorLength;
+                return AppLocalizations.of(context)!
+                    .connectPagePasswordValidationErrorLength;
               }
 
               if (!RegExp(r'[A-Z]').hasMatch(text)) {
-                return tr.connectPagePasswordValidationErrorUpper;
+                return AppLocalizations.of(context)!
+                    .connectPagePasswordValidationErrorUpper;
               }
 
               if (!RegExp(r'[@#$%^*?!=+<>(){}]').hasMatch(text)) {
-                return tr.connectPagePasswordValidationErrorSpecial(
+                return AppLocalizations.of(context)!
+                    .connectPagePasswordValidationErrorSpecial(
                   r'@#$%^*?!=+<>(){}',
                 );
               }
@@ -167,8 +170,8 @@ class _DevicePasswordFieldState extends State<DevicePasswordField> {
       splashRadius: 20,
       hoverColor: Colors.yellow,
       tooltip: _isEditing
-          ? tr.connectPagePasswordButtonCommitTooltip
-          : tr.connectPagePasswordButtonEditTooltip,
+          ? AppLocalizations.of(context)!.connectPagePasswordButtonCommitTooltip
+          : AppLocalizations.of(context)!.connectPagePasswordButtonEditTooltip,
     );
   }
 
@@ -192,10 +195,13 @@ class _DevicePasswordFieldState extends State<DevicePasswordField> {
               ? Icons.visibility_off
               : Icons.visibility),
       tooltip: _isEditing
-          ? tr.connectPagePasswordButtonRandomGenerateTooltip
+          ? AppLocalizations.of(context)!
+              .connectPagePasswordButtonRandomGenerateTooltip
           : _isVisible
-              ? tr.connectPagePasswordVisibilityToggleHideTooltip
-              : tr.connectPagePasswordVisibilityToggleShowTooltip,
+              ? AppLocalizations.of(context)!
+                  .connectPagePasswordVisibilityToggleHideTooltip
+              : AppLocalizations.of(context)!
+                  .connectPagePasswordVisibilityToggleShowTooltip,
     );
   }
 

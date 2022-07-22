@@ -2,7 +2,7 @@ import 'dart:developer';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
-import 'package:mirrorx/env/langs/tr.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:mirrorx/env/sdk/mirrorx_core.dart';
 import 'package:mirrorx/env/sdk/mirrorx_core_sdk.dart';
 import 'package:mirrorx/env/utility/dialog.dart';
@@ -90,7 +90,7 @@ class _RemoteConnectFieldState extends State<RemoteConnectField> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  tr.connectPageConnectRemoteTitle,
+                  AppLocalizations.of(context)!.connectPageConnectRemoteTitle,
                   style: const TextStyle(fontSize: 27),
                 ),
                 _connectHandshake
@@ -101,8 +101,8 @@ class _RemoteConnectFieldState extends State<RemoteConnectField> {
                         splashRadius: 20,
                         hoverColor: Colors.yellow,
                         disabledColor: Colors.grey,
-                        tooltip:
-                            tr.connectPageConnectRemoteButtonConnectTooltip,
+                        tooltip: AppLocalizations.of(context)!
+                            .connectPageConnectRemoteButtonConnectTooltip,
                       ),
               ],
             ),
@@ -164,11 +164,12 @@ class _RemoteConnectFieldState extends State<RemoteConnectField> {
       if (!success) {
         _updateHandshakeState(false);
         await popupDialog(
-          contentBuilder: (_) => Text(tr.dialogConnectRemoteOffline),
+          contentBuilder: (_) =>
+              Text(AppLocalizations.of(context)!.dialogConnectRemoteOffline),
           actionBuilder: (navigatorState) => [
             TextButton(
               onPressed: navigatorState.pop,
-              child: Text(tr.dialogOK),
+              child: Text(AppLocalizations.of(context)!.dialogOK),
             )
           ],
         );
@@ -180,14 +181,14 @@ class _RemoteConnectFieldState extends State<RemoteConnectField> {
         contentBuilder: (_) => Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(tr.dialogConnectRemoteError),
+            Text(AppLocalizations.of(context)!.dialogConnectRemoteError),
             Text(e.toString()),
           ],
         ),
         actionBuilder: (navigatorState) => [
           TextButton(
             onPressed: navigatorState.pop,
-            child: Text(tr.dialogOK),
+            child: Text(AppLocalizations.of(context)!.dialogOK),
           )
         ],
       );

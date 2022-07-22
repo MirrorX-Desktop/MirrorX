@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/src/foundation/key.dart';
-import 'package:flutter/src/widgets/framework.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:mirrorx/env/langs/tr.dart';
 import 'package:mirrorx/env/sdk/mirrorx_core.dart';
 import 'package:mirrorx/env/sdk/mirrorx_core_sdk.dart';
 import 'package:mirrorx/model/desktop.dart';
 import 'package:mirrorx/state/desktop_manager/desktop_manager_cubit.dart';
 import 'package:mirrorx/state/page_manager/page_manager_cubit.dart';
 import 'package:texture_render/texture_render.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 import 'screenshot_swiper.dart';
 
@@ -67,7 +65,7 @@ class _ConnectProgressStateDialogState
       Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(tr.dialogContentInputDevicePassword),
+          Text(AppLocalizations.of(context)!.dialogContentInputDevicePassword),
           TextField(
             textAlign: TextAlign.center,
             textAlignVertical: TextAlignVertical.center,
@@ -80,7 +78,7 @@ class _ConnectProgressStateDialogState
       ),
       actions: [
         TextButton(
-          child: Text(tr.dialogOK),
+          child: Text(AppLocalizations.of(context)!.dialogOK),
           onPressed: () {
             setState(() {
               _connectStep = ConnectStep.keyExchange;
@@ -88,7 +86,7 @@ class _ConnectProgressStateDialogState
           },
         ),
         TextButton(
-          child: Text(tr.dialogCancel),
+          child: Text(AppLocalizations.of(context)!.dialogCancel),
           onPressed: () {
             Navigator.of(context).pop(null);
           },
@@ -105,8 +103,8 @@ class _ConnectProgressStateDialogState
       ),
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
-          return _buildProgressAndTip(
-              tr.connectPageConnectProgressTipKeyExchange);
+          return _buildProgressAndTip(AppLocalizations.of(context)!
+              .connectPageConnectProgressTipKeyExchange);
         }
 
         if (snapshot.hasError) {
@@ -114,7 +112,8 @@ class _ConnectProgressStateDialogState
             Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(tr.connectPageConnectProgressTipKeyExchangeFailed),
+                Text(AppLocalizations.of(context)!
+                    .connectPageConnectProgressTipKeyExchangeFailed),
                 Text(snapshot.error.toString())
               ],
             ),
@@ -123,7 +122,7 @@ class _ConnectProgressStateDialogState
                 onPressed: () {
                   Navigator.of(context).pop();
                 },
-                child: Text(tr.dialogOK),
+                child: Text(AppLocalizations.of(context)!.dialogOK),
               )
             ],
           );
@@ -140,8 +139,8 @@ class _ConnectProgressStateDialogState
           .endpointGetDisplayInfo(remoteDeviceId: widget.remoteDeviceId),
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
-          return _buildProgressAndTip(
-              tr.connectPageConnectProgressTipListMonitors);
+          return _buildProgressAndTip(AppLocalizations.of(context)!
+              .connectPageConnectProgressTipListMonitors);
         }
 
         if (snapshot.hasError) {
@@ -149,7 +148,8 @@ class _ConnectProgressStateDialogState
             Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(tr.connectPageConnectProgressTipListMonitorsFailed),
+                Text(AppLocalizations.of(context)!
+                    .connectPageConnectProgressTipListMonitorsFailed),
                 Text(snapshot.error.toString())
               ],
             ),
@@ -158,7 +158,7 @@ class _ConnectProgressStateDialogState
                 onPressed: () {
                   Navigator.of(context).pop();
                 },
-                child: Text(tr.dialogOK),
+                child: Text(AppLocalizations.of(context)!.dialogOK),
               )
             ],
           );
@@ -176,7 +176,7 @@ class _ConnectProgressStateDialogState
       Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(tr.dialogContentSelectMonitor),
+          Text(AppLocalizations.of(context)!.dialogContentSelectMonitor),
           ScreenShotSwiper(
             displays: resp.displays,
             selectCallback: (displayInfo) {
@@ -193,7 +193,7 @@ class _ConnectProgressStateDialogState
           onPressed: () {
             Navigator.of(context).pop();
           },
-          child: Text(tr.dialogOK),
+          child: Text(AppLocalizations.of(context)!.dialogOK),
         )
       ],
     );
@@ -204,8 +204,8 @@ class _ConnectProgressStateDialogState
       future: prepareMediaTransmission(context.read<DesktopManagerCubit>()),
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
-          return _buildProgressAndTip(
-              tr.connectPageConnectProgressTipPrepareMedia);
+          return _buildProgressAndTip(AppLocalizations.of(context)!
+              .connectPageConnectProgressTipPrepareMedia);
         }
 
         if (snapshot.hasError) {
@@ -213,7 +213,8 @@ class _ConnectProgressStateDialogState
             Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(tr.connectPageConnectProgressTipPrepareMediaFailed),
+                Text(AppLocalizations.of(context)!
+                    .connectPageConnectProgressTipPrepareMediaFailed),
                 Text(snapshot.error.toString())
               ],
             ),
@@ -222,7 +223,7 @@ class _ConnectProgressStateDialogState
                 onPressed: () {
                   Navigator.of(context).pop();
                 },
-                child: Text(tr.dialogOK),
+                child: Text(AppLocalizations.of(context)!.dialogOK),
               )
             ],
           );

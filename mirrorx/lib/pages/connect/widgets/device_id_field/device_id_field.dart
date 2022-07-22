@@ -1,6 +1,6 @@
 import 'dart:developer';
 
-import 'package:mirrorx/env/langs/tr.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -26,7 +26,7 @@ class DeviceIdField extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  tr.connectPageDeviceIDTitle,
+                  AppLocalizations.of(context)!.connectPageDeviceIDTitle,
                   style: const TextStyle(fontSize: 27),
                 ),
                 BlocBuilder<ProfileStateCubit, ProfileState>(
@@ -35,14 +35,15 @@ class DeviceIdField extends StatelessWidget {
                       Clipboard.setData(ClipboardData(text: state.deviceID))
                           .then(
                         (_) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                            content: Text(tr
+                            content: Text(AppLocalizations.of(context)!
                                 .connectPageDeviceIDButtonCopySnackbarContent))),
                       );
                     },
                     icon: const Icon(Icons.copy),
                     splashRadius: 20,
                     hoverColor: Colors.yellow,
-                    tooltip: tr.connectPageDeviceIDButtonCopyTooltip,
+                    tooltip: AppLocalizations.of(context)!
+                        .connectPageDeviceIDButtonCopyTooltip,
                   ),
                 ),
               ],

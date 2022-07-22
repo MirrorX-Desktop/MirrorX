@@ -3,7 +3,7 @@ import 'dart:developer';
 import 'package:card_swiper/card_swiper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:mirrorx/env/langs/tr.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:mirrorx/env/sdk/mirrorx_core.dart';
 import 'package:mirrorx/env/sdk/mirrorx_core_sdk.dart';
 import 'package:mirrorx/env/utility/dialog.dart';
@@ -43,12 +43,13 @@ class _DesktopPageState extends State<DesktopPage> {
         context.read<PageManagerCubit>().switchPage("Connect");
 
         popupDialog(
-          contentBuilder: (_) => Text(tr.dialogContentConnectionDisconnected,
+          contentBuilder: (_) => Text(
+              AppLocalizations.of(context)!.dialogContentConnectionDisconnected,
               textAlign: TextAlign.center),
           actionBuilder: (navigatorState) => [
             TextButton(
               onPressed: navigatorState.pop,
-              child: Text(tr.dialogOK),
+              child: Text(AppLocalizations.of(context)!.dialogOK),
             ),
           ],
         );
@@ -67,8 +68,10 @@ class _DesktopPageState extends State<DesktopPage> {
             // VerticalDivider(),
             Tooltip(
               message: _fit == BoxFit.none
-                  ? tr.desktopPageToolbarButtonTooltipScale
-                  : tr.desktopPageToolbarButtonTooltipNoneScale,
+                  ? AppLocalizations.of(context)!
+                      .desktopPageToolbarButtonTooltipScale
+                  : AppLocalizations.of(context)!
+                      .desktopPageToolbarButtonTooltipNoneScale,
               child: Container(
                 width: 36,
                 height: 36,

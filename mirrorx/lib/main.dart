@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mirrorx/pages/loading/loading_page.dart';
 import 'package:flutter/material.dart';
@@ -24,21 +26,27 @@ class App extends StatelessWidget {
         BlocProvider(create: (context) => PageManagerCubit()),
         BlocProvider(create: (context) => DesktopManagerCubit()),
       ],
-      child: MaterialApp(
-        showPerformanceOverlay: false,
-        locale: ui.window.locale,
-        debugShowCheckedModeBanner: false,
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        title: "MirrorX",
-        theme: ThemeData(
-          useMaterial3: true,
-          scrollbarTheme: ScrollbarTheme.of(context)
-              .copyWith(thickness: MaterialStateProperty.all(4)),
-          scaffoldBackgroundColor: Colors.white,
-        ),
-        home: const Scaffold(body: LoadingPage()),
-        navigatorKey: navigatorKey,
+      child: BlocBuilder<ProfileStateCubit, ProfileState>(
+        builder: (context, state) {
+          log("${state.locale}");
+
+          return MaterialApp(
+            showPerformanceOverlay: false,
+            locale: state.locale,
+            debugShowCheckedModeBanner: false,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            title: "MirrorX",
+            theme: ThemeData(
+              useMaterial3: true,
+              scrollbarTheme: ScrollbarTheme.of(context)
+                  .copyWith(thickness: MaterialStateProperty.all(4)),
+              scaffoldBackgroundColor: Colors.white,
+            ),
+            home: const Scaffold(body: LoadingPage()),
+            navigatorKey: navigatorKey,
+          );
+        },
       ),
     );
   }

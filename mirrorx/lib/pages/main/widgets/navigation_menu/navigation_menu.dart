@@ -1,9 +1,10 @@
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:mirrorx/env/langs/tr.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mirrorx/env/sdk/mirrorx_core.dart';
 import 'package:mirrorx/state/desktop_manager/desktop_manager_cubit.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 import 'navigation_menu_item.dart';
 
@@ -23,31 +24,31 @@ class NavigationMenu extends StatelessWidget {
               NavigationMenuItem(
                 pageTag: "Connect",
                 iconBuilder: (color) => Icon(Icons.screen_share, color: color),
-                title: tr.connectPageTitle,
+                title: AppLocalizations.of(context)!.connectPageTitle,
                 system: true,
               ),
               NavigationMenuItem(
                 pageTag: "Intranet",
                 iconBuilder: (color) => Icon(Icons.lan, color: color),
-                title: tr.intranetPageTitle,
+                title: AppLocalizations.of(context)!.intranetPageTitle,
                 system: true,
               ),
               NavigationMenuItem(
                 pageTag: "Files",
                 iconBuilder: (color) => Icon(Icons.folder_copy, color: color),
-                title: tr.filesPageTitle,
+                title: AppLocalizations.of(context)!.filesPageTitle,
                 system: true,
               ),
               NavigationMenuItem(
                 pageTag: "History",
                 iconBuilder: (color) => Icon(Icons.history, color: color),
-                title: tr.historyPageTitle,
+                title: AppLocalizations.of(context)!.historyPageTitle,
                 system: true,
               ),
               NavigationMenuItem(
                 pageTag: "Settings",
                 iconBuilder: (color) => Icon(Icons.tune, color: color),
-                title: tr.settingsPageTitle,
+                title: AppLocalizations.of(context)!.settingsPageTitle,
                 system: true,
               ),
             ],
