@@ -8,7 +8,7 @@
     "dialogConnectRemoteOffline": "The remote device is offline",
     "dialogContentInputDevicePassword": "Please enter the password for the remote device",
     "dialogContentSelectMonitor": "Please select the monitor",
-    "dialogContentConnectionDisconnected": "The remote device connect is disconnected",
+    "dialogContentConnectionDisconnected": "The remote device connection is disconnected",
     "connectPageTitle": "Connect",
     "connectPageDeviceIDTitle": "Device ID",
     "connectPageDeviceIDButtonCopyTooltip": "Copy Device ID",
