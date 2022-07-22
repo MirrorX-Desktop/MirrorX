@@ -41,6 +41,11 @@
     "filesPageTitle": "Files",
     "historyPageTitle": "History",
     "settingsPageTitle": "Settings",
+    "settingsPageGroupVideoTitle": "Video",
+    "settingsPageGroupAudioTitle": "Audio",
+    "settingsPageGroupInputTitle": "Input",
+    "settingsPageGroupOtherTitle": "Other",
+    "settingsPageOptionLanguageTitle": "Language",
     "desktopPageToolbarButtonTooltipScale": "Scale Screen",
     "desktopPageToolbarButtonTooltipNoneScale": "Original Size"
 }

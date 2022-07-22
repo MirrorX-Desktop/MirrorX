@@ -13,17 +13,32 @@ class LanguageSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DropdownButton<Locale>(
-      value: Localizations.localeOf(context),
-      items: AppLocalizations.supportedLocales
-          .map((item) => DropdownMenuItem(
-                value: item,
-                child: Text(languages[item.languageCode]!),
-              ))
-          .toList(),
-      onChanged: (Locale? value) {
-        context.read<ProfileStateCubit>().changeLocale(value);
-      },
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          AppLocalizations.of(context)!.settingsPageOptionLanguageTitle,
+          style: const TextStyle(fontSize: 28),
+        ),
+        DropdownButtonHideUnderline(
+          child: DropdownButton<Locale>(
+            elevation: 1,
+            underline: null,
+            dropdownColor: Colors.white,
+            focusColor: Colors.transparent,
+            borderRadius: const BorderRadius.all(Radius.circular(8)),
+            value: Localizations.localeOf(context),
+            items: AppLocalizations.supportedLocales
+                .map((item) => DropdownMenuItem(
+                      value: item,
+                      child: Text(languages[item.languageCode]!),
+                    ))
+                .toList(),
+            onChanged: (Locale? value) =>
+                context.read<ProfileStateCubit>().changeLocale(value),
+          ),
+        ),
+      ],
     );
   }
 }
