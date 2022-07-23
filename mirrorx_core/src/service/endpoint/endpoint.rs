@@ -191,7 +191,7 @@ where
 
     let (packet_tx, packet_rx) = tokio::sync::mpsc::channel(128);
 
-    let ( exit_tx, _) = async_broadcast::broadcast(1);
+    let (exit_tx, exit_rx) = async_broadcast::broadcast(1);
 
     let endpoint = Arc::new(EndPoint {
         monitor: OnceCell::new(),
