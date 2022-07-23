@@ -235,7 +235,7 @@ impl EndPoint {
     }
 
     pub fn subscribe_exit(&self) -> async_broadcast::Receiver<()> {
-        self.exit_rx.clone()
+        self.exit_tx.new_receiver()
     }
 }
 
@@ -334,7 +334,7 @@ impl EndPoint {
         start_video_encode_process(
             self.remote_device_id.clone(),
             self.exit_tx.clone(),
-            self.exit_rx.clone(),
+            self.exit_tx.new_receiver(),
             width as i32,
             height as i32,
             fps as i32,
@@ -345,7 +345,7 @@ impl EndPoint {
         start_desktop_capture_process(
             self.remote_device_id.clone(),
             self.exit_tx.clone(),
-            self.exit_rx.clone(),
+            self.exit_tx.new_receiver(),
             capture_frame_tx,
             display_id,
             fps,
@@ -371,7 +371,7 @@ impl EndPoint {
         start_video_decode_process(
             self.remote_device_id.clone(),
             self.exit_tx.clone(),
-            self.exit_rx.clone(),
+            self.exit_tx.new_receiver(),
             width,
             height,
             fps,
