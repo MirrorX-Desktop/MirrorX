@@ -203,7 +203,7 @@ where
         video_frame_tx: OnceCell::new(),
         audio_frame_tx: OnceCell::new(),
         exit_tx: exit_tx.clone(),
-        exit_rx: exit_tx.new_receiver(),
+        exit_rx,
     });
 
     serve_reader(endpoint.clone(), exit_tx.new_receiver(), stream, opening_key);
