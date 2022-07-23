@@ -245,6 +245,24 @@ pub extern "C" fn wire_endpoint_input(
 }
 
 #[no_mangle]
+pub extern "C" fn wire_endpoint_manually_close(
+    port_: i64,
+    remote_device_id: *mut wire_uint_8_list,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap(
+        WrapInfo {
+            debug_name: "endpoint_manually_close",
+            port: Some(port_),
+            mode: FfiCallMode::Normal,
+        },
+        move || {
+            let api_remote_device_id = remote_device_id.wire2api();
+            move |task_callback| Ok(endpoint_manually_close(api_remote_device_id))
+        },
+    )
+}
+
+#[no_mangle]
 pub extern "C" fn wire_endpoint_close_notify(port_: i64, remote_device_id: *mut wire_uint_8_list) {
     FLUTTER_RUST_BRIDGE_HANDLER.wrap(
         WrapInfo {

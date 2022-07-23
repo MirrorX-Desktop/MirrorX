@@ -78,6 +78,11 @@ abstract class MirrorXCore {
 
   FlutterRustBridgeTaskConstMeta get kEndpointInputConstMeta;
 
+  Future<void> endpointManuallyClose(
+      {required String remoteDeviceId, dynamic hint});
+
+  FlutterRustBridgeTaskConstMeta get kEndpointManuallyCloseConstMeta;
+
   Stream<void> endpointCloseNotify(
       {required String remoteDeviceId, dynamic hint});
 
@@ -546,6 +551,23 @@ class MirrorXCoreImpl extends FlutterRustBridgeBase<MirrorXCoreWire>
       const FlutterRustBridgeTaskConstMeta(
         debugName: "endpoint_input",
         argNames: ["remoteDeviceId", "event"],
+      );
+
+  Future<void> endpointManuallyClose(
+          {required String remoteDeviceId, dynamic hint}) =>
+      executeNormal(FlutterRustBridgeTask(
+        callFfi: (port_) => inner.wire_endpoint_manually_close(
+            port_, _api2wire_String(remoteDeviceId)),
+        parseSuccessData: _wire2api_unit,
+        constMeta: kEndpointManuallyCloseConstMeta,
+        argValues: [remoteDeviceId],
+        hint: hint,
+      ));
+
+  FlutterRustBridgeTaskConstMeta get kEndpointManuallyCloseConstMeta =>
+      const FlutterRustBridgeTaskConstMeta(
+        debugName: "endpoint_manually_close",
+        argNames: ["remoteDeviceId"],
       );
 
   Stream<void> endpointCloseNotify(
@@ -1064,6 +1086,23 @@ class MirrorXCoreWire implements FlutterRustBridgeWireBase {
   late final _wire_endpoint_input = _wire_endpoint_inputPtr.asFunction<
       void Function(
           int, ffi.Pointer<wire_uint_8_list>, ffi.Pointer<wire_InputEvent>)>();
+
+  void wire_endpoint_manually_close(
+    int port_,
+    ffi.Pointer<wire_uint_8_list> remote_device_id,
+  ) {
+    return _wire_endpoint_manually_close(
+      port_,
+      remote_device_id,
+    );
+  }
+
+  late final _wire_endpoint_manually_closePtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Void Function(ffi.Int64,
+              ffi.Pointer<wire_uint_8_list>)>>('wire_endpoint_manually_close');
+  late final _wire_endpoint_manually_close = _wire_endpoint_manually_closePtr
+      .asFunction<void Function(int, ffi.Pointer<wire_uint_8_list>)>();
 
   void wire_endpoint_close_notify(
     int port_,

@@ -363,6 +363,8 @@ void wire_endpoint_input(int64_t port_,
                          struct wire_uint_8_list *remote_device_id,
                          struct wire_InputEvent *event);
 
+void wire_endpoint_manually_close(int64_t port_, struct wire_uint_8_list *remote_device_id);
+
 void wire_endpoint_close_notify(int64_t port_, struct wire_uint_8_list *remote_device_id);
 
 struct wire_InputEvent *new_box_autoadd_input_event_0(void);
@@ -407,6 +409,7 @@ static int64_t dummy_method_to_enforce_bundling(void) {
     dummy_var ^= ((int64_t) (void*) wire_endpoint_get_display_info);
     dummy_var ^= ((int64_t) (void*) wire_endpoint_start_media_transmission);
     dummy_var ^= ((int64_t) (void*) wire_endpoint_input);
+    dummy_var ^= ((int64_t) (void*) wire_endpoint_manually_close);
     dummy_var ^= ((int64_t) (void*) wire_endpoint_close_notify);
     dummy_var ^= ((int64_t) (void*) new_box_autoadd_input_event_0);
     dummy_var ^= ((int64_t) (void*) new_box_autoadd_keyboard_event_0);

@@ -82,6 +82,7 @@ class NavigationMenu extends StatelessWidget {
                           system: false,
                           desktopClosed: state.closedDesktops
                               .contains(model.remoteDeviceId),
+                          desktopModel: model,
                         ),
                       ),
                     )

@@ -23,9 +23,7 @@ class LanguageSelector extends StatelessWidget {
         DropdownButtonHideUnderline(
           child: DropdownButton<Locale>(
             elevation: 1,
-            underline: null,
             dropdownColor: Colors.white,
-            focusColor: Colors.transparent,
             borderRadius: const BorderRadius.all(Radius.circular(8)),
             value: Localizations.localeOf(context),
             items: AppLocalizations.supportedLocales

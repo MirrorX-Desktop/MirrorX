@@ -9,6 +9,7 @@
     "dialogContentInputDevicePassword": "Please enter the password for the remote device",
     "dialogContentSelectMonitor": "Please select the monitor",
     "dialogContentConnectionDisconnected": "The remote device connection is disconnected",
+    "dialogContentManuallyClose": "Do you really want to disconnect the connection?",
     "connectPageTitle": "Connect",
     "connectPageDeviceIDTitle": "Device ID",
     "connectPageDeviceIDButtonCopyTooltip": "Copy Device ID",
@@ -48,5 +49,7 @@
     "settingsPageGroupOtherTitle": "Other",
     "settingsPageOptionLanguageTitle": "Language",
     "desktopPageToolbarButtonTooltipScale": "Scale Screen",
-    "desktopPageToolbarButtonTooltipNoneScale": "Original Size"
+    "desktopPageToolbarButtonTooltipNoneScale": "Original Size",
+    "navigationPopupMenuItemTitleRemark": "Remark",
+    "navigationPopupMenuItemTitleDisconnect": "Disconnect"
 }

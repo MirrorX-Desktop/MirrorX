@@ -1,9 +1,6 @@
-use crate::service::endpoint::message::{
-    GetDisplayInfoResponse, InputEvent, KeyboardEvent, MouseEvent,
-};
+use crate::service::endpoint::message::{GetDisplayInfoResponse, InputEvent};
 use crate::utility::runtime::TOKIO_RUNTIME;
 use crate::{api, service::endpoint::message::StartMediaTransmissionResponse};
-use futures::FutureExt;
 use std::sync::{atomic::AtomicBool, Once};
 use tracing::info;
 
@@ -120,6 +117,10 @@ pub fn endpoint_input(remote_device_id: String, event: InputEvent) -> anyhow::Re
     async_block_on! {
         api::endpoint::input(remote_device_id, event)
     }
+}
+
+pub fn endpoint_manually_close(remote_device_id: String) {
+    api::endpoint::manually_close(remote_device_id);
 }
 
 pub fn endpoint_close_notify(

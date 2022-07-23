@@ -9,6 +9,7 @@
     "dialogContentInputDevicePassword": "请输入远程设备密码",
     "dialogContentSelectMonitor": "请选择屏幕",
     "dialogContentConnectionDisconnected": "远程设备的连接已断开",
+    "dialogContentManuallyClose": "你真的想关闭连接吗？",
     "connectPageTitle": "连接",
     "connectPageDeviceIDTitle": "设备ID",
     "connectPageDeviceIDButtonCopyTooltip": "拷贝设备ID",
@@ -48,5 +49,7 @@
     "settingsPageGroupOtherTitle": "其它",
     "settingsPageOptionLanguageTitle": "语言",
     "desktopPageToolbarButtonTooltipScale": "缩放屏幕",
-    "desktopPageToolbarButtonTooltipNoneScale": "原始分辨率"
+    "desktopPageToolbarButtonTooltipNoneScale": "原始分辨率",
+    "navigationPopupMenuItemTitleRemark": "备注",
+    "navigationPopupMenuItemTitleDisconnect": "断开连接"
 }

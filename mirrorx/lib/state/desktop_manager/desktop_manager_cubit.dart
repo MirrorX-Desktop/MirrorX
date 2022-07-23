@@ -13,21 +13,29 @@ class DesktopManagerCubit extends Cubit<DesktopManagerState> {
         desktopModels: List.from(state.desktopModels)..add(desktopModel)));
   }
 
-  void removeDesktop(String remoteDeviceID) {
+  void removeDesktop(String remoteDeviceId) {
     emit(
       state.copyWith(
         desktopModels: List.from(state.desktopModels)
-          ..removeWhere((e) => e.remoteDeviceId == remoteDeviceID),
-        closedDesktops: List.from(state.closedDesktops)..remove(remoteDeviceID),
+          ..removeWhere((e) => e.remoteDeviceId == remoteDeviceId),
+        closedDesktops: List.from(state.closedDesktops)..remove(remoteDeviceId),
       ),
     );
   }
 
-  void markDeskopClosed(String remoteDeviceID) {
-    if (!state.closedDesktops.contains(remoteDeviceID)) {
+  void markDeskopClosed(String remoteDeviceId) {
+    final containDesktop = state.desktopModels
+            .indexWhere((m) => m.remoteDeviceId == remoteDeviceId) >=
+        0;
+
+    if (!containDesktop) {
+      return;
+    }
+
+    if (!state.closedDesktops.contains(remoteDeviceId)) {
       emit(state.copyWith(
           closedDesktops: List.from(state.closedDesktops)
-            ..add(remoteDeviceID)));
+            ..add(remoteDeviceId)));
     }
   }
 }

@@ -4,7 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:marquee/marquee.dart';
+import 'package:mirrorx/env/sdk/mirrorx_core_sdk.dart';
+import 'package:mirrorx/env/utility/dialog.dart';
+import 'package:mirrorx/model/desktop.dart';
+import 'package:mirrorx/state/desktop_manager/desktop_manager_cubit.dart';
 import 'package:mirrorx/state/page_manager/page_manager_cubit.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class NavigationMenuItem extends StatefulWidget {
   const NavigationMenuItem({
@@ -14,13 +19,20 @@ class NavigationMenuItem extends StatefulWidget {
     required this.title,
     required this.system,
     this.desktopClosed,
-  }) : super(key: key);
+    this.desktopModel,
+  })  : assert(system == false
+            ? desktopModel != null
+                ? true
+                : false
+            : true),
+        super(key: key);
 
   final String pageTag;
   final Widget Function(Color?) iconBuilder;
   final String title;
   final bool system;
   final bool? desktopClosed;
+  final DesktopModel? desktopModel;
 
   @override
   _NavigationMenuItemState createState() => _NavigationMenuItemState();
@@ -238,6 +250,65 @@ class _NavigationMenuItemState extends State<NavigationMenuItem>
             context.read<PageManagerCubit>().switchPage(widget.pageTag);
           }
         },
+        onSecondaryTap: widget.system
+            ? null
+            : () async {
+                const offset = Offset(72, 0);
+                final RenderBox button =
+                    context.findRenderObject()! as RenderBox;
+                final RenderBox overlay = Navigator.of(context)
+                    .overlay!
+                    .context
+                    .findRenderObject()! as RenderBox;
+                final RelativeRect position = RelativeRect.fromRect(
+                  Rect.fromPoints(
+                    button.localToGlobal(offset, ancestor: overlay),
+                    button.localToGlobal(
+                      button.size.bottomRight(Offset.zero) + offset,
+                      ancestor: overlay,
+                    ),
+                  ),
+                  Offset.zero & overlay.size,
+                );
+
+                final menuItem = await showMenu<int>(
+                  context: context,
+                  elevation: 3,
+                  color: Colors.white,
+                  items: [
+                    PopupMenuItem(
+                      value: 1,
+                      enabled: false,
+                      child: Text(AppLocalizations.of(context)!
+                          .navigationPopupMenuItemTitleRemark),
+                    ),
+                    const PopupMenuDivider(),
+                    PopupMenuItem(
+                      value: 2,
+                      child: Text(
+                        AppLocalizations.of(context)!
+                            .navigationPopupMenuItemTitleDisconnect,
+                        style: const TextStyle(color: Colors.red),
+                      ),
+                    ),
+                  ],
+                  position: position,
+                  constraints: const BoxConstraints(minWidth: 200),
+                  shape: RoundedRectangleBorder(
+                    side: const BorderSide(),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                );
+
+                switch (menuItem) {
+                  case 1:
+                    break;
+                  case 2:
+                    askDisconnect();
+                    break;
+                  default:
+                }
+              },
         child: child,
       ),
     );
@@ -281,6 +352,45 @@ class _NavigationMenuItemState extends State<NavigationMenuItem>
           ),
         );
       },
+    );
+  }
+
+  void askDisconnect() async {
+    final remoteDeviceId = widget.desktopModel!.remoteDeviceId;
+
+    if (!mounted) {
+      return;
+    }
+
+    final desktopManagerCubit = context.read<DesktopManagerCubit>();
+    final pageManagerCubit = context.read<PageManagerCubit>();
+
+    popupDialog(
+      context,
+      contentBuilder: (context) => Text(
+        AppLocalizations.of(context)!.dialogContentManuallyClose,
+        textAlign: TextAlign.center,
+      ),
+      actionBuilder: (navigatorState) => [
+        TextButton(
+          onPressed: () {
+            log("press yes");
+
+            desktopManagerCubit.removeDesktop(remoteDeviceId);
+            pageManagerCubit.switchPage("Connect");
+
+            MirrorXCoreSDK.instance
+                .endpointManuallyClose(remoteDeviceId: remoteDeviceId);
+
+            navigatorState.pop();
+          },
+          child: Text(AppLocalizations.of(context)!.dialogYes),
+        ),
+        TextButton(
+          onPressed: navigatorState.pop,
+          child: Text(AppLocalizations.of(context)!.dialogNo),
+        ),
+      ],
     );
   }
 

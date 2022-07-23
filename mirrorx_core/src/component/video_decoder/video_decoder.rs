@@ -271,7 +271,6 @@ impl VideoDecoder {
 
         let mut abgr_frame = Vec::<u8>::with_capacity(abgr_frame_size);
 
-        let ti = std::time::Instant::now();
         let ret = NV12ToARGBMatrix(
             (*self.hw_decode_frame).data[0],
             (*self.hw_decode_frame).linesize[0] as isize,
@@ -283,8 +282,6 @@ impl VideoDecoder {
             (*self.hw_decode_frame).width as isize,
             (*self.hw_decode_frame).height as isize,
         );
-
-        info!("instant: {:?}", ti.elapsed());
 
         if ret != 0 {
             return Err(MirrorXError::Other(anyhow::anyhow!(

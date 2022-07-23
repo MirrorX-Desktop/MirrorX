@@ -34,9 +34,12 @@ class DeviceIdField extends StatelessWidget {
                     onPressed: () {
                       Clipboard.setData(ClipboardData(text: state.deviceID))
                           .then(
-                        (_) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                            content: Text(AppLocalizations.of(context)!
-                                .connectPageDeviceIDButtonCopySnackbarContent))),
+                        (_) =>
+                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          content: Text(AppLocalizations.of(context)!
+                              .connectPageDeviceIDButtonCopySnackbarContent),
+                          behavior: SnackBarBehavior.floating,
+                        )),
                       );
                     },
                     icon: const Icon(Icons.copy),

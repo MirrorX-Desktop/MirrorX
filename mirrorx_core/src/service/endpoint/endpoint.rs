@@ -13,7 +13,7 @@ use crate::{
 use anyhow::anyhow;
 use bincode::Options;
 use bytes::Bytes;
-use crossbeam::channel::{Receiver, Sender, TrySendError};
+use crossbeam::channel::{Receiver, Sender, TryRecvError, TrySendError};
 use dashmap::DashMap;
 use futures::{
     stream::{SplitSink, SplitStream},
@@ -202,12 +202,18 @@ where
         packet_tx,
         video_frame_tx: OnceCell::new(),
         audio_frame_tx: OnceCell::new(),
-        exit_tx,
-        exit_rx,
+        exit_tx: exit_tx,
+        exit_rx: exit_rx.clone(),
     });
 
-    serve_reader(endpoint.clone(), stream, opening_key);
-    serve_writer(remote_device_id.clone(), packet_rx, sink, sealing_key);
+    serve_reader(endpoint.clone(), exit_rx.clone(), stream, opening_key);
+    serve_writer(
+        remote_device_id.clone(),
+        exit_rx.clone(),
+        packet_rx,
+        sink,
+        sealing_key,
+    );
 
     ENDPOINTS.insert(remote_device_id, endpoint);
 
@@ -439,6 +445,10 @@ impl EndPoint {
         }
     }
 
+    pub fn manually_close(&self) {
+        let _ = self.exit_tx.try_send(());
+    }
+
     make_endpoint_call!(
         start_media_transmission,
         StartMediaTransmissionRequest,
@@ -460,55 +470,76 @@ impl EndPoint {
 
 impl Drop for EndPoint {
     fn drop(&mut self) {
-        let _ = self.exit_tx.send(());
+        let _ = self.exit_tx.try_send(());
         info!(remote_device_id = ?self.remote_device_id, "endpoint dropped");
     }
 }
 
 fn serve_reader(
     endpoint: Arc<EndPoint>,
+    exit_rx: Receiver<()>,
     mut stream: SplitStream<Framed<TcpStream, LengthDelimitedCodec>>,
     mut opening_key: OpeningKey<NonceValue>,
 ) {
     TOKIO_RUNTIME.spawn(async move {
         loop {
-            let mut packet_bytes = match stream.next().await {
-                Some(res) => match res {
-                    Ok(packet_bytes) => packet_bytes,
-                    Err(err) => {
-                        error!(remote_device_id=?endpoint.remote_device_id(), ?err, "read from network stream failed");
+
+let count=           Arc::strong_count(&endpoint);
+
+            info!("strong count: {}",count);
+
+            match exit_rx.try_recv() {
+                Ok(_) => {
+                    info!("receive exit from reader");
+                    break;
+                },
+                Err(err) => {
+                    if TryRecvError::Disconnected == err {
                         break;
                     }
-                },
-                None => {
-                    info!(remote_device_id=?endpoint.remote_device_id(), "network stream closed");
-                    break;
                 }
             };
 
-            let opened_packet_bytes =
-                match opening_key.open_in_place(ring::aead::Aad::empty(), &mut packet_bytes) {
-                    Ok(v) => v,
-                    Err(err) => {
-                        error!(remote_device_id=?endpoint.remote_device_id(), ?err, "decrypt packet data failed");
+            if let Ok(packet_result) = timeout(Duration::from_secs(1), stream.next()).await
+            {
+                let mut packet_bytes = match packet_result {
+                    Some(res) => match res {
+                        Ok(packet_bytes) => packet_bytes,
+                        Err(err) => {
+                            error!(remote_device_id=?endpoint.remote_device_id(), ?err, "read from network stream failed");
+                            break;
+                        }
+                    },
+                    None => {
+                        info!(remote_device_id=?endpoint.remote_device_id(), "network stream closed");
                         break;
                     }
                 };
 
-            let packet = match BINCODE_SERIALIZER
-                .deserialize::<EndPointMessagePacket>(&opened_packet_bytes)
-            {
-                Ok(packet) => packet,
-                Err(err) => {
-                    error!(remote_device_id=?endpoint.remote_device_id(), ?err, "deserialize packet failed");
-                    break;
-                }
-            };
+                let opened_packet_bytes =
+                    match opening_key.open_in_place(ring::aead::Aad::empty(), &mut packet_bytes) {
+                        Ok(v) => v,
+                        Err(err) => {
+                            error!(remote_device_id=?endpoint.remote_device_id(), ?err, "decrypt packet data failed");
+                            break;
+                        }
+                    };
 
-            let endpoint = endpoint.clone();
-            TOKIO_RUNTIME.spawn(async move {
-                handle_message(endpoint, packet).await;
-            });
+                let packet = match BINCODE_SERIALIZER
+                    .deserialize::<EndPointMessagePacket>(&opened_packet_bytes)
+                {
+                    Ok(packet) => packet,
+                    Err(err) => {
+                        error!(remote_device_id=?endpoint.remote_device_id(), ?err, "deserialize packet failed");
+                        break;
+                    }
+                };
+
+                let endpoint = endpoint.clone();
+                TOKIO_RUNTIME.spawn(async move {
+                    handle_message(endpoint, packet).await;
+                });
+            }
         }
 
         ENDPOINTS.remove(endpoint.remote_device_id());
@@ -518,38 +549,53 @@ fn serve_reader(
 
 fn serve_writer(
     remote_device_id: String,
+    exit_rx: Receiver<()>,
     mut packet_rx: tokio::sync::mpsc::Receiver<EndPointMessagePacket>,
     mut sink: SplitSink<Framed<TcpStream, LengthDelimitedCodec>, Bytes>,
     mut sealing_key: SealingKey<NonceValue>,
 ) {
     TOKIO_RUNTIME.spawn(async move {
         loop {
-            let packet = match packet_rx.recv().await {
-                Some(buffer) => buffer,
-                None => {
-                    info!(?remote_device_id, "writer tx closed");
+            match exit_rx.try_recv() {
+                Ok(_) => {
+                    info!("receive exit from writer");
                     break;
                 }
-            };
-
-            let mut packet_buffer = match BINCODE_SERIALIZER.serialize(&packet) {
-                Ok(buffer) => buffer,
                 Err(err) => {
-                    error!(?remote_device_id, ?err, "packet serialize failed");
-                    break;
+                    if TryRecvError::Disconnected == err {
+                        break;
+                    }
                 }
             };
 
-            if let Err(err) =
-                sealing_key.seal_in_place_append_tag(ring::aead::Aad::empty(), &mut packet_buffer)
-            {
-                error!(?remote_device_id, ?err, "crypt packet data failed");
-                break;
-            }
+            if let Ok(packet_result) = timeout(Duration::from_secs(1), packet_rx.recv()).await {
+                let packet = match packet_result {
+                    Some(buffer) => buffer,
+                    None => {
+                        info!(?remote_device_id, "writer tx closed");
+                        break;
+                    }
+                };
 
-            if let Err(_) = sink.send(Bytes::from(packet_buffer)).await {
-                error!(?remote_device_id, "write to network stream failed");
-                break;
+                let mut packet_buffer = match BINCODE_SERIALIZER.serialize(&packet) {
+                    Ok(buffer) => buffer,
+                    Err(err) => {
+                        error!(?remote_device_id, ?err, "packet serialize failed");
+                        break;
+                    }
+                };
+
+                if let Err(err) = sealing_key
+                    .seal_in_place_append_tag(ring::aead::Aad::empty(), &mut packet_buffer)
+                {
+                    error!(?remote_device_id, ?err, "crypt packet data failed");
+                    break;
+                }
+
+                if let Err(_) = sink.send(Bytes::from(packet_buffer)).await {
+                    error!(?remote_device_id, "write to network stream failed");
+                    break;
+                }
             }
         }
 
