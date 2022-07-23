@@ -54,10 +54,11 @@ pub fn start_desktop_capture_process(
                             "desktop capture frame",
                         );
 
-                        if let Err(TrySendError::Full(_)) = capture_frame_tx.try_send(frame) {
-                            continue;
-                        } else {
-                            return;
+                        if let Err(err) = capture_frame_tx.try_send(frame) {
+                            match err{
+                                TrySendError::Full(_) => warn!("desktop frame if full"),
+                                TrySendError::Closed(_) => return,
+                            };
                         }
                     },
                     Err(err) => {
