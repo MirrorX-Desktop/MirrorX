@@ -1,20 +1,11 @@
-import 'dart:developer';
-
-import 'package:card_swiper/card_swiper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
-import 'package:mirrorx/env/sdk/mirrorx_core.dart';
-import 'package:mirrorx/env/sdk/mirrorx_core_sdk.dart';
 import 'package:mirrorx/env/utility/dialog.dart';
 import 'package:mirrorx/model/desktop.dart';
 import 'package:mirrorx/pages/desktop/widgets/desktop_render_box/desktop_render_box.dart';
 import 'package:mirrorx/state/desktop_manager/desktop_manager_cubit.dart';
-import 'package:mirrorx/state/navigator_key.dart';
 import 'package:mirrorx/state/page_manager/page_manager_cubit.dart';
-import 'package:texture_render/model.dart';
-import 'package:texture_render/texture_render_platform_interface.dart';
-import 'package:flutter/foundation.dart';
 
 class DesktopPage extends StatefulWidget {
   const DesktopPage({Key? key, required this.model}) : super(key: key);
@@ -43,6 +34,7 @@ class _DesktopPageState extends State<DesktopPage> {
         context.read<PageManagerCubit>().switchPage("Connect");
 
         popupDialog(
+          context,
           contentBuilder: (_) => Text(
               AppLocalizations.of(context)!.dialogContentConnectionDisconnected,
               textAlign: TextAlign.center),

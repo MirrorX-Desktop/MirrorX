@@ -37,6 +37,7 @@
     "connectPageConnectProgressTipListMonitorsFailed": "List Monitors Failed",
     "connectPageConnectProgressTipPrepareMedia": "Prepare Media ...",
     "connectPageConnectProgressTipPrepareMediaFailed": "Prepare Media Failed",
+    "connectPageConnectProgressDefaultMonitorName": "Default Monitor",
     "intranetPageTitle": "Intranet",
     "filesPageTitle": "Files",
     "historyPageTitle": "History",

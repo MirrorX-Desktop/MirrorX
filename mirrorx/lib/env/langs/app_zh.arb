@@ -37,6 +37,7 @@
     "connectPageConnectProgressTipListMonitorsFailed": "获取屏幕失败",
     "connectPageConnectProgressTipPrepareMedia": "准备媒体数据中 ...",
     "connectPageConnectProgressTipPrepareMediaFailed": "准备媒体数据失败",
+    "connectPageConnectProgressDefaultMonitorName": "默认显示器",
     "intranetPageTitle": "局域网",
     "filesPageTitle": "文件",
     "historyPageTitle": "历史",

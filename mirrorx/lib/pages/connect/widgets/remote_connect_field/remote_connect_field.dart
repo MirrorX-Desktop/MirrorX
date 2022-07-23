@@ -1,22 +1,12 @@
 import 'dart:developer';
 
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:intl/intl.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
-import 'package:mirrorx/env/sdk/mirrorx_core.dart';
 import 'package:mirrorx/env/sdk/mirrorx_core_sdk.dart';
 import 'package:mirrorx/env/utility/dialog.dart';
-import 'package:mirrorx/model/desktop.dart';
 import 'package:mirrorx/pages/connect/widgets/connect_progress_dialog/connect_progress_dialog.dart';
 import 'package:mirrorx/pages/connect/widgets/remote_connect_field/digit_input.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:mirrorx/pages/desktop/desktop_page.dart';
-import 'package:mirrorx/state/desktop_manager/desktop_manager_cubit.dart';
-import 'package:mirrorx/state/navigator_key.dart';
-import 'package:mirrorx/state/page_manager/page_manager_cubit.dart';
-import 'package:mirrorx/state/profile/profile_state_cubit.dart';
-import 'package:texture_render/texture_render.dart';
 
 class RemoteConnectField extends StatefulWidget {
   const RemoteConnectField({Key? key}) : super(key: key);
@@ -163,21 +153,25 @@ class _RemoteConnectFieldState extends State<RemoteConnectField> {
 
       if (!success) {
         _updateHandshakeState(false);
-        await popupDialog(
-          contentBuilder: (_) =>
-              Text(AppLocalizations.of(context)!.dialogConnectRemoteOffline),
-          actionBuilder: (navigatorState) => [
-            TextButton(
-              onPressed: navigatorState.pop,
-              child: Text(AppLocalizations.of(context)!.dialogOK),
-            )
-          ],
-        );
+        if (mounted) {
+          await popupDialog(
+            context,
+            contentBuilder: (_) =>
+                Text(AppLocalizations.of(context)!.dialogConnectRemoteOffline),
+            actionBuilder: (navigatorState) => [
+              TextButton(
+                onPressed: navigatorState.pop,
+                child: Text(AppLocalizations.of(context)!.dialogOK),
+              )
+            ],
+          );
+        }
         return;
       }
     } catch (e) {
       _updateHandshakeState(false);
       await popupDialog(
+        context,
         contentBuilder: (_) => Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [

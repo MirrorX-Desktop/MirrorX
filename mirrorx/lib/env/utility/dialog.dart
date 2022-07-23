@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:mirrorx/state/navigator_key.dart';
 
-Future<T?> popupDialog<T>({
+Future<T?> popupDialog<T>(
+  BuildContext context, {
   required Widget Function(BuildContext) contentBuilder,
   required List<Widget>? Function(NavigatorState) actionBuilder,
 }) async {
   return showGeneralDialog<T?>(
-    context: navigatorKey.currentContext!,
+    context: context,
     pageBuilder: (context, animationValue1, animationValue2) {
       return AlertDialog(
         title: const Text("MirrorX", textAlign: TextAlign.center),
-        content: contentBuilder(navigatorKey.currentContext!),
-        actions: actionBuilder(navigatorKey.currentState!),
+        content: contentBuilder(context),
+        actions: actionBuilder(Navigator.of(context)),
       );
     },
     barrierDismissible: false,

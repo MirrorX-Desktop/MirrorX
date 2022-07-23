@@ -193,7 +193,7 @@ class _ConnectProgressStateDialogState
           onPressed: () {
             Navigator.of(context).pop();
           },
-          child: Text(AppLocalizations.of(context)!.dialogOK),
+          child: Text(AppLocalizations.of(context)!.dialogCancel),
         )
       ],
     );

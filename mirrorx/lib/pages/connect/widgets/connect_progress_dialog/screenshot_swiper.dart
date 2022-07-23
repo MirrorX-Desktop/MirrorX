@@ -1,6 +1,7 @@
 import 'package:card_swiper/card_swiper.dart';
 import 'package:flutter/material.dart';
 import 'package:mirrorx/env/sdk/mirrorx_core.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class ScreenShotSwiper extends StatefulWidget {
   const ScreenShotSwiper({
@@ -23,14 +24,16 @@ class _ScreenShotSwiperState extends State<ScreenShotSwiper> {
   Widget build(BuildContext context) {
     var monitorName = widget.displays[_selectedIndex].name;
     if (monitorName.isEmpty) {
-      monitorName = "内建显示器";
+      monitorName = AppLocalizations.of(context)!
+          .connectPageConnectProgressDefaultMonitorName;
     }
     return Column(
       children: [
         SizedBox(
-          width: 500,
+          width: 580,
           height: 280,
           child: Swiper(
+            outer: true,
             itemCount: widget.displays.length,
             pagination: const SwiperPagination(
               builder: DotSwiperPaginationBuilder(
@@ -39,11 +42,12 @@ class _ScreenShotSwiperState extends State<ScreenShotSwiper> {
               ),
             ),
             control: const SwiperControl(
-                iconPrevious: Icons.chevron_left_rounded,
-                iconNext: Icons.chevron_right_rounded,
-                color: Colors.yellow,
-                size: 60,
-                padding: EdgeInsets.zero),
+              iconPrevious: Icons.chevron_left_rounded,
+              iconNext: Icons.chevron_right_rounded,
+              color: Colors.yellow,
+              size: 60,
+              padding: EdgeInsets.zero,
+            ),
             indicatorLayout: PageIndicatorLayout.SCALE,
             onIndexChanged: (index) {
               setState(() {
@@ -52,38 +56,32 @@ class _ScreenShotSwiperState extends State<ScreenShotSwiper> {
             },
             itemBuilder: (BuildContext context, int index) {
               final display = widget.displays[index];
-              return Container(
-                padding: const EdgeInsets.symmetric(horizontal: 60),
-                child: Center(
-                  child: MouseRegion(
-                    cursor: SystemMouseCursors.click,
-                    child: GestureDetector(
-                      child: AspectRatio(
-                        aspectRatio: display.width / display.height,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(4),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.1),
-                                blurRadius: 1,
-                                spreadRadius: 1.2,
-                              ),
-                            ],
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(4),
-                            child: Image.memory(
-                              display.screenShot,
+              return Center(
+                child: MouseRegion(
+                  cursor: SystemMouseCursors.click,
+                  child: GestureDetector(
+                    child: AspectRatio(
+                      aspectRatio: display.width / display.height,
+                      child: Container(
+                        decoration: BoxDecoration(
+                            image: DecorationImage(
+                                image: MemoryImage(display.screenShot)),
+                            borderRadius: BorderRadius.circular(6),
+                            border:
+                                Border.all(color: Colors.grey.withOpacity(0.4))
+                            // boxShadow: [
+                            //   BoxShadow(
+                            //       color: Colors.black.withOpacity(0.1),
+                            //       offset: Offset(0, 0),
+                            //       blurRadius: 1,
+                            //       spreadRadius: 1)
+                            // ],
                             ),
-                          ),
-                        ),
                       ),
-                      onTap: () {
-                        widget.selectCallback(display);
-                      },
                     ),
+                    onTap: () {
+                      widget.selectCallback(display);
+                    },
                   ),
                 ),
               );

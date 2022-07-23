@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 import 'dart:ui' as ui;
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:mirrorx/state/desktop_manager/desktop_manager_cubit.dart';
-import 'package:mirrorx/state/navigator_key.dart';
 import 'package:mirrorx/state/page_manager/page_manager_cubit.dart';
 import 'package:mirrorx/state/profile/profile_state_cubit.dart';
 
@@ -42,7 +41,6 @@ class App extends StatelessWidget {
               scaffoldBackgroundColor: Colors.white,
             ),
             home: const Scaffold(body: LoadingPage()),
-            navigatorKey: navigatorKey,
           );
         },
       ),
