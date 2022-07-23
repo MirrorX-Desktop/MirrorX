@@ -373,7 +373,7 @@ class _NavigationMenuItemState extends State<NavigationMenuItem>
       ),
       actionBuilder: (navigatorState) => [
         TextButton(
-          onPressed: () {
+          onPressed: () async {
             log("press yes");
 
             desktopManagerCubit.removeDesktop(remoteDeviceId);

@@ -13,7 +13,7 @@ use crate::{
 use anyhow::anyhow;
 use bincode::Options;
 use bytes::Bytes;
-use crossbeam::channel::{Receiver, Sender, TryRecvError, TrySendError};
+use crossbeam::{channel::Sender, select};
 use dashmap::DashMap;
 use futures::{
     stream::{SplitSink, SplitStream},
@@ -104,10 +104,10 @@ pub struct EndPoint {
     atomic_call_id: AtomicU16,
     call_reply_tx_map: DashMap<u16, tokio::sync::oneshot::Sender<EndPointMessage>>,
     packet_tx: tokio::sync::mpsc::Sender<EndPointMessagePacket>,
-    video_frame_tx: OnceCell<Sender<VideoFrame>>,
+    video_frame_tx: OnceCell<tokio::sync::mpsc::Sender<VideoFrame>>,
     audio_frame_tx: OnceCell<Sender<AudioFrame>>,
-    exit_tx: Sender<()>,
-    exit_rx: Receiver<()>,
+    exit_tx: async_broadcast::Sender<()>,
+    exit_rx: async_broadcast::Receiver<()>,
 }
 
 pub async fn connect<A>(
@@ -191,7 +191,7 @@ where
 
     let (packet_tx, packet_rx) = tokio::sync::mpsc::channel(128);
 
-    let (exit_tx, exit_rx) = crossbeam::channel::unbounded();
+    let ( exit_tx, _) = async_broadcast::broadcast(1);
 
     let endpoint = Arc::new(EndPoint {
         monitor: OnceCell::new(),
@@ -202,14 +202,15 @@ where
         packet_tx,
         video_frame_tx: OnceCell::new(),
         audio_frame_tx: OnceCell::new(),
-        exit_tx: exit_tx,
-        exit_rx: exit_rx.clone(),
+        exit_tx: exit_tx.clone(),
+        exit_rx: exit_tx.new_receiver(),
     });
 
-    serve_reader(endpoint.clone(), exit_rx.clone(), stream, opening_key);
+    serve_reader(endpoint.clone(), exit_tx.new_receiver(), stream, opening_key);
     serve_writer(
+        endpoint.clone(),
         remote_device_id.clone(),
-        exit_rx.clone(),
+        exit_tx.new_receiver(),
         packet_rx,
         sink,
         sealing_key,
@@ -233,7 +234,7 @@ impl EndPoint {
         self.monitor.get()
     }
 
-    pub fn subscribe_exit(&self) -> Receiver<()> {
+    pub fn subscribe_exit(&self) -> async_broadcast::Receiver<()> {
         self.exit_rx.clone()
     }
 }
@@ -328,7 +329,7 @@ impl EndPoint {
         let height = monitor.height;
         let fps = monitor.refresh_rate.min(except_fps);
 
-        let (capture_frame_tx, capture_frame_rx) = crossbeam::channel::bounded(1);
+        let (capture_frame_tx, capture_frame_rx) = tokio::sync::mpsc::channel(1);
 
         start_video_encode_process(
             self.remote_device_id.clone(),
@@ -364,7 +365,7 @@ impl EndPoint {
         video_texture_ptr: i64,
         update_frame_callback_ptr: i64,
     ) -> Result<(), MirrorXError> {
-        let (video_frame_tx, video_frame_rx) = crossbeam::channel::bounded(600);
+        let (video_frame_tx, video_frame_rx) = tokio::sync::mpsc::channel(600);
         let (decoded_frame_tx, decoded_frame_rx) = crossbeam::channel::bounded(600);
 
         start_video_decode_process(
@@ -429,7 +430,7 @@ impl EndPoint {
 
     pub fn enqueue_video_frame(&self, video_frame: VideoFrame) {
         if let Some(tx) = self.video_frame_tx.get() {
-            if let Err(TrySendError::Full(_)) = tx.try_send(video_frame) {
+            if let Err(tokio::sync::mpsc::error::TrySendError::Full(_)) = tx.try_send(video_frame) {
                 warn!(remote_device_id = ?self.remote_device_id, "video frame queue is full");
             }
         }
@@ -446,7 +447,7 @@ impl EndPoint {
     }
 
     pub fn manually_close(&self) {
-        let _ = self.exit_tx.try_send(());
+        let _ = self.exit_tx.try_broadcast(());
     }
 
     make_endpoint_call!(
@@ -470,136 +471,114 @@ impl EndPoint {
 
 impl Drop for EndPoint {
     fn drop(&mut self) {
-        let _ = self.exit_tx.try_send(());
+        let _ = self.exit_tx.try_broadcast(());
         info!(remote_device_id = ?self.remote_device_id, "endpoint dropped");
     }
 }
 
 fn serve_reader(
     endpoint: Arc<EndPoint>,
-    exit_rx: Receiver<()>,
+    mut exit_rx: async_broadcast::Receiver<()>,
     mut stream: SplitStream<Framed<TcpStream, LengthDelimitedCodec>>,
     mut opening_key: OpeningKey<NonceValue>,
 ) {
     TOKIO_RUNTIME.spawn(async move {
         loop {
+            tokio::select! {
+                _ = exit_rx.recv() => break,
+                res = stream.next() => match res {
+                    Some(res) => {
+                        let mut packet_bytes = match res {
+                            Ok(packet_bytes) => packet_bytes,
+                            Err(err) => {
+                                error!(remote_device_id=?endpoint.remote_device_id(), ?err, "read from network stream failed");
+                                break;
+                            }
+                        };
 
-let count=           Arc::strong_count(&endpoint);
-
-            info!("strong count: {}",count);
-
-            match exit_rx.try_recv() {
-                Ok(_) => {
-                    info!("receive exit from reader");
-                    break;
-                },
-                Err(err) => {
-                    if TryRecvError::Disconnected == err {
-                        break;
-                    }
-                }
-            };
-
-            if let Ok(packet_result) = timeout(Duration::from_secs(1), stream.next()).await
-            {
-                let mut packet_bytes = match packet_result {
-                    Some(res) => match res {
-                        Ok(packet_bytes) => packet_bytes,
-                        Err(err) => {
-                            error!(remote_device_id=?endpoint.remote_device_id(), ?err, "read from network stream failed");
-                            break;
-                        }
+                        let opened_packet_bytes =
+                            match opening_key.open_in_place(ring::aead::Aad::empty(), &mut packet_bytes) {
+                                Ok(v) => v,
+                                Err(err) => {
+                                    error!(remote_device_id=?endpoint.remote_device_id(), ?err, "decrypt packet data failed");
+                                    break;
+                                }
+                            };
+                        
+                        let packet = match BINCODE_SERIALIZER
+                            .deserialize::<EndPointMessagePacket>(&opened_packet_bytes)
+                        {
+                            Ok(packet) => packet,
+                            Err(err) => {
+                                error!(remote_device_id=?endpoint.remote_device_id(), ?err, "deserialize packet failed");
+                                break;
+                            }
+                        };
+                    
+                        let endpoint = endpoint.clone();
+                        TOKIO_RUNTIME.spawn(async move {
+                            handle_message(endpoint, packet).await;
+                        });
                     },
                     None => {
                         info!(remote_device_id=?endpoint.remote_device_id(), "network stream closed");
                         break;
-                    }
-                };
-
-                let opened_packet_bytes =
-                    match opening_key.open_in_place(ring::aead::Aad::empty(), &mut packet_bytes) {
-                        Ok(v) => v,
-                        Err(err) => {
-                            error!(remote_device_id=?endpoint.remote_device_id(), ?err, "decrypt packet data failed");
-                            break;
-                        }
-                    };
-
-                let packet = match BINCODE_SERIALIZER
-                    .deserialize::<EndPointMessagePacket>(&opened_packet_bytes)
-                {
-                    Ok(packet) => packet,
-                    Err(err) => {
-                        error!(remote_device_id=?endpoint.remote_device_id(), ?err, "deserialize packet failed");
-                        break;
-                    }
-                };
-
-                let endpoint = endpoint.clone();
-                TOKIO_RUNTIME.spawn(async move {
-                    handle_message(endpoint, packet).await;
-                });
+                    },
+                }
             }
         }
 
-        ENDPOINTS.remove(endpoint.remote_device_id());
+        endpoint.manually_close();
         info!(remote_device_id=?endpoint.remote_device_id(), "read process exit");
     });
 }
 
 fn serve_writer(
+    endpoint: Arc<EndPoint>,
     remote_device_id: String,
-    exit_rx: Receiver<()>,
+    mut exit_rx: async_broadcast::Receiver<()>,
     mut packet_rx: tokio::sync::mpsc::Receiver<EndPointMessagePacket>,
     mut sink: SplitSink<Framed<TcpStream, LengthDelimitedCodec>, Bytes>,
     mut sealing_key: SealingKey<NonceValue>,
 ) {
     TOKIO_RUNTIME.spawn(async move {
         loop {
-            match exit_rx.try_recv() {
-                Ok(_) => {
-                    info!("receive exit from writer");
+            tokio::select! {
+                _ = exit_rx.recv() => {
+                    info!("serve writer receive");
                     break;
-                }
-                Err(err) => {
-                    if TryRecvError::Disconnected == err {
-                        break;
-                    }
-                }
-            };
+                },
+                res = packet_rx.recv() => match res {
+                    Some(packet) => {
+                        let mut packet_buffer = match BINCODE_SERIALIZER.serialize(&packet) {
+                            Ok(buffer) => buffer,
+                            Err(err) => {
+                                error!(?remote_device_id, ?err, "packet serialize failed");
+                                break;
+                            }
+                        };
 
-            if let Ok(packet_result) = timeout(Duration::from_secs(1), packet_rx.recv()).await {
-                let packet = match packet_result {
-                    Some(buffer) => buffer,
+                        if let Err(err) = sealing_key
+                            .seal_in_place_append_tag(ring::aead::Aad::empty(), &mut packet_buffer)
+                        {
+                            error!(?remote_device_id, ?err, "crypt packet data failed");
+                            break;
+                        }
+
+                        if let Err(_) = sink.send(Bytes::from(packet_buffer)).await {
+                            error!(?remote_device_id, "write to network stream failed");
+                            break;
+                        }
+                    },
                     None => {
                         info!(?remote_device_id, "writer tx closed");
                         break;
                     }
-                };
-
-                let mut packet_buffer = match BINCODE_SERIALIZER.serialize(&packet) {
-                    Ok(buffer) => buffer,
-                    Err(err) => {
-                        error!(?remote_device_id, ?err, "packet serialize failed");
-                        break;
-                    }
-                };
-
-                if let Err(err) = sealing_key
-                    .seal_in_place_append_tag(ring::aead::Aad::empty(), &mut packet_buffer)
-                {
-                    error!(?remote_device_id, ?err, "crypt packet data failed");
-                    break;
-                }
-
-                if let Err(_) = sink.send(Bytes::from(packet_buffer)).await {
-                    error!(?remote_device_id, "write to network stream failed");
-                    break;
                 }
             }
         }
 
-        ENDPOINTS.remove(&remote_device_id);
+        endpoint.manually_close();
         info!(?remote_device_id, "write process exit");
     });
 }
