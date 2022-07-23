@@ -8,6 +8,7 @@ use crate::{
     service::endpoint::message::*,
     utility::runtime::TOKIO_RUNTIME,
 };
+use async_broadcast::TryRecvError;
 use crossbeam::channel::{Receiver, Sender};
 use scopeguard::defer;
 use std::collections::HashMap;
@@ -20,7 +21,7 @@ pub fn start_video_encode_process(
     width: i32,
     height: i32,
     fps: i32,
-    mut capture_frame_rx: tokio::sync::mpsc::Receiver<Frame>,
+    mut capture_frame_rx: crossbeam::channel::Receiver<Frame>,
     packet_tx: tokio::sync::mpsc::Sender<EndPointMessagePacket>,
 ) -> Result<(), MirrorXError> {
     let (encoder_name, options) = if cfg!(target_os = "macos") {
@@ -44,70 +45,39 @@ pub fn start_video_encode_process(
 
     let mut encoder = VideoEncoder::new(encoder_name, fps, width, height, options)?;
 
-    // std::thread::Builder::new()
-    //     .name(format!("video_encode_process:{}", remote_device_id))
-    //     .spawn(move || {
-    //         defer! {
-    //             info!(?remote_device_id, "video encode process exit");
-    //             let _ = exit_tx.send(());
-    //         }
+    std::thread::Builder::new()
+        .name(format!("video_encode_process:{}", remote_device_id))
+        .spawn(move || {
+            defer! {
+                info!(?remote_device_id, "video encode process exit");
+                let _ = exit_tx.try_broadcast(());
+            }
 
-    //         loop {
-    //             crossbeam::select! {
-    //                 recv(exit_rx) -> _ => {
-    //                     return;
-    //                 },
-    //                 recv(capture_frame_rx) -> res => match res {
-    //                     Ok(frame) => if let Err(err) = encoder.encode(frame, &packet_tx) {
-    //                         error!(?err, "video frame encode failed");
-    //                         return;
-    //                     },
-    //                     Err(_) => return,
-    //                 }
-    //             }
-    //         }
-    //     })
-    //     .and_then(|_| Ok(()))
-    //     .map_err(|err| {
-    //         MirrorXError::Other(anyhow::anyhow!("spawn video encode process failed ({err})"))
-    //     })
+            loop {
+                match exit_rx.try_recv() {
+                    Ok(_) => return,
+                    Err(err) => {
+                        if err == TryRecvError::Closed {
+                            return;
+                        }
+                    }
+                };
 
-    TOKIO_RUNTIME.spawn(async move {
-        defer! {
-            info!(?remote_device_id, "video encode process exit");
-            let _ = exit_tx.try_broadcast(());
-        }
-
-        loop {
-            tokio::select! {
-                _ = exit_rx.recv() => break,
-                res = capture_frame_rx.recv() => match res {
-                    Some(capture_frame) => {
+                match capture_frame_rx.recv() {
+                    Ok(capture_frame) => {
                         if let Err(err) = encoder.encode(capture_frame, &packet_tx) {
                             error!(?err, "video frame encode failed");
                             return;
                         }
-                    },
-                    None => break,
-                }
-            };
-
-            // crossbeam::select! {
-            //     recv(exit_rx) -> _ => {
-            //         return;
-            //     },
-            //     recv(capture_frame_rx) -> res => match res {
-            //         Ok(frame) => if let Err(err) = encoder.encode(frame, &packet_tx) {
-            //             error!(?err, "video frame encode failed");
-            //             return;
-            //         },
-            //         Err(_) => return,
-            //     }
-            // }
-        }
-    });
-
-    Ok(())
+                    }
+                    Err(_) => return,
+                };
+            }
+        })
+        .and_then(|_| Ok(()))
+        .map_err(|err| {
+            MirrorXError::Other(anyhow::anyhow!("spawn video encode process failed ({err})"))
+        })
 }
 
 pub fn start_video_decode_process(
