@@ -154,7 +154,7 @@ class _RemoteConnectFieldState extends State<RemoteConnectField> {
       if (!success) {
         _updateHandshakeState(false);
         if (mounted) {
-          await popupDialog(
+          popupDialog(
             context,
             contentBuilder: (_) =>
                 Text(AppLocalizations.of(context)!.dialogConnectRemoteOffline),
@@ -170,7 +170,7 @@ class _RemoteConnectFieldState extends State<RemoteConnectField> {
       }
     } catch (e) {
       _updateHandshakeState(false);
-      await popupDialog(
+      popupDialog(
         context,
         contentBuilder: (_) => Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -191,7 +191,7 @@ class _RemoteConnectFieldState extends State<RemoteConnectField> {
 
     _updateHandshakeState(false);
 
-    await showGeneralDialog(
+    showGeneralDialog(
       context: context,
       pageBuilder: (context, animationValue1, animationValue2) {
         return StatefulBuilder(builder: (context, setter) {
