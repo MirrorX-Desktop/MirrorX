@@ -191,7 +191,7 @@ where
 
     let (packet_tx, packet_rx) = tokio::sync::mpsc::channel(128);
 
-    let ( exit_tx, _) = async_broadcast::broadcast(1);
+    let (exit_tx, exit_rx) = async_broadcast::broadcast(1);
 
     let endpoint = Arc::new(EndPoint {
         monitor: OnceCell::new(),
@@ -203,7 +203,7 @@ where
         video_frame_tx: OnceCell::new(),
         audio_frame_tx: OnceCell::new(),
         exit_tx: exit_tx.clone(),
-        exit_rx: exit_tx.new_receiver(),
+        exit_rx,
     });
 
     serve_reader(endpoint.clone(), exit_tx.new_receiver(), stream, opening_key);
