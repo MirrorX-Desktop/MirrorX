@@ -23,7 +23,7 @@ static VIDEO_DATA_OUTPUT_CALLBACK_CLASS_INIT_ONCE: Once = Once::new();
 pub struct AVCaptureVideoDataOutputCallback {}
 
 impl AVCaptureVideoDataOutputCallback {
-    pub fn initialize(&mut self, capture_frame_tx: tokio::sync::mpsc::Sender<Frame>) {
+    pub fn initialize(&mut self, capture_frame_tx: crossbeam::channel::Sender<Frame>) {
         unsafe {
             let obj = &mut *(self as *mut _ as *mut Object);
             let capture_frame_tx_ptr = Box::into_raw(Box::new(capture_frame_tx));
@@ -67,7 +67,7 @@ impl Drop for AVCaptureVideoDataOutputCallback {
 
             let capture_frame_tx_ptr: *mut c_void = msg_send![obj, captureFrameTx];
             if !capture_frame_tx_ptr.is_null() {
-                Box::from_raw(capture_frame_tx_ptr as *mut tokio::sync::mpsc::Sender<Frame>);
+                Box::from_raw(capture_frame_tx_ptr as *mut crossbeam::channel::Sender<Frame>);
             }
 
             msg_send![obj, release]
@@ -138,7 +138,7 @@ unsafe fn add_method_capture_output_callback(cls: &mut ClassDecl) {
 
             let capture_frame_tx = std::mem::transmute::<
                 *mut c_void,
-                &mut tokio::sync::mpsc::Sender<Frame>,
+                &mut crossbeam::channel::Sender<Frame>,
             >(capture_frame_tx_ptr);
 
             let mut timing_info: CMSampleTimingInfo = std::mem::zeroed();
@@ -215,7 +215,7 @@ unsafe fn add_method_capture_output_callback(cls: &mut ClassDecl) {
                 0,
             );
 
-            if let Err(err) = capture_frame_tx.blocking_send(capture_frame) {
+            if let Err(err) = capture_frame_tx.send(capture_frame) {
                 error!(?err, "send capture frame failed");
                 return;
             }

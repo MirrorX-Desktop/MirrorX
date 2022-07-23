@@ -16,7 +16,7 @@ unsafe impl Send for Duplicator {}
 
 impl Duplicator {
     pub fn new(
-        capture_frame_tx: tokio::sync::mpsc::Sender<Frame>,
+        capture_frame_tx: crossbeam::channel::Sender<Frame>,
         display_id: &str,
         fps: u8,
     ) -> anyhow::Result<Self> {

@@ -24,7 +24,7 @@ pub struct AVCaptureVideoDataOutput {
 }
 
 impl AVCaptureVideoDataOutput {
-    pub fn new(tx: tokio::sync::mpsc::Sender<Frame>) -> Self {
+    pub fn new(tx: crossbeam::channel::Sender<Frame>) -> Self {
         unsafe {
             let cls = class!(AVCaptureVideoDataOutput);
             let obj: *mut Object = msg_send![cls, new];

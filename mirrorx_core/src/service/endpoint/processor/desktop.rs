@@ -109,7 +109,7 @@ pub fn start_desktop_capture_process(
     remote_device_id: String,
     exit_tx: async_broadcast::Sender<()>,
     mut exit_rx: async_broadcast::Receiver<()>,
-    capture_frame_tx: tokio::sync::mpsc::Sender<Frame>,
+    capture_frame_tx: crossbeam::channel::Sender<Frame>,
     display_id: &str,
     fps: u8,
 ) -> Result<(), MirrorXError> {
