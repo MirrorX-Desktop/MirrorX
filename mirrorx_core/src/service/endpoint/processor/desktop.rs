@@ -1,3 +1,4 @@
+use crate::utility::runtime::TOKIO_RUNTIME;
 use crate::{
     component::{
         desktop::{Duplicator, Frame},
@@ -14,68 +15,91 @@ use tracing::{error, info, trace, warn};
 #[cfg(target_os = "windows")]
 pub fn start_desktop_capture_process(
     remote_device_id: String,
-    exit_tx: Sender<()>,
-    exit_rx: Receiver<()>,
-    capture_frame_tx: Sender<Frame>,
+    exit_tx: async_broadcast::Sender<()>,
+    mut exit_rx: async_broadcast::Receiver<()>,
+    capture_frame_tx: tokio::sync::mpsc::Sender<Frame>,
     display_id: &str,
     fps: u8,
 ) -> Result<(), MirrorXError> {
-    use crate::ffi::ffmpeg::avutil::av_gettime_relative;
-    use crossbeam::select;
+    use tokio::sync::mpsc::error::TrySendError;
 
     let mut duplicator = Duplicator::new(display_id)?;
 
     let expected_wait_time = Duration::from_secs_f32(1f32 / (fps as f32));
 
-    std::thread::Builder::new()
-        .name(format!("desktop_capture_process:{}", remote_device_id))
-        .spawn(move || {
-            defer! {
-                info!(?remote_device_id, "desktop capture process exit");
-                let _ = exit_tx.send(());
-            }
+    TOKIO_RUNTIME.spawn(async move {
+        defer! {
+            info!(?remote_device_id, "desktop capture process exit");
+            let _ = exit_tx.try_broadcast(());
+        }
 
-            let interval = crossbeam::channel::tick(expected_wait_time);
-            let epoch = unsafe { av_gettime_relative() };
+        let mut interval = tokio::time::interval(expected_wait_time);
+        let epoch = unsafe { crate::ffi::ffmpeg::avutil::av_gettime_relative() };
 
-            loop {
-                select! {
-                    recv(exit_rx) -> _ => {
-                        return;
-                    },
-                    recv(interval) -> _ =>  match duplicator.capture() {
-                        Ok(mut frame) => unsafe {
-                            frame.capture_time = av_gettime_relative() - epoch;
+        loop {
+            tokio::select! {
+                _ = exit_rx.recv() => break,
+                _ = interval.tick() => match duplicator.capture() {
+                    Ok(mut frame) => unsafe {
+                        frame.capture_time = crate::ffi::ffmpeg::avutil::av_gettime_relative() - epoch;
 
-                            trace!(
-                                width=?frame.width,
-                                height=?frame.height,
-                                chrominance_len=?frame.chrominance_buffer.len(),
-                                chrominance_stride=?frame.chrominance_stride,
-                                luminance_len=?frame.luminance_buffer.len(),
-                                luminance_stride=?frame.luminance_stride,
-                                capture_time=?frame.capture_time,
-                                "desktop capture frame",
-                            );
+                        trace!(
+                            width=?frame.width,
+                            height=?frame.height,
+                            chrominance_len=?frame.chrominance_buffer.len(),
+                            chrominance_stride=?frame.chrominance_stride,
+                            luminance_len=?frame.luminance_buffer.len(),
+                            luminance_stride=?frame.luminance_stride,
+                            capture_time=?frame.capture_time,
+                            "desktop capture frame",
+                        );
 
-                            if let Err(_) = capture_frame_tx.send(frame) {
-                                return;
-                            }
-                        },
-                        Err(err) => {
-                            error!(?err, "capture desktop frame failed");
+                        if let Err(TrySendError::Full(_)) = capture_frame_tx.try_send(frame) {
+                            continue;
+                        } else {
                             return;
                         }
+                    },
+                    Err(err) => {
+                        error!(?err, "capture desktop frame failed");
+                        return;
                     }
                 }
             }
-        })
-        .and_then(|_| Ok(()))
-        .map_err(|err| {
-            MirrorXError::Other(anyhow::anyhow!(
-                "spawn desktop capture process failed ({err})"
-            ))
-        })
+
+            // select! {
+            //     recv(exit_rx) -> _ => {
+            //         return;
+            //     },
+            //     recv(interval) -> _ =>  match duplicator.capture() {
+            //         Ok(mut frame) => unsafe {
+            //             frame.capture_time = av_gettime_relative() - epoch;
+
+            //             trace!(
+            //                 width=?frame.width,
+            //                 height=?frame.height,
+            //                 chrominance_len=?frame.chrominance_buffer.len(),
+            //                 chrominance_stride=?frame.chrominance_stride,
+            //                 luminance_len=?frame.luminance_buffer.len(),
+            //                 luminance_stride=?frame.luminance_stride,
+            //                 capture_time=?frame.capture_time,
+            //                 "desktop capture frame",
+            //             );
+
+            //             if let Err(_) = capture_frame_tx.send(frame) {
+            //                 return;
+            //             }
+            //         },
+            //         Err(err) => {
+            //             error!(?err, "capture desktop frame failed");
+            //             return;
+            //         }
+            //     }
+            // }
+        }
+    });
+
+    Ok(())
 }
 
 #[cfg(target_os = "macos")]
@@ -87,8 +111,6 @@ pub fn start_desktop_capture_process(
     display_id: &str,
     fps: u8,
 ) -> Result<(), MirrorXError> {
-    use crate::utility::runtime::TOKIO_RUNTIME;
-
     let mut duplicator = Duplicator::new(capture_frame_tx, display_id, fps)?;
 
     // std::thread::Builder::new()
