@@ -1,16 +1,16 @@
 ![screenshoot](screenshot.png)
 
-# <center> MirrorX
+# MirrorX
 
-## MirrorX is a remote desktop control tool powered by Rust and Flutter. With fully opensource client and server, native E2EE support, users can build SECURITY and FAST remote control network, which is fully under control of users.
+MirrorX is a remote desktop control tool powered by [Rust](https://github.com/rust-lang/rust) and [Flutter](https://github.com/flutter/flutter). With fully opensource client and server, native E2EE support, users can build SECURITY and FAST remote control network, which is fully under control of users.
 
 
 > **MirrorX is on the early stage with active developing now. Please forgive us that we cannot make any backward compatibility commitments at this time.**
 
 ## Component
-* [MirrorX Client]()
-* [MirrorX Signaling Server]()
-* [MirrorX Endpoints Server]()
+* [MirrorX Client](https://github.com/MirrorX-Desktop/mirrorx)
+* [MirrorX Signaling Server](https://github.com/MirrorX-Desktop/signaling)
+* [MirrorX Endpoints Server](https://github.com/MirrorX-Desktop/endpoints)
 
 ## Available Platform
 - [x] macOS
@@ -18,6 +18,7 @@
 - [ ] Linux
 - [ ] Android
 - [ ] iOS
+- [ ] Web
 
-## Hot to build
+## How to build
 > todo
