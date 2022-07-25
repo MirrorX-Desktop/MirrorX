@@ -2,6 +2,8 @@
 
 # MirrorX
 
+![Discord](https://img.shields.io/discord/1001077628238827620?label=Discord)
+
 MirrorX is a remote desktop control tool powered by [Rust](https://github.com/rust-lang/rust) and [Flutter](https://github.com/flutter/flutter). With fully opensource client and server, native E2EE support, users can build SECURITY and FAST remote control network, which is fully under control of users.
 
 
