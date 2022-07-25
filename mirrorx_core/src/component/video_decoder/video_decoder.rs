@@ -265,20 +265,34 @@ impl VideoDecoder {
             return Err(MirrorXError::MediaVideoDecoderOutputTxSendFailed);
         }
 
-        let abgr_frame_size = ((*self.hw_decode_frame).width as usize)
+        let argb_frame_size = ((*self.hw_decode_frame).width as usize)
             * ((*self.hw_decode_frame).height as usize)
             * 4;
 
-        let mut abgr_frame = Vec::<u8>::with_capacity(abgr_frame_size);
+        let mut argb_frame = Vec::<u8>::with_capacity(argb_frame_size);
 
+        #[cfg(target_os = "macos")]
         let ret = NV12ToARGBMatrix(
             (*self.hw_decode_frame).data[0],
             (*self.hw_decode_frame).linesize[0] as isize,
             (*self.hw_decode_frame).data[1],
             (*self.hw_decode_frame).linesize[1] as isize,
-            abgr_frame.as_mut_ptr(),
+            argb_frame.as_mut_ptr(),
             ((*self.hw_decode_frame).width as isize) * 4,
             &kYuvF709Constants,
+            (*self.hw_decode_frame).width as isize,
+            (*self.hw_decode_frame).height as isize,
+        );
+
+        #[cfg(target_os = "windows")]
+        let ret = NV21ToARGBMatrix(
+            (*self.hw_decode_frame).data[0],
+            (*self.hw_decode_frame).linesize[0] as isize,
+            (*self.hw_decode_frame).data[1],
+            (*self.hw_decode_frame).linesize[1] as isize,
+            argb_frame.as_mut_ptr(),
+            ((*self.hw_decode_frame).width as isize) * 4,
+            &kYvuF709Constants,
             (*self.hw_decode_frame).width as isize,
             (*self.hw_decode_frame).height as isize,
         );
@@ -290,10 +304,10 @@ impl VideoDecoder {
             )));
         }
 
-        abgr_frame.set_len(abgr_frame_size);
+        argb_frame.set_len(argb_frame_size);
 
         let decoded_frame = DecodedFrame {
-            buffer: abgr_frame,
+            buffer: argb_frame,
             width: (*self.hw_decode_frame).width as u32,
             height: (*self.hw_decode_frame).height as u32,
         };
