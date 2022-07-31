@@ -1,10 +1,7 @@
-#![allow(unused)]
+#![allow(unused, non_upper_case_globals)]
 
 #[cfg(target_os = "macos")]
-mod macos;
-
-#[cfg(target_os = "macos")]
-pub use macos::*;
+pub mod macos;
 
 #[cfg(target_os = "windows")]
 mod windows;

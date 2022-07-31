@@ -1,10 +1,13 @@
 use super::ns_screen::NSScreen;
-use crate::{component::monitor::Monitor, error::MirrorXError, ffi::os::*};
+use crate::{
+    component::monitor::Monitor,
+    error::MirrorXError,
+    ffi::os::{macos::core_graphics::*, *},
+};
 use core_graphics::display::*;
-use libc::c_void;
 use objc_foundation::{INSData, INSObject, NSMutableData};
 use scopeguard::defer;
-use std::ops::DerefMut;
+use std::{ops::DerefMut, os::raw::c_void};
 use tracing::error;
 
 pub fn get_active_monitors() -> Result<Vec<Monitor>, MirrorXError> {

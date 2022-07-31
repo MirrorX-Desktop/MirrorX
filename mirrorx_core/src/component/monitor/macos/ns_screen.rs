@@ -1,5 +1,5 @@
 use crate::error::MirrorXError;
-use core_graphics::display::CGDirectDisplayID;
+use core_graphics::display::{CGDirectDisplayID, CGRect};
 use objc::{class, msg_send, runtime::Class, sel, sel_impl};
 use objc_foundation::{INSArray, INSObject, INSString, NSArray, NSDictionary, NSObject, NSString};
 use objc_id::{Id, Owned};
@@ -64,5 +64,9 @@ impl NSScreen {
             let name: Id<NSString> = msg_send![self.class, localizedName];
             name.as_str().to_string()
         }
+    }
+
+    pub fn frame(&self) -> CGRect {
+        unsafe { msg_send![self.class, frame] }
     }
 }

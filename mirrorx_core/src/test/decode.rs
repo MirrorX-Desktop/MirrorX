@@ -22,16 +22,16 @@ fn test_capture_and_encode_and_decode() -> anyhow::Result<()> {
         }
     };
 
-    let (exit_tx, exit_rx) = crossbeam::channel::unbounded();
+    let (exit_tx, _) = async_broadcast::broadcast(1);
     let (packet_tx, mut packet_rx) = tokio::sync::mpsc::channel(16);
     let (capture_frame_tx, capture_frame_rx) = crossbeam::channel::bounded(1);
-    let (video_frame_tx, video_frame_rx) = crossbeam::channel::bounded(16);
+    let (video_frame_tx, video_frame_rx) = tokio::sync::mpsc::channel(16);
     let (decoded_frame_tx, decoded_frame_rx) = crossbeam::channel::bounded(16);
 
     start_desktop_capture_process(
         String::from("remote_test"),
         exit_tx.clone(),
-        exit_rx.clone(),
+        exit_tx.new_receiver(),
         capture_frame_tx,
         &monitor.id,
         monitor.refresh_rate,
@@ -40,7 +40,7 @@ fn test_capture_and_encode_and_decode() -> anyhow::Result<()> {
     start_video_encode_process(
         String::from("remote_test"),
         exit_tx.clone(),
-        exit_rx.clone(),
+        exit_tx.new_receiver(),
         monitor.width as i32,
         monitor.height as i32,
         monitor.refresh_rate as i32,
@@ -50,8 +50,8 @@ fn test_capture_and_encode_and_decode() -> anyhow::Result<()> {
 
     start_video_decode_process(
         String::from("remote_test"),
-        exit_tx,
-        exit_rx,
+        exit_tx.clone(),
+        exit_tx.new_receiver(),
         monitor.width as i32,
         monitor.height as i32,
         monitor.refresh_rate as i32,

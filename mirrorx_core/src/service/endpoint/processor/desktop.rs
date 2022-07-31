@@ -113,7 +113,12 @@ pub fn start_desktop_capture_process(
     display_id: &str,
     fps: u8,
 ) -> Result<(), MirrorXError> {
-    let mut duplicator = Duplicator::new(capture_frame_tx, display_id, fps)?;
+    let display_id = match display_id.parse::<u32>() {
+        Ok(display_id) => display_id,
+        Err(err) => return Err(MirrorXError::Other(anyhow::anyhow!(err))),
+    };
+
+    // let mut duplicator = Duplicator::new(display_id, capture_frame_tx)?;
 
     // std::thread::Builder::new()
     //     .name(format!("desktop_capture_process:{}", remote_device_id))
@@ -139,21 +144,21 @@ pub fn start_desktop_capture_process(
     //         ))
     //     })
 
-    TOKIO_RUNTIME.spawn(async move {
-        defer! {
-            info!(?remote_device_id, "desktop capture process exit");
-            let _ = exit_tx.try_broadcast(());
-        }
+    // TOKIO_RUNTIME.spawn(async move {
+    //     defer! {
+    //         info!(?remote_device_id, "desktop capture process exit");
+    //         let _ = exit_tx.try_broadcast(());
+    //     }
 
-        if let Err(err) = duplicator.start() {
-            error!(?err, "duplicator start failed");
-            return;
-        }
+    //     if let Err(err) = duplicator.start() {
+    //         error!(?err, "duplicator start failed");
+    //         return;
+    //     }
 
-        let _ = exit_rx.recv().await;
+    //     let _ = exit_rx.recv().await;
 
-        duplicator.stop();
-    });
+    //     duplicator.stop();
+    // });
 
     Ok(())
 }
