@@ -1,13 +1,13 @@
 use crate::{
-    component::monitor::NSScreen,
+    component::{desktop::frame::CaptureFrame, monitor::NSScreen},
     error::MirrorXError,
-    ffi::os::macos::{core_graphics::*, core_video::*, io_surface::*},
+    ffi::os::macos::{core_graphics::*, core_media::*, core_video::*, io_surface::*},
 };
 use block::ConcreteBlock;
-use core_foundation::base::{CFRelease, CFRetain, ToVoid};
+use core_foundation::base::CFRelease;
 use dispatch::ffi::{dispatch_queue_create, dispatch_release, DISPATCH_QUEUE_SERIAL};
 use scopeguard::defer;
-use std::{ffi::CString, ops::Deref};
+use std::{cell::Cell, ffi::CString, ops::Deref, rc::Rc};
 
 // pub struct Duplicator {
 //     capture_session: AVCaptureSession,
@@ -78,7 +78,7 @@ pub struct Duplicator {
 impl Duplicator {
     pub fn new(
         display: core_graphics::display::CGDirectDisplayID,
-        capture_frame_tx: crossbeam::channel::Sender<IOSurfaceRefWrapper>,
+        capture_frame_tx: crossbeam::channel::Sender<CaptureFrame>,
     ) -> Result<Self, MirrorXError> {
         unsafe {
             let screens = NSScreen::screens()?;
@@ -98,6 +98,8 @@ impl Duplicator {
 
             let screen_size = screen.frame().size;
 
+            let start_time: Rc<Cell<Option<std::time::Instant>>> = Rc::new(Cell::new(None));
+
             let capture_frame_tx_ptr = Box::into_raw(Box::new(capture_frame_tx));
 
             let block = ConcreteBlock::new(
@@ -106,6 +108,7 @@ impl Duplicator {
                       frame_surface: IOSurfaceRef,
                       update_ref: CGDisplayStreamUpdateRef| {
                     frame_available_handler(
+                        start_time.clone(),
                         capture_frame_tx_ptr,
                         status,
                         display_time,
@@ -161,7 +164,8 @@ impl Duplicator {
 }
 
 unsafe fn frame_available_handler(
-    capture_frame_tx: *mut crossbeam::channel::Sender<IOSurfaceRefWrapper>,
+    start_time: Rc<Cell<Option<std::time::Instant>>>,
+    capture_frame_tx: *mut crossbeam::channel::Sender<CaptureFrame>,
     status: CGDisplayStreamFrameStatus,
     display_time: u64,
     frame_surface: IOSurfaceRef,
@@ -172,15 +176,32 @@ unsafe fn frame_available_handler(
         return;
     }
 
-    CFRetain(frame_surface);
-    IOSurfaceIncrementUseCount(frame_surface);
+    let elapsed_time = match start_time.get() {
+        Some(epoch) => epoch.elapsed().as_secs_f64(),
+        None => {
+            start_time.replace(Some(std::time::Instant::now()));
+            0f64
+        }
+    };
 
-    if let Err(err) = (*capture_frame_tx).try_send(IOSurfaceRefWrapper {
-        surface: frame_surface,
-    }) {
-        let surface_wrapper = err.into_inner();
-        IOSurfaceDecrementUseCount(surface_wrapper.surface);
-        CFRelease(surface_wrapper.surface);
+    let mut pixel_buffer = std::ptr::null_mut();
+    let ret = CVPixelBufferCreateWithIOSurface(
+        std::ptr::null(),
+        frame_surface,
+        std::ptr::null(),
+        &mut pixel_buffer,
+    );
+
+    if ret != 0 {
+        tracing::error!(?ret, "CVPixelBufferCreateWithIOSurface failed");
+        return;
+    }
+
+    let pts = CMTimeMakeWithSeconds(elapsed_time, 1000);
+
+    if let Err(err) = (*capture_frame_tx).send(CaptureFrame { pts, pixel_buffer }) {
+        let capture_frame = err.into_inner();
+        CFRelease(capture_frame.pixel_buffer);
     }
 
     let dropped_frames = CGDisplayStreamUpdateGetDropCount(update_ref);

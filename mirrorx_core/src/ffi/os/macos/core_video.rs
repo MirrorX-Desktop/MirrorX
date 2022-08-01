@@ -1,5 +1,7 @@
-use super::four_char_code;
-use core_foundation::{base::CFTypeRef, string::CFStringRef};
+use super::{four_char_code, io_surface::IOSurfaceRef};
+use core_foundation::{
+    base::CFTypeRef, dictionary::CFDictionaryRef, mach_port::CFAllocatorRef, string::CFStringRef,
+};
 use std::os::raw::c_void;
 
 pub static kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange: u32 =
@@ -45,4 +47,11 @@ extern "C" {
         key: CFStringRef,
         attachmentMode: *mut c_void,
     ) -> CFTypeRef;
+
+    pub fn CVPixelBufferCreateWithIOSurface(
+        allocator: CFAllocatorRef,
+        surface: IOSurfaceRef,
+        pixel_buffer_attributes: CFDictionaryRef,
+        pixel_buffer_out: *mut CVPixelBufferRef,
+    ) -> i32;
 }

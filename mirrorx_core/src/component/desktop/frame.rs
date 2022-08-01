@@ -1,3 +1,5 @@
+use crate::ffi::os::macos::{core_media::CMTime, core_video::CVPixelBufferRef};
+
 #[derive(Debug)]
 pub struct Frame {
     pub width: u16,
@@ -54,3 +56,11 @@ impl Frame {
     //     self.chrominance_stride
     // }
 }
+
+#[cfg(target_os = "macos")]
+pub struct CaptureFrame {
+    pub pts: CMTime,
+    pub pixel_buffer: CVPixelBufferRef,
+}
+
+unsafe impl Send for CaptureFrame {}

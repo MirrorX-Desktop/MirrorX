@@ -9,6 +9,6 @@ pub struct IOSurfaceRefWrapper {
 unsafe impl Send for IOSurfaceRefWrapper {}
 
 extern "C" {
-    pub fn IOSurfaceIncrementUseCount(buffer: *mut c_void);
-    pub fn IOSurfaceDecrementUseCount(buffer: *mut c_void);
+    pub fn IOSurfaceIncrementUseCount(buffer: IOSurfaceRef);
+    pub fn IOSurfaceDecrementUseCount(buffer: IOSurfaceRef);
 }
