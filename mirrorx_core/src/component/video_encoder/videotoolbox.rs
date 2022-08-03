@@ -261,10 +261,6 @@ fn encode_output_callback(
             return;
         }
 
-        // defer! {
-        //     CFRelease(attachments.to_void());
-        // }
-
         let dic = CFArrayGetValueAtIndex(attachments, 0);
 
         let is_key_frame = CFDictionaryContainsKey(

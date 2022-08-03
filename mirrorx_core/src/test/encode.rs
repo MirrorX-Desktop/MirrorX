@@ -59,6 +59,6 @@ async fn test_capture_and_encode() -> anyhow::Result<()> {
         }
     });
 
-    tokio::time::sleep(std::time::Duration::from_secs(20)).await;
+    tokio::time::sleep(std::time::Duration::from_secs(30)).await;
     Ok(())
 }
