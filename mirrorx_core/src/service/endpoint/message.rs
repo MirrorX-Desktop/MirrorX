@@ -73,8 +73,13 @@ pub struct StartMediaTransmissionResponse {
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct VideoFrame {
     #[serde(with = "serde_bytes")]
+    pub sps: Option<Vec<u8>>,
+
+    #[serde(with = "serde_bytes")]
+    pub pps: Option<Vec<u8>>,
+
+    #[serde(with = "serde_bytes")]
     pub buffer: Vec<u8>,
-    pub pts: i64,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]

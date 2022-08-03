@@ -1,3 +1,5 @@
+use core_foundation::base::CFRelease;
+
 use crate::ffi::os::macos::{core_media::CMTime, core_video::CVPixelBufferRef};
 
 #[derive(Debug)]
@@ -64,3 +66,13 @@ pub struct CaptureFrame {
 }
 
 unsafe impl Send for CaptureFrame {}
+
+impl Drop for CaptureFrame {
+    fn drop(&mut self) {
+        if !self.pixel_buffer.is_null() {
+            unsafe {
+                CFRelease(self.pixel_buffer);
+            }
+        }
+    }
+}

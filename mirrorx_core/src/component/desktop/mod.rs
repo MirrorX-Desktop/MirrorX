@@ -9,4 +9,5 @@ mod windows;
 pub use self::windows::Duplicator;
 
 mod frame;
+pub use frame::CaptureFrame;
 pub use frame::Frame;

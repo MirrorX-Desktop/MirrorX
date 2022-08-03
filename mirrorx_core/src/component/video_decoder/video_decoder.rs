@@ -198,8 +198,8 @@ impl VideoDecoder {
                     &mut (*self.packet).size,
                     frame.buffer.as_ptr(),
                     frame.buffer.len() as i32,
-                    frame.pts,
-                    frame.pts,
+                    0,
+                    0,
                     0,
                 );
 

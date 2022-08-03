@@ -1,14 +1,14 @@
 use crate::{
     component::{
-        desktop::Frame,
+        desktop::{CaptureFrame, Frame},
         video_decoder::{DecodedFrame, VideoDecoder},
-        video_encoder::VideoEncoder,
     },
     error::MirrorXError,
     service::endpoint::message::*,
     utility::runtime::TOKIO_RUNTIME,
 };
 use async_broadcast::TryRecvError;
+use core_foundation::base::CFRelease;
 use crossbeam::channel::{Receiver, Sender};
 use scopeguard::defer;
 use std::collections::HashMap;
@@ -21,7 +21,7 @@ pub fn start_video_encode_process(
     width: i32,
     height: i32,
     fps: i32,
-    mut capture_frame_rx: crossbeam::channel::Receiver<Frame>,
+    mut capture_frame_rx: crossbeam::channel::Receiver<CaptureFrame>,
     packet_tx: tokio::sync::mpsc::Sender<EndPointMessagePacket>,
 ) -> Result<(), MirrorXError> {
     let (encoder_name, options) = if cfg!(target_os = "macos") {
@@ -43,12 +43,18 @@ pub fn start_video_encode_process(
         panic!("unsupported platform")
     };
 
-    let mut encoder = VideoEncoder::new(encoder_name, fps, width, height, options)?;
+    let mut encoder = crate::component::video_encoder::videotoolbox::Encoder::new(width, height)?;
 
     std::thread::Builder::new()
         .name(format!("video_encode_process:{}", remote_device_id))
         .spawn(move || {
+            let tx_ptr = Box::into_raw(Box::new(packet_tx));
+
             defer! {
+                unsafe {
+                    let _ = Box::from_raw(tx_ptr);
+                }
+
                 info!(?remote_device_id, "video encode process exit");
                 let _ = exit_tx.try_broadcast(());
             }
@@ -65,7 +71,7 @@ pub fn start_video_encode_process(
 
                 match capture_frame_rx.recv() {
                     Ok(capture_frame) => {
-                        if let Err(err) = encoder.encode(capture_frame, &packet_tx) {
+                        if let Err(err) = encoder.encode(capture_frame, tx_ptr) {
                             error!(?err, "video frame encode failed");
                             return;
                         }

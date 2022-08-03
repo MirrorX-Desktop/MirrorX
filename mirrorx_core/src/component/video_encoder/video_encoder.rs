@@ -222,27 +222,27 @@ impl VideoEncoder {
                     std::slice::from_raw_parts((*self.packet).data, (*self.packet).size as usize)
                         .to_vec();
 
-                let packet = EndPointMessagePacket {
-                    typ: EndPointMessagePacketType::Push,
-                    call_id: None,
-                    message: EndPointMessage::VideoFrame(VideoFrame {
-                        buffer,
-                        pts: (*self.packet).pts,
-                    }),
-                };
+                // let packet = EndPointMessagePacket {
+                //     typ: EndPointMessagePacketType::Push,
+                //     call_id: None,
+                //     message: EndPointMessage::VideoFrame(VideoFrame {
+                //         buffer,
+                //         pts: (*self.packet).pts,
+                //     }),
+                // };
 
-                if let Err(err) = tx.try_send(packet) {
-                    match err {
-                        tokio::sync::mpsc::error::TrySendError::Full(_) => {
-                            warn!("network send channel is full")
-                        }
-                        tokio::sync::mpsc::error::TrySendError::Closed(_) => {
-                            return Err(MirrorXError::Other(anyhow::anyhow!(
-                                "network send channel is closed"
-                            )));
-                        }
-                    }
-                }
+                // if let Err(err) = tx.try_send(packet) {
+                //     match err {
+                //         tokio::sync::mpsc::error::TrySendError::Full(_) => {
+                //             warn!("network send channel is full")
+                //         }
+                //         tokio::sync::mpsc::error::TrySendError::Closed(_) => {
+                //             return Err(MirrorXError::Other(anyhow::anyhow!(
+                //                 "network send channel is closed"
+                //             )));
+                //         }
+                //     }
+                // }
 
                 av_packet_unref(self.packet);
             }

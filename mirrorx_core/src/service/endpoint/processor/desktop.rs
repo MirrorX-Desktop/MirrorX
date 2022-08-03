@@ -1,3 +1,4 @@
+use crate::component::desktop::CaptureFrame;
 use crate::utility::runtime::TOKIO_RUNTIME;
 use crate::{
     component::{
@@ -109,7 +110,7 @@ pub fn start_desktop_capture_process(
     remote_device_id: String,
     exit_tx: async_broadcast::Sender<()>,
     mut exit_rx: async_broadcast::Receiver<()>,
-    capture_frame_tx: crossbeam::channel::Sender<Frame>,
+    capture_frame_tx: crossbeam::channel::Sender<CaptureFrame>,
     display_id: &str,
     fps: u8,
 ) -> Result<(), MirrorXError> {
@@ -118,14 +119,14 @@ pub fn start_desktop_capture_process(
         Err(err) => return Err(MirrorXError::Other(anyhow::anyhow!(err))),
     };
 
-    // let mut duplicator = Duplicator::new(display_id, capture_frame_tx)?;
+    let mut duplicator = Duplicator::new(display_id, capture_frame_tx)?;
 
     // std::thread::Builder::new()
     //     .name(format!("desktop_capture_process:{}", remote_device_id))
     //     .spawn(move || {
     //         defer! {
     //             info!(?remote_device_id, "desktop capture process exit");
-    //             let _ = exit_tx.send(());
+    //             let _ = exit_tx.try_broadcast(());
     //         }
 
     //         if let Err(err) = duplicator.start() {
@@ -133,7 +134,8 @@ pub fn start_desktop_capture_process(
     //             return;
     //         }
 
-    //         let _ = exit_rx.recv();
+    //         let _ = exit_rx.recv().await;
+    //         tracing::info!("recv exit");
 
     //         duplicator.stop();
     //     })
@@ -142,23 +144,23 @@ pub fn start_desktop_capture_process(
     //         MirrorXError::Other(anyhow::anyhow!(
     //             "spawn desktop capture process failed ({err})"
     //         ))
-    //     })
+    //     });
 
-    // TOKIO_RUNTIME.spawn(async move {
-    //     defer! {
-    //         info!(?remote_device_id, "desktop capture process exit");
-    //         let _ = exit_tx.try_broadcast(());
-    //     }
+    TOKIO_RUNTIME.spawn(async move {
+        defer! {
+            info!(?remote_device_id, "desktop capture process exit");
+            let _ = exit_tx.try_broadcast(());
+        }
 
-    //     if let Err(err) = duplicator.start() {
-    //         error!(?err, "duplicator start failed");
-    //         return;
-    //     }
+        if let Err(err) = duplicator.start() {
+            error!(?err, "duplicator start failed");
+            return;
+        }
 
-    //     let _ = exit_rx.recv().await;
+        let _ = exit_rx.recv().await;
 
-    //     duplicator.stop();
-    // });
+        duplicator.stop();
+    });
 
     Ok(())
 }

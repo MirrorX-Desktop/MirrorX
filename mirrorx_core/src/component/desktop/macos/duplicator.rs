@@ -75,6 +75,8 @@ pub struct Duplicator {
     display_stream: CGDisplayStreamRef,
 }
 
+unsafe impl Send for Duplicator {}
+
 impl Duplicator {
     pub fn new(
         display: core_graphics::display::CGDirectDisplayID,
