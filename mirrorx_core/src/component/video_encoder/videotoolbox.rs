@@ -60,6 +60,17 @@ impl Encoder {
     }
 }
 
+impl Drop for Encoder {
+    fn drop(&mut self) {
+        if !self.session.is_null() {
+            unsafe {
+                VTCompressionSessionCompleteFrames(self.session, CMTime::invalid());
+                VTCompressionSessionInvalidate(self.session);
+            }
+        }
+    }
+}
+
 unsafe fn create_compression_session(
     frame_width: i32,
     frame_height: i32,

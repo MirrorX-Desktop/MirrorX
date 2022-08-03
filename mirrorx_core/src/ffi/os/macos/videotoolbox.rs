@@ -68,4 +68,9 @@ extern "C" {
         source_frame_ref_con: *mut c_void,
         info_flags_out: *mut VTEncodeInfoFlags,
     ) -> OSStatus;
+    pub fn VTCompressionSessionCompleteFrames(
+        session: VTCompressionSessionRef,
+        complete_until_presentation_timestamp: CMTime,
+    ) -> OSStatus;
+    pub fn VTCompressionSessionInvalidate(session: VTCompressionSessionRef);
 }
