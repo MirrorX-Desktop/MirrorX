@@ -6,17 +6,15 @@ use crate::{
         EndPointMessage, EndPointMessagePacket, EndPointMessagePacketType, VideoFrame,
     },
 };
-use bytes::Buf;
 use core_foundation::{
     array::{CFArray, CFArrayGetValueAtIndex},
-    base::{CFRelease, OSStatus, ToVoid},
+    base::{OSStatus, ToVoid},
     dictionary::{CFDictionaryContainsKey, CFDictionaryRef},
     number::{kCFBooleanFalse, kCFBooleanTrue, CFNumber},
 };
-use scopeguard::defer;
 use std::os::raw::c_void;
 
-const NAL_UNIT_HEADER_LENGTH: usize = 4;
+const NALU_HEADER_LENGTH: usize = 4;
 
 pub struct Encoder {
     session: VTCompressionSessionRef,
@@ -363,27 +361,26 @@ fn encode_output_callback(
 
         let mut offset = 0;
 
-        while offset + NAL_UNIT_HEADER_LENGTH < total_length as usize {
+        while offset + NALU_HEADER_LENGTH < total_length as usize {
             let nalu_header_slice =
-                std::slice::from_raw_parts(data_pointer.add(offset), NAL_UNIT_HEADER_LENGTH);
+                std::slice::from_raw_parts(data_pointer.add(offset), NALU_HEADER_LENGTH);
 
-            let nalu_header_bytes: [u8; NAL_UNIT_HEADER_LENGTH] = [
+            let nalu_header_bytes: [u8; NALU_HEADER_LENGTH] = [
                 nalu_header_slice[0],
                 nalu_header_slice[1],
                 nalu_header_slice[2],
                 nalu_header_slice[3],
             ];
 
-            // NAL Unit length is Big Endian format
+            // NALU length bytes is Big Endian u32
             let nalu_body_length = u32::from_be_bytes(nalu_header_bytes) as usize;
 
             let nalu_body_bytes = std::slice::from_raw_parts(
-                data_pointer.add(offset + NAL_UNIT_HEADER_LENGTH),
+                data_pointer.add(offset + NALU_HEADER_LENGTH),
                 nalu_body_length,
             )
             .to_vec();
 
-            // todo send sps pps nal_unit_bytes
             if let Err(err) = (*endpoint_message_tx).try_send(EndPointMessagePacket {
                 typ: EndPointMessagePacketType::Push,
                 call_id: None,
@@ -396,7 +393,7 @@ fn encode_output_callback(
                 tracing::warn!("send message 'VideoFrame' failed ({})", err);
             }
 
-            offset += NAL_UNIT_HEADER_LENGTH + nalu_body_length
+            offset += NALU_HEADER_LENGTH + nalu_body_length
         }
     }
 }
