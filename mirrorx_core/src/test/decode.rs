@@ -10,8 +10,8 @@ use crate::{
 };
 use tracing::{error, info};
 
-#[test]
-fn test_capture_and_encode_and_decode() -> anyhow::Result<()> {
+#[tokio::test]
+async fn test_capture_and_encode_and_decode() -> anyhow::Result<()> {
     tracing_subscriber::fmt::init();
 
     let monitors = monitor::get_active_monitors()?;

@@ -96,20 +96,20 @@ pub fn start_video_decode_process(
     mut video_frame_rx: tokio::sync::mpsc::Receiver<VideoFrame>,
     decoded_frame_tx: Sender<DecodedFrame>,
 ) -> Result<(), MirrorXError> {
-    let (decoder_name, options) = if cfg!(target_os = "macos") {
-        ("h264", HashMap::new())
-    } else if cfg!(target_os = "windows") {
-        (
-            "h264_d3d11va",
-            HashMap::new(), // HashMap::from([("async_depth", "1"), ("gpu_copy", "on")]),
-        )
-    } else {
-        return Err(MirrorXError::Other(anyhow::anyhow!(
-            "unsupport platform decode"
-        )));
-    };
+    // let (decoder_name, options) = if cfg!(target_os = "macos") {
+    //     ("h264", HashMap::new())
+    // } else if cfg!(target_os = "windows") {
+    //     (
+    //         "h264_d3d11va",
+    //         HashMap::new(), // HashMap::from([("async_depth", "1"), ("gpu_copy", "on")]),
+    //     )
+    // } else {
+    //     return Err(MirrorXError::Other(anyhow::anyhow!(
+    //         "unsupport platform decode"
+    //     )));
+    // };
 
-    let decoder = VideoDecoder::new(decoder_name, width, height, fps, options)?;
+    let mut decoder = crate::component::video_decoder::videotoolbox::Decoder::new();
 
     // std::thread::Builder::new()
     //     .name(format!("video_decode_process:{}", remote_device_id))
@@ -150,7 +150,7 @@ pub fn start_video_decode_process(
                 _ = exit_rx.recv() => break,
                 res = video_frame_rx.recv() => match res {
                     Some(video_frame) => {
-                        if let Err(err) = decoder.decode(video_frame, &decoded_frame_tx) {
+                        if let Err(err) = decoder.decode(video_frame) {
                             error!(?err, "video frame decode failed");
                             return;
                         }

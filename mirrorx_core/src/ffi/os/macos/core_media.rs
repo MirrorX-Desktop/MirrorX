@@ -48,6 +48,10 @@ pub struct CMSampleTimingInfo {
     pub decode_timestamp: CMTime,
 }
 
+pub type CMBlockBufferFlags = u32;
+
+pub type CMItemCount = CFIndex;
+
 extern "C" {
     pub static kCMSampleAttachmentKey_NotSync: CFStringRef;
 }
@@ -75,6 +79,17 @@ extern "C" {
         sample_timing: *const CMSampleTimingInfo,
         sample_buffer_out: *mut CMSampleBufferRef,
     ) -> OSStatus;
+    pub fn CMSampleBufferCreateReady(
+        allocator: CFAllocatorRef,
+        data_buffer: CMBlockBufferRef,
+        format_description: CMFormatDescriptionRef,
+        num_samples: CMItemCount,
+        num_sample_timing_entries: CMItemCount,
+        sample_timing_array: *const CMSampleTimingInfo,
+        num_sample_size_entries: CMItemCount,
+        sample_size_array: *const u32,
+        sample_buffer_out: *mut CMSampleBufferRef,
+    ) -> OSStatus;
     pub fn CMSampleBufferGetSampleAttachmentsArray(
         sbuf: CMSampleBufferRef,
         create_if_necessary: bool,
@@ -88,6 +103,14 @@ extern "C" {
         parameter_set_count_out: *mut u32,
         nal_unit_header_length_out: *mut isize,
     ) -> OSStatus;
+    pub fn CMVideoFormatDescriptionCreateFromH264ParameterSets(
+        allocator: CFAllocatorRef,
+        parameter_set_count: u32,
+        parameter_set_pointers: *const *const u8,
+        parameter_set_sizes: *const u32,
+        nal_unit_header_length: isize,
+        format_description_out: *mut CMFormatDescriptionRef,
+    ) -> OSStatus;
     pub fn CMSampleBufferGetDataBuffer(sbuf: CMSampleBufferRef) -> CMBlockBufferRef;
     pub fn CMBlockBufferGetDataPointer(
         the_buffer: CMBlockBufferRef,
@@ -95,5 +118,16 @@ extern "C" {
         length_at_offset_out: *mut u32,
         total_length_out: *mut u32,
         data_pointer_out: *mut *const u8,
+    ) -> OSStatus;
+    pub fn CMBlockBufferCreateWithMemoryBlock(
+        structure_allocator: CFAllocatorRef,
+        memory_block: *mut c_void,
+        block_length: u32,
+        block_allocator: CFAllocatorRef,
+        custom_block_source: *const c_void,
+        offset_to_data: u32,
+        data_length: u32,
+        flags: CMBlockBufferFlags,
+        block_buffer_out: *mut CMBlockBufferRef,
     ) -> OSStatus;
 }

@@ -228,7 +228,7 @@ unsafe fn create_compression_session(
     Ok(session)
 }
 
-fn encode_output_callback(
+extern "C" fn encode_output_callback(
     _: *mut c_void,
     source_frame_ref_con: *mut c_void,
     status: OSStatus,
