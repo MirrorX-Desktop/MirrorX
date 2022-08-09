@@ -1,7 +1,7 @@
 use crate::{
     component::{
         desktop::{CaptureFrame, Frame},
-        video_decoder::{DecodedFrame, VideoDecoder},
+        video_decoder::DecodedFrame,
     },
     error::MirrorXError,
     service::endpoint::message::*,
@@ -11,7 +11,7 @@ use async_broadcast::TryRecvError;
 use core_foundation::base::CFRelease;
 use crossbeam::channel::{Receiver, Sender};
 use scopeguard::defer;
-use std::collections::HashMap;
+use std::{collections::HashMap, time::Duration};
 use tracing::{error, info, trace, warn};
 
 pub fn start_video_encode_process(
@@ -93,7 +93,7 @@ pub fn start_video_decode_process(
     width: i32,
     height: i32,
     fps: i32,
-    mut video_frame_rx: tokio::sync::mpsc::Receiver<VideoFrame>,
+    mut video_frame_rx: Receiver<VideoFrame>,
     decoded_frame_tx: Sender<DecodedFrame>,
 ) -> Result<(), MirrorXError> {
     // let (decoder_name, options) = if cfg!(target_os = "macos") {
@@ -111,53 +111,38 @@ pub fn start_video_decode_process(
 
     let mut decoder = crate::component::video_decoder::videotoolbox::Decoder::new();
 
-    // std::thread::Builder::new()
-    //     .name(format!("video_decode_process:{}", remote_device_id))
-    //     .spawn(move || {
-    //         defer! {
-    //             info!(?remote_device_id, "video decode process exit");
-    //             let _ = exit_tx.send(());
-    //         }
+    TOKIO_RUNTIME.spawn_blocking(move || {
+        let tx_ptr = Box::into_raw(Box::new(decoded_frame_tx));
 
-    //         loop {
-    //             crossbeam::select! {
-    //                 recv(exit_rx) -> _ => {
-    //                     return;
-    //                 },
-    //                 recv(video_frame_rx) -> res => match res {
-    //                     Ok(frame) => if let Err(err) = decoder.decode(frame, &decoded_frame_tx) {
-    //                         error!(?err, "video frame decode failed");
-    //                         return;
-    //                     },
-    //                     Err(_) => return,
-    //                 }
-    //             }
-    //         }
-    //     })
-    //     .and_then(|_| Ok(()))
-    //     .map_err(|err| {
-    //         MirrorXError::Other(anyhow::anyhow!("spawn video decode process failed ({err})"))
-    //     })
-
-    TOKIO_RUNTIME.spawn(async move {
         defer! {
-            info!(?remote_device_id, "video decode process exit");
-            let _ = exit_tx.try_broadcast(());
+                info!(?remote_device_id, "video decode process exit");
+                let _ = unsafe { Box::from_raw(tx_ptr) };
+                let _ = exit_tx.try_broadcast(());
         }
 
         loop {
-            tokio::select! {
-                _ = exit_rx.recv() => break,
-                res = video_frame_rx.recv() => match res {
-                    Some(video_frame) => {
-                        if let Err(err) = decoder.decode(video_frame) {
-                            error!(?err, "video frame decode failed");
-                            return;
-                        }
-                    },
-                    None => break,
+            match exit_rx.try_recv() {
+                Ok(_) => break,
+                Err(err) => {
+                    if err.is_closed() || err.is_overflowed() {
+                        break;
+                    }
                 }
             };
+
+            match video_frame_rx.recv_timeout(Duration::from_secs(1)) {
+                Ok(video_frame) => {
+                    if let Err(err) = decoder.decode(video_frame, tx_ptr) {
+                        error!(?err, "video frame decode failed");
+                        break;
+                    }
+                }
+                Err(err) => {
+                    if err.is_disconnected() {
+                        break;
+                    }
+                }
+            }
         }
     });
 

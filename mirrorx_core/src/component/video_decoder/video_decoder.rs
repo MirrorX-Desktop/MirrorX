@@ -306,11 +306,14 @@ impl VideoDecoder {
 
         argb_frame.set_len(argb_frame_size);
 
+        #[cfg(target_os = "windows")]
         let decoded_frame = DecodedFrame {
             buffer: argb_frame,
             width: (*self.hw_decode_frame).width as u32,
             height: (*self.hw_decode_frame).height as u32,
         };
+
+        let a = DecodedFrame();
 
         av_frame_unref((*self).hw_decode_frame);
 

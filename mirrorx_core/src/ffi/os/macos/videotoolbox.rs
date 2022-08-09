@@ -43,7 +43,7 @@ pub type VTCompressionOutputCallback = extern "C" fn(
     sample_buffer: CMSampleBufferRef,
 );
 
-pub type VTDecompressionOutputCallback = extern "C" fn(
+pub type VTDecompressionOutputCallback = unsafe extern "C" fn(
     decompressionOutputRefCon: *mut c_void,
     sourceFrameRefCon: *mut c_void,
     status: OSStatus,
@@ -61,6 +61,7 @@ pub struct VTDecompressionOutputCallbackRecord {
 
 extern "C" {
     pub static kVTProfileLevel_H264_Main_5_0: CFStringRef;
+    pub static kVTProfileLevel_H264_Main_AutoLevel: CFStringRef;
 }
 
 extern "C" {
@@ -119,7 +120,7 @@ extern "C" {
         video_format_description: CMVideoFormatDescriptionRef,
         video_decoder_specification: CFDictionaryRef,
         destination_image_buffer_attributes: CFDictionaryRef,
-        output_callback: &VTDecompressionOutputCallbackRecord,
+        output_callback: *const VTDecompressionOutputCallbackRecord,
         decompression_session_out: *mut VTDecompressionSessionRef,
     ) -> OSStatus;
     pub fn VTDecompressionSessionCanAcceptFormatDescription(

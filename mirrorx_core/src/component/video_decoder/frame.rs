@@ -1,10 +1,10 @@
-// #[cfg(target_os = "macos")]
-// use std::os::raw::c_void;
+#[cfg(target_os = "macos")]
+use crate::ffi::os::macos::core_video::CVPixelBufferRef;
 
-// #[cfg(target_os = "macos")]
-// pub struct DecodedFrame(pub *mut c_void);
+#[cfg(target_os = "macos")]
+pub struct DecodedFrame(pub CVPixelBufferRef);
 
-// #[cfg(target_os = "windows")]
+#[cfg(target_os = "windows")]
 pub struct DecodedFrame {
     pub buffer: Vec<u8>,
     pub width: u32,

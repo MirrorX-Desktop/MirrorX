@@ -7,7 +7,7 @@ use super::{
 use crate::{
     component::monitor::{self, Monitor},
     error::MirrorXError,
-    service::endpoint::handler::{handle_audio_frame, handle_input, handle_video_frame},
+    service::endpoint::handler::handle_input,
     utility::{nonce_value::NonceValue, runtime::TOKIO_RUNTIME, serializer::BINCODE_SERIALIZER},
 };
 use anyhow::anyhow;
@@ -71,29 +71,35 @@ macro_rules! make_endpoint_push {
 
 macro_rules! handle_call_message {
     ($endpoint:expr, $call_id:expr, $req:tt, $resp_type:path, $handler:tt) => {{
-        if let Some(call_id) = $call_id {
-            let resp_message = match $handler($endpoint, $req).await {
-                Ok(resp) => $resp_type(resp),
-                Err(err) => {
-                    error!(?err, "handle_call_message: handler '{}' returns error", stringify!($handler));
-                    EndPointMessage::Error
-                }
-            };
+        let endpoint = $endpoint.clone();
+        TOKIO_RUNTIME.spawn(async move {
+            if let Some(call_id) = $call_id {
+                let resp_message = match $handler(&endpoint, $req).await {
+                    Ok(resp) => $resp_type(resp),
+                    Err(err) => {
+                        error!(?err, "handle_call_message: handler '{}' returns error", stringify!($handler));
+                        EndPointMessage::Error
+                    }
+                };
 
-            if let Err(err) = $endpoint.reply(call_id,resp_message).await{
-                error!(?err, remote_device_id = ?$endpoint.remote_device_id(), "handle_call_message: handler '{}' reply message failed", stringify!($handler));
+                if let Err(err) = endpoint.reply(call_id,resp_message).await{
+                    error!(?err, remote_device_id = ?endpoint.remote_device_id(), "handle_call_message: handler '{}' reply message failed", stringify!($handler));
+                }
+            } else {
+                error!("handle_call_message: received request message '{}' without call id", stringify!($req));
             }
-        } else {
-            error!("handle_call_message: received request message '{}' without call id", stringify!($req));
-        }
+        });
     }};
 }
 
 macro_rules! handle_push_message {
      ($endpoint:expr, $req:tt, $handler:tt) => {{
-        if let Err(err) = $handler($endpoint, $req).await {
-            error!(?err, remote_device_id = ?$endpoint.remote_device_id(), "handle_push_message: handler '{}' returns error", stringify!($handler));
-        }
+         let endpoint = $endpoint.clone();
+         TOKIO_RUNTIME.spawn(async move {
+             if let Err(err) = $handler(&endpoint, $req).await {
+                 error!(?err, remote_device_id = ?endpoint.remote_device_id(), "handle_push_message: handler '{}' returns error", stringify!($handler));
+             }
+         });
     }};
 }
 
@@ -104,7 +110,7 @@ pub struct EndPoint {
     atomic_call_id: AtomicU16,
     call_reply_tx_map: DashMap<u16, tokio::sync::oneshot::Sender<EndPointMessage>>,
     packet_tx: tokio::sync::mpsc::Sender<EndPointMessagePacket>,
-    video_frame_tx: OnceCell<tokio::sync::mpsc::Sender<VideoFrame>>,
+    video_frame_tx: OnceCell<Sender<VideoFrame>>,
     audio_frame_tx: OnceCell<Sender<AudioFrame>>,
     exit_tx: async_broadcast::Sender<()>,
     exit_rx: async_broadcast::Receiver<()>,
@@ -206,7 +212,12 @@ where
         exit_rx,
     });
 
-    serve_reader(endpoint.clone(), exit_tx.new_receiver(), stream, opening_key);
+    serve_reader(
+        endpoint.clone(),
+        exit_tx.new_receiver(),
+        stream,
+        opening_key,
+    );
     serve_writer(
         endpoint.clone(),
         remote_device_id.clone(),
@@ -320,7 +331,7 @@ impl EndPoint {
                 None => {
                     return Err(MirrorXError::Other(anyhow::anyhow!(
                         "can not find specified monitor or primary monitor"
-                    )))
+                    )));
                 }
             },
         };
@@ -365,7 +376,7 @@ impl EndPoint {
         video_texture_ptr: i64,
         update_frame_callback_ptr: i64,
     ) -> Result<(), MirrorXError> {
-        let (video_frame_tx, video_frame_rx) = tokio::sync::mpsc::channel(600);
+        let (video_frame_tx, video_frame_rx) = crossbeam::channel::bounded(600);
         let (decoded_frame_tx, decoded_frame_rx) = crossbeam::channel::bounded(600);
 
         start_video_decode_process(
@@ -428,24 +439,6 @@ impl EndPoint {
         Ok(())
     }
 
-    pub fn enqueue_video_frame(&self, video_frame: VideoFrame) {
-        if let Some(tx) = self.video_frame_tx.get() {
-            if let Err(tokio::sync::mpsc::error::TrySendError::Full(_)) = tx.try_send(video_frame) {
-                warn!(remote_device_id = ?self.remote_device_id, "video frame queue is full");
-            }
-        }
-    }
-
-    pub fn enqueue_audio_frame(&self, audio_frame: AudioFrame) {
-        if let Some(tx) = self.audio_frame_tx.get() {
-            if let Err(err) = tx.try_send(audio_frame) {
-                if err.is_full() {
-                    warn!(remote_device_id = ?self.remote_device_id, "audio frame queue is full");
-                }
-            }
-        }
-    }
-
     pub fn manually_close(&self) {
         let _ = self.exit_tx.try_broadcast(());
     }
@@ -504,7 +497,7 @@ fn serve_reader(
                                     break;
                                 }
                             };
-                        
+
                         let packet = match BINCODE_SERIALIZER
                             .deserialize::<EndPointMessagePacket>(&opened_packet_bytes)
                         {
@@ -514,11 +507,8 @@ fn serve_reader(
                                 break;
                             }
                         };
-                    
-                        let endpoint = endpoint.clone();
-                        TOKIO_RUNTIME.spawn(async move {
-                            handle_message(endpoint, packet).await;
-                        });
+
+                        handle_message(&endpoint, packet);
                     },
                     None => {
                         info!(remote_device_id=?endpoint.remote_device_id(), "network stream closed");
@@ -583,12 +573,12 @@ fn serve_writer(
     });
 }
 
-async fn handle_message(endpoint: Arc<EndPoint>, packet: EndPointMessagePacket) {
+fn handle_message(endpoint: &Arc<EndPoint>, packet: EndPointMessagePacket) {
     match packet.typ {
         EndPointMessagePacketType::Request => match packet.message {
             EndPointMessage::GetDisplayInfoRequest(req) => {
                 handle_call_message!(
-                    &endpoint,
+                    endpoint,
                     packet.call_id,
                     req,
                     EndPointMessage::GetDisplayInfoResponse,
@@ -597,7 +587,7 @@ async fn handle_message(endpoint: Arc<EndPoint>, packet: EndPointMessagePacket) 
             }
             EndPointMessage::StartMediaTransmissionRequest(req) => {
                 handle_call_message!(
-                    &endpoint,
+                    endpoint,
                     packet.call_id,
                     req,
                     EndPointMessage::StartMediaTransmissionResponse,
@@ -615,13 +605,25 @@ async fn handle_message(endpoint: Arc<EndPoint>, packet: EndPointMessagePacket) 
         }
         EndPointMessagePacketType::Push => match packet.message {
             EndPointMessage::VideoFrame(req) => {
-                handle_push_message!(&endpoint, req, handle_video_frame);
+                if let Some(tx) = endpoint.video_frame_tx.get() {
+                    if let Err(err) = tx.try_send(req) {
+                        if err.is_full() {
+                            warn!(remote_device_id = ?endpoint.remote_device_id, "video frame queue is full");
+                        }
+                    }
+                }
             }
             EndPointMessage::AudioFrame(req) => {
-                handle_push_message!(&endpoint, req, handle_audio_frame);
+                if let Some(tx) = endpoint.audio_frame_tx.get() {
+                    if let Err(err) = tx.try_send(req) {
+                        if err.is_full() {
+                            warn!(remote_device_id = ?endpoint.remote_device_id, "audio frame queue is full");
+                        }
+                    }
+                }
             }
             EndPointMessage::Input(req) => {
-                handle_push_message!(&endpoint, req, handle_input);
+                handle_push_message!(endpoint, req, handle_input);
             }
             _ => error!("handle_message: received unknown push message"),
         },

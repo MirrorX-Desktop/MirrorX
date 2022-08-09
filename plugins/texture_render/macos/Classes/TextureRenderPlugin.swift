@@ -2,10 +2,10 @@ import Cocoa
 import FlutterMacOS
 
 let update_frame_callback:
-@convention(c) (UnsafeRawPointer, UnsafeRawPointer, UInt,UInt) -> Void = {
-    (videoTexturePointer, bufferPointer, width,height) in
+@convention(c) (UnsafeRawPointer, UnsafeRawPointer) -> Void = {
+    (videoTexturePointer, pixelBufferPointer) in
     let videoTexture = Unmanaged<VideoTexture>.fromOpaque(videoTexturePointer).takeUnretainedValue()
-    videoTexture.updateFrame(buffer: bufferPointer, width: width, height: height)
+    videoTexture.updateFrame(pixelBufferPointer: pixelBufferPointer)
 }
 
 public class TextureRenderPlugin: NSObject, FlutterPlugin {

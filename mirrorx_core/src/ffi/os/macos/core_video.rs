@@ -17,6 +17,8 @@ extern "C" {
     pub static kCVPixelBufferWidthKey: CFStringRef;
     pub static kCVPixelBufferHeightKey: CFStringRef;
     pub static kCVImageBufferYCbCrMatrixKey: CFStringRef;
+    pub static kCVPixelBufferMetalCompatibilityKey: CFStringRef;
+    pub static kCVPixelBufferOpenGLCompatibilityKey: CFStringRef;
 
     pub static kCVImageBufferYCbCrMatrix_ITU_R_601_4: CFStringRef;
     pub static kCVImageBufferYCbCrMatrix_ITU_R_709_2: CFStringRef;

@@ -186,16 +186,12 @@ pub fn start_desktop_render_process(
                     }
                 };
 
-                // #[cfg(target_os = "macos")]
-                // unsafe {
-                //     update_callback_fn(
-                //         texture_id,
-                //         video_texture_ptr as *mut c_void,
-                //         decoded_video_frame.0,
-                //     );
-                // }
+                #[cfg(target_os = "macos")]
+                unsafe {
+                    update_callback_fn(video_texture_ptr as *mut c_void, decoded_video_frame.0);
+                }
 
-                // #[cfg(target_os = "windows")]
+                #[cfg(target_os = "windows")]
                 unsafe {
                     update_callback_fn(
                         video_texture_ptr as *mut c_void,

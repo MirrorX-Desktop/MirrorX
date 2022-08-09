@@ -16,6 +16,7 @@ use crate::{
         StartMediaTransmissionRequest,
     },
 };
+use std::sync::Arc;
 
 pub async fn handle_get_display_info_request(
     endpoint: &EndPoint,
@@ -64,22 +65,6 @@ pub async fn handle_start_media_transmission_request(
     };
 
     Ok(reply)
-}
-
-pub async fn handle_video_frame(
-    endpoint: &EndPoint,
-    video_frame: VideoFrame,
-) -> Result<(), MirrorXError> {
-    endpoint.enqueue_video_frame(video_frame);
-    Ok(())
-}
-
-pub async fn handle_audio_frame(
-    endpoint: &EndPoint,
-    audio_frame: AudioFrame,
-) -> Result<(), MirrorXError> {
-    endpoint.enqueue_audio_frame(audio_frame);
-    Ok(())
 }
 
 pub async fn handle_input(endpoint: &EndPoint, input: Input) -> Result<(), MirrorXError> {

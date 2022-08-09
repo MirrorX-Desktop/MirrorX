@@ -1,19 +1,23 @@
 use std::os::raw::c_void;
 
 use crate::{
+    component::NALU_HEADER_LENGTH,
     error::MirrorXError,
     ffi::os::macos::{core_media::*, core_video::*, videotoolbox::*},
     service::endpoint::message::VideoFrame,
 };
 use core_foundation::{
     base::{kCFAllocatorDefault, kCFAllocatorNull, CFRelease, OSStatus, ToVoid},
-    dictionary::{CFDictionary, CFDictionaryCreate, CFMutableDictionary},
+    boolean::CFBoolean,
+    dictionary::{
+        kCFTypeDictionaryKeyCallBacks, kCFTypeDictionaryValueCallBacks, CFDictionaryCreate,
+    },
     mach_port::CFIndex,
-    number::{kCFBooleanFalse, kCFBooleanTrue, CFNumber},
-    string::CFStringRef,
+    number::{kCFBooleanTrue, CFNumber},
 };
-use hmac::digest::block_buffer::BlockBuffer;
 use scopeguard::defer;
+
+use super::DecodedFrame;
 
 pub struct Decoder {
     format_description: CMVideoFormatDescriptionRef,
@@ -30,7 +34,11 @@ impl Decoder {
         }
     }
 
-    pub fn decode(&mut self, mut video_frame: VideoFrame) -> Result<(), MirrorXError> {
+    pub fn decode(
+        &mut self,
+        mut video_frame: VideoFrame,
+        decoded_frame_tx: *mut crossbeam::channel::Sender<DecodedFrame>,
+    ) -> Result<(), MirrorXError> {
         unsafe {
             if let (Some(sps), Some(pps)) = (video_frame.sps, video_frame.pps) {
                 let format_description = create_format_description(&sps, &pps)?;
@@ -61,18 +69,23 @@ impl Decoder {
                 )));
             }
 
-            let mut nalu_bytes = (video_frame.buffer.len() as u32).to_be_bytes().to_vec();
-            nalu_bytes.append(&mut video_frame.buffer);
+            let nalu_header_bytes =
+                ((video_frame.buffer.len() - NALU_HEADER_LENGTH) as u32).to_be_bytes();
+
+            video_frame.buffer[0] = nalu_header_bytes[0];
+            video_frame.buffer[1] = nalu_header_bytes[1];
+            video_frame.buffer[2] = nalu_header_bytes[2];
+            video_frame.buffer[3] = nalu_header_bytes[3];
 
             let mut block_buffer = std::ptr::null_mut();
             let ret = CMBlockBufferCreateWithMemoryBlock(
                 kCFAllocatorDefault,
-                nalu_bytes.as_mut_ptr() as *mut c_void,
-                nalu_bytes.len() as u32,
+                video_frame.buffer.as_ptr() as *mut c_void,
+                video_frame.buffer.len() as isize,
                 kCFAllocatorNull,
                 std::ptr::null(),
                 0,
-                nalu_bytes.len() as u32,
+                video_frame.buffer.len() as isize,
                 0,
                 &mut block_buffer,
             );
@@ -93,7 +106,7 @@ impl Decoder {
                 0,
                 std::ptr::null(),
                 1,
-                [nalu_bytes.len() as u32].as_ptr(),
+                [video_frame.buffer.len() as isize].as_ptr(),
                 &mut sample_buffer,
             );
 
@@ -108,7 +121,7 @@ impl Decoder {
                 self.session,
                 sample_buffer,
                 kVTDecodeFrame_EnableAsynchronousDecompression,
-                std::ptr::null_mut(),
+                decoded_frame_tx as *mut c_void,
                 std::ptr::null_mut(), // todo: pass frame dropped to statistic
             );
 
@@ -128,15 +141,15 @@ unsafe fn create_format_description(
     sps: &[u8],
     pps: &[u8],
 ) -> Result<CMFormatDescriptionRef, MirrorXError> {
-    let parameter_set_ptr = [sps.as_ptr(), pps.as_ptr()].as_ptr();
-    let parameter_set_size_ptr = [sps.len() as u32, pps.len() as u32].as_ptr();
+    let parameter_set = [sps.as_ptr(), pps.as_ptr()];
+    let parameter_set_size = [sps.len() as isize, pps.len() as isize];
 
     let mut format_description = std::ptr::null_mut();
     let ret = CMVideoFormatDescriptionCreateFromH264ParameterSets(
         kCFAllocatorDefault,
         2,
-        parameter_set_ptr,
-        parameter_set_size_ptr,
+        parameter_set.as_ptr(),
+        parameter_set_size.as_ptr(),
         4,
         &mut format_description,
     );
@@ -154,13 +167,25 @@ unsafe fn create_format_description(
 unsafe fn create_decompression_session(
     format_description: CMVideoFormatDescriptionRef,
 ) -> Result<VTDecompressionSessionRef, MirrorXError> {
+    let keys = [
+        kCVPixelBufferPixelFormatTypeKey.to_void(),
+        kCVPixelBufferMetalCompatibilityKey.to_void(),
+        kCVPixelBufferOpenGLCompatibilityKey.to_void(),
+    ];
+
+    let values = [
+        CFNumber::from(kCVPixelFormatType_32BGRA as i64).to_void(),
+        CFBoolean::true_value().to_void(),
+        CFBoolean::true_value().to_void(),
+    ];
+
     let desitination_pixel_buffer_attributes = CFDictionaryCreate(
         kCFAllocatorDefault,
-        [kCVPixelBufferPixelFormatTypeKey.to_void()].as_ptr(),
-        [&kCVPixelFormatType_32BGRA as *const _ as *const c_void].as_ptr(),
-        1,
-        std::ptr::null(),
-        std::ptr::null(),
+        keys.as_ptr(),
+        values.as_ptr(),
+        keys.len() as CFIndex,
+        &kCFTypeDictionaryKeyCallBacks,
+        &kCFTypeDictionaryValueCallBacks,
     );
 
     defer! {
@@ -169,7 +194,7 @@ unsafe fn create_decompression_session(
 
     let output_callback = VTDecompressionOutputCallbackRecord {
         decompression_output_callback: decode_output_callback,
-        decompression_output_ref_con: todo!(),
+        decompression_output_ref_con: std::ptr::null_mut(),
     };
 
     let mut session = std::ptr::null_mut();
@@ -207,7 +232,7 @@ unsafe fn create_decompression_session(
     Ok(session)
 }
 
-extern "C" fn decode_output_callback(
+unsafe extern "C" fn decode_output_callback(
     decompressionOutputRefCon: *mut c_void,
     sourceFrameRefCon: *mut c_void,
     status: OSStatus,
@@ -216,5 +241,25 @@ extern "C" fn decode_output_callback(
     presentationTimeStamp: CMTime,
     presentationDuration: CMTime,
 ) {
-    tracing::info!(?presentationTimeStamp, "cmtime");
+    if status != 0 {
+        tracing::error!("VTDecompressionOutputCallback returns error ({})", status);
+        return;
+    }
+
+    let tx = sourceFrameRefCon as *mut crossbeam::channel::Sender<DecodedFrame>;
+    if tx.is_null() {
+        return;
+    }
+
+    if imageBuffer.is_null() {
+        return;
+    }
+
+    let pixel_buffer = CVPixelBufferRetain(imageBuffer);
+
+    if let Err(err) = (*tx).try_send(DecodedFrame(pixel_buffer)) {
+        tracing::error!("send decoded frame failed ({})", err);
+        let decoded_frame = err.into_inner();
+        CVPixelBufferRelease(decoded_frame.0);
+    }
 }

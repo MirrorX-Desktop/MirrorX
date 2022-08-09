@@ -1,5 +1,5 @@
 use crate::{
-    component::desktop::CaptureFrame,
+    component::{desktop::CaptureFrame, NALU_HEADER_LENGTH},
     error::MirrorXError,
     ffi::os::macos::{core_media::*, videotoolbox::*},
     service::endpoint::message::{
@@ -8,13 +8,11 @@ use crate::{
 };
 use core_foundation::{
     array::{CFArray, CFArrayGetValueAtIndex},
-    base::{OSStatus, ToVoid},
-    dictionary::{CFDictionaryContainsKey, CFDictionaryRef},
+    base::{CFRelease, OSStatus, ToVoid},
+    dictionary::{CFDictionaryGetValueIfPresent, CFDictionaryRef},
     number::{kCFBooleanFalse, kCFBooleanTrue, CFNumber},
 };
 use std::os::raw::c_void;
-
-const NALU_HEADER_LENGTH: usize = 4;
 
 pub struct Encoder {
     session: VTCompressionSessionRef,
@@ -31,7 +29,7 @@ impl Encoder {
     }
 
     pub fn encode(
-        &self,
+        &mut self,
         capture_frame: CaptureFrame,
         endpoint_message_tx: *mut tokio::sync::mpsc::Sender<EndPointMessagePacket>,
     ) -> Result<(), MirrorXError> {
@@ -64,6 +62,7 @@ impl Drop for Encoder {
             unsafe {
                 VTCompressionSessionCompleteFrames(self.session, CMTime::invalid());
                 VTCompressionSessionInvalidate(self.session);
+                CFRelease(self.session);
             }
         }
     }
@@ -97,7 +96,7 @@ unsafe fn create_compression_session(
     ret = VTSessionSetProperty(
         session,
         kVTCompressionPropertyKey_ProfileLevel,
-        kVTProfileLevel_H264_Main_5_0.to_void(),
+        kVTProfileLevel_H264_Main_AutoLevel.to_void(),
     );
 
     if ret != 0 {
@@ -264,18 +263,20 @@ extern "C" fn encode_output_callback(
             return;
         }
 
-        let attachments = CMSampleBufferGetSampleAttachmentsArray(sample_buffer, true);
-        if attachments.is_null() {
-            tracing::error!("CMSampleBufferGetSampleAttachmentsArray returns null CFArrayRef");
-            return;
+        let mut is_key_frame = false;
+        let attachments = CMSampleBufferGetSampleAttachmentsArray(sample_buffer, false);
+        if !attachments.is_null() {
+            let dic = CFArrayGetValueAtIndex(attachments, 0);
+
+            let mut value = std::ptr::null();
+
+            is_key_frame = CFDictionaryGetValueIfPresent(
+                dic as CFDictionaryRef,
+                kCMSampleAttachmentKey_DependsOnOthers.to_void(),
+                &mut value,
+            ) == 0
+                || value == kCFBooleanFalse.to_void();
         }
-
-        let dic = CFArrayGetValueAtIndex(attachments, 0);
-
-        let is_key_frame = CFDictionaryContainsKey(
-            dic as CFDictionaryRef,
-            kCMSampleAttachmentKey_NotSync.to_void(),
-        ) == 0;
 
         let mut sps = once_cell::unsync::OnceCell::new();
         let mut pps = once_cell::unsync::OnceCell::new();
@@ -292,7 +293,7 @@ extern "C" fn encode_output_callback(
             // get SPS
 
             let mut sps_ptr = std::ptr::null();
-            let mut sps_size = 0u32;
+            let mut sps_size = 0isize;
 
             let ret = CMVideoFormatDescriptionGetH264ParameterSetAtIndex(
                 format,
@@ -314,7 +315,7 @@ extern "C" fn encode_output_callback(
             // get PPS
 
             let mut pps_ptr = std::ptr::null();
-            let mut pps_size = 0u32;
+            let mut pps_size = 0isize;
 
             let ret = CMVideoFormatDescriptionGetH264ParameterSetAtIndex(
                 format,
@@ -333,8 +334,11 @@ extern "C" fn encode_output_callback(
                 return;
             }
 
-            let _ = sps.set(std::slice::from_raw_parts(sps_ptr, sps_size as usize).to_vec());
-            let _ = pps.set(std::slice::from_raw_parts(pps_ptr, pps_size as usize).to_vec());
+            let sps_bytes = std::slice::from_raw_parts(sps_ptr, sps_size as usize).to_vec();
+            let pps_bytes = std::slice::from_raw_parts(pps_ptr, pps_size as usize).to_vec();
+
+            let _ = sps.set(sps_bytes);
+            let _ = pps.set(pps_bytes);
         }
 
         let data_buffer = CMSampleBufferGetDataBuffer(sample_buffer);
@@ -372,12 +376,12 @@ extern "C" fn encode_output_callback(
                 nalu_header_slice[3],
             ];
 
-            // NALU length bytes is Big Endian u32
             let nalu_body_length = u32::from_be_bytes(nalu_header_bytes) as usize;
 
+            // this nalu body bytes copied with header
             let nalu_body_bytes = std::slice::from_raw_parts(
-                data_pointer.add(offset + NALU_HEADER_LENGTH),
-                nalu_body_length,
+                data_pointer.add(offset),
+                nalu_body_length + NALU_HEADER_LENGTH,
             )
             .to_vec();
 

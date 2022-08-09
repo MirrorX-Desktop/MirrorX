@@ -54,6 +54,7 @@ pub type CMItemCount = CFIndex;
 
 extern "C" {
     pub static kCMSampleAttachmentKey_NotSync: CFStringRef;
+    pub static kCMSampleAttachmentKey_DependsOnOthers: CFStringRef;
 }
 
 extern "C" {
@@ -87,7 +88,7 @@ extern "C" {
         num_sample_timing_entries: CMItemCount,
         sample_timing_array: *const CMSampleTimingInfo,
         num_sample_size_entries: CMItemCount,
-        sample_size_array: *const u32,
+        sample_size_array: *const isize,
         sample_buffer_out: *mut CMSampleBufferRef,
     ) -> OSStatus;
     pub fn CMSampleBufferGetSampleAttachmentsArray(
@@ -97,18 +98,18 @@ extern "C" {
     pub fn CMSampleBufferGetFormatDescription(sbuf: CMSampleBufferRef) -> CMFormatDescriptionRef;
     pub fn CMVideoFormatDescriptionGetH264ParameterSetAtIndex(
         video_desc: CMFormatDescriptionRef,
-        parameter_set_index: u32,
+        parameter_set_index: isize,
         parameter_set_pointer_out: *mut *const u8,
-        parameter_set_size_out: *mut u32,
-        parameter_set_count_out: *mut u32,
-        nal_unit_header_length_out: *mut isize,
+        parameter_set_size_out: *mut isize,
+        parameter_set_count_out: *mut isize,
+        nal_unit_header_length_out: *mut i32,
     ) -> OSStatus;
     pub fn CMVideoFormatDescriptionCreateFromH264ParameterSets(
         allocator: CFAllocatorRef,
-        parameter_set_count: u32,
+        parameter_set_count: isize,
         parameter_set_pointers: *const *const u8,
-        parameter_set_sizes: *const u32,
-        nal_unit_header_length: isize,
+        parameter_set_sizes: *const isize,
+        nal_unit_header_length: i32,
         format_description_out: *mut CMFormatDescriptionRef,
     ) -> OSStatus;
     pub fn CMSampleBufferGetDataBuffer(sbuf: CMSampleBufferRef) -> CMBlockBufferRef;
@@ -122,11 +123,11 @@ extern "C" {
     pub fn CMBlockBufferCreateWithMemoryBlock(
         structure_allocator: CFAllocatorRef,
         memory_block: *mut c_void,
-        block_length: u32,
+        block_length: isize,
         block_allocator: CFAllocatorRef,
         custom_block_source: *const c_void,
-        offset_to_data: u32,
-        data_length: u32,
+        offset_to_data: isize,
+        data_length: isize,
         flags: CMBlockBufferFlags,
         block_buffer_out: *mut CMBlockBufferRef,
     ) -> OSStatus;
