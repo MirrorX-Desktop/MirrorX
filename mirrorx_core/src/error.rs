@@ -1,4 +1,4 @@
-use std::io;
+use std::{fmt::Display, io};
 use thiserror::Error;
 
 #[cfg(target_os = "windows")]
@@ -132,4 +132,10 @@ pub enum MirrorXError {
     MediaVideoDecoderReceiveFrameFailed(i32),
     #[error("media video decoder output tx send failed")]
     MediaVideoDecoderOutputTxSendFailed,
+    #[error("native api: {name}, code: {}, additional: {additional:?}", if cfg!(target_os="windows") { format!("{:#010X}", .code) } else { format!("{}", .code) })]
+    Native {
+        name: &'static str,
+        code: i32,
+        additional: Option<String>,
+    },
 }

@@ -313,8 +313,6 @@ impl VideoDecoder {
             height: (*self.hw_decode_frame).height as u32,
         };
 
-        let a = DecodedFrame();
-
         av_frame_unref((*self).hw_decode_frame);
 
         Ok(decoded_frame)

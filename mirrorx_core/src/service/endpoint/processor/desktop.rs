@@ -1,10 +1,6 @@
-use crate::component::desktop::CaptureFrame;
 use crate::utility::runtime::TOKIO_RUNTIME;
 use crate::{
-    component::{
-        desktop::{Duplicator, Frame},
-        video_decoder::DecodedFrame,
-    },
+    component::{desktop::Duplicator, video_decoder::DecodedFrame},
     error::MirrorXError,
     service::endpoint::ffi::create_callback_fn,
 };
@@ -18,89 +14,91 @@ pub fn start_desktop_capture_process(
     remote_device_id: String,
     exit_tx: async_broadcast::Sender<()>,
     mut exit_rx: async_broadcast::Receiver<()>,
-    capture_frame_tx: crossbeam::channel::Sender<Frame>,
+    capture_frame_tx: crossbeam::channel::Sender<crate::component::capture_frame::CaptureFrame>,
     display_id: &str,
     fps: u8,
 ) -> Result<(), MirrorXError> {
     use tokio::sync::mpsc::error::TrySendError;
 
-    let mut duplicator = Duplicator::new(display_id)?;
+    use crate::component::capture_frame::CaptureFrame;
 
-    let expected_wait_time = Duration::from_secs_f32(1f32 / (fps as f32));
+    // let mut duplicator = Duplicator::new(display_id)?;
 
-    TOKIO_RUNTIME.spawn(async move {
-        defer! {
-            info!(?remote_device_id, "desktop capture process exit");
-            let _ = exit_tx.try_broadcast(());
-        }
+    // let expected_wait_time = Duration::from_secs_f32(1f32 / (fps as f32));
 
-        let mut interval = tokio::time::interval(expected_wait_time);
-        let epoch = unsafe { crate::ffi::ffmpeg::avutil::av_gettime_relative() };
+    // TOKIO_RUNTIME.spawn(async move {
+    //     defer! {
+    //         info!(?remote_device_id, "desktop capture process exit");
+    //         let _ = exit_tx.try_broadcast(());
+    //     }
 
-        loop {
-            tokio::select! {
-                _ = exit_rx.recv() => break,
-                _ = interval.tick() => match duplicator.capture() {
-                    Ok(mut frame) => unsafe {
-                        frame.capture_time = crate::ffi::ffmpeg::avutil::av_gettime_relative() - epoch;
+    //     let mut interval = tokio::time::interval(expected_wait_time);
+    //     let epoch = unsafe { crate::ffi::ffmpeg::avutil::av_gettime_relative() };
 
-                        trace!(
-                            width=?frame.width,
-                            height=?frame.height,
-                            chrominance_len=?frame.chrominance_buffer.len(),
-                            chrominance_stride=?frame.chrominance_stride,
-                            luminance_len=?frame.luminance_buffer.len(),
-                            luminance_stride=?frame.luminance_stride,
-                            capture_time=?frame.capture_time,
-                            "desktop capture frame",
-                        );
+    //     loop {
+    //         tokio::select! {
+    //             _ = exit_rx.recv() => break,
+    //             _ = interval.tick() => match duplicator.capture() {
+    //                 Ok(mut frame) => unsafe {
+    //                     frame.capture_time = crate::ffi::ffmpeg::avutil::av_gettime_relative() - epoch;
 
-                        if let Err(_) = capture_frame_tx.send(frame) {
-                            // match err{
-                            //     TrySendError::Full(_) => warn!("desktop frame if full"),
-                            //     TrySendError::Closed(_) => return,
-                            // };
-                            return;
-                        }
-                    },
-                    Err(err) => {
-                        error!(?err, "capture desktop frame failed");
-                        return;
-                    }
-                }
-            }
+    //                     trace!(
+    //                         width=?frame.width,
+    //                         height=?frame.height,
+    //                         chrominance_len=?frame.chrominance_buffer.len(),
+    //                         chrominance_stride=?frame.chrominance_stride,
+    //                         luminance_len=?frame.luminance_buffer.len(),
+    //                         luminance_stride=?frame.luminance_stride,
+    //                         capture_time=?frame.capture_time,
+    //                         "desktop capture frame",
+    //                     );
 
-            // select! {
-            //     recv(exit_rx) -> _ => {
-            //         return;
-            //     },
-            //     recv(interval) -> _ =>  match duplicator.capture() {
-            //         Ok(mut frame) => unsafe {
-            //             frame.capture_time = av_gettime_relative() - epoch;
+    //                     if let Err(_) = capture_frame_tx.send(frame) {
+    //                         // match err{
+    //                         //     TrySendError::Full(_) => warn!("desktop frame if full"),
+    //                         //     TrySendError::Closed(_) => return,
+    //                         // };
+    //                         return;
+    //                     }
+    //                 },
+    //                 Err(err) => {
+    //                     error!(?err, "capture desktop frame failed");
+    //                     return;
+    //                 }
+    //             }
+    //         }
 
-            //             trace!(
-            //                 width=?frame.width,
-            //                 height=?frame.height,
-            //                 chrominance_len=?frame.chrominance_buffer.len(),
-            //                 chrominance_stride=?frame.chrominance_stride,
-            //                 luminance_len=?frame.luminance_buffer.len(),
-            //                 luminance_stride=?frame.luminance_stride,
-            //                 capture_time=?frame.capture_time,
-            //                 "desktop capture frame",
-            //             );
+    // select! {
+    //     recv(exit_rx) -> _ => {
+    //         return;
+    //     },
+    //     recv(interval) -> _ =>  match duplicator.capture() {
+    //         Ok(mut frame) => unsafe {
+    //             frame.capture_time = av_gettime_relative() - epoch;
 
-            //             if let Err(_) = capture_frame_tx.send(frame) {
-            //                 return;
-            //             }
-            //         },
-            //         Err(err) => {
-            //             error!(?err, "capture desktop frame failed");
-            //             return;
-            //         }
-            //     }
-            // }
-        }
-    });
+    //             trace!(
+    //                 width=?frame.width,
+    //                 height=?frame.height,
+    //                 chrominance_len=?frame.chrominance_buffer.len(),
+    //                 chrominance_stride=?frame.chrominance_stride,
+    //                 luminance_len=?frame.luminance_buffer.len(),
+    //                 luminance_stride=?frame.luminance_stride,
+    //                 capture_time=?frame.capture_time,
+    //                 "desktop capture frame",
+    //             );
+
+    //             if let Err(_) = capture_frame_tx.send(frame) {
+    //                 return;
+    //             }
+    //         },
+    //         Err(err) => {
+    //             error!(?err, "capture desktop frame failed");
+    //             return;
+    //         }
+    //     }
+    // }
+    // }
+    // });
 
     Ok(())
 }

@@ -1,4 +1,5 @@
 use crate::{
+    component::capture_frame::CaptureFrame,
     error::MirrorXError,
     ffi::ffmpeg::{avcodec::*, avutil::*},
     service::endpoint::message::{
@@ -127,7 +128,7 @@ impl VideoEncoder {
 
     pub fn encode(
         &mut self,
-        frame: crate::component::desktop::Frame,
+        frame: CaptureFrame,
         tx: &Sender<EndPointMessagePacket>,
     ) -> Result<(), MirrorXError> {
         unsafe {
@@ -188,9 +189,9 @@ impl VideoEncoder {
                 ));
             }
 
-            (*self.frame).data[0] = frame.luminance_buffer.as_ptr() as *mut _;
+            (*self.frame).data[0] = frame.luminance_bytes.as_ptr() as *mut _;
             (*self.frame).linesize[0] = frame.luminance_stride as i32;
-            (*self.frame).data[1] = frame.chrominance_buffer.as_ptr() as *mut _;
+            (*self.frame).data[1] = frame.chrominance_bytes.as_ptr() as *mut _;
             (*self.frame).linesize[1] = frame.chrominance_stride as i32;
             // (*self.frame).pts = av_rescale_q(
             //     frame.capture_time,

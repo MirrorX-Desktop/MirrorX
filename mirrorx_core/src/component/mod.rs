@@ -2,6 +2,7 @@
 
 pub mod audio_decoder;
 pub mod audio_encoder;
+pub mod capture_frame;
 pub mod desktop;
 pub mod input;
 pub mod monitor;

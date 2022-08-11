@@ -1,17 +1,10 @@
-use super::{
-    dx::DX,
-    dx_math::{BPP, VERTEX, VERTICES},
+use super::{dx::DX, dx_math::VERTICES};
+use crate::{
+    component::capture_frame::CaptureFrame, error::MirrorXError, utility::wide_char::FromWide,
 };
-use crate::{component::desktop::Frame, error::MirrorXError, utility::wide_char::FromWide};
 use anyhow::bail;
 use scopeguard::defer;
-use std::{
-    ffi::OsString,
-    mem::zeroed,
-    ops::{Shr, ShrAssign},
-    os::raw::c_void,
-    ptr::null,
-};
+use std::{ffi::OsString, mem::zeroed, ptr::null};
 use tracing::info;
 use windows::{
     core::Interface,
@@ -246,7 +239,7 @@ impl Duplicator {
         }
     }
 
-    pub fn capture(&mut self) -> anyhow::Result<Frame> {
+    pub fn capture(&mut self) -> anyhow::Result<CaptureFrame> {
         unsafe {
             self.acquire_frame()?;
             self.process_frame()?;
@@ -298,23 +291,22 @@ impl Duplicator {
             let chrominance_buffer_size =
                 (height as u32) / 2 * mapped_resource_chrominance.RowPitch;
 
-            let capture_frame = Frame::new(
-                width as u16,
-                height as u16,
-                std::slice::from_raw_parts(
+            let capture_frame = CaptureFrame {
+                width: width as u16,
+                height: height as u16,
+                luminance_bytes: std::slice::from_raw_parts(
                     mapped_resource_lumina.pData as *mut u8,
                     luminance_buffer_size as usize,
                 )
                 .to_vec(),
-                mapped_resource_lumina.RowPitch as u16,
-                std::slice::from_raw_parts(
+                luminance_stride: mapped_resource_lumina.RowPitch as u16,
+                chrominance_bytes: std::slice::from_raw_parts(
                     mapped_resource_chrominance.pData as *mut u8,
                     chrominance_buffer_size as usize,
                 )
                 .to_vec(),
-                mapped_resource_chrominance.RowPitch as u16,
-                0,
-            );
+                chrominance_stride: mapped_resource_chrominance.RowPitch as u16,
+            };
 
             Ok(capture_frame)
         }

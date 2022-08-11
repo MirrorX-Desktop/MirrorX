@@ -340,27 +340,27 @@ impl EndPoint {
         let height = monitor.height;
         let fps = monitor.refresh_rate.min(except_fps);
 
-        let (capture_frame_tx, capture_frame_rx) = crossbeam::channel::bounded(1);
+        // let (capture_frame_tx, capture_frame_rx) = crossbeam::channel::bounded(1);
 
-        start_video_encode_process(
-            self.remote_device_id.clone(),
-            self.exit_tx.clone(),
-            self.exit_tx.new_receiver(),
-            width as i32,
-            height as i32,
-            fps as i32,
-            capture_frame_rx,
-            self.packet_tx.clone(),
-        )?;
+        // start_video_encode_process(
+        //     self.remote_device_id.clone(),
+        //     self.exit_tx.clone(),
+        //     self.exit_tx.new_receiver(),
+        //     width as i32,
+        //     height as i32,
+        //     fps as i32,
+        //     capture_frame_rx,
+        //     self.packet_tx.clone(),
+        // )?;
 
-        start_desktop_capture_process(
-            self.remote_device_id.clone(),
-            self.exit_tx.clone(),
-            self.exit_tx.new_receiver(),
-            capture_frame_tx,
-            display_id,
-            fps,
-        )?;
+        // start_desktop_capture_process(
+        //     self.remote_device_id.clone(),
+        //     self.exit_tx.clone(),
+        //     self.exit_tx.new_receiver(),
+        //     capture_frame_tx,
+        //     display_id,
+        //    fps,
+        // )?;
 
         let _ = self.monitor.set(monitor.clone());
 
