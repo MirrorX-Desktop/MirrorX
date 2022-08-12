@@ -139,3 +139,14 @@ pub enum MirrorXError {
         additional: Option<String>,
     },
 }
+
+#[cfg(target_os = "windows")]
+impl From<windows::core::Error> for MirrorXError {
+    fn from(err: windows::core::Error) -> Self {
+        MirrorXError::Native {
+            name: "",
+            code: err.code().0,
+            additional: Some(err.message().to_string()),
+        }
+    }
+}
