@@ -1,6 +1,7 @@
 use std::{fmt::Display, io};
 use thiserror::Error;
 
+use windows::core::HRESULT;
 #[cfg(target_os = "windows")]
 use windows::Win32::Foundation::WIN32_ERROR;
 
@@ -132,21 +133,12 @@ pub enum MirrorXError {
     MediaVideoDecoderReceiveFrameFailed(i32),
     #[error("media video decoder output tx send failed")]
     MediaVideoDecoderOutputTxSendFailed,
-    #[error("native api: {name}, code: {}, additional: {additional:?}", if cfg!(target_os="windows") { format!("{:#010X}", .code) } else { format!("{}", .code) })]
-    Native {
-        name: &'static str,
-        code: i32,
-        additional: Option<String>,
-    },
-}
 
-#[cfg(target_os = "windows")]
-impl From<windows::core::Error> for MirrorXError {
-    fn from(err: windows::core::Error) -> Self {
-        MirrorXError::Native {
-            name: "",
-            code: err.code().0,
-            additional: Some(err.message().to_string()),
-        }
-    }
+    #[error("syscall error: code: {code:?}, message: \"{message}\", file: {file}, line: {line}")]
+    Syscall {
+        code: HRESULT,
+        message: String,
+        file: String,
+        line: String,
+    },
 }

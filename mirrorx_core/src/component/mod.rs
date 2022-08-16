@@ -10,3 +10,6 @@ pub mod video_decoder;
 pub mod video_encoder;
 
 pub const NALU_HEADER_LENGTH: usize = 4;
+
+#[cfg(target_os = "windows")]
+pub mod media_foundation;

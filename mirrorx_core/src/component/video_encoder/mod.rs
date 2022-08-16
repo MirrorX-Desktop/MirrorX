@@ -7,6 +7,3 @@ mod video_encoder;
 
 #[cfg(target_os = "macos")]
 pub mod videotoolbox;
-
-#[cfg(target_os = "windows")]
-pub mod media_foundation;
