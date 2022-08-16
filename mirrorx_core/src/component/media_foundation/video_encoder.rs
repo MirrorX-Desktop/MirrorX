@@ -21,6 +21,9 @@ use windows::{
 };
 
 pub struct VideoEncoder {
+    frame_width: u16,
+    frame_height: u16,
+    descriptor: Descriptor,
     event_generator: Option<IMFMediaEventGenerator>,
     needs_create_output_sample: bool,
 }
@@ -83,11 +86,24 @@ impl VideoEncoder {
                 == 0;
 
             Ok(VideoEncoder {
+                frame_width,
+                frame_height,
+                descriptor: descriptor.clone(),
                 event_generator,
                 needs_create_output_sample,
             })
         }
     }
+
+    pub fn encode(&self) {}
+
+    // unsafe fn process_input(&self) -> Result<(), MirrorXError> {
+    //     let image_size = syscall_check!(MFCalculateImageSize(
+    //         &MFVideoFormat_NV12,
+    //         self.frame_width as u32,
+    //         self.frame_height as u32
+    //     ));
+    // }
 }
 
 fn set_codec_api_rate_control_mode(codec_api: &ICodecAPI) -> Result<(), MirrorXError> {
@@ -278,6 +294,11 @@ unsafe fn create_input_and_output_media_type(
 
     Ok((input_media_type, output_media_type))
 }
+
+// unsafe fn create_sample() {
+//     let sample = syscall_check!(MFCreateSample());
+//     MFCreateDXGISurfaceBuffer(riid, punksurface, usubresourceindex, fbottomupwhenlinear)
+// }
 
 #[test]
 fn test_media_foundation_video_encoder() -> anyhow::Result<()> {
