@@ -12,6 +12,7 @@ use windows::{
     core::{Interface, GUID},
     Win32::{
         Foundation::MAX_PATH,
+        Graphics::Direct3D11::ID3D11Texture2D,
         Media::MediaFoundation::*,
         System::{
             Com::*,
@@ -26,6 +27,7 @@ pub struct VideoEncoder {
     descriptor: Descriptor,
     event_generator: Option<IMFMediaEventGenerator>,
     needs_create_output_sample: bool,
+    transform: IMFTransform,
 }
 
 impl VideoEncoder {
@@ -91,19 +93,53 @@ impl VideoEncoder {
                 descriptor: descriptor.clone(),
                 event_generator,
                 needs_create_output_sample,
+                transform,
             })
         }
     }
 
     pub fn encode(&self) {}
 
-    // unsafe fn process_input(&self) -> Result<(), MirrorXError> {
-    //     let image_size = syscall_check!(MFCalculateImageSize(
-    //         &MFVideoFormat_NV12,
-    //         self.frame_width as u32,
-    //         self.frame_height as u32
-    //     ));
-    // }
+    unsafe fn process_input(&self, texture: &ID3D11Texture2D) -> Result<(), MirrorXError> {
+        let image_size = syscall_check!(MFCalculateImageSize(
+            &MFVideoFormat_NV12,
+            self.frame_width as u32,
+            self.frame_height as u32
+        ));
+
+        let sample = create_sample(texture)?;
+        syscall_check!(sample.SetSampleTime(0));
+        syscall_check!(sample.SetSampleDuration(0));
+
+        if self.descriptor.is_async() {
+            syscall_check!(self.transform.ProcessInput(0, sample, 0));
+        }
+
+        Ok(())
+    }
+
+    unsafe fn drain_event(&self, block: bool) -> Result<bool, MirrorXError> {
+        if let Some(event_generator) = self.event_generator {
+            let event_flags = if block {
+                MF_EVENT_FLAG_NONE
+            } else {
+                MF_EVENT_FLAG_NO_WAIT
+            };
+
+            match event_generator.GetEvent(event_flags) {
+                Ok(event) => {
+                    let typ = syscall_check!(event.GetType());
+                    let status = syscall_check!(event.GetStatus());
+                    if status.is_ok() {
+                        if typ == METransformNeedInput.0 {}
+                    }
+                }
+                Err(hr) => hr.code() == MF_E_NO_EVENTS_AVAILABLE,
+            }
+        }
+
+        false
+    }
 }
 
 fn set_codec_api_rate_control_mode(codec_api: &ICodecAPI) -> Result<(), MirrorXError> {
@@ -295,10 +331,24 @@ unsafe fn create_input_and_output_media_type(
     Ok((input_media_type, output_media_type))
 }
 
-// unsafe fn create_sample() {
-//     let sample = syscall_check!(MFCreateSample());
-//     MFCreateDXGISurfaceBuffer(riid, punksurface, usubresourceindex, fbottomupwhenlinear)
-// }
+unsafe fn create_sample(texture: &ID3D11Texture2D) -> Result<IMFSample, MirrorXError> {
+    let media_buffer = syscall_check!(MFCreateDXGISurfaceBuffer(
+        &ID3D11Texture2D::IID,
+        texture,
+        0,
+        false
+    ));
+
+    let media_2d_buffer: IMF2DBuffer = syscall_check!(media_buffer.cast());
+
+    let length = syscall_check!(media_2d_buffer.GetContiguousLength());
+    syscall_check!(media_buffer.SetCurrentLength(length));
+
+    let sample = syscall_check!(MFCreateVideoSampleFromSurface(None));
+    syscall_check!(sample.AddBuffer(media_buffer));
+
+    Ok(sample)
+}
 
 #[test]
 fn test_media_foundation_video_encoder() -> anyhow::Result<()> {
