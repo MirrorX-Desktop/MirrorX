@@ -1,4 +1,4 @@
-use crate::{error::MirrorXError, utility::wide_char::FromWide};
+use crate::{check_if_failed, error::MirrorXError, utility::wide_char::FromWide};
 use std::ffi::OsString;
 use windows::Win32::{Foundation::MAX_PATH, Media::MediaFoundation::*};
 
@@ -46,7 +46,7 @@ pub fn enum_descriptors() -> Result<Vec<Descriptor>, MirrorXError> {
         flags |= MFT_ENUM_FLAG_ASYNCMFT;
         flags |= MFT_ENUM_FLAG_SORTANDFILTER;
 
-        syscall_check!(MFTEnumEx(
+        check_if_failed!(MFTEnumEx(
             MFT_CATEGORY_VIDEO_ENCODER,
             flags,
             std::ptr::null(),
@@ -72,18 +72,18 @@ pub fn enum_descriptors() -> Result<Vec<Descriptor>, MirrorXError> {
 }
 
 unsafe fn create_descriptor(activate: &IMFActivate) -> Result<Descriptor, MirrorXError> {
-    let flags = syscall_check!(activate.GetUINT32(&MF_TRANSFORM_FLAGS_Attribute));
+    let flags = check_if_failed!(activate.GetUINT32(&MF_TRANSFORM_FLAGS_Attribute));
 
     let mut is_async = !((flags & MFT_ENUM_FLAG_SYNCMFT.0) != 0);
     is_async |= !!((flags & MFT_ENUM_FLAG_ASYNCMFT.0) != 0);
 
     let is_hardware = MFT_ENUM_FLAG_HARDWARE.0 != 0;
 
-    let guid = syscall_check!(activate.GetGUID(&MFT_TRANSFORM_CLSID_Attribute));
+    let guid = check_if_failed!(activate.GetGUID(&MFT_TRANSFORM_CLSID_Attribute));
 
     let mut name = [0u16; MAX_PATH as usize];
 
-    syscall_check!(activate.GetString(
+    check_if_failed!(activate.GetString(
         &MFT_FRIENDLY_NAME_Attribute,
         &mut name,
         std::ptr::null_mut(),

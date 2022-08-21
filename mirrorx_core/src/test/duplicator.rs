@@ -34,3 +34,54 @@ fn test_duplicator() -> anyhow::Result<()> {
         Ok(())
     }
 }
+
+#[test]
+#[cfg(target_os = "windows")]
+fn test_duplicator() -> anyhow::Result<()> {
+    use std::io::Cursor;
+
+    use image::ColorType;
+
+    tracing_subscriber::fmt::init();
+
+    let monitors = crate::component::monitor::get_active_monitors()?;
+
+    let mut duplicator = crate::component::desktop::Duplicator::new(&monitors[0].id)?;
+
+    let capture_frame = match duplicator.capture() {
+        Ok(frame) => frame,
+        Err(err) => {
+            tracing::error!("{:?}", err);
+            return Err(err);
+        }
+    };
+
+    tracing::info!(
+        "width:{}, height:{}, bytes_length:{}, stride:{}",
+        capture_frame.width,
+        capture_frame.height,
+        capture_frame.bytes.len(),
+        capture_frame.stride
+    );
+
+    let mut png_bytes: Vec<u8> = Vec::with_capacity(capture_frame.bytes.len());
+
+    image::write_buffer_with_format(
+        &mut Cursor::new(&mut png_bytes),
+        &capture_frame.bytes,
+        capture_frame.width as u32,
+        capture_frame.height as u32,
+        ColorType::Rgba8,
+        image::ImageOutputFormat::Png,
+    )
+    .map_err(|err| anyhow::anyhow!(err))?;
+
+    let mut p = std::env::temp_dir();
+    p.push(format!("mirrorx_{}.png", chrono::Local::now().timestamp()));
+
+    tracing::info!("output png file path: {:?}", p.as_path().as_os_str());
+
+    std::fs::write(&p, &png_bytes)?;
+
+    Ok(())
+}

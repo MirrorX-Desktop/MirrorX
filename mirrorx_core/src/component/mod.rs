@@ -1,4 +1,5 @@
 #![allow(non_snake_case)]
+mod macros;
 
 pub mod audio_decoder;
 pub mod audio_encoder;

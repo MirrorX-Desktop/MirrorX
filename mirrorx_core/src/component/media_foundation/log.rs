@@ -1,4 +1,4 @@
-use crate::{error::MirrorXError, utility::wide_char::FromWide};
+use crate::{check_if_failed, error::MirrorXError, utility::wide_char::FromWide};
 use scopeguard::defer;
 use std::{ffi::OsString, os::raw::c_void};
 use windows::{
@@ -14,7 +14,7 @@ use windows::{
 
 pub fn log_media_type(media_type: &IMFMediaType) -> Result<(), MirrorXError> {
     unsafe {
-        let count = syscall_check!(media_type.GetCount());
+        let count = check_if_failed!(media_type.GetCount());
 
         if count == 0 {
             tracing::info!("empty media type");
@@ -36,7 +36,7 @@ unsafe fn log_media_type_attribute(
     let mut guid: GUID = std::mem::zeroed();
     let mut var: PROPVARIANT = std::mem::zeroed();
 
-    syscall_check!(media_type.GetItemByIndex(index, &mut guid, &mut var));
+    check_if_failed!(media_type.GetItemByIndex(index, &mut guid, &mut var));
     defer! {
         let _ = PropVariantClear(&var as *const _ as  *mut _);
     }
@@ -277,7 +277,7 @@ fn get_guid_name(guid: &GUID) -> Result<String, MirrorXError> {
 
     if name == "" {
         unsafe {
-            let pw_str = syscall_check!(StringFromCLSID(guid));
+            let pw_str = check_if_failed!(StringFromCLSID(guid));
             defer! {
                 CoTaskMemFree(pw_str.0 as *const c_void);
             }

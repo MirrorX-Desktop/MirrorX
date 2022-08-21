@@ -1,6 +1,8 @@
 use std::{fmt::Display, io};
 use thiserror::Error;
 
+pub type CoreResult<T> = Result<T, MirrorXError>;
+
 use windows::core::HRESULT;
 #[cfg(target_os = "windows")]
 use windows::Win32::Foundation::WIN32_ERROR;
@@ -133,6 +135,12 @@ pub enum MirrorXError {
     MediaVideoDecoderReceiveFrameFailed(i32),
     #[error("media video decoder output tx send failed")]
     MediaVideoDecoderOutputTxSendFailed,
+
+    #[error("try again")]
+    TryAgain,
+
+    #[error("eof")]
+    EOF,
 
     #[error("syscall error: code: {code:?}, message: \"{message}\", file: {file}, line: {line}")]
     Syscall {
