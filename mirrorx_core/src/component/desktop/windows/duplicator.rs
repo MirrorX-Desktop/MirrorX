@@ -45,7 +45,7 @@ pub struct Duplicator {
     // render_target_view_chrominance: ID3D11RenderTargetView,
     sampler_linear: [Option<ID3D11SamplerState>; 1],
     blend_state: ID3D11BlendState,
-    keyed_mutex: IDXGIKeyedMutex,
+    // keyed_mutex: IDXGIKeyedMutex,
 }
 
 unsafe impl Send for Duplicator {}
@@ -81,14 +81,14 @@ impl Duplicator {
             texture_desc.Format = dxgi_outdupl_desc.ModeDesc.Format;
             texture_desc.SampleDesc.Count = 1;
             texture_desc.Usage = D3D11_USAGE_DEFAULT;
-            texture_desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
+            texture_desc.BindFlags = /*D3D11_BIND_SHADER_RESOURCE |*/ D3D11_BIND_RENDER_TARGET;
             texture_desc.CPUAccessFlags = D3D11_CPU_ACCESS_FLAG::default();
-            texture_desc.MiscFlags = D3D11_RESOURCE_MISC_SHARED_KEYEDMUTEX;
+            // texture_desc.MiscFlags = D3D11_RESOURCE_MISC_SHARED_KEYEDMUTEX;
 
             let backend_texture =
                 check_if_failed!(dx.device().CreateTexture2D(&texture_desc, null()));
 
-            let keyed_mutex: IDXGIKeyedMutex = check_if_failed!(backend_texture.cast());
+            // let keyed_mutex: IDXGIKeyedMutex = check_if_failed!(backend_texture.cast());
 
             texture_desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
             texture_desc.Usage = D3D11_USAGE_STAGING;
@@ -258,14 +258,14 @@ impl Duplicator {
                 // render_target_view_chrominance,
                 sampler_linear: [Some(sampler_linear); 1],
                 blend_state,
-                keyed_mutex,
+                // keyed_mutex,
             })
         }
     }
 
     pub fn capture(&mut self) -> anyhow::Result<CaptureFrame> {
         unsafe {
-            check_if_failed!(self.keyed_mutex.AcquireSync(1, 100));
+            // check_if_failed!(self.keyed_mutex.AcquireSync(1, 100));
 
             self.acquire_frame()?;
             // self.process_frame()?;
@@ -347,8 +347,8 @@ impl Duplicator {
                 stride: mapped_resource_backend.RowPitch as u16,
             };
 
-            check_if_failed!(self.keyed_mutex.ReleaseSync(0));
-zhux
+            // check_if_failed!(self.keyed_mutex.ReleaseSync(0));
+
             Ok(capture_frame)
         }
     }
@@ -410,7 +410,7 @@ zhux
             .CopyResource(&self.backend_texture, desktop_texture);
 
         // // draw mouse
-        // self.draw_mouse(&dxgi_outdupl_frame_info)?;
+        self.draw_mouse(&dxgi_outdupl_frame_info)?;
 
         check_if_failed!(self.output_duplication.ReleaseFrame());
 
@@ -476,16 +476,18 @@ zhux
             .device_context()
             .PSSetShaderResources(0, &vec![Some(shader_resouce_view)]);
 
-        // draw lumina plane
         self.dx
             .device_context()
             .OMSetRenderTargets(&[Some(self.render_target_view_backend.clone())], None);
+
         self.dx
             .device_context()
             .PSSetShader(self.dx.pixel_shader(), &[]);
+
         self.dx
             .device_context()
             .RSSetViewports(&[self.view_port_backend]);
+
         self.dx.device_context().Draw(VERTICES.len() as u32, 0);
 
         // draw chrominance plane
