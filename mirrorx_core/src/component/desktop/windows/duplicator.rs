@@ -10,7 +10,7 @@ use crate::{
 };
 use anyhow::bail;
 use scopeguard::defer;
-use std::{ffi::OsString, mem::zeroed, os::raw::c_void, ptr::null};
+use std::ffi::OsString;
 use tracing::info;
 use windows::{
     core::Interface,
@@ -31,21 +31,10 @@ pub struct Duplicator {
     output_desc: DXGI_OUTPUT_DESC,
     output_duplication: IDXGIOutputDuplication,
     backend_texture: ID3D11Texture2D,
-    staging_backend_texture: ID3D11Texture2D,
-    view_port_backend: D3D11_VIEWPORT,
-    render_target_view_backend: ID3D11RenderTargetView,
-    // backend_render_target_view: ID3D11RenderTargetView,
-    // render_texture_lumina: ID3D11Texture2D,
-    // render_texture_chrominance: ID3D11Texture2D,
-    // staging_texture_lumina: ID3D11Texture2D,
-    // staging_texture_chrominance: ID3D11Texture2D,
-    // view_port_lumina: D3D11_VIEWPORT,
-    // view_port_chrominance: D3D11_VIEWPORT,
-    // render_target_view_lumina: ID3D11RenderTargetView,
-    // render_target_view_chrominance: ID3D11RenderTargetView,
-    sampler_linear: [Option<ID3D11SamplerState>; 1],
+    backend_staging_texture: ID3D11Texture2D,
+    backend_render_target_view: Option<ID3D11RenderTargetView>,
+    sampler_linear: Option<ID3D11SamplerState>,
     blend_state: ID3D11BlendState,
-    // keyed_mutex: IDXGIKeyedMutex,
 }
 
 unsafe impl Send for Duplicator {}
@@ -53,9 +42,7 @@ unsafe impl Send for Duplicator {}
 impl Duplicator {
     pub fn new(monitor_id: &str) -> Result<Duplicator, MirrorXError> {
         unsafe {
-            let current_desktop = OpenInputDesktop(0, false, GENERIC_ALL).map_err(|err| {
-                MirrorXError::Other(anyhow::anyhow!("OpenInputDesktop failed ({})", err))
-            })?;
+            let current_desktop = check_if_failed!(OpenInputDesktop(0, false, GENERIC_ALL));
 
             defer! {
                 let _ = CloseDesktop(current_desktop);
@@ -70,7 +57,7 @@ impl Duplicator {
             let dx = DX::new()?;
             let (output_desc, output_duplication) = init_output_duplication(&dx, monitor_id)?;
 
-            let mut dxgi_outdupl_desc = zeroed();
+            let mut dxgi_outdupl_desc = std::mem::zeroed();
             output_duplication.GetDesc(&mut dxgi_outdupl_desc);
 
             let mut texture_desc: D3D11_TEXTURE2D_DESC = std::mem::zeroed();
@@ -81,23 +68,19 @@ impl Duplicator {
             texture_desc.Format = dxgi_outdupl_desc.ModeDesc.Format;
             texture_desc.SampleDesc.Count = 1;
             texture_desc.Usage = D3D11_USAGE_DEFAULT;
-            texture_desc.BindFlags = /*D3D11_BIND_SHADER_RESOURCE |*/ D3D11_BIND_RENDER_TARGET;
-            texture_desc.CPUAccessFlags = D3D11_CPU_ACCESS_FLAG::default();
-            // texture_desc.MiscFlags = D3D11_RESOURCE_MISC_SHARED_KEYEDMUTEX;
+            texture_desc.BindFlags = D3D11_BIND_RENDER_TARGET;
 
             let backend_texture =
-                check_if_failed!(dx.device().CreateTexture2D(&texture_desc, null()));
-
-            // let keyed_mutex: IDXGIKeyedMutex = check_if_failed!(backend_texture.cast());
+                check_if_failed!(dx.device().CreateTexture2D(&texture_desc, std::ptr::null()));
 
             texture_desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
             texture_desc.Usage = D3D11_USAGE_STAGING;
-            texture_desc.BindFlags = D3D11_BIND_FLAG(0);
-            texture_desc.MiscFlags = D3D11_RESOURCE_MISC_FLAG::default();
-            let staging_backend_texture =
-                check_if_failed!(dx.device().CreateTexture2D(&texture_desc, null()));
+            texture_desc.BindFlags = D3D11_BIND_FLAG::default();
 
-            let view_port_backend = D3D11_VIEWPORT {
+            let backend_staging_texture =
+                check_if_failed!(dx.device().CreateTexture2D(&texture_desc, std::ptr::null()));
+
+            let view_port = D3D11_VIEWPORT {
                 TopLeftX: 0.0,
                 TopLeftY: 0.0,
                 Width: texture_desc.Width as f32,
@@ -106,172 +89,66 @@ impl Duplicator {
                 MaxDepth: 1.0,
             };
 
-            dx.device_context().RSSetViewports(&[view_port_backend]);
+            dx.device_context().RSSetViewports(&[view_port]);
 
-            let render_target_view_backend =
-                check_if_failed!(dx.device().CreateRenderTargetView(&backend_texture, null()));
+            let backend_render_target_view = check_if_failed!(dx
+                .device()
+                .CreateRenderTargetView(&backend_texture, std::ptr::null()));
 
-            // let backend_render_target_view = dx.device().CreateRenderTargetView(&backend_texture,null()).map_err(|err|{
-            //         anyhow::anyhow!(
-            //             r#"Duplication: ID3D11Device::CreateRenderTargetView failed {{"texture_name":"{}", "error": "{:?}"}}"#,
-            //             "backend_texture",
-            //             err.code()
-            //         )
-            //     })?;
+            let mut sampler_desc: D3D11_SAMPLER_DESC = std::mem::zeroed();
+            sampler_desc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+            sampler_desc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+            sampler_desc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+            sampler_desc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+            sampler_desc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+            sampler_desc.MinLOD = 0f32;
+            sampler_desc.MaxLOD = D3D11_FLOAT32_MAX;
 
-            // create lumina plane resource
+            let sampler_state = check_if_failed!(dx.device().CreateSamplerState(&sampler_desc));
 
-            // texture_desc.Format = DXGI_FORMAT_R8_UNORM;
-            // texture_desc.BindFlags = D3D11_BIND_RENDER_TARGET;
-            // texture_desc.MiscFlags = D3D11_RESOURCE_MISC_FLAG::default();
-            // let render_texture_lumina = dx. device()
-            //     .CreateTexture2D(&texture_desc, null())
-            //     .map_err(|err| {
-            //         anyhow::anyhow!(
-            //             r#"Duplication: ID3D11Device::CreateTexture2D failed {{"texture_name":"{}", "error": "{:?}"}}"#,
-            //             "render_texture_lumina",
-            //             err.code()
-            //         )
-            //     })?;
+            let mut blend_desc: D3D11_BLEND_DESC = std::mem::zeroed();
+            blend_desc.AlphaToCoverageEnable = true.into();
+            blend_desc.IndependentBlendEnable = false.into();
+            blend_desc.RenderTarget[0].BlendEnable = true.into();
+            blend_desc.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
+            blend_desc.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+            blend_desc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
+            blend_desc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
+            blend_desc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
+            blend_desc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+            blend_desc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL.0 as u8;
 
-            // texture_desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
-            // texture_desc.Usage = D3D11_USAGE_STAGING;
-            // texture_desc.BindFlags = D3D11_BIND_FLAG(0);
-            // let staging_texture_lumina = dx.device().CreateTexture2D(&texture_desc, null()).map_err(|err|{
-            //     anyhow::anyhow!(
-            //         r#"Duplication: ID3D11Device::CreateTexture2D failed {{"texture_name":"{}", "error": "{:?}"}}"#,
-            //         "staging_texture_lumina",
-            //         err.code()
-            //     )
-            // })?;
-
-            // let view_port_lumina = D3D11_VIEWPORT {
-            //     TopLeftX: 0.0,
-            //     TopLeftY: 0.0,
-            //     Width: texture_desc.Width as f32,
-            //     Height: texture_desc.Height as f32,
-            //     MinDepth: 0.0,
-            //     MaxDepth: 1.0,
-            // };
-
-            // let render_target_view_lumina = dx.device().CreateRenderTargetView(&render_texture_lumina,null()).map_err(|err|{
-            //     anyhow::anyhow!(
-            //         r#"Duplication: ID3D11Device::CreateRenderTargetView failed {{"texture_name":"{}", "error": "{:?}"}}"#,
-            //         "render_texture_lumina",
-            //         err.code()
-            //     )
-            // })?;
-
-            // // create chrominance plane resource
-
-            // texture_desc.Width = dxgi_outdupl_desc.ModeDesc.Width / 2;
-            // texture_desc.Height = dxgi_outdupl_desc.ModeDesc.Height / 2;
-            // texture_desc.Format = DXGI_FORMAT_R8G8_UNORM;
-            // texture_desc.Usage = D3D11_USAGE_DEFAULT;
-            // texture_desc.CPUAccessFlags = D3D11_CPU_ACCESS_FLAG(0);
-            // texture_desc.BindFlags = D3D11_BIND_RENDER_TARGET;
-
-            // let render_texture_chrominance = dx.device()
-            //     .CreateTexture2D(&texture_desc, null())
-            //     .map_err(|err| {
-            //         anyhow::anyhow!(
-            //             r#"Duplication: ID3D11Device::CreateTexture2D failed {{"texture_name":"{}", "error": "{:?}"}}"#,
-            //             "render_texture_chrominance",
-            //             err.code()
-            //         )
-            //     })?;
-
-            // texture_desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
-            // texture_desc.Usage = D3D11_USAGE_STAGING;
-            // texture_desc.BindFlags = D3D11_BIND_FLAG(0);
-            // let staging_texture_chrominance =dx. device().CreateTexture2D(&texture_desc, null()).map_err(|err|{
-            //     anyhow::anyhow!(
-            //         r#"Duplication: ID3D11Device::CreateTexture2D failed {{"texture_name":"{}", "error": "{:?}"}}"#,
-            //         "staging_texture_chrominance",
-            //         err.code()
-            //     )
-            // })?;
-
-            // let view_port_chrominance = D3D11_VIEWPORT {
-            //     TopLeftX: 0.0,
-            //     TopLeftY: 0.0,
-            //     Width: texture_desc.Width as f32,
-            //     Height: texture_desc.Height as f32,
-            //     MinDepth: 0.0,
-            //     MaxDepth: 1.0,
-            // };
-
-            // let render_target_view_chrominance = dx.device().CreateRenderTargetView(&render_texture_chrominance,null()).map_err(|err|{
-            //     anyhow::anyhow!(
-            //         r#"Duplication: ID3D11Device::CreateRenderTargetView failed {{"texture_name":"{}", "error": "{:?}"}}"#,
-            //         "render_texture_chrominance",
-            //         err.code()
-            //     )
-            // })?;
-
-            let mut samp_desc: D3D11_SAMPLER_DESC = zeroed();
-            samp_desc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-            samp_desc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
-            samp_desc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
-            samp_desc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
-            samp_desc.ComparisonFunc = D3D11_COMPARISON_NEVER;
-            samp_desc.MinLOD = 0f32;
-            samp_desc.MaxLOD = D3D11_FLOAT32_MAX;
-
-            let sampler_linear = check_if_failed!(dx.device().CreateSamplerState(&samp_desc));
-
-            let mut blend_state_desc: D3D11_BLEND_DESC = zeroed();
-            blend_state_desc.AlphaToCoverageEnable = true.into();
-            blend_state_desc.IndependentBlendEnable = false.into();
-            blend_state_desc.RenderTarget[0].BlendEnable = true.into();
-            blend_state_desc.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
-            blend_state_desc.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
-            blend_state_desc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
-            blend_state_desc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
-            blend_state_desc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
-            blend_state_desc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
-            blend_state_desc.RenderTarget[0].RenderTargetWriteMask =
-                D3D11_COLOR_WRITE_ENABLE_ALL.0 as u8;
-
-            let blend_state = check_if_failed!(dx.device().CreateBlendState(&blend_state_desc));
+            let blend_state = check_if_failed!(dx.device().CreateBlendState(&blend_desc));
 
             Ok(Duplicator {
                 dx,
                 output_desc,
                 output_duplication,
                 backend_texture,
-                staging_backend_texture,
-                view_port_backend,
-                render_target_view_backend,
-                // backend_render_target_view,
-                // render_texture_lumina,
-                // render_texture_chrominance,
-                // staging_texture_lumina,
-                // staging_texture_chrominance,
-                // view_port_lumina,
-                // view_port_chrominance,
-                // render_target_view_lumina,
-                // render_target_view_chrominance,
-                sampler_linear: [Some(sampler_linear); 1],
+                backend_staging_texture,
+                backend_render_target_view: Some(backend_render_target_view),
+                sampler_linear: Some(sampler_state),
                 blend_state,
-                // keyed_mutex,
             })
         }
     }
 
     pub fn capture(&mut self) -> anyhow::Result<CaptureFrame> {
         unsafe {
-            // check_if_failed!(self.keyed_mutex.AcquireSync(1, 100));
+            let desktop_frame_info = self.acquire_frame()?;
 
-            self.acquire_frame()?;
-            // self.process_frame()?;
+            if desktop_frame_info.PointerPosition.Visible.as_bool() {
+                self.draw_mouse(&desktop_frame_info)?;
+            }
+
+            self.release_frame()?;
 
             self.dx
                 .device_context()
-                .CopyResource(&self.staging_backend_texture, &self.backend_texture);
+                .CopyResource(&self.backend_staging_texture, &self.backend_texture);
 
             let mapped_resource_backend = check_if_failed!(self.dx.device_context().Map(
-                &self.staging_backend_texture,
+                &self.backend_staging_texture,
                 0,
                 D3D11_MAP_READ,
                 0
@@ -280,45 +157,8 @@ impl Duplicator {
             defer! {
                 self.dx
                 .device_context()
-                .Unmap(&self.staging_backend_texture, 0);
+                .Unmap(&self.backend_staging_texture, 0);
             }
-
-            // self.dx
-            //     .device_context()
-            //     .CopyResource(&self.staging_texture_lumina, &self.render_texture_lumina);
-
-            // self.dx.device_context().CopyResource(
-            //     &self.staging_texture_chrominance,
-            //     &self.render_texture_chrominance,
-            // );
-
-            // let mapped_resource_lumina = self.dx.device_context().Map(&self.staging_texture_lumina, 0, D3D11_MAP_READ, 0).map_err(|err|{
-            //     anyhow::anyhow!(
-            //         r#"Duplication: ID3D11DeviceContext::Map failed {{"resource_name": "{}", "error": "{:?}"}}"#,
-            //         "staging_texture_lumina",
-            //         err.code()
-            //     )
-            // })?;
-
-            // defer! {
-            //     self.dx
-            //     .device_context()
-            //     .Unmap(&self.staging_texture_lumina, 0);
-            // }
-
-            // let mapped_resource_chrominance = self.dx.device_context().Map(&self.staging_texture_chrominance, 0, D3D11_MAP_READ, 0).map_err(|err|{
-            //     anyhow::anyhow!(
-            //         r#"Duplication: ID3D11DeviceContext::Map failed {{"resource_name": "{}", "error": "{:?}"}}"#,
-            //         "staging_texture_chrominance",
-            //         err.code()
-            //     )
-            // })?;
-
-            // defer! {
-            //     self.dx
-            //     .device_context()
-            //     .Unmap(&self.staging_texture_chrominance, 0);
-            // }
 
             let width = self.output_desc.DesktopCoordinates.right
                 - self.output_desc.DesktopCoordinates.left;
@@ -327,10 +167,6 @@ impl Duplicator {
                 - self.output_desc.DesktopCoordinates.top;
 
             let buffer_size = (height as u32) * mapped_resource_backend.RowPitch;
-
-            // let luminance_buffer_size = (height as u32) * mapped_resource_lumina.RowPitch;
-            // let chrominance_buffer_size =
-            //     (height as u32) / 2 * mapped_resource_chrominance.RowPitch;
 
             let capture_frame = CaptureFrame {
                 width: width as u16,
@@ -343,15 +179,13 @@ impl Duplicator {
                 stride: mapped_resource_backend.RowPitch as u16,
             };
 
-            // check_if_failed!(self.keyed_mutex.ReleaseSync(0));
-
             Ok(capture_frame)
         }
     }
 
-    unsafe fn acquire_frame(&mut self) -> anyhow::Result<()> {
+    unsafe fn acquire_frame(&mut self) -> CoreResult<DXGI_OUTDUPL_FRAME_INFO> {
         let mut dxgi_resource = None;
-        let mut dxgi_outdupl_frame_info = zeroed();
+        let mut dxgi_outdupl_frame_info = std::mem::zeroed();
 
         let mut failures = 0;
         while failures < 10 {
@@ -368,10 +202,9 @@ impl Duplicator {
             };
 
             if failures > 10 {
-                bail!(
-                    r#"Duplication: IDXGIOutputDuplication::AcquireNextFrame too many failures, {{"last_error": "{:?}"}}"#,
-                    hr
-                );
+                return Err(MirrorXError::Other(anyhow::anyhow!(
+                    "too many failures on dxgi acquire frame"
+                )));
             }
 
             if hr == DXGI_ERROR_ACCESS_LOST {
@@ -391,139 +224,42 @@ impl Duplicator {
             }
         }
 
-        let desktop_texture :ID3D11Texture2D = match dxgi_resource{
-                Some(resource)=>resource.cast().map_err(|err|{
-                    anyhow::anyhow!(
-                        r#"Duplication: IDXGIResource::QueryInterface for ID3D11Texture2D failed {{"error": "{:?}"}}"#,         
-                        err.code()
-                    )
-                })?,
-                None=>bail!("Duplication: IDXGIOutputDuplication::AcquireNextFrame success but referenced IDXGIResource is null"),
-            };
-
-        self.dx
-            .device_context()
-            .CopyResource(&self.backend_texture, desktop_texture);
-
-        if dxgi_outdupl_frame_info.PointerPosition.Visible.as_bool() {
-            self.draw_mouse(&dxgi_outdupl_frame_info)?;
+        match dxgi_resource {
+            Some(resource) => {
+                let desktop_texture: ID3D11Texture2D = check_if_failed!(resource.cast());
+                self.dx
+                    .device_context()
+                    .CopyResource(&self.backend_texture, desktop_texture);
+                Ok(dxgi_outdupl_frame_info)
+            }
+            None => Err(MirrorXError::Other(anyhow::anyhow!(
+                "IDXGIResource is None"
+            ))),
         }
+    }
 
+    unsafe fn release_frame(&self) -> CoreResult<()> {
         check_if_failed!(self.output_duplication.ReleaseFrame());
-
-        // let backend_surface: IDXGISurface1 = self
-        //     .backend_texture
-        //     .cast()
-        //     .map_err(|err| anyhow::anyhow!(err))?;
-
-        // let mut cursor_info: CURSORINFO = zeroed();
-        // cursor_info.cbSize = std::mem::size_of::<CURSORINFO>() as u32;
-
-        // if GetCursorInfo(&mut cursor_info).as_bool() {
-        //     if cursor_info.flags == CURSOR_SHOWING {
-        //         let cursorPosition = cursor_info.ptScreenPos;
-        //         let lCursorSize = cursor_info.cbSize;
-
-        //         let hdc = backend_surface
-        //             .GetDC(false)
-        //             .map_err(|err| anyhow::anyhow!(err))?;
-
-        //         DrawIconEx(
-        //             hdc,
-        //             cursorPosition.x,
-        //             cursorPosition.y,
-        //             cursor_info.hCursor,
-        //             0,
-        //             0,
-        //             0,
-        //             None,
-        //             DI_NORMAL | DI_DEFAULTSIZE,
-        //         );
-
-        //         backend_surface.ReleaseDC(null());
-        //     }
-        // }
-
         Ok(())
     }
 
-    // unsafe fn process_frame(&self) -> anyhow::Result<()> {
-    //     let mut texture2d_desc = zeroed();
-    //     self.backend_texture.GetDesc(&mut texture2d_desc);
-
-    //     let shader_resouce_view_desc = D3D11_SHADER_RESOURCE_VIEW_DESC {
-    //         Format: texture2d_desc.Format,
-    //         ViewDimension: D3D11_SRV_DIMENSION_TEXTURE2D,
-    //         Anonymous: D3D11_SHADER_RESOURCE_VIEW_DESC_0 {
-    //             Texture2D: D3D11_TEX2D_SRV {
-    //                 MostDetailedMip: texture2d_desc.MipLevels - 1,
-    //                 MipLevels: texture2d_desc.MipLevels,
-    //             },
-    //         },
-    //     };
-
-    //     let shader_resouce_view = self.dx.device().CreateShaderResourceView(&self.backend_texture,&shader_resouce_view_desc).map_err(|err|{
-    //         anyhow::anyhow!(
-    //             r#"Duplication: ID3D11Device::CreateShaderResourceView failed {{"error": "{:?}"}}"#,
-    //             err.code()
-    //         )
-    //     })?;
-
-    //     self.dx
-    //         .device_context()
-    //         .PSSetShaderResources(0, &vec![Some(shader_resouce_view)]);
-
-    //     let rtv = check_if_failed!(self
-    //         .dx
-    //         .device()
-    //         .CreateRenderTargetView(&self.backend_texture, std::ptr::null()));
-
-    //     self.dx
-    //         .device_context()
-    //         .OMSetRenderTargets(&[Some(rtv)], None);
-
-    //     self.dx
-    //         .device_context()
-    //         .PSSetShader(self.dx.pixel_shader(), &[]);
-
-    //     self.dx
-    //         .device_context()
-    //         .RSSetViewports(&[self.view_port_backend]);
-
-    //     self.dx.device_context().Draw(VERTICES.len() as u32, 0);
-
-    //     // draw chrominance plane
-    //     // self.dx
-    //     //     .device_context()
-    //     //     .OMSetRenderTargets(&[Some(self.render_target_view_chrominance.clone())], None);
-    //     // self.dx
-    //     //     .device_context()
-    //     //     .PSSetShader(self.dx.pixel_shader_chrominance(), &[]);
-    //     // self.dx
-    //     //     .device_context()
-    //     //     .RSSetViewports(&[self.view_port_chrominance]);
-    //     // self.dx.device_context().Draw(VERTICES.len() as u32, 0);
-
-    //     Ok(())
-    // }
-
     unsafe fn draw_mouse(
         &self,
-        dxgi_outdupl_frame_info: &DXGI_OUTDUPL_FRAME_INFO,
+        desktop_frame_info: &DXGI_OUTDUPL_FRAME_INFO,
     ) -> anyhow::Result<()> {
         let mut cursor_shape_buffer =
-            Vec::<u8>::with_capacity(dxgi_outdupl_frame_info.PointerShapeBufferSize as usize);
+            Vec::with_capacity(desktop_frame_info.PointerShapeBufferSize as usize);
         let mut cursor_shape_buffer_length = 0u32;
-        let mut cursor_shape_info: DXGI_OUTDUPL_POINTER_SHAPE_INFO = zeroed();
+        let mut cursor_shape_info: DXGI_OUTDUPL_POINTER_SHAPE_INFO = std::mem::zeroed();
 
         check_if_failed!(self.output_duplication.GetFramePointerShape(
-            dxgi_outdupl_frame_info.PointerShapeBufferSize,
+            desktop_frame_info.PointerShapeBufferSize,
             cursor_shape_buffer.as_mut_ptr() as *mut _,
             &mut cursor_shape_buffer_length,
             &mut cursor_shape_info,
         ));
 
-        cursor_shape_buffer.set_len(dxgi_outdupl_frame_info.PointerShapeBufferSize as usize);
+        cursor_shape_buffer.set_len(desktop_frame_info.PointerShapeBufferSize as usize);
 
         let mut full_desc: D3D11_TEXTURE2D_DESC = std::mem::zeroed();
         self.backend_texture.GetDesc(&mut full_desc);
@@ -537,26 +273,29 @@ impl Duplicator {
         let (mut pointer_width, mut pointer_height, mut pointer_left, mut pointer_top) =
             (0i32, 0i32, 0i32, 0i32);
 
-        let mut d3d_box: D3D11_BOX = std::mem::zeroed();
-        d3d_box.front = 0;
-        d3d_box.back = 1;
+        let mut pointer_box: D3D11_BOX = std::mem::zeroed();
+        pointer_box.front = 0;
+        pointer_box.back = 1;
 
-        let mut desc: D3D11_TEXTURE2D_DESC = std::mem::zeroed();
-        desc.MipLevels = 1;
-        desc.ArraySize = 1;
-        desc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
-        desc.SampleDesc.Count = 1;
-        desc.SampleDesc.Quality = 0;
-        desc.Usage = D3D11_USAGE_DEFAULT;
-        desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-        desc.CPUAccessFlags = D3D11_CPU_ACCESS_FLAG::default();
-        desc.MiscFlags = D3D11_RESOURCE_MISC_FLAG::default();
+        let mut pointer_texture_desc: D3D11_TEXTURE2D_DESC = std::mem::zeroed();
+        pointer_texture_desc.MipLevels = 1;
+        pointer_texture_desc.ArraySize = 1;
+        pointer_texture_desc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+        pointer_texture_desc.SampleDesc.Count = 1;
+        pointer_texture_desc.SampleDesc.Quality = 0;
+        pointer_texture_desc.Usage = D3D11_USAGE_DEFAULT;
+        pointer_texture_desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+        pointer_texture_desc.CPUAccessFlags = D3D11_CPU_ACCESS_FLAG::default();
+        pointer_texture_desc.MiscFlags = D3D11_RESOURCE_MISC_FLAG::default();
 
-        let mut s_desc: D3D11_SHADER_RESOURCE_VIEW_DESC = std::mem::zeroed();
-        s_desc.Format = desc.Format;
-        s_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-        s_desc.Anonymous.Texture2D.MostDetailedMip = desc.MipLevels - 1;
-        s_desc.Anonymous.Texture2D.MipLevels = desc.MipLevels;
+        let mut shader_resource_view_desc: D3D11_SHADER_RESOURCE_VIEW_DESC = std::mem::zeroed();
+        shader_resource_view_desc.Format = pointer_texture_desc.Format;
+        shader_resource_view_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+        shader_resource_view_desc
+            .Anonymous
+            .Texture2D
+            .MostDetailedMip = pointer_texture_desc.MipLevels - 1;
+        shader_resource_view_desc.Anonymous.Texture2D.MipLevels = pointer_texture_desc.MipLevels;
 
         let mut init_buffer = std::ptr::null();
 
@@ -566,8 +305,8 @@ impl Duplicator {
                     "DXGI_OUTDUPL_POINTER_SHAPE_INFO: DXGI_OUTDUPL_POINTER_SHAPE_TYPE_COLOR"
                 );
 
-                pointer_left = dxgi_outdupl_frame_info.PointerPosition.Position.x as i32;
-                pointer_top = dxgi_outdupl_frame_info.PointerPosition.Position.y as i32;
+                pointer_left = desktop_frame_info.PointerPosition.Position.x as i32;
+                pointer_top = desktop_frame_info.PointerPosition.Position.y as i32;
                 pointer_width = cursor_shape_info.Width as i32;
                 pointer_height = cursor_shape_info.Height as i32;
             }
@@ -578,15 +317,17 @@ impl Duplicator {
 
                 let buffer = self.process_mono_mask(
                     true,
+                    &full_desc,
                     &mut cursor_shape_info,
-                    dxgi_outdupl_frame_info,
+                    desktop_frame_info,
                     &mut cursor_shape_buffer,
                     &mut pointer_width,
                     &mut pointer_height,
                     &mut pointer_left,
                     &mut pointer_top,
-                    &mut d3d_box,
+                    &mut pointer_box,
                 )?;
+
                 init_buffer = buffer.as_ptr()
             }
             DXGI_OUTDUPL_POINTER_SHAPE_TYPE_MASKED_COLOR => {
@@ -596,15 +337,17 @@ impl Duplicator {
 
                 let buffer = self.process_mono_mask(
                     false,
+                    &full_desc,
                     &mut cursor_shape_info,
-                    dxgi_outdupl_frame_info,
+                    desktop_frame_info,
                     &mut cursor_shape_buffer,
                     &mut pointer_width,
                     &mut pointer_height,
                     &mut pointer_left,
                     &mut pointer_top,
-                    &mut d3d_box,
+                    &mut pointer_box,
                 )?;
+
                 init_buffer = buffer.as_ptr()
             }
             _ => {}
@@ -637,8 +380,8 @@ impl Duplicator {
         vertices[5].pos.x = (pointer_left + pointer_width - center_x) as f32 / center_x as f32;
         vertices[5].pos.y = -1f32 * (pointer_top - center_y) as f32 / center_y as f32;
 
-        desc.Width = pointer_width as u32;
-        desc.Height = pointer_height as u32;
+        pointer_texture_desc.Width = pointer_width as u32;
+        pointer_texture_desc.Height = pointer_height as u32;
 
         let mut init_data: D3D11_SUBRESOURCE_DATA = std::mem::zeroed();
         init_data.pSysMem =
@@ -655,18 +398,20 @@ impl Duplicator {
             };
         init_data.SysMemSlicePitch = 0;
 
-        let mouse_texture = check_if_failed!(self.dx.device().CreateTexture2D(&desc, &init_data));
+        let pointer_texture = check_if_failed!(self
+            .dx
+            .device()
+            .CreateTexture2D(&pointer_texture_desc, &init_data));
 
         let shader_res = check_if_failed!(self
             .dx
             .device()
-            .CreateShaderResourceView(&mouse_texture, &s_desc));
+            .CreateShaderResourceView(&pointer_texture, &shader_resource_view_desc));
 
-        let mut b_desc: D3D11_BUFFER_DESC = std::mem::zeroed();
-        b_desc.Usage = D3D11_USAGE_DEFAULT;
-        b_desc.ByteWidth = (std::mem::size_of::<VERTEX>() * VERTICES.len()) as u32;
-        b_desc.BindFlags = D3D11_BIND_VERTEX_BUFFER.0;
-        b_desc.CPUAccessFlags = 0;
+        let mut buffer_desc: D3D11_BUFFER_DESC = std::mem::zeroed();
+        buffer_desc.Usage = D3D11_USAGE_DEFAULT;
+        buffer_desc.ByteWidth = (std::mem::size_of::<VERTEX>() * VERTICES.len()) as u32;
+        buffer_desc.BindFlags = D3D11_BIND_VERTEX_BUFFER.0;
 
         init_data = std::mem::zeroed();
         init_data.pSysMem = vertices.as_ptr() as *const _;
@@ -674,7 +419,7 @@ impl Duplicator {
         let vertex_buffer = Some(check_if_failed!(self
             .dx
             .device()
-            .CreateBuffer(&b_desc, &init_data)));
+            .CreateBuffer(&buffer_desc, &init_data)));
 
         let blend_factor = [0f32; 4];
         let stride = std::mem::size_of::<VERTEX>() as u32;
@@ -696,7 +441,7 @@ impl Duplicator {
 
         self.dx
             .device_context()
-            .OMSetRenderTargets(&[Some(self.render_target_view_backend.clone())], None);
+            .OMSetRenderTargets(&[self.backend_render_target_view.clone()], None);
 
         self.dx
             .device_context()
@@ -712,7 +457,7 @@ impl Duplicator {
 
         self.dx
             .device_context()
-            .PSSetSamplers(0, &self.sampler_linear);
+            .PSSetSamplers(0, &[self.sampler_linear.clone()]);
 
         self.dx.device_context().Draw(VERTICES.len() as u32, 0);
 
@@ -722,6 +467,7 @@ impl Duplicator {
     unsafe fn process_mono_mask(
         &self,
         is_mono: bool,
+        full_desc: &D3D11_TEXTURE2D_DESC,
         pointer_info: &mut DXGI_OUTDUPL_POINTER_SHAPE_INFO,
         frame_info: &DXGI_OUTDUPL_FRAME_INFO,
         pointer_shape_buffer: &mut [u8],
@@ -729,11 +475,8 @@ impl Duplicator {
         pointer_height: &mut i32,
         pointer_left: &mut i32,
         pointer_top: &mut i32,
-        d3d_box: &mut D3D11_BOX,
+        pointer_box: &mut D3D11_BOX,
     ) -> CoreResult<Vec<u8>> {
-        let mut full_desc: D3D11_TEXTURE2D_DESC = std::mem::zeroed();
-        self.backend_texture.GetDesc(&mut full_desc);
-
         let desktop_width = full_desc.Width as i32;
         let desktop_height = full_desc.Height as i32;
 
@@ -785,10 +528,10 @@ impl Duplicator {
             .device()
             .CreateTexture2D(&copy_buffer_desc, std::ptr::null()));
 
-        (*d3d_box).left = *pointer_left as u32;
-        (*d3d_box).top = *pointer_top as u32;
-        (*d3d_box).right = (*pointer_left + *pointer_width) as u32;
-        (*d3d_box).bottom = (*pointer_top + *pointer_height) as u32;
+        (*pointer_box).left = *pointer_left as u32;
+        (*pointer_box).top = *pointer_top as u32;
+        (*pointer_box).right = (*pointer_left + *pointer_width) as u32;
+        (*pointer_box).bottom = (*pointer_top + *pointer_height) as u32;
 
         self.dx.device_context().CopySubresourceRegion(
             &copy_buffer,
@@ -798,7 +541,7 @@ impl Duplicator {
             0,
             &self.backend_texture,
             0,
-            d3d_box,
+            pointer_box,
         );
 
         let copy_surface: IDXGISurface = check_if_failed!(copy_buffer.cast());
@@ -806,7 +549,11 @@ impl Duplicator {
         let mut mapped_surface: DXGI_MAPPED_RECT = std::mem::zeroed();
         check_if_failed!(copy_surface.Map(&mut mapped_surface, DXGI_MAP_READ));
 
-        let mut init_buffer = Vec::<u8>::new();
+        defer! {
+            let _ = copy_surface.Unmap();
+        }
+
+        let mut init_buffer = Vec::new();
         init_buffer.resize(
             ((*pointer_width as u32) * (*pointer_height as u32) * BPP) as usize,
             0,
@@ -883,8 +630,6 @@ impl Duplicator {
             }
         }
 
-        check_if_failed!(copy_surface.Unmap());
-
         Ok(init_buffer)
     }
 }
@@ -892,24 +637,12 @@ impl Duplicator {
 unsafe fn init_output_duplication(
     dx: &DX,
     monitor_id: &str,
-) -> Result<(DXGI_OUTPUT_DESC, IDXGIOutputDuplication), MirrorXError> {
-    let dxgi_device: IDXGIDevice = dx.device().cast().map_err(|err| {
-        MirrorXError::Other(anyhow::anyhow!(
-            "ID3D11Device::QueryInterface for IDXGIDevice failed ({})",
-            err
-        ))
-    })?;
+) -> CoreResult<(DXGI_OUTPUT_DESC, IDXGIOutputDuplication)> {
+    let dxgi_device: IDXGIDevice = check_if_failed!(dx.device().cast());
 
-    let dxgi_adapter = dxgi_device.GetParent::<IDXGIAdapter>().map_err(|err| {
-        MirrorXError::Other(anyhow::anyhow!(
-            "IDXGIDevice::GetParent for IDXGIAdapter failed ({})",
-            err
-        ))
-    })?;
+    let dxgi_adapter = check_if_failed!(dxgi_device.GetParent::<IDXGIAdapter>());
 
-    let adapter_desc = dxgi_adapter.GetDesc().map_err(|err| {
-        MirrorXError::Other(anyhow::anyhow!("IDXGIAdapter::GetDesc failed ({})", err))
-    })?;
+    let adapter_desc = check_if_failed!(dxgi_adapter.GetDesc());
 
     info!("{:?}", &adapter_desc.AdapterLuid);
     info!("{:?}", OsString::from_wide_null(&adapter_desc.Description));
@@ -919,9 +652,7 @@ unsafe fn init_output_duplication(
     while let Ok(dxgi_output) = dxgi_adapter.EnumOutputs(output_index) {
         output_index += 1;
 
-        let dxgi_output_desc = dxgi_output.GetDesc().map_err(|err| {
-            MirrorXError::Other(anyhow::anyhow!("IDXGIOutput::GetDesc failed ({})", err))
-        })?;
+        let dxgi_output_desc = check_if_failed!(dxgi_output.GetDesc());
 
         if !dxgi_output_desc.AttachedToDesktop.as_bool() {
             continue;
@@ -956,20 +687,10 @@ unsafe fn init_output_duplication(
                     })?;
 
                 if device_id == monitor_id {
-                    let dxgi_output1: IDXGIOutput1 = dxgi_output.cast().map_err(|err| {
-                        MirrorXError::Other(anyhow::anyhow!(
-                            "IDXGIOutput::QueryInterface for IDXGIOutput1 failed ({})",
-                            err
-                        ))
-                    })?;
+                    let dxgi_output1: IDXGIOutput1 = check_if_failed!(dxgi_output.cast());
 
                     let dxgi_output_duplication =
-                        dxgi_output1.DuplicateOutput(dx.device()).map_err(|err| {
-                            MirrorXError::Other(anyhow::anyhow!(
-                                "Duplication: IDXGIOutput1::DuplicateOutput failed ({})",
-                                err
-                            ))
-                        })?;
+                        check_if_failed!(dxgi_output1.DuplicateOutput(dx.device()));
 
                     return Ok((dxgi_output_desc, dxgi_output_duplication));
                 }
