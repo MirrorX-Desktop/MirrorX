@@ -48,7 +48,7 @@ fn test_duplicator() -> anyhow::Result<()> {
 
     let mut duplicator = crate::component::desktop::Duplicator::new(&monitors[0].id)?;
 
-    let capture_frame = match duplicator.capture() {
+    let mut capture_frame = match duplicator.capture() {
         Ok(frame) => frame,
         Err(err) => {
             tracing::error!("{:?}", err);
@@ -65,6 +65,12 @@ fn test_duplicator() -> anyhow::Result<()> {
     );
 
     let mut png_bytes: Vec<u8> = Vec::with_capacity(capture_frame.bytes.len());
+
+    for chunk in &mut capture_frame.bytes.chunks_mut(4).into_iter() {
+        chunk[0] = chunk[0] ^ chunk[2];
+        chunk[2] = chunk[0] ^ chunk[2];
+        chunk[0] = chunk[0] ^ chunk[2];
+    }
 
     image::write_buffer_with_format(
         &mut Cursor::new(&mut png_bytes),

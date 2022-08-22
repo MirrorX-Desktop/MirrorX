@@ -450,60 +450,65 @@ impl Duplicator {
         Ok(())
     }
 
-    unsafe fn process_frame(&self) -> anyhow::Result<()> {
-        let mut texture2d_desc = zeroed();
-        self.backend_texture.GetDesc(&mut texture2d_desc);
+    // unsafe fn process_frame(&self) -> anyhow::Result<()> {
+    //     let mut texture2d_desc = zeroed();
+    //     self.backend_texture.GetDesc(&mut texture2d_desc);
 
-        let shader_resouce_view_desc = D3D11_SHADER_RESOURCE_VIEW_DESC {
-            Format: texture2d_desc.Format,
-            ViewDimension: D3D11_SRV_DIMENSION_TEXTURE2D,
-            Anonymous: D3D11_SHADER_RESOURCE_VIEW_DESC_0 {
-                Texture2D: D3D11_TEX2D_SRV {
-                    MostDetailedMip: texture2d_desc.MipLevels - 1,
-                    MipLevels: texture2d_desc.MipLevels,
-                },
-            },
-        };
+    //     let shader_resouce_view_desc = D3D11_SHADER_RESOURCE_VIEW_DESC {
+    //         Format: texture2d_desc.Format,
+    //         ViewDimension: D3D11_SRV_DIMENSION_TEXTURE2D,
+    //         Anonymous: D3D11_SHADER_RESOURCE_VIEW_DESC_0 {
+    //             Texture2D: D3D11_TEX2D_SRV {
+    //                 MostDetailedMip: texture2d_desc.MipLevels - 1,
+    //                 MipLevels: texture2d_desc.MipLevels,
+    //             },
+    //         },
+    //     };
 
-        let shader_resouce_view = self.dx.device().CreateShaderResourceView(&self.backend_texture,&shader_resouce_view_desc).map_err(|err|{
-            anyhow::anyhow!(
-                r#"Duplication: ID3D11Device::CreateShaderResourceView failed {{"error": "{:?}"}}"#,
-                err.code()
-            )
-        })?;
+    //     let shader_resouce_view = self.dx.device().CreateShaderResourceView(&self.backend_texture,&shader_resouce_view_desc).map_err(|err|{
+    //         anyhow::anyhow!(
+    //             r#"Duplication: ID3D11Device::CreateShaderResourceView failed {{"error": "{:?}"}}"#,
+    //             err.code()
+    //         )
+    //     })?;
 
-        self.dx
-            .device_context()
-            .PSSetShaderResources(0, &vec![Some(shader_resouce_view)]);
+    //     self.dx
+    //         .device_context()
+    //         .PSSetShaderResources(0, &vec![Some(shader_resouce_view)]);
 
-        self.dx
-            .device_context()
-            .OMSetRenderTargets(&[Some(self.render_target_view_backend.clone())], None);
+    //     let rtv = check_if_failed!(self
+    //         .dx
+    //         .device()
+    //         .CreateRenderTargetView(&self.backend_texture, std::ptr::null()));
 
-        self.dx
-            .device_context()
-            .PSSetShader(self.dx.pixel_shader(), &[]);
+    //     self.dx
+    //         .device_context()
+    //         .OMSetRenderTargets(&[Some(rtv)], None);
 
-        self.dx
-            .device_context()
-            .RSSetViewports(&[self.view_port_backend]);
+    //     self.dx
+    //         .device_context()
+    //         .PSSetShader(self.dx.pixel_shader(), &[]);
 
-        self.dx.device_context().Draw(VERTICES.len() as u32, 0);
+    //     self.dx
+    //         .device_context()
+    //         .RSSetViewports(&[self.view_port_backend]);
 
-        // draw chrominance plane
-        // self.dx
-        //     .device_context()
-        //     .OMSetRenderTargets(&[Some(self.render_target_view_chrominance.clone())], None);
-        // self.dx
-        //     .device_context()
-        //     .PSSetShader(self.dx.pixel_shader_chrominance(), &[]);
-        // self.dx
-        //     .device_context()
-        //     .RSSetViewports(&[self.view_port_chrominance]);
-        // self.dx.device_context().Draw(VERTICES.len() as u32, 0);
+    //     self.dx.device_context().Draw(VERTICES.len() as u32, 0);
 
-        Ok(())
-    }
+    //     // draw chrominance plane
+    //     // self.dx
+    //     //     .device_context()
+    //     //     .OMSetRenderTargets(&[Some(self.render_target_view_chrominance.clone())], None);
+    //     // self.dx
+    //     //     .device_context()
+    //     //     .PSSetShader(self.dx.pixel_shader_chrominance(), &[]);
+    //     // self.dx
+    //     //     .device_context()
+    //     //     .RSSetViewports(&[self.view_port_chrominance]);
+    //     // self.dx.device_context().Draw(VERTICES.len() as u32, 0);
+
+    //     Ok(())
+    // }
 
     unsafe fn draw_mouse(
         &self,
@@ -558,6 +563,8 @@ impl Duplicator {
 
         let mut init_buffer = std::ptr::null();
 
+        tracing::info!("cursor_shape, {:?}", cursor_shape_buffer);
+
         match DXGI_OUTDUPL_POINTER_SHAPE_TYPE(cursor_shape_info.Type as i32) {
             DXGI_OUTDUPL_POINTER_SHAPE_TYPE_COLOR => {
                 pointer_left = dxgi_outdupl_frame_info.PointerPosition.Position.x as i32;
@@ -577,7 +584,7 @@ impl Duplicator {
                     &mut pointer_top,
                     &mut d3d_box,
                 )?;
-
+                tracing::info!("{:?}", buffer);
                 init_buffer = buffer.as_ptr()
             }
             DXGI_OUTDUPL_POINTER_SHAPE_TYPE_MASKED_COLOR => {
@@ -592,11 +599,17 @@ impl Duplicator {
                     &mut pointer_top,
                     &mut d3d_box,
                 )?;
-
+                tracing::info!("{:?}", buffer);
                 init_buffer = buffer.as_ptr()
             }
             _ => {}
         };
+
+        tracing::info!(
+            "pointer_left: {}, pointer_top: {}",
+            pointer_left,
+            pointer_top
+        );
 
         let mut vertices = VERTICES.clone();
         vertices[0].pos.x = (pointer_left - center_x) as f32 / center_x as f32;
@@ -625,6 +638,7 @@ impl Duplicator {
         let mut init_data: D3D11_SUBRESOURCE_DATA = std::mem::zeroed();
         init_data.pSysMem =
             if cursor_shape_info.Type == DXGI_OUTDUPL_POINTER_SHAPE_TYPE_COLOR.0 as u32 {
+                tracing::info!("use cursor_shape, {:?}", cursor_shape_buffer);
                 cursor_shape_buffer.as_ptr() as *const _
             } else {
                 init_buffer as *const _
@@ -676,9 +690,14 @@ impl Duplicator {
             0xFFFFFFFF,
         );
 
+        let rtv = check_if_failed!(self
+            .dx
+            .device()
+            .CreateRenderTargetView(&self.backend_texture, std::ptr::null()));
+
         self.dx
             .device_context()
-            .OMSetRenderTargets(&[Some(self.render_target_view_backend.clone())], None);
+            .OMSetRenderTargets(&[Some(rtv)], None);
 
         self.dx
             .device_context()
@@ -695,6 +714,10 @@ impl Duplicator {
         self.dx
             .device_context()
             .PSSetSamplers(0, &self.sampler_linear);
+
+        self.dx
+            .device_context()
+            .RSSetViewports(&[self.view_port_backend.clone()]);
 
         self.dx.device_context().Draw(VERTICES.len() as u32, 0);
 
