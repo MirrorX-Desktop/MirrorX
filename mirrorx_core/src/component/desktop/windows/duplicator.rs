@@ -106,6 +106,8 @@ impl Duplicator {
                 MaxDepth: 1.0,
             };
 
+            dx.device_context().RSSetViewports(&[view_port_backend]);
+
             let render_target_view_backend =
                 check_if_failed!(dx.device().CreateRenderTargetView(&backend_texture, null()));
 
@@ -216,13 +218,10 @@ impl Duplicator {
             samp_desc.MinLOD = 0f32;
             samp_desc.MaxLOD = D3D11_FLOAT32_MAX;
 
-            let sampler_linear = dx
-                .device()
-                .CreateSamplerState(&samp_desc)
-                .map_err(|err| anyhow::anyhow!(err))?;
+            let sampler_linear = check_if_failed!(dx.device().CreateSamplerState(&samp_desc));
 
             let mut blend_state_desc: D3D11_BLEND_DESC = zeroed();
-            blend_state_desc.AlphaToCoverageEnable = false.into();
+            blend_state_desc.AlphaToCoverageEnable = true.into();
             blend_state_desc.IndependentBlendEnable = false.into();
             blend_state_desc.RenderTarget[0].BlendEnable = true.into();
             blend_state_desc.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
@@ -234,10 +233,7 @@ impl Duplicator {
             blend_state_desc.RenderTarget[0].RenderTargetWriteMask =
                 D3D11_COLOR_WRITE_ENABLE_ALL.0 as u8;
 
-            let blend_state = dx
-                .device()
-                .CreateBlendState(&blend_state_desc)
-                .map_err(|err| anyhow::anyhow!(err))?;
+            let blend_state = check_if_failed!(dx.device().CreateBlendState(&blend_state_desc));
 
             Ok(Duplicator {
                 dx,
@@ -409,8 +405,9 @@ impl Duplicator {
             .device_context()
             .CopyResource(&self.backend_texture, desktop_texture);
 
-        // // draw mouse
-        self.draw_mouse(&dxgi_outdupl_frame_info)?;
+        if dxgi_outdupl_frame_info.PointerPosition.Visible.as_bool() {
+            self.draw_mouse(&dxgi_outdupl_frame_info)?;
+        }
 
         check_if_failed!(self.output_duplication.ReleaseFrame());
 
@@ -563,16 +560,22 @@ impl Duplicator {
 
         let mut init_buffer = std::ptr::null();
 
-        tracing::info!("cursor_shape, {:?}", cursor_shape_buffer);
-
         match DXGI_OUTDUPL_POINTER_SHAPE_TYPE(cursor_shape_info.Type as i32) {
             DXGI_OUTDUPL_POINTER_SHAPE_TYPE_COLOR => {
+                tracing::info!(
+                    "DXGI_OUTDUPL_POINTER_SHAPE_INFO: DXGI_OUTDUPL_POINTER_SHAPE_TYPE_COLOR"
+                );
+
                 pointer_left = dxgi_outdupl_frame_info.PointerPosition.Position.x as i32;
                 pointer_top = dxgi_outdupl_frame_info.PointerPosition.Position.y as i32;
                 pointer_width = cursor_shape_info.Width as i32;
                 pointer_height = cursor_shape_info.Height as i32;
             }
             DXGI_OUTDUPL_POINTER_SHAPE_TYPE_MONOCHROME => {
+                tracing::info!(
+                    "DXGI_OUTDUPL_POINTER_SHAPE_INFO: DXGI_OUTDUPL_POINTER_SHAPE_TYPE_MONOCHROME"
+                );
+
                 let buffer = self.process_mono_mask(
                     true,
                     &mut cursor_shape_info,
@@ -584,10 +587,13 @@ impl Duplicator {
                     &mut pointer_top,
                     &mut d3d_box,
                 )?;
-                tracing::info!("{:?}", buffer);
                 init_buffer = buffer.as_ptr()
             }
             DXGI_OUTDUPL_POINTER_SHAPE_TYPE_MASKED_COLOR => {
+                tracing::info!(
+                    "DXGI_OUTDUPL_POINTER_SHAPE_INFO: DXGI_OUTDUPL_POINTER_SHAPE_TYPE_MASKED_COLOR"
+                );
+
                 let buffer = self.process_mono_mask(
                     false,
                     &mut cursor_shape_info,
@@ -599,7 +605,6 @@ impl Duplicator {
                     &mut pointer_top,
                     &mut d3d_box,
                 )?;
-                tracing::info!("{:?}", buffer);
                 init_buffer = buffer.as_ptr()
             }
             _ => {}
@@ -638,7 +643,6 @@ impl Duplicator {
         let mut init_data: D3D11_SUBRESOURCE_DATA = std::mem::zeroed();
         init_data.pSysMem =
             if cursor_shape_info.Type == DXGI_OUTDUPL_POINTER_SHAPE_TYPE_COLOR.0 as u32 {
-                tracing::info!("use cursor_shape, {:?}", cursor_shape_buffer);
                 cursor_shape_buffer.as_ptr() as *const _
             } else {
                 init_buffer as *const _
@@ -690,14 +694,9 @@ impl Duplicator {
             0xFFFFFFFF,
         );
 
-        let rtv = check_if_failed!(self
-            .dx
-            .device()
-            .CreateRenderTargetView(&self.backend_texture, std::ptr::null()));
-
         self.dx
             .device_context()
-            .OMSetRenderTargets(&[Some(rtv)], None);
+            .OMSetRenderTargets(&[Some(self.render_target_view_backend.clone())], None);
 
         self.dx
             .device_context()
@@ -714,10 +713,6 @@ impl Duplicator {
         self.dx
             .device_context()
             .PSSetSamplers(0, &self.sampler_linear);
-
-        self.dx
-            .device_context()
-            .RSSetViewports(&[self.view_port_backend.clone()]);
 
         self.dx.device_context().Draw(VERTICES.len() as u32, 0);
 
@@ -857,6 +852,7 @@ impl Duplicator {
                 }
             }
         } else {
+            tracing::info!("is not mono, modify pointer shape");
             let buffer_32: *mut u32 = std::mem::transmute(pointer_shape_buffer.as_mut_ptr());
             for row in 0..*pointer_height {
                 for col in 0..*pointer_width {
