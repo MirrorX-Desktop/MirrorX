@@ -37,6 +37,7 @@ pub struct Duplicator {
     sampler_state: [Option<ID3D11SamplerState>; 1],
     blend_state: ID3D11BlendState,
 
+    video_texture: ID3D11Texture2D,
     video_device: ID3D11VideoDevice,
     video_context: ID3D11VideoContext,
     video_processor: ID3D11VideoProcessor,
@@ -71,29 +72,24 @@ impl Duplicator {
             let mut dxgi_outdupl_desc = std::mem::zeroed();
             output_duplication.GetDesc(&mut dxgi_outdupl_desc);
 
-            let (backend_texture, backend_rtv, backend_viewport) = init_backend(
-                dx.device(),
-                dxgi_outdupl_desc.ModeDesc.Width,
-                dxgi_outdupl_desc.ModeDesc.Height,
-            )?;
-
-            let nv12_texture = init_nv12(
+            let (backend_texture, backend_rtv, backend_viewport) = init_backend_resources(
                 dx.device(),
                 dxgi_outdupl_desc.ModeDesc.Width,
                 dxgi_outdupl_desc.ModeDesc.Height,
             )?;
 
             let (
+                video_texture,
                 video_processor,
                 video_processor_enumerator,
                 video_processor_output_view,
                 video_stream,
-            ) = init_video_processor(
+            ) = init_video_resources(
+                dx.device(),
                 &video_device,
                 dxgi_outdupl_desc.ModeDesc.Width,
                 dxgi_outdupl_desc.ModeDesc.Height,
                 &backend_texture,
-                &nv12_texture,
             )?;
 
             let sampler_state = init_sampler_state(dx.device())?;
@@ -111,6 +107,7 @@ impl Duplicator {
                 sampler_state: [Some(sampler_state)],
                 blend_state,
 
+                video_texture,
                 video_device,
                 video_context,
                 video_processor,
@@ -121,7 +118,7 @@ impl Duplicator {
         }
     }
 
-    pub fn capture(&mut self) -> CoreResult<()> {
+    pub fn capture(&mut self) -> CoreResult<&ID3D11Texture2D> {
         unsafe {
             let desktop_frame_info = self.acquire_frame()?;
 
@@ -174,8 +171,7 @@ impl Duplicator {
             //     stride: mapped_resource_backend.RowPitch as u16,
             // };
 
-            // Ok(capture_frame)
-            Ok(())
+            Ok(&self.video_texture)
         }
     }
 
@@ -697,7 +693,7 @@ unsafe fn init_output_duplication(
     )))
 }
 
-unsafe fn init_backend(
+unsafe fn init_backend_resources(
     device: &ID3D11Device,
     width: u32,
     height: u32,
@@ -736,7 +732,19 @@ unsafe fn init_backend(
     Ok((texture, rtv, viewport))
 }
 
-unsafe fn init_nv12(device: &ID3D11Device, width: u32, height: u32) -> CoreResult<ID3D11Texture2D> {
+unsafe fn init_video_resources(
+    device: &ID3D11Device,
+    video_device: &ID3D11VideoDevice,
+    width: u32,
+    height: u32,
+    input_texture: &ID3D11Texture2D,
+) -> CoreResult<(
+    ID3D11Texture2D,
+    ID3D11VideoProcessor,
+    ID3D11VideoProcessorEnumerator,
+    ID3D11VideoProcessorOutputView,
+    D3D11_VIDEO_PROCESSOR_STREAM,
+)> {
     let mut texture_desc: D3D11_TEXTURE2D_DESC = std::mem::zeroed();
     texture_desc.Width = width;
     texture_desc.Height = height;
@@ -750,21 +758,6 @@ unsafe fn init_nv12(device: &ID3D11Device, width: u32, height: u32) -> CoreResul
 
     let texture = check_if_failed!(device.CreateTexture2D(&texture_desc, std::ptr::null()));
 
-    Ok(texture)
-}
-
-unsafe fn init_video_processor(
-    video_device: &ID3D11VideoDevice,
-    width: u32,
-    height: u32,
-    input_texture: &ID3D11Texture2D,
-    output_texture: &ID3D11Texture2D,
-) -> CoreResult<(
-    ID3D11VideoProcessor,
-    ID3D11VideoProcessorEnumerator,
-    ID3D11VideoProcessorOutputView,
-    D3D11_VIDEO_PROCESSOR_STREAM,
-)> {
     let mut content_desc: D3D11_VIDEO_PROCESSOR_CONTENT_DESC = std::mem::zeroed();
     content_desc.InputFrameFormat = D3D11_VIDEO_FRAME_FORMAT_PROGRESSIVE;
     content_desc.InputFrameRate = DXGI_RATIONAL {
@@ -803,11 +796,7 @@ unsafe fn init_video_processor(
     output_view_desc.ViewDimension = D3D11_VPOV_DIMENSION_TEXTURE2D;
 
     let video_processor_output_view = check_if_failed!(video_device
-        .CreateVideoProcessorOutputView(
-            output_texture,
-            &video_processor_enumerator,
-            &output_view_desc
-        ));
+        .CreateVideoProcessorOutputView(&texture, &video_processor_enumerator, &output_view_desc));
 
     let mut video_stream: D3D11_VIDEO_PROCESSOR_STREAM = std::mem::zeroed();
     video_stream.Enable = true.into();
@@ -820,6 +809,7 @@ unsafe fn init_video_processor(
     video_stream.ppFutureSurfaces = std::ptr::null_mut();
 
     Ok((
+        texture,
         video_processor,
         video_processor_enumerator,
         video_processor_output_view,
