@@ -53,6 +53,18 @@ impl VideoEncoder {
 
             let transform: IMFTransform =
                 check_if_failed!(CoCreateInstance(&guid, None, CLSCTX_ALL));
+
+            // set to zero when err is notimpl
+            // let mut in_stream_id = [0u32; 1];
+            // let mut out_stream_id = [0u32; 1];
+            // check_if_failed!(transform.GetStreamIDs(&mut in_stream_id, &mut out_stream_id));
+
+            // tracing::info!(
+            //     "in stream id: {:?}, out stream id: {:?}",
+            //     in_stream_id,
+            //     out_stream_id
+            // );
+
             if descriptor.is_async() {
                 let attributes = check_if_failed!(transform.GetAttributes());
                 check_if_failed!(attributes.SetUINT32(&MF_TRANSFORM_ASYNC_UNLOCK, 1));
@@ -114,24 +126,24 @@ impl VideoEncoder {
         }
     }
 
-    pub fn encode(&self) {}
+    pub fn encode(&mut self, texture: &ID3D11Texture2D) -> CoreResult<()> {
+        unsafe {
+            let image_size = check_if_failed!(MFCalculateImageSize(
+                &MFVideoFormat_NV12,
+                self.frame_width as u32,
+                self.frame_height as u32
+            ));
 
-    unsafe fn send_frame(&mut self, texture: &ID3D11Texture2D) -> CoreResult<()> {
-        let image_size = check_if_failed!(MFCalculateImageSize(
-            &MFVideoFormat_NV12,
-            self.frame_width as u32,
-            self.frame_height as u32
-        ));
+            let in_sample = create_sample(texture)?;
+            check_if_failed!(in_sample.SetSampleTime(0));
+            check_if_failed!(in_sample.SetSampleDuration(0));
 
-        let in_sample = create_sample(texture)?;
-        check_if_failed!(in_sample.SetSampleTime(0));
-        check_if_failed!(in_sample.SetSampleDuration(0));
+            self.send_sample(in_sample)?;
 
-        self.send_sample(Some(in_sample))?;
+            let out_sample = self.receive_sample()?;
 
-        let out_sample = self.receive_sample()?;
-
-        Ok(())
+            Ok(())
+        }
     }
 
     // unsafe fn drain_event(&self, block: bool) -> Result<bool, MirrorXError> {
@@ -187,8 +199,8 @@ impl VideoEncoder {
         return Ok(());
     }
 
-    unsafe fn send_sample(&mut self, sample: Option<IMFSample>) -> CoreResult<()> {
-        if let Some(sample) = sample {
+    unsafe fn send_sample(&mut self, sample: IMFSample) -> CoreResult<()> {
+        if true {
             if self.descriptor.is_async() {
                 self.wait_events()?;
                 if !self.async_need_input {
@@ -201,7 +213,7 @@ impl VideoEncoder {
             }
             self.sample_sent = true;
 
-            if let Err(hr) = self.transform.ProcessInput(0, sample, 0) {
+            if let Err(hr) = self.transform.ProcessInput(0, &sample, 0) {
                 if hr.code() == MF_E_NOTACCEPTING {
                     return Err(MirrorXError::TryAgain);
                 } else {
@@ -503,7 +515,7 @@ unsafe fn create_input_and_output_media_type(
     Ok((input_media_type, output_media_type))
 }
 
-unsafe fn create_sample(texture: &ID3D11Texture2D) -> Result<IMFSample, MirrorXError> {
+unsafe fn create_sample(texture: &ID3D11Texture2D) -> CoreResult<IMFSample> {
     let media_buffer = check_if_failed!(MFCreateDXGISurfaceBuffer(
         &ID3D11Texture2D::IID,
         texture,
