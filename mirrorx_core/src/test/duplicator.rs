@@ -42,6 +42,8 @@ fn test_duplicator() -> anyhow::Result<()> {
 
     use image::ColorType;
 
+    use crate::error::MirrorXError;
+
     tracing_subscriber::fmt::init();
     unsafe {
         let version = windows::Win32::Media::MediaFoundation::MF_SDK_VERSION << 16
@@ -79,10 +81,23 @@ fn test_duplicator() -> anyhow::Result<()> {
                 &duplicator.deivce(),
             )?;
 
-        let capture_frame = duplicator.capture()?;
+        loop {
+            let capture_frame = duplicator.capture()?;
 
-        video_encoder.encode(capture_frame)?;
-
+            if let Err(err) = video_encoder.encode(capture_frame) {
+                match err {
+                    MirrorXError::TryAgain => {
+                        tracing::info!("try again");
+                        continue;
+                    }
+                    _ => {
+                        return Err(anyhow::anyhow!(err));
+                    }
+                }
+            } else {
+                tracing::info!("output ok");
+            }
+        }
         // tracing::info!(
         //     "width:{}, height:{}, bytes_length:{}, stride:{}",
         //     capture_frame.width,

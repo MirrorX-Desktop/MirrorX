@@ -126,9 +126,9 @@ impl Duplicator {
         unsafe {
             let desktop_frame_info = self.acquire_frame()?;
 
-            if desktop_frame_info.PointerPosition.Visible.as_bool() {
-                self.draw_mouse(&desktop_frame_info)?;
-            }
+            // if desktop_frame_info.PointerPosition.Visible.as_bool() {
+            //     self.draw_mouse(&desktop_frame_info)?;
+            // }
 
             self.release_frame()?;
 
@@ -276,13 +276,11 @@ impl Duplicator {
         let mut pointer_texture_desc: D3D11_TEXTURE2D_DESC = std::mem::zeroed();
         pointer_texture_desc.MipLevels = 1;
         pointer_texture_desc.ArraySize = 1;
-        pointer_texture_desc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+        pointer_texture_desc.Format = full_desc.Format;
         pointer_texture_desc.SampleDesc.Count = 1;
         pointer_texture_desc.SampleDesc.Quality = 0;
         pointer_texture_desc.Usage = D3D11_USAGE_DEFAULT;
         pointer_texture_desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-        pointer_texture_desc.CPUAccessFlags = D3D11_CPU_ACCESS_FLAG::default();
-        pointer_texture_desc.MiscFlags = D3D11_RESOURCE_MISC_FLAG::default();
 
         let mut shader_resource_view_desc: D3D11_SHADER_RESOURCE_VIEW_DESC = std::mem::zeroed();
         shader_resource_view_desc.Format = pointer_texture_desc.Format;

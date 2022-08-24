@@ -27,7 +27,7 @@ pub struct VideoEncoder {
     frame_height: u16,
     descriptor: Descriptor,
     event_generator: Option<IMFMediaEventGenerator>,
-    needs_create_output_sample: bool,
+    output_provides_sample: bool,
     transform: IMFTransform,
     async_need_input: bool,
     async_have_output: bool,
@@ -63,23 +63,23 @@ impl VideoEncoder {
                 Err(_) => false,
             };
 
-            let device_manager = if support_d3d11 {
-                let mut reset_token = 0;
-                let mut device_manager = None;
+            // let device_manager = if support_d3d11 {
+            //     let mut reset_token = 0;
+            //     let mut device_manager = None;
 
-                check_if_failed!(MFCreateDXGIDeviceManager(
-                    &mut reset_token,
-                    &mut device_manager
-                ));
+            //     check_if_failed!(MFCreateDXGIDeviceManager(
+            //         &mut reset_token,
+            //         &mut device_manager
+            //     ));
 
-                if let Some(device_manager) = &device_manager {
-                    check_if_failed!(device_manager.ResetDevice(device, reset_token));
-                }
+            //     if let Some(device_manager) = &device_manager {
+            //         check_if_failed!(device_manager.ResetDevice(device, reset_token));
+            //     }
 
-                device_manager
-            } else {
-                None
-            };
+            //     device_manager
+            // } else {
+            //     None
+            // };
 
             if descriptor.is_async() {
                 check_if_failed!(attributes.SetUINT32(&MF_TRANSFORM_ASYNC_UNLOCK, 1));
@@ -111,15 +111,18 @@ impl VideoEncoder {
             let mut output_stream_ids = [0u32; 1];
             let _ = transform.GetStreamIDs(&mut input_stream_ids, &mut output_stream_ids);
 
+            tracing::info!("input_stream_ids: {:?}", input_stream_ids);
+            tracing::info!("output_stream_ids: {:?}", output_stream_ids);
+
             check_if_failed!(transform.SetOutputType(output_stream_ids[0], output_media_type, 0));
             check_if_failed!(transform.SetInputType(input_stream_ids[0], input_media_type, 0));
 
-            if let Some(device_manager) = &device_manager {
-                check_if_failed!(transform.ProcessMessage(
-                    MFT_MESSAGE_SET_D3D_MANAGER,
-                    std::mem::transmute(device_manager.as_raw())
-                ));
-            }
+            // if let Some(device_manager) = &device_manager {
+            //     check_if_failed!(transform.ProcessMessage(
+            //         MFT_MESSAGE_SET_D3D_MANAGER,
+            //         std::mem::transmute(device_manager.as_raw())
+            //     ));
+            // }
 
             check_if_failed!(transform.ProcessMessage(MFT_MESSAGE_NOTIFY_BEGIN_STREAMING, 0));
             check_if_failed!(transform.ProcessMessage(MFT_MESSAGE_NOTIFY_START_OF_STREAM, 0));
@@ -132,17 +135,16 @@ impl VideoEncoder {
             };
 
             let stream_info = check_if_failed!(transform.GetOutputStreamInfo(0));
-            let needs_create_output_sample = stream_info.dwFlags
-                & (MFT_OUTPUT_STREAM_PROVIDES_SAMPLES.0 as u32
-                    | MFT_OUTPUT_STREAM_CAN_PROVIDE_SAMPLES.0 as u32)
-                == 0;
+            let needs_create_output_sample =
+                stream_info.dwFlags & MFT_OUTPUT_STREAM_PROVIDES_SAMPLES.0 as u32 != 0
+                    || stream_info.dwFlags & MFT_OUTPUT_STREAM_CAN_PROVIDE_SAMPLES.0 as u32 != 0;
 
             Ok(VideoEncoder {
                 frame_width,
                 frame_height,
                 descriptor: descriptor.clone(),
                 event_generator,
-                needs_create_output_sample,
+                output_provides_sample: needs_create_output_sample,
                 transform,
                 async_need_input: false,
                 async_have_output: false,
@@ -158,46 +160,23 @@ impl VideoEncoder {
 
     pub fn encode(&mut self, texture: &ID3D11Texture2D) -> CoreResult<()> {
         unsafe {
-            let image_size = check_if_failed!(MFCalculateImageSize(
-                &MFVideoFormat_NV12,
-                self.frame_width as u32,
-                self.frame_height as u32
-            ));
+            // let image_size = check_if_failed!(MFCalculateImageSize(
+            //     &MFVideoFormat_NV12,
+            //     self.frame_width as u32,
+            //     self.frame_height as u32
+            // ));
 
             let in_sample = create_sample(texture)?;
             check_if_failed!(in_sample.SetSampleTime(0));
             check_if_failed!(in_sample.SetSampleDuration(0));
 
-            self.send_sample(in_sample)?;
+            self.send_sample(Some(in_sample))?;
 
             let out_sample = self.receive_sample()?;
 
             Ok(())
         }
     }
-
-    // unsafe fn drain_event(&self, block: bool) -> Result<bool, MirrorXError> {
-    //     if let Some(event_generator) = self.event_generator {
-    //         let event_flags = if block {
-    //             MF_EVENT_FLAG_NONE
-    //         } else {
-    //             MF_EVENT_FLAG_NO_WAIT
-    //         };
-
-    //         match event_generator.GetEvent(event_flags) {
-    //             Ok(event) => {
-    //                 let typ = syscall_check!(event.GetType());
-    //                 let status = syscall_check!(event.GetStatus());
-    //                 if status.is_ok() {
-    //                     if typ == METransformNeedInput.0 {}
-    //                 }
-    //             }
-    //             Err(hr) => hr.code() == MF_E_NO_EVENTS_AVAILABLE,
-    //         }
-    //     }
-
-    //     false
-    // }
 
     unsafe fn wait_events(&mut self) -> Result<(), MirrorXError> {
         if !self.descriptor.is_async() {
@@ -229,8 +208,8 @@ impl VideoEncoder {
         return Ok(());
     }
 
-    unsafe fn send_sample(&mut self, sample: IMFSample) -> CoreResult<()> {
-        if true {
+    unsafe fn send_sample(&mut self, sample: Option<IMFSample>) -> CoreResult<()> {
+        if let Some(sample) = sample {
             if self.descriptor.is_async() {
                 self.wait_events()?;
                 if !self.async_need_input {
@@ -275,11 +254,10 @@ impl VideoEncoder {
     }
 
     unsafe fn receive_sample(&mut self) -> CoreResult<IMFSample> {
-        let mut out_sample = None;
+        let mut out_buffers: [MFT_OUTPUT_DATA_BUFFER; 1] = std::mem::zeroed();
+        out_buffers[0].dwStreamID = 0;
 
         loop {
-            let mut sample = None;
-
             if self.descriptor.is_async() {
                 self.wait_events()?;
                 if !self.async_have_output || self.draining_done {
@@ -287,16 +265,12 @@ impl VideoEncoder {
                 }
             }
 
-            if self.needs_create_output_sample {
-                sample = Some(create_memory_sample(
+            if !self.output_provides_sample {
+                out_buffers[0].pSample = Some(create_memory_sample(
                     self.output_stream_info.cbSize,
                     self.output_stream_info.cbAlignment,
                 )?);
             }
-
-            let mut out_buffers: [MFT_OUTPUT_DATA_BUFFER; 1] = std::mem::zeroed();
-            out_buffers[0].dwStreamID = 0;
-            out_buffers[0].pSample = sample;
 
             let mut status = 0;
             match self
@@ -304,11 +278,12 @@ impl VideoEncoder {
                 .ProcessOutput(0, &mut out_buffers, &mut status)
             {
                 Ok(_) => {
-                    out_sample = out_buffers[0].pSample.clone();
+                    tracing::info!("generate out sample");
                     break;
                 }
                 Err(err) => match err.code() {
                     MF_E_TRANSFORM_NEED_MORE_INPUT => {
+                        tracing::info!("need more input");
                         if self.draining {
                             self.draining_done = true;
                         }
@@ -343,15 +318,12 @@ impl VideoEncoder {
 
         self.async_have_output = false;
 
-        match out_sample {
-            Some(sample) => Ok(sample),
-            None => {
-                if self.draining_done {
-                    Err(MirrorXError::EOF)
-                } else {
-                    Err(MirrorXError::TryAgain)
-                }
-            }
+        if let Some(sample) = out_buffers[0].clone().pSample {
+            Ok(sample)
+        } else if self.draining_done {
+            Err(MirrorXError::EOF)
+        } else {
+            Err(MirrorXError::TryAgain)
         }
     }
 }
