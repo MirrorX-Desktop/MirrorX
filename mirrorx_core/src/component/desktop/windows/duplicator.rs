@@ -118,6 +118,10 @@ impl Duplicator {
         }
     }
 
+    pub fn deivce(&self) -> &ID3D11Device {
+        self.dx.device()
+    }
+
     pub fn capture(&mut self) -> CoreResult<&ID3D11Texture2D> {
         unsafe {
             let desktop_frame_info = self.acquire_frame()?;
@@ -753,8 +757,8 @@ unsafe fn init_video_resources(
     texture_desc.Format = DXGI_FORMAT_NV12;
     texture_desc.SampleDesc.Count = 1;
     texture_desc.SampleDesc.Quality = 0;
-    texture_desc.Usage = D3D11_USAGE_DEFAULT;
-    texture_desc.BindFlags = D3D11_BIND_RENDER_TARGET;
+    // texture_desc.Usage = D3D11_USAGE_DEFAULT;
+    // texture_desc.BindFlags = D3D11_BIND_VIDEO_ENCODER | D3D11_BIND_SHADER_RESOURCE;
 
     let texture = check_if_failed!(device.CreateTexture2D(&texture_desc, std::ptr::null()));
 

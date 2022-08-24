@@ -13,7 +13,7 @@ use windows::{
     core::{Interface, GUID},
     Win32::{
         Foundation::MAX_PATH,
-        Graphics::Direct3D11::ID3D11Texture2D,
+        Graphics::Direct3D11::{ID3D11Device, ID3D11Texture2D},
         Media::MediaFoundation::*,
         System::{
             Com::*,
@@ -36,6 +36,7 @@ pub struct VideoEncoder {
     async_marker: bool,
     sample_sent: bool,
     output_stream_info: MFT_OUTPUT_STREAM_INFO,
+    device_manager: Option<IMFDXGIDeviceManager>,
 }
 
 impl VideoEncoder {
@@ -44,7 +45,8 @@ impl VideoEncoder {
         frame_height: u16,
         fps: u8,
         descriptor: &Descriptor,
-    ) -> Result<VideoEncoder, MirrorXError> {
+        device: &ID3D11Device,
+    ) -> CoreResult<VideoEncoder> {
         unsafe {
             let (input_media_type, output_media_type) =
                 create_input_and_output_media_type(frame_width, frame_height, fps)?;
@@ -54,19 +56,32 @@ impl VideoEncoder {
             let transform: IMFTransform =
                 check_if_failed!(CoCreateInstance(&guid, None, CLSCTX_ALL));
 
-            // set to zero when err is notimpl
-            // let mut in_stream_id = [0u32; 1];
-            // let mut out_stream_id = [0u32; 1];
-            // check_if_failed!(transform.GetStreamIDs(&mut in_stream_id, &mut out_stream_id));
+            let attributes = check_if_failed!(transform.GetAttributes());
 
-            // tracing::info!(
-            //     "in stream id: {:?}, out stream id: {:?}",
-            //     in_stream_id,
-            //     out_stream_id
-            // );
+            let support_d3d11 = match attributes.GetUINT32(&MF_SA_D3D11_AWARE) {
+                Ok(res) => res > 0,
+                Err(_) => false,
+            };
+
+            let device_manager = if support_d3d11 {
+                let mut reset_token = 0;
+                let mut device_manager = None;
+
+                check_if_failed!(MFCreateDXGIDeviceManager(
+                    &mut reset_token,
+                    &mut device_manager
+                ));
+
+                if let Some(device_manager) = &device_manager {
+                    check_if_failed!(device_manager.ResetDevice(device, reset_token));
+                }
+
+                device_manager
+            } else {
+                None
+            };
 
             if descriptor.is_async() {
-                let attributes = check_if_failed!(transform.GetAttributes());
                 check_if_failed!(attributes.SetUINT32(&MF_TRANSFORM_ASYNC_UNLOCK, 1));
             }
 
@@ -92,6 +107,12 @@ impl VideoEncoder {
             tracing::info!("output media type attributes");
             log_media_type(&output_media_type)?;
 
+            if let Some(device_manager) = &device_manager {
+                check_if_failed!(transform.ProcessMessage(
+                    MFT_MESSAGE_SET_D3D_MANAGER,
+                    std::mem::transmute(device_manager.as_raw())
+                ));
+            }
             check_if_failed!(transform.ProcessMessage(MFT_MESSAGE_NOTIFY_BEGIN_STREAMING, 0));
             check_if_failed!(transform.ProcessMessage(MFT_MESSAGE_NOTIFY_START_OF_STREAM, 0));
 
@@ -122,6 +143,7 @@ impl VideoEncoder {
                 async_marker: false,
                 sample_sent: false,
                 output_stream_info: stream_info,
+                device_manager,
             })
         }
     }
@@ -539,31 +561,4 @@ unsafe fn create_memory_sample(size: u32, align: u32) -> CoreResult<IMFSample> {
     let media_buffer = check_if_failed!(MFCreateAlignedMemoryBuffer(size, align.max(16) - 1));
     check_if_failed!(sample.AddBuffer(media_buffer));
     Ok(sample)
-}
-
-#[test]
-fn test_media_foundation_video_encoder() -> anyhow::Result<()> {
-    tracing_subscriber::fmt::init();
-
-    unsafe {
-        let version = MF_SDK_VERSION << 16 | MF_API_VERSION;
-        if let Err(err) = MFStartup(version, MFSTARTUP_NOSOCKET) {
-            panic!("{}", err);
-        } else {
-            tracing::info!("MFStartup Ok");
-        }
-
-        defer! {
-            let _ = MFShutdown();
-        }
-
-        let descriptors = enum_descriptors()?;
-        if descriptors.len() == 0 {
-            return Err(anyhow::anyhow!("descriptors is empty"));
-        }
-
-        VideoEncoder::new(1920, 1080, 60, &descriptors[0])?;
-
-        Ok(())
-    }
 }

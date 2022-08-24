@@ -64,17 +64,20 @@ fn test_duplicator() -> anyhow::Result<()> {
             return Err(anyhow::anyhow!("descriptors is empty"));
         }
 
+        tracing::info!("descriptiors: {:?}", descriptors);
+
+        let monitors = crate::component::monitor::get_active_monitors()?;
+
+        let mut duplicator = crate::component::desktop::Duplicator::new(&monitors[0].id)?;
+
         let mut video_encoder =
             crate::component::media_foundation::video_encoder::VideoEncoder::new(
                 1920,
                 1080,
                 60,
                 &descriptors[0],
+                &duplicator.deivce(),
             )?;
-
-        let monitors = crate::component::monitor::get_active_monitors()?;
-
-        let mut duplicator = crate::component::desktop::Duplicator::new(&monitors[0].id)?;
 
         let capture_frame = duplicator.capture()?;
 

@@ -45,7 +45,9 @@ impl DX {
                     None,
                     driver_type,
                     None,
-                    D3D11_CREATE_DEVICE_BGRA_SUPPORT | D3D11_CREATE_DEVICE_DEBUG,
+                    D3D11_CREATE_DEVICE_BGRA_SUPPORT
+                        | D3D11_CREATE_DEVICE_VIDEO_SUPPORT
+                        | D3D11_CREATE_DEVICE_DEBUG,
                     &feature_levels,
                     D3D11_SDK_VERSION,
                     &mut device,

@@ -77,7 +77,7 @@ unsafe fn create_descriptor(activate: &IMFActivate) -> Result<Descriptor, Mirror
     let mut is_async = !((flags & MFT_ENUM_FLAG_SYNCMFT.0) != 0);
     is_async |= !!((flags & MFT_ENUM_FLAG_ASYNCMFT.0) != 0);
 
-    let is_hardware = MFT_ENUM_FLAG_HARDWARE.0 != 0;
+    let is_hardware = flags & MFT_ENUM_FLAG_HARDWARE.0 != 0;
 
     let guid = check_if_failed!(activate.GetGUID(&MFT_TRANSFORM_CLSID_Attribute));
 
