@@ -75,7 +75,7 @@ fn test_duplicator() -> anyhow::Result<()> {
                 1920,
                 1080,
                 60,
-                &descriptors[0],
+                &descriptors[1],
                 &duplicator.deivce(),
             )?;
 

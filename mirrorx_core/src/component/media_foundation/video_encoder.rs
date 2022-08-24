@@ -107,12 +107,20 @@ impl VideoEncoder {
             tracing::info!("output media type attributes");
             log_media_type(&output_media_type)?;
 
+            let mut input_stream_ids = [0u32; 1];
+            let mut output_stream_ids = [0u32; 1];
+            let _ = transform.GetStreamIDs(&mut input_stream_ids, &mut output_stream_ids);
+
+            check_if_failed!(transform.SetOutputType(output_stream_ids[0], output_media_type, 0));
+            check_if_failed!(transform.SetInputType(input_stream_ids[0], input_media_type, 0));
+
             if let Some(device_manager) = &device_manager {
                 check_if_failed!(transform.ProcessMessage(
                     MFT_MESSAGE_SET_D3D_MANAGER,
                     std::mem::transmute(device_manager.as_raw())
                 ));
             }
+
             check_if_failed!(transform.ProcessMessage(MFT_MESSAGE_NOTIFY_BEGIN_STREAMING, 0));
             check_if_failed!(transform.ProcessMessage(MFT_MESSAGE_NOTIFY_START_OF_STREAM, 0));
 
@@ -143,7 +151,7 @@ impl VideoEncoder {
                 async_marker: false,
                 sample_sent: false,
                 output_stream_info: stream_info,
-                device_manager,
+                device_manager: None,
             })
         }
     }

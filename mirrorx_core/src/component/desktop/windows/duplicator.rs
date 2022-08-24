@@ -757,8 +757,8 @@ unsafe fn init_video_resources(
     texture_desc.Format = DXGI_FORMAT_NV12;
     texture_desc.SampleDesc.Count = 1;
     texture_desc.SampleDesc.Quality = 0;
-    // texture_desc.Usage = D3D11_USAGE_DEFAULT;
-    // texture_desc.BindFlags = D3D11_BIND_VIDEO_ENCODER | D3D11_BIND_SHADER_RESOURCE;
+    texture_desc.Usage = D3D11_USAGE_DEFAULT;
+    texture_desc.BindFlags = D3D11_BIND_RENDER_TARGET;
 
     let texture = check_if_failed!(device.CreateTexture2D(&texture_desc, std::ptr::null()));
 
