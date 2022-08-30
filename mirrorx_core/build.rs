@@ -34,13 +34,15 @@ fn link_ffmpeg() {
 
     #[cfg(target_os = "windows")]
     {
-        // println!("cargo:rustc-link-search=../third/dependencies/msvc/lib/x64");
-        // println!("cargo:rustc-link-lib=libx264");
-        // println!("cargo:rustc-link-lib=libavcodec");
-        // println!("cargo:rustc-link-lib=libavutil");
-        // println!("cargo:rustc-link-lib=libavformat");
-        // println!("cargo:rustc-link-lib=libavdevice");
-
+        println!("cargo:rustc-link-search=../third/dependencies/msvc/lib/x64");
+        println!("cargo:rustc-link-lib=libx264");
+        println!("cargo:rustc-link-lib=libopus");
+        println!("cargo:rustc-link-lib=libmfx");
+        println!("cargo:rustc-link-lib=libavcodec");
+        println!("cargo:rustc-link-lib=libavutil");
+        println!("cargo:rustc-link-lib=libavformat");
+        println!("cargo:rustc-link-lib=libavdevice");
+       
         // println!("cargo:rustc-link-search=../third/dependencies/libyuv/Release");
         // println!("cargo:rustc-link-lib=yuv");
 

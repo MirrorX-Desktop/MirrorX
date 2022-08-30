@@ -25,7 +25,12 @@ function Get-IfDirectoryIsEmpty([string]$path) {
 function Get-Source([string]$branch, [string]$repo, [string]$destination) {
     $folder_exist = Test-Path -Path $destination
     if (($folder_exist -eq $false) -or (Get-IfDirectoryIsEmpty)) {
-        Invoke-Expression "git clone -b $branch --depth=1 $repo $destination"
+        $res = Start-Process -Wait -FilePath "git.exe" -PassThru -NoNewWindow -ArgumentList "clone", "-b $branch", "--depth=1", "$repo", "$destination"
+       
+        if ($res.ExitCode -ne 0) {
+            Write-Output "Get-Source: clone failed"
+            Exit
+        }
     }
     else {
         Write-Output "Get-Source: $destination is exists and not empty, skip clone"
@@ -35,35 +40,35 @@ function Get-Source([string]$branch, [string]$repo, [string]$destination) {
 function Get-DependenciesSource {
     # clone ffmpeg
     Write-Output "Get-DependenciesSource: FFmpeg"
-    Get-Source "n5.1" "https://git.ffmpeg.org/ffmpeg.git" ".\dependencies_source\source\ffmpeg"
+    Get-Source "release/5.1" "https://github.com/FFmpeg/FFmpeg.git" ".\dependencies\source\ffmpeg"
     
     # clone libx264
     Write-Output "Get-DependenciesSource: x264"
-    Get-Source "0.164.r3094" "https://github.com/ShiftMediaProject/x264.git" ".\dependencies_source\source\x264"
-    # Get-Source "stable" "https://code.videolan.org/videolan/x264.git" ".\dependencies_source\source\x264"
+    Get-Source "0.164.r3094" "https://github.com/ShiftMediaProject/x264.git" ".\dependencies\source\x264"
+    # Get-Source "stable" "https://code.videolan.org/videolan/x264.git" ".\dependencies\source\x264"
 
     # clone libopus
     Write-Output "Get-DependenciesSource: opus"
-    Get-Source "v1.3.1-1" "https://github.com/ShiftMediaProject/opus.git" ".\dependencies_source\source\opus"
-    # Get-Source "v1.3.1" "https://gitlab.xiph.org/xiph/opus.git" ".\dependencies_source\source\opus"
+    Get-Source "v1.3.1-1" "https://github.com/ShiftMediaProject/opus.git" ".\dependencies\source\opus"
+    # Get-Source "v1.3.1" "https://gitlab.xiph.org/xiph/opus.git" ".\dependencies\source\opus"
 
     # clone nv-codec-headers
     Write-Output "Get-DependenciesSource: nv-codec-headers"
-    Get-Source "n11.1.5.1" "https://github.com/FFmpeg/nv-codec-headers.git" ".\dependencies_source\source\nv-codec-headers"
+    Get-Source "n11.1.5.1" "https://github.com/FFmpeg/nv-codec-headers.git" ".\dependencies\source\nv-codec-headers"
 
     # clone amf
     Write-Output "Get-DependenciesSource: AMF"
-    Get-Source "v1.4.26" "https://github.com/GPUOpen-LibrariesAndSDKs/AMF.git" ".\dependencies_source\source\AMF"
+    Get-Source "v1.4.26" "https://github.com/GPUOpen-LibrariesAndSDKs/AMF.git" ".\dependencies\source\AMF"
 
     # clone mfx_dispatcher(Intel Media SDK dispatcher)
     Write-Output "Get-DependenciesSource: mfx_dispatcher"
-    Get-Source "1.35.r89" "https://github.com/ShiftMediaProject/mfx_dispatch.git" ".\dependencies_source\source\mfx_dispatcher"
+    Get-Source "1.35.r89" "https://github.com/ShiftMediaProject/mfx_dispatch.git" ".\dependencies\source\mfx_dispatcher"
 }
 
 function Get-Component {
     # clone VSNASM
     Write-Output "Get-Component: VSNASM"
-    Get-Source "master" "https://github.com/ShiftMediaProject/VSNASM.git" ".\dependencies_source\VSNASM"
+    Get-Source "master" "https://github.com/ShiftMediaProject/VSNASM.git" ".\dependencies\VSNASM"
 
     # clone VSWhere
     Write-Output "Get-Component: VSWhere"
@@ -71,39 +76,43 @@ function Get-Component {
 
     # clone FFVS-Project-Generator
     Write-Output "Get-Component: FFVS-Project-Generator"
-    Get-FFVS_Project_Generator
+    Get-Source "master" "https://github.com/ShiftMediaProject/FFVS-Project-Generator.git" ".\dependencies\source\FFVS-Project-Generator"
 }
 
 function Get-VSWhere {
-    try {
-        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-        Start-BitsTransfer "https://github.com/Microsoft/vswhere/releases/download/2.8.4/vswhere.exe" ".\dependencies_source\VSNASM\vswhere.exe"
+    if (Test-Path ".\dependencies\VSNASM\vswhere.exe") {
+        Write-Output "Get-Component: VSWhere exists, skip download"
     }
-    catch {
-        Write-Output "Install-Component: Download VSWhere failed"
-        Write-Output $Error
-        Eixt
+    else {
+        try {
+            [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+            Start-BitsTransfer "https://github.com/Microsoft/vswhere/releases/download/2.8.4/vswhere.exe" ".\dependencies\VSNASM\vswhere.exe"
+        }
+        catch {
+            Write-Output "Get-Component: Download VSWhere failed"
+            Write-Output $Error
+            Eixt
+        }
     }
 }
 
-function Get-FFVS_Project_Generator {
-    try {
-        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-        Start-BitsTransfer "https://github.com/ShiftMediaProject/FFVS-Project-Generator/releases/download/1.11.4/FFVS-Project-Generator_1.11.4_x64.zip" ".\dependencies_source\source\FFVS-Project-Generator_1.11.4_x64.zip"
-    }
-    catch {
-        Write-Output "Install-Component: Download FFVS-Project-Generator failed: $Error"
-        Eixt
+function Install-FFVS_Project_Generator {
+    $proc = Start-Process -FilePath "MSBuild.exe" -PassThru -NoNewWindow -ArgumentList "-t:ReBuild", "-nodeReuse:false", "-p:Configuration=Release", "-p:Platform=x64", ".\dependencies\source\FFVS-Project-Generator\project_generate.sln"
+    Wait-Process -InputObject $proc
+
+    if ($proc.ExitCode -ne 0) {
+        Write-Output "Install-Component: install FFVS_Project_Generator failed"
+        Exit
     }
 
-    Expand-Archive -Path ".\dependencies_source\source\FFVS-Project-Generator_1.11.4_x64.zip" -DestinationPath ".\dependencies_source\source" -Force
+    Copy-Item -Path ".\dependencies\source\FFVS-Project-Generator\bin\project_generate.exe" -Destination ".\dependencies\source\project_generate.exe" -Force
 }
 
 function Install-VSNASM {
     $env:CI = "Local"
-    $res = Start-Process -FilePath ".\dependencies_source\VSNASM\install_script.bat" -Wait -PassThru -NoNewWindow
-    $res = $res.ExitCode
-    if ($res -ne 0) {
+    $res = Start-Process -Wait -FilePath ".\dependencies\VSNASM\install_script.bat" -PassThru -NoNewWindow
+
+    if ($res.ExitCode -ne 0) {
         Write-Output "Install-Component: install VSNASM failed"
         Exit
     }
@@ -112,42 +121,47 @@ function Install-VSNASM {
 function Install-Component {    
     Write-Output "Install-Component: VSNASM"
     Install-VSNASM
+
+    Write-Output "Install-Component: FFVS_Project_Generator"
+    Install-FFVS_Project_Generator
 }
 
 function Invoke-PrepareCompile {
     # copy nv-codec header
     Write-Output "Invoke-PrepareCompile: Copy NVCodec headers"
-    Copy-Item -Path ".\dependencies_source\source\nv-codec-headers\include" -Recurse -Destination ".\dependencies_source\msvc\include" -Force
+    Copy-Item -Path ".\dependencies\source\nv-codec-headers\include" -Recurse -Destination ".\dependencies\msvc\include" -Force
 
     # copy nv-codec header
     Write-Output "Invoke-PrepareCompile: Copy AMF headers"
-    Copy-Item -Path ".\dependencies_source\source\AMF\amf\public\include" -Recurse -Destination ".\dependencies_source\msvc\include\AMF" -Force
+    Copy-Item -Path ".\dependencies\source\AMF\amf\public\include" -Recurse -Destination ".\dependencies\msvc\include\AMF" -Force
 }
 
 function Invoke-CompileDependencies {
     try {
-        Write-Output "Invoke-CompileDependencies: Generate opus VS project"
-        Start-Process -FilePath ".\dependencies_source\source\opus\SMP\libopus_with_latest_sdk.bat" -Wait -PassThru -NoNewWindow
-
-        Write-Output "Invoke-CompileDependencies: Generate x264 VS project"
-        Start-Process -FilePath ".\dependencies_source\source\x264\SMP\x264_with_latest_sdk.bat" -Wait -PassThru -NoNewWindow
-
-        Write-Output "Invoke-CompileDependencies: Generate mfx_dispatcher VS project"
-        Start-Process -FilePath ".\dependencies_source\source\mfx_dispatcher\SMP\libmfx_with_latest_sdk.bat" -Wait -PassThru -NoNewWindow
+        Invoke-CompileOpus
+        Invoke-CompileX264
+        Invoke-CompileMFXDispatcher
     }
     catch {
-        {1:<#Do this if a terminating exception happens#>}
+        Write-Output "Invoke-CompileDependencies: Build failed"
+        Exit
     }
     
 }
 
-function Invoke-CompileOpus{
+function Invoke-CompileOpus {
     try {
-        Write-Output "Invoke-CompileOpus: Generate opus VS project"
-        Start-Process -FilePath ".\dependencies_source\source\opus\SMP\libopus_with_latest_sdk.bat" -Wait -PassThru -NoNewWindow
-
         Write-Output "Invoke-CompileOpus: Upgrade project"
-        Start-Process -FilePath "devenv.exe" -Wait -PassThru -NoNewWindow -ArgumentList ".\dependencies_source\source\opus\SMP\libopus.sln","-upgrade"
+        Start-Process -Wait -FilePath "devenv.exe" -PassThru -NoNewWindow -ArgumentList ".\dependencies\source\opus\SMP\libopus.vcxproj", "-upgrade"
+
+        Write-Output "Invoke-CompileOpus: Compile"
+        $proc = Start-Process -FilePath "MSBuild.exe" -PassThru -NoNewWindow -ArgumentList "-t:ReBuild", "-nodeReuse:false", "-p:Configuration=Release", "-p:Platform=x64", "-p:PlatformToolset=v143", ".\dependencies\source\opus\SMP\libopus.vcxproj"
+        Wait-Process -InputObject $proc
+
+        if ($proc.ExitCode -ne 0) {
+            Write-Output "Invoke-CompileOpus: Build failed"
+            Exit
+        }
     }
     catch {
         Write-Output "Invoke-CompileOpus: Build failed"
@@ -156,11 +170,54 @@ function Invoke-CompileOpus{
     }
 }
 
-function Invoke-GenerateVSProject {
+function Invoke-CompileX264 {
+    try {
+        Write-Output "Invoke-CompileX264: Upgrade project"
+        Start-Process -Wait -FilePath "devenv.exe" -PassThru -NoNewWindow -ArgumentList ".\dependencies\source\x264\SMP\libx264.vcxproj", "-upgrade"
+       
+        Write-Output "Invoke-CompileX264: Compile"
+        $proc = Start-Process -FilePath "MSBuild.exe" -PassThru -NoNewWindow -ArgumentList "-t:ReBuild", "-nodeReuse:false", "-p:Configuration=Release", "-p:Platform=x64", "-p:PlatformToolset=v143", ".\dependencies\source\x264\SMP\libx264.vcxproj"
+        Wait-Process -InputObject $proc
+
+        if ($proc.ExitCode -ne 0) {
+            Write-Output "Invoke-CompileX264: Build failed"
+            Exit
+        }
+    }
+    catch {
+        Write-Output "Invoke-CompileX264: Build failed"
+        Write-Output $Error
+        Exit
+    }
+}
+
+
+function Invoke-CompileMFXDispatcher {
+    try {
+        Write-Output "Invoke-CompileMFXDispatcher: Upgrade project"
+        Start-Process -Wait -FilePath "devenv.exe" -PassThru -NoNewWindow -ArgumentList ".\dependencies\source\mfx_dispatcher\SMP\libmfx.vcxproj", "-upgrade"
+
+        Write-Output "Invoke-CompileMFXDispatcher: Compile"
+        $proc = Start-Process -FilePath "MSBuild.exe" -PassThru -NoNewWindow -ArgumentList "-t:ReBuild", "-nodeReuse:false", "-p:Configuration=Release", "-p:Platform=x64", "-p:PlatformToolset=v143", ".\dependencies\source\mfx_dispatcher\SMP\libmfx.vcxproj"
+        Wait-Process -InputObject $proc
+
+        if ($proc.ExitCode -ne 0){
+            Write-Output "Invoke-CompileMFXDispatcher: Build failed"
+            Exit
+        }
+    }
+    catch {
+        Write-Output "Invoke-CompileMFXDispatcher: Build failed"
+        Write-Output $Error
+        Exit
+    }
+}
+
+function Invoke-GenerateFFmpegVSProject {
     # generate vs project
-    Write-Output "Invoke-GenerateVSProject: Generate VS project"
-    Set-Location ".\dependencies_source\source"
-    $res = Start-Process -FilePath ".\project_generate.exe" -Wait -PassThru -NoNewWindow -ArgumentList `
+    Write-Output "Invoke-GenerateFFmpegVSProject: Generate VS project"
+    Set-Location ".\dependencies\source"
+    $res = Start-Process -Wait -FilePath ".\project_generate.exe" -PassThru -NoNewWindow -ArgumentList `
         "--disable-all", `
         "--disable-autodetect", `
         "--enable-dxva2", `
@@ -203,18 +260,40 @@ function Invoke-GenerateVSProject {
     }
 }
 
+function Invoke-CompileFFmpeg {
+    try {
+        Write-Output "Invoke-CompileMFXDispatcher: Compile"
+        $proc = Start-Process -FilePath "MSBuild.exe" -PassThru -NoNewWindow -ArgumentList "-t:ReBuild", "-nodeReuse:false", "-p:Configuration=Release", "-p:Platform=x64", "-p:PlatformToolset=v143", ".\dependencies\source\ffmpeg\SMP\ffmpeg.sln"
+        Wait-Process -InputObject $proc
+
+        if ($proc.ExitCode -ne 0){
+            Write-Output "Invoke-CompileFFmpeg: Build failed"
+            Exit
+        }
+    }
+    catch {
+        Write-Output "Invoke-CompileFFmpeg: Build failed"
+        Write-Output $Error
+        Exit
+    }
+}
+
 $elevated = Get-IsElevated
 if ($elevated -eq $false) {
     Write-Output "Pleause run this script as Administrator"
     Exit
 }
 
+Get-DependenciesSource
+
 Get-Component
 
 Install-Component
 
-Get-DependenciesSource
-
 Invoke-PrepareCompile
 
 Invoke-CompileDependencies
+
+Invoke-GenerateFFmpegVSProject
+
+Invoke-CompileFFmpeg
