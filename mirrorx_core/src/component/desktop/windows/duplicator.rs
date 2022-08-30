@@ -1,6 +1,6 @@
 use super::{dx::DX, dx_math::VERTICES};
 use crate::{
-    check_if_failed,
+    windows_api_check,
     component::{
         capture_frame::CaptureFrame,
         desktop::windows::dx_math::{BPP, VERTEX},
@@ -51,7 +51,7 @@ unsafe impl Send for Duplicator {}
 impl Duplicator {
     pub fn new(monitor_id: &str) -> Result<Duplicator, MirrorXError> {
         unsafe {
-            let current_desktop = check_if_failed!(OpenInputDesktop(0, false, GENERIC_ALL));
+            let current_desktop = windows_api_check!(OpenInputDesktop(0, false, GENERIC_ALL));
 
             defer! {
                 let _ = CloseDesktop(current_desktop);
@@ -64,8 +64,8 @@ impl Duplicator {
             }
 
             let dx = DX::new()?;
-            let video_device: ID3D11VideoDevice = check_if_failed!(dx.device().cast());
-            let video_context: ID3D11VideoContext = check_if_failed!(dx.device_context().cast());
+            let video_device: ID3D11VideoDevice = windows_api_check!(dx.device().cast());
+            let video_context: ID3D11VideoContext = windows_api_check!(dx.device_context().cast());
 
             let (output_desc, output_duplication) = init_output_duplication(&dx, monitor_id)?;
 
@@ -132,7 +132,7 @@ impl Duplicator {
 
             self.release_frame()?;
 
-            check_if_failed!(self.video_context.VideoProcessorBlt(
+            windows_api_check!(self.video_context.VideoProcessorBlt(
                 &self.video_processor,
                 &self.video_processor_output_view,
                 0,
@@ -222,7 +222,7 @@ impl Duplicator {
 
         match dxgi_resource {
             Some(resource) => {
-                let desktop_texture: ID3D11Texture2D = check_if_failed!(resource.cast());
+                let desktop_texture: ID3D11Texture2D = windows_api_check!(resource.cast());
                 self.dx
                     .device_context()
                     .CopyResource(&self.backend_texture, desktop_texture);
@@ -235,7 +235,7 @@ impl Duplicator {
     }
 
     unsafe fn release_frame(&self) -> CoreResult<()> {
-        check_if_failed!(self.output_duplication.ReleaseFrame());
+        windows_api_check!(self.output_duplication.ReleaseFrame());
         Ok(())
     }
 
@@ -248,7 +248,7 @@ impl Duplicator {
         let mut cursor_shape_buffer_length = 0u32;
         let mut cursor_shape_info: DXGI_OUTDUPL_POINTER_SHAPE_INFO = std::mem::zeroed();
 
-        check_if_failed!(self.output_duplication.GetFramePointerShape(
+        windows_api_check!(self.output_duplication.GetFramePointerShape(
             desktop_frame_info.PointerShapeBufferSize,
             cursor_shape_buffer.as_mut_ptr() as *mut _,
             &mut cursor_shape_buffer_length,
@@ -386,12 +386,12 @@ impl Duplicator {
             };
         init_data.SysMemSlicePitch = 0;
 
-        let pointer_texture = check_if_failed!(self
+        let pointer_texture = windows_api_check!(self
             .dx
             .device()
             .CreateTexture2D(&pointer_texture_desc, &init_data));
 
-        let shader_res = check_if_failed!(self
+        let shader_res = windows_api_check!(self
             .dx
             .device()
             .CreateShaderResourceView(&pointer_texture, &shader_resource_view_desc));
@@ -404,7 +404,7 @@ impl Duplicator {
         init_data = std::mem::zeroed();
         init_data.pSysMem = vertices.as_ptr() as *const _;
 
-        let vertex_buffer = Some(check_if_failed!(self
+        let vertex_buffer = Some(windows_api_check!(self
             .dx
             .device()
             .CreateBuffer(&buffer_desc, &init_data)));
@@ -515,7 +515,7 @@ impl Duplicator {
         copy_buffer_desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
         copy_buffer_desc.MiscFlags = D3D11_RESOURCE_MISC_FLAG::default();
 
-        let copy_buffer = check_if_failed!(self
+        let copy_buffer = windows_api_check!(self
             .dx
             .device()
             .CreateTexture2D(&copy_buffer_desc, std::ptr::null()));
@@ -536,10 +536,10 @@ impl Duplicator {
             pointer_box,
         );
 
-        let copy_surface: IDXGISurface = check_if_failed!(copy_buffer.cast());
+        let copy_surface: IDXGISurface = windows_api_check!(copy_buffer.cast());
 
         let mut mapped_surface: DXGI_MAPPED_RECT = std::mem::zeroed();
-        check_if_failed!(copy_surface.Map(&mut mapped_surface, DXGI_MAP_READ));
+        windows_api_check!(copy_surface.Map(&mut mapped_surface, DXGI_MAP_READ));
 
         defer! {
             let _ = copy_surface.Unmap();
@@ -630,11 +630,11 @@ unsafe fn init_output_duplication(
     dx: &DX,
     monitor_id: &str,
 ) -> CoreResult<(DXGI_OUTPUT_DESC, IDXGIOutputDuplication)> {
-    let dxgi_device: IDXGIDevice = check_if_failed!(dx.device().cast());
+    let dxgi_device: IDXGIDevice = windows_api_check!(dx.device().cast());
 
-    let dxgi_adapter = check_if_failed!(dxgi_device.GetParent::<IDXGIAdapter>());
+    let dxgi_adapter = windows_api_check!(dxgi_device.GetParent::<IDXGIAdapter>());
 
-    let adapter_desc = check_if_failed!(dxgi_adapter.GetDesc());
+    let adapter_desc = windows_api_check!(dxgi_adapter.GetDesc());
 
     info!("{:?}", &adapter_desc.AdapterLuid);
     info!("{:?}", OsString::from_wide_null(&adapter_desc.Description));
@@ -644,7 +644,7 @@ unsafe fn init_output_duplication(
     while let Ok(dxgi_output) = dxgi_adapter.EnumOutputs(output_index) {
         output_index += 1;
 
-        let dxgi_output_desc = check_if_failed!(dxgi_output.GetDesc());
+        let dxgi_output_desc = windows_api_check!(dxgi_output.GetDesc());
 
         if !dxgi_output_desc.AttachedToDesktop.as_bool() {
             continue;
@@ -679,10 +679,10 @@ unsafe fn init_output_duplication(
                     })?;
 
                 if device_id == monitor_id {
-                    let dxgi_output1: IDXGIOutput1 = check_if_failed!(dxgi_output.cast());
+                    let dxgi_output1: IDXGIOutput1 = windows_api_check!(dxgi_output.cast());
 
                     let dxgi_output_duplication =
-                        check_if_failed!(dxgi_output1.DuplicateOutput(dx.device()));
+                        windows_api_check!(dxgi_output1.DuplicateOutput(dx.device()));
 
                     return Ok((dxgi_output_desc, dxgi_output_duplication));
                 }
@@ -711,16 +711,16 @@ unsafe fn init_backend_resources(
     texture_desc.Usage = D3D11_USAGE_DEFAULT;
     texture_desc.BindFlags = D3D11_BIND_RENDER_TARGET;
 
-    let texture = check_if_failed!(device.CreateTexture2D(&texture_desc, std::ptr::null()));
+    let texture = windows_api_check!(device.CreateTexture2D(&texture_desc, std::ptr::null()));
 
     texture_desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
     texture_desc.Usage = D3D11_USAGE_STAGING;
     texture_desc.BindFlags = D3D11_BIND_FLAG::default();
 
     let backend_staging_texture =
-        check_if_failed!(device.CreateTexture2D(&texture_desc, std::ptr::null()));
+        windows_api_check!(device.CreateTexture2D(&texture_desc, std::ptr::null()));
 
-    let rtv = check_if_failed!(device.CreateRenderTargetView(&texture, std::ptr::null()));
+    let rtv = windows_api_check!(device.CreateRenderTargetView(&texture, std::ptr::null()));
 
     let viewport = D3D11_VIEWPORT {
         TopLeftX: 0.0,
@@ -758,7 +758,7 @@ unsafe fn init_video_resources(
     texture_desc.Usage = D3D11_USAGE_DEFAULT;
     texture_desc.BindFlags = D3D11_BIND_RENDER_TARGET;
 
-    let texture = check_if_failed!(device.CreateTexture2D(&texture_desc, std::ptr::null()));
+    let texture = windows_api_check!(device.CreateTexture2D(&texture_desc, std::ptr::null()));
 
     let mut content_desc: D3D11_VIDEO_PROCESSOR_CONTENT_DESC = std::mem::zeroed();
     content_desc.InputFrameFormat = D3D11_VIDEO_FRAME_FORMAT_PROGRESSIVE;
@@ -777,10 +777,10 @@ unsafe fn init_video_resources(
     content_desc.Usage = D3D11_VIDEO_USAGE_PLAYBACK_NORMAL;
 
     let video_processor_enumerator =
-        check_if_failed!(video_device.CreateVideoProcessorEnumerator(&content_desc));
+        windows_api_check!(video_device.CreateVideoProcessorEnumerator(&content_desc));
 
     let video_processor =
-        check_if_failed!(video_device.CreateVideoProcessor(&video_processor_enumerator, 0));
+        windows_api_check!(video_device.CreateVideoProcessor(&video_processor_enumerator, 0));
 
     let mut input_view_desc: D3D11_VIDEO_PROCESSOR_INPUT_VIEW_DESC = std::mem::zeroed();
     input_view_desc.FourCC = 0;
@@ -788,7 +788,7 @@ unsafe fn init_video_resources(
     input_view_desc.Anonymous.Texture2D.MipSlice = 0;
     input_view_desc.Anonymous.Texture2D.ArraySlice = 0;
 
-    let video_processor_input_view = check_if_failed!(video_device.CreateVideoProcessorInputView(
+    let video_processor_input_view = windows_api_check!(video_device.CreateVideoProcessorInputView(
         input_texture,
         &video_processor_enumerator,
         &input_view_desc
@@ -797,7 +797,7 @@ unsafe fn init_video_resources(
     let mut output_view_desc: D3D11_VIDEO_PROCESSOR_OUTPUT_VIEW_DESC = std::mem::zeroed();
     output_view_desc.ViewDimension = D3D11_VPOV_DIMENSION_TEXTURE2D;
 
-    let video_processor_output_view = check_if_failed!(video_device
+    let video_processor_output_view = windows_api_check!(video_device
         .CreateVideoProcessorOutputView(&texture, &video_processor_enumerator, &output_view_desc));
 
     let mut video_stream: D3D11_VIDEO_PROCESSOR_STREAM = std::mem::zeroed();
@@ -829,7 +829,7 @@ unsafe fn init_sampler_state(device: &ID3D11Device) -> CoreResult<ID3D11SamplerS
     sampler_desc.MinLOD = 0f32;
     sampler_desc.MaxLOD = D3D11_FLOAT32_MAX;
 
-    let sampler_state = check_if_failed!(device.CreateSamplerState(&sampler_desc));
+    let sampler_state = windows_api_check!(device.CreateSamplerState(&sampler_desc));
 
     Ok(sampler_state)
 }
@@ -847,7 +847,7 @@ unsafe fn init_blend_state(device: &ID3D11Device) -> CoreResult<ID3D11BlendState
     blend_desc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
     blend_desc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL.0 as u8;
 
-    let blend_state = check_if_failed!(device.CreateBlendState(&blend_desc));
+    let blend_state = windows_api_check!(device.CreateBlendState(&blend_desc));
 
     Ok(blend_state)
 }

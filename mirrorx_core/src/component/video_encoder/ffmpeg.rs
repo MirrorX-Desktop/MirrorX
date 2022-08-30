@@ -1,128 +1,82 @@
+use super::ffmpeg_encoder_config::{FFMPEGEncoderType, Libx264Config};
 use crate::{
+    api_error,
     component::capture_frame::CaptureFrame,
     error::MirrorXError,
     ffi::ffmpeg::{avcodec::*, avutil::*},
-    service::endpoint::message::{
-        EndPointMessage, EndPointMessagePacket, EndPointMessagePacketType, VideoFrame,
-    },
+    service::endpoint::message::EndPointMessagePacket,
 };
-use anyhow::anyhow;
-use std::{collections::HashMap, ffi::CString};
 use tokio::sync::mpsc::Sender;
-use tracing::warn;
 
-pub struct VideoEncoder {
+pub struct Encoder {
     codec_ctx: *mut AVCodecContext,
     frame: *mut AVFrame,
     packet: *mut AVPacket,
 }
 
-unsafe impl Send for VideoEncoder {}
-unsafe impl Sync for VideoEncoder {}
+unsafe impl Send for Encoder {}
 
-impl VideoEncoder {
+impl Encoder {
     pub fn new(
-        encoder_name: &str,
-        fps: i32,
-        width: i32,
-        height: i32,
-        options: HashMap<&str, &str>,
-    ) -> Result<VideoEncoder, MirrorXError> {
-        let encoder_name_ptr = CString::new(encoder_name.to_string())
-            .map_err(|err| MirrorXError::Other(anyhow!(err)))?;
+        encoder_type: FFMPEGEncoderType,
+        frame_width: i32,
+        frame_height: i32,
+        excepted_fps: i32,
+    ) -> Result<Encoder, MirrorXError> {
+        let encoder_config = match encoder_type {
+            FFMPEGEncoderType::Libx264 => Libx264Config::new()?,
+        };
+
+        let mut encoder = Self {
+            codec_ctx: std::ptr::null_mut(),
+            frame: std::ptr::null_mut(),
+            packet: std::ptr::null_mut(),
+        };
 
         unsafe {
             av_log_set_level(AV_LOG_TRACE);
             av_log_set_flags(AV_LOG_SKIP_REPEATED);
 
-            let codec = avcodec_find_encoder_by_name(encoder_name_ptr.as_ptr());
+            let codec = avcodec_find_encoder_by_name(encoder_config.ffmpeg_encoder_name());
             if codec.is_null() {
-                return Err(MirrorXError::MediaVideoEncoderNotFound(
-                    encoder_name.to_string(),
+                return Err(api_error!(
+                    "avcodec_find_encoder_by_name returns null pointer"
                 ));
             }
 
-            let codec_ctx = avcodec_alloc_context3(codec);
-            if codec_ctx.is_null() {
-                return Err(MirrorXError::MediaVideoEncoderAllocContextFailed);
+            encoder.codec_ctx = avcodec_alloc_context3(codec);
+            if encoder.codec_ctx.is_null() {
+                return Err(api_error!("avcodec_alloc_context3 returns null pointer"));
             }
 
-            (*codec_ctx).width = width;
-            (*codec_ctx).height = height;
-            (*codec_ctx).time_base = AVRational { num: 1, den: fps };
-            (*codec_ctx).gop_size = fps * 2;
-            (*codec_ctx).bit_rate = 4000 * 1000;
-            (*codec_ctx).rc_max_rate = 4000 * 1000;
-            (*codec_ctx).rc_min_rate = 4000 * 1000;
-            (*codec_ctx).rc_buffer_size = 4000 * 1000 * 2;
-            (*codec_ctx).has_b_frames = 0;
-            (*codec_ctx).max_b_frames = 0;
-            (*codec_ctx).pix_fmt = AV_PIX_FMT_NV12;
-            (*codec_ctx).flags |= AV_CODEC_FLAG2_LOCAL_HEADER;
-            (*codec_ctx).color_range = AVCOL_RANGE_JPEG;
-            (*codec_ctx).color_primaries = AVCOL_PRI_BT709;
-            (*codec_ctx).color_trc = AVCOL_TRC_BT709;
-            (*codec_ctx).colorspace = AVCOL_SPC_BT709;
+            (*encoder.codec_ctx).width = frame_width;
+            (*encoder.codec_ctx).height = frame_height;
+            (*encoder.codec_ctx).time_base = AVRational {
+                num: 1,
+                den: excepted_fps,
+            };
+            (*encoder.codec_ctx).gop_size = excepted_fps * 2;
+            (*encoder.codec_ctx).bit_rate = 4000 * 1000;
+            (*encoder.codec_ctx).rc_max_rate = 4000 * 1000;
+            (*encoder.codec_ctx).rc_min_rate = 4000 * 1000;
+            (*encoder.codec_ctx).rc_buffer_size = 4000 * 1000 * 2;
+            (*encoder.codec_ctx).has_b_frames = 0;
+            (*encoder.codec_ctx).max_b_frames = 0;
+            (*encoder.codec_ctx).pix_fmt = AV_PIX_FMT_NV12;
+            (*encoder.codec_ctx).flags |= AV_CODEC_FLAG2_LOCAL_HEADER;
+            (*encoder.codec_ctx).color_range = AVCOL_RANGE_JPEG;
+            (*encoder.codec_ctx).color_primaries = AVCOL_PRI_BT709;
+            (*encoder.codec_ctx).color_trc = AVCOL_TRC_BT709;
+            (*encoder.codec_ctx).colorspace = AVCOL_SPC_BT709;
 
-            for (k, v) in options {
-                Self::set_opt(codec_ctx, k, v, 0)?;
-            }
+            encoder_config.apply_option(encoder.codec_ctx)?;
 
-            let ret = avcodec_open2(codec_ctx, codec, std::ptr::null_mut());
+            let ret = avcodec_open2(encoder.codec_ctx, codec, std::ptr::null_mut());
             if ret != 0 {
-                return Err(MirrorXError::MediaVideoEncoderOpenFailed(ret));
+                return Err(api_error!("avcodec_open2 returns null pointer"));
             }
 
-            Ok(VideoEncoder {
-                codec_ctx,
-                frame: std::ptr::null_mut(),
-                packet: std::ptr::null_mut(),
-            })
-        }
-    }
-
-    fn set_opt(
-        codec_ctx: *mut AVCodecContext,
-        key: &str,
-        value: &str,
-        search_flags: i32,
-    ) -> Result<(), MirrorXError> {
-        let opt_name =
-            CString::new(key.to_string()).map_err(|err| MirrorXError::Other(anyhow!(err)))?;
-        let opt_value =
-            CString::new(value.to_string()).map_err(|err| MirrorXError::Other(anyhow!(err)))?;
-
-        unsafe {
-            let ret = av_opt_set(
-                (*codec_ctx).priv_data,
-                opt_name.as_ptr(),
-                opt_value.as_ptr(),
-                search_flags,
-            );
-
-            if ret == AVERROR_OPTION_NOT_FOUND {
-                return Err(MirrorXError::MediaVideoEncoderOptionNotFound(
-                    key.to_string(),
-                ));
-            } else if ret == AVERROR(libc::ERANGE) {
-                return Err(MirrorXError::MediaVideoEncoderOptionValueOutOfRange {
-                    key: key.to_string(),
-                    value: value.to_string(),
-                });
-            } else if ret == AVERROR(libc::EINVAL) {
-                return Err(MirrorXError::MediaVideoEncoderOptionValueInvalid {
-                    key: key.to_string(),
-                    value: value.to_string(),
-                });
-            } else if ret != 0 {
-                return Err(MirrorXError::MediaVideoEncoderOptionSetFailed {
-                    key: key.to_string(),
-                    value: value.to_string(),
-                    error_code: ret,
-                });
-            } else {
-                Ok(())
-            }
+            Ok(encoder)
         }
     }
 
@@ -251,7 +205,7 @@ impl VideoEncoder {
     }
 }
 
-impl Drop for VideoEncoder {
+impl Drop for Encoder {
     fn drop(&mut self) {
         unsafe {
             if !self.codec_ctx.is_null() {

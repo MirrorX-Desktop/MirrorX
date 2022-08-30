@@ -136,17 +136,25 @@ pub enum MirrorXError {
     #[error("media video decoder output tx send failed")]
     MediaVideoDecoderOutputTxSendFailed,
 
-    #[error("try again")]
-    TryAgain,
+    #[error("API Error (message={message:?}, file=\"{file}\", line={line})")]
+    API {
+        message: String,
+        file: String,
+        line: String,
+    },
 
-    #[error("eof")]
-    EOF,
-
-    #[error("syscall error: code: {code:?}, message: \"{message}\", file: {file}, line: {line}")]
-    Syscall {
+    #[cfg(target_os = "windows")]
+    #[error("Windows API Error (code={code:?}, message=\"{message}\", file=\"{file}\", line={line})")]
+    WindowsAPI {
         code: HRESULT,
         message: String,
         file: String,
         line: String,
     },
+
+    #[error("convert String to CString failed")]
+    CStringNullError(#[from] std::ffi::NulError),
+
+    #[error("AVError: {0}({1})")]
+    AVError(String, i32),
 }
