@@ -72,6 +72,7 @@ pub struct AVCodecHWConfig {
 }
 
 extern "C" {
+    pub fn avcodec_find_encoder(id: AVCodecID) -> *const AVCodec;
     pub fn avcodec_find_decoder(id: AVCodecID) -> *const AVCodec;
     pub fn avcodec_find_encoder_by_name(name: *const c_char) -> *const AVCodec;
     pub fn avcodec_find_decoder_by_name(name: *const c_char) -> *const AVCodec;

@@ -13,9 +13,9 @@ macro_rules! windows_api_check {
 
 #[macro_export]
 macro_rules! api_error {
-    ($message:expr) => {
+    ($($arg:tt)*) => {
         MirrorXError::API {
-            message: $message.to_string(),
+            message: format!($($arg)*),
             file: file!().to_string(),
             line: line!().to_string(),
         }

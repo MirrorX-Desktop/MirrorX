@@ -1,3 +1,5 @@
+use std::ffi::CStr;
+
 use super::ffmpeg_encoder_config::{FFMPEGEncoderType, Libx264Config};
 use crate::{
     api_error,
@@ -102,7 +104,7 @@ impl Encoder {
 
                 let new_frame = av_frame_alloc();
                 if new_frame.is_null() {
-                    return Err(MirrorXError::MediaVideoEncoderAVFrameAllocFailed);
+                    return Err(api_error!("av_frame_alloc returns null pointer"));
                 }
 
                 (*new_frame).width = frame.width as i32;
@@ -112,12 +114,15 @@ impl Encoder {
 
                 ret = av_frame_get_buffer(new_frame, 1);
                 if ret < 0 {
-                    return Err(MirrorXError::MediaVideoEncoderAVFrameGetBufferFailed(ret));
+                    return Err(api_error!(
+                        "av_frame_get_buffer returns error code: {}",
+                        ret
+                    ));
                 }
 
                 let packet = av_packet_alloc();
                 if packet.is_null() {
-                    return Err(MirrorXError::MediaVideoEncoderAVPacketAllocFailed);
+                    return Err(api_error!("av_packet_alloc returns null pointer"));
                 }
 
                 let packet_size = av_image_get_buffer_size(
@@ -129,7 +134,7 @@ impl Encoder {
 
                 ret = av_new_packet(packet, packet_size);
                 if ret < 0 {
-                    return Err(MirrorXError::MediaVideoEncoderAVPacketCreateFailed(ret));
+                    return Err(api_error!("av_new_packet returns error code: {}", ret));
                 }
 
                 self.frame = new_frame;
@@ -138,8 +143,9 @@ impl Encoder {
 
             ret = av_frame_make_writable(self.frame);
             if ret < 0 {
-                return Err(MirrorXError::MediaVideoEncoderAVFrameMakeWritableFailed(
-                    ret,
+                return Err(api_error!(
+                    "av_frame_make_writable returns error code: {}",
+                    ret
                 ));
             }
 
@@ -220,6 +226,26 @@ impl Drop for Encoder {
             if !self.packet.is_null() {
                 av_packet_free(&mut self.packet);
             }
+        }
+    }
+}
+
+#[test]
+fn iter_encoder() {
+    tracing_subscriber::fmt::init();
+
+    unsafe {
+        let mut state = std::ptr::null_mut();
+
+        loop {
+            let av_codec = av_codec_iterate(&mut state);
+            if av_codec.is_null() {
+                break;
+            }
+
+            av_codec.
+            let name = CStr::from_ptr((*av_codec).name).to_str().unwrap();
+            tracing::info!("{}", name);
         }
     }
 }
