@@ -6,7 +6,7 @@ use crate::{
     component::capture_frame::CaptureFrame,
     error::MirrorXError,
     ffi::ffmpeg::{avcodec::*, avutil::*},
-    service::endpoint::message::EndPointMessagePacket,
+    service::endpoint::message::{EndPointMessagePacket, EndPointMessagePacketType, EndPointMessage, VideoFrame},
 };
 use tokio::sync::mpsc::Sender;
 
@@ -65,7 +65,7 @@ impl Encoder {
             (*encoder.codec_ctx).has_b_frames = 0;
             (*encoder.codec_ctx).max_b_frames = 0;
             (*encoder.codec_ctx).pix_fmt = AV_PIX_FMT_NV12;
-            (*encoder.codec_ctx).flags |= AV_CODEC_FLAG2_LOCAL_HEADER;
+            // (*encoder.codec_ctx).flags |= AV_CODEC_FLAG2_LOCAL_HEADER;
             (*encoder.codec_ctx).color_range = AVCOL_RANGE_JPEG;
             (*encoder.codec_ctx).color_primaries = AVCOL_PRI_BT709;
             (*encoder.codec_ctx).color_trc = AVCOL_TRC_BT709;
@@ -179,31 +179,60 @@ impl Encoder {
                     return Err(MirrorXError::MediaVideoDecoderReceiveFrameFailed(ret));
                 }
 
+                let mut sps = once_cell::unsync::OnceCell::new();
+                let mut pps = once_cell::unsync::OnceCell::new();
+
                 let buffer =
                     std::slice::from_raw_parts((*self.packet).data, (*self.packet).size as usize)
                         .to_vec();
 
-                // let packet = EndPointMessagePacket {
-                //     typ: EndPointMessagePacketType::Push,
-                //     call_id: None,
-                //     message: EndPointMessage::VideoFrame(VideoFrame {
-                //         buffer,
-                //         pts: (*self.packet).pts,
-                //     }),
-                // };
+                if (*self.packet).flags & 0x0001 != 0 {
+                    let description_data = std::slice::from_raw_parts(
+                        (*self.codec_ctx).extradata,
+                        (*self.codec_ctx).extradata_size as usize,
+                    );
 
-                // if let Err(err) = tx.try_send(packet) {
-                //     match err {
-                //         tokio::sync::mpsc::error::TrySendError::Full(_) => {
-                //             warn!("network send channel is full")
-                //         }
-                //         tokio::sync::mpsc::error::TrySendError::Closed(_) => {
-                //             return Err(MirrorXError::Other(anyhow::anyhow!(
-                //                 "network send channel is closed"
-                //             )));
-                //         }
-                //     }
-                // }
+                    for (i, e) in description_data.iter().enumerate() {
+                        if *e == 0x67 || *e == 0x68 {
+                            //
+                            let n = description_data[i - 1] as u16
+                                | ((description_data[i - 2] as u16) << 8);
+
+                            let data = std::slice::from_raw_parts(
+                                (*self.codec_ctx).extradata.add(i),
+                                n as usize,
+                            )
+                            .to_vec();
+
+                            if *e == 0x67 {
+                                let _ = sps.set(data);
+                            } else if *e == 0x68 {
+                                let _ = pps.set(data);
+                            }
+                        }
+                    }
+                }
+
+                let packet = EndPointMessagePacket {
+                    typ: EndPointMessagePacketType::Push,
+                    call_id: None,
+                    message: EndPointMessage::VideoFrame(VideoFrame {
+                        sps: sps.take(),
+                        pps: pps.take(),
+                        buffer,
+                    }),
+                };
+
+                if let Err(err) = tx.try_send(packet) {
+                    match err {
+                        tokio::sync::mpsc::error::TrySendError::Full(_) => {
+                            tracing::warn!("network send channel is full")
+                        }
+                        tokio::sync::mpsc::error::TrySendError::Closed(_) => {
+                            return Err(api_error!("channel closed"));
+                        }
+                    }
+                }
 
                 av_packet_unref(self.packet);
             }
@@ -243,7 +272,6 @@ fn iter_encoder() {
                 break;
             }
 
-            av_codec.
             let name = CStr::from_ptr((*av_codec).name).to_str().unwrap();
             tracing::info!("{}", name);
         }

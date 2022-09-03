@@ -1,18 +1,22 @@
-use super::{dx::DX, dx_math::VERTICES};
+use super::{
+    dx_math::{VERTEX_STRIDES, VERTICES},
+    shader,
+};
 use crate::{
-    windows_api_check,
+    api_error,
     component::{
         capture_frame::CaptureFrame,
         desktop::windows::dx_math::{BPP, VERTEX},
     },
     error::{CoreResult, MirrorXError},
     utility::wide_char::FromWide,
+    windows_api_check,
 };
 use scopeguard::defer;
-use std::ffi::OsString;
+use std::{ffi::OsString, os::raw::c_void};
 use tracing::info;
 use windows::{
-    core::Interface,
+    core::{Interface, PCSTR},
     Win32::{
         Graphics::{
             Direct3D::*,
@@ -26,166 +30,122 @@ use windows::{
 };
 
 pub struct Duplicator {
-    dx: DX,
+    device: ID3D11Device,
+    device_context: ID3D11DeviceContext,
 
-    output_desc: DXGI_OUTPUT_DESC,
-    output_duplication: IDXGIOutputDuplication,
+    vertex_shader: ID3D11VertexShader,
+    vertex_buffer: Option<ID3D11Buffer>,
+
+    pixel_shader: ID3D11PixelShader,
+    pixel_shader_lumina: ID3D11PixelShader,
+    pixel_shader_chrominance: ID3D11PixelShader,
+
+    duplication: IDXGIOutputDuplication,
+    dxgi_outdupl_desc: DXGI_OUTDUPL_DESC,
 
     backend_texture: ID3D11Texture2D,
     backend_viewport: [D3D11_VIEWPORT; 1],
     backend_rtv: [Option<ID3D11RenderTargetView>; 1],
+
+    lumina_render_texture: ID3D11Texture2D,
+    lumina_staging_texture: ID3D11Texture2D,
+    lumina_viewport: [D3D11_VIEWPORT; 1],
+    lumina_rtv: [Option<ID3D11RenderTargetView>; 1],
+
+    chrominance_render_texture: ID3D11Texture2D,
+    chrominance_staging_texture: ID3D11Texture2D,
+    chrominance_viewport: [D3D11_VIEWPORT; 1],
+    chrominance_rtv: [Option<ID3D11RenderTargetView>; 1],
+
     sampler_state: [Option<ID3D11SamplerState>; 1],
     blend_state: ID3D11BlendState,
-
-    video_texture: ID3D11Texture2D,
-    video_device: ID3D11VideoDevice,
-    video_context: ID3D11VideoContext,
-    video_processor: ID3D11VideoProcessor,
-    video_processor_enumerator: ID3D11VideoProcessorEnumerator,
-    video_processor_output_view: ID3D11VideoProcessorOutputView,
-    video_stream: [D3D11_VIDEO_PROCESSOR_STREAM; 1],
+    input_layout: ID3D11InputLayout,
 }
 
 unsafe impl Send for Duplicator {}
 
 impl Duplicator {
-    pub fn new(monitor_id: &str) -> Result<Duplicator, MirrorXError> {
+    pub fn new(monitor_id: Option<String>) -> CoreResult<Duplicator> {
         unsafe {
-            let current_desktop = windows_api_check!(OpenInputDesktop(0, false, GENERIC_ALL));
+            prepare_desktop()?;
 
-            defer! {
-                let _ = CloseDesktop(current_desktop);
-            }
-
-            if !SetThreadDesktop(current_desktop).as_bool() {
-                return Err(MirrorXError::Other(anyhow::anyhow!(
-                    "SetThreadDesktop failed"
-                )));
-            }
-
-            let dx = DX::new()?;
-            let video_device: ID3D11VideoDevice = windows_api_check!(dx.device().cast());
-            let video_context: ID3D11VideoContext = windows_api_check!(dx.device_context().cast());
-
-            let (output_desc, output_duplication) = init_output_duplication(&dx, monitor_id)?;
-
-            let mut dxgi_outdupl_desc = std::mem::zeroed();
-            output_duplication.GetDesc(&mut dxgi_outdupl_desc);
-
-            let (backend_texture, backend_rtv, backend_viewport) = init_backend_resources(
-                dx.device(),
-                dxgi_outdupl_desc.ModeDesc.Width,
-                dxgi_outdupl_desc.ModeDesc.Height,
-            )?;
+            let (device, device_context) = init_directx()?;
 
             let (
-                video_texture,
-                video_processor,
-                video_processor_enumerator,
-                video_processor_output_view,
-                video_stream,
-            ) = init_video_resources(
-                dx.device(),
-                &video_device,
-                dxgi_outdupl_desc.ModeDesc.Width,
-                dxgi_outdupl_desc.ModeDesc.Height,
-                &backend_texture,
-            )?;
+                vertex_shader,
+                vertex_buffer,
+                pixel_shader,
+                pixel_shader_lumina,
+                pixel_shader_chrominance,
+            ) = init_shaders(&device)?;
 
-            let sampler_state = init_sampler_state(dx.device())?;
-            let blend_state = init_blend_state(dx.device())?;
+            let duplication = init_output_duplication(&device, monitor_id)?;
+
+            let mut dxgi_outdupl_desc = std::mem::zeroed();
+            duplication.GetDesc(&mut dxgi_outdupl_desc);
+
+            let (backend_texture, backend_rtv, backend_viewport) =
+                init_backend_resources(&device, &dxgi_outdupl_desc)?;
+
+            let (lumina_render_texture, lumina_staging_texture, lumina_viewport, lumina_rtv) =
+                init_lumina_resources(&device, &dxgi_outdupl_desc)?;
+
+            let (
+                chrominance_render_texture,
+                chrominance_staging_texture,
+                chrominance_viewport,
+                chrominance_rtv,
+            ) = init_chrominance_resources(&device, &dxgi_outdupl_desc)?;
+
+            let sampler_state = init_sampler_state(&device)?;
+
+            let blend_state = init_blend_state(&device)?;
+
+            let input_layout = init_input_layout(&device)?;
 
             Ok(Duplicator {
-                dx,
-
-                output_desc,
-                output_duplication,
-
+                device,
+                device_context,
+                vertex_shader,
+                vertex_buffer: Some(vertex_buffer),
+                pixel_shader,
+                pixel_shader_lumina,
+                pixel_shader_chrominance,
+                duplication,
+                dxgi_outdupl_desc,
                 backend_texture,
                 backend_viewport: [backend_viewport],
                 backend_rtv: [Some(backend_rtv)],
+                lumina_render_texture,
+                lumina_staging_texture,
+                lumina_viewport: [lumina_viewport],
+                lumina_rtv: [Some(lumina_rtv)],
+                chrominance_render_texture,
+                chrominance_staging_texture,
+                chrominance_viewport: [chrominance_viewport],
+                chrominance_rtv: [Some(chrominance_rtv)],
                 sampler_state: [Some(sampler_state)],
                 blend_state,
-
-                video_texture,
-                video_device,
-                video_context,
-                video_processor,
-                video_processor_enumerator,
-                video_processor_output_view,
-                video_stream: [video_stream],
+                input_layout,
             })
         }
     }
 
-    pub fn deivce(&self) -> &ID3D11Device {
-        self.dx.device()
-    }
-
-    pub fn capture(&mut self) -> CoreResult<&ID3D11Texture2D> {
+    pub fn capture(&self) -> CoreResult<CaptureFrame> {
         unsafe {
-            let desktop_frame_info = self.acquire_frame()?;
-
-            // if desktop_frame_info.PointerPosition.Visible.as_bool() {
-            //     self.draw_mouse(&desktop_frame_info)?;
-            // }
-
-            self.release_frame()?;
-
-            windows_api_check!(self.video_context.VideoProcessorBlt(
-                &self.video_processor,
-                &self.video_processor_output_view,
-                0,
-                &self.video_stream,
-            ));
-
-            // self.dx
-            //     .device_context()
-            //     .CopyResource(&self.backend_staging_texture, &self.backend_texture);
-
-            // let mapped_resource_backend = check_if_failed!(self.dx.device_context().Map(
-            //     &self.backend_staging_texture,
-            //     0,
-            //     D3D11_MAP_READ,
-            //     0
-            // ));
-
-            // defer! {
-            //     self.dx
-            //     .device_context()
-            //     .Unmap(&self.backend_staging_texture, 0);
-            // }
-
-            // let width = self.output_desc.DesktopCoordinates.right
-            //     - self.output_desc.DesktopCoordinates.left;
-
-            // let height = self.output_desc.DesktopCoordinates.bottom
-            //     - self.output_desc.DesktopCoordinates.top;
-
-            // let buffer_size = (height as u32) * mapped_resource_backend.RowPitch;
-
-            // let capture_frame = CaptureFrame {
-            //     width: width as u16,
-            //     height: height as u16,
-            //     bytes: std::slice::from_raw_parts(
-            //         mapped_resource_backend.pData as *mut u8,
-            //         buffer_size as usize,
-            //     )
-            //     .to_vec(),
-            //     stride: mapped_resource_backend.RowPitch as u16,
-            // };
-
-            Ok(&self.video_texture)
+            self.acquire_frame()?;
+            self.draw_lumina_and_chrominance_texture()?;
+            self.create_capture_frame()
         }
     }
 
-    unsafe fn acquire_frame(&mut self) -> CoreResult<DXGI_OUTDUPL_FRAME_INFO> {
+    unsafe fn acquire_frame(&self) -> CoreResult<()> {
         let mut dxgi_resource = None;
         let mut dxgi_outdupl_frame_info = std::mem::zeroed();
 
         let mut failures = 0;
         while failures < 10 {
-            let hr = match self.output_duplication.AcquireNextFrame(
+            let hr = match self.duplication.AcquireNextFrame(
                 INFINITE,
                 &mut dxgi_outdupl_frame_info,
                 &mut dxgi_resource,
@@ -198,9 +158,7 @@ impl Duplicator {
             };
 
             if failures > 10 {
-                return Err(MirrorXError::Other(anyhow::anyhow!(
-                    "too many failures on dxgi acquire frame"
-                )));
+                return Err(api_error!("too many failures on DXGI acquire frame"));
             }
 
             if hr == DXGI_ERROR_ACCESS_LOST {
@@ -220,35 +178,149 @@ impl Duplicator {
             }
         }
 
-        match dxgi_resource {
-            Some(resource) => {
-                let desktop_texture: ID3D11Texture2D = windows_api_check!(resource.cast());
-                self.dx
-                    .device_context()
-                    .CopyResource(&self.backend_texture, desktop_texture);
-                Ok(dxgi_outdupl_frame_info)
+        defer! {
+            if let Err(err) = self.duplication.ReleaseFrame() {
+                tracing::error!("DXGI release frame failed ({:?})", err.code());
             }
-            None => Err(MirrorXError::Other(anyhow::anyhow!(
-                "IDXGIResource is None"
-            ))),
+        }
+
+        if let Some(resource) = dxgi_resource {
+            let desktop_texture: ID3D11Texture2D = windows_api_check!(resource.cast());
+
+            self.device_context
+                .CopyResource(&self.backend_texture, desktop_texture);
+
+            if dxgi_outdupl_frame_info.PointerPosition.Visible.as_bool() {
+                self.draw_mouse(&dxgi_outdupl_frame_info)?;
+            }
+
+            Ok(())
+        } else {
+            Err(api_error!("DXGI frame resource is None"))
         }
     }
 
-    unsafe fn release_frame(&self) -> CoreResult<()> {
-        windows_api_check!(self.output_duplication.ReleaseFrame());
+    unsafe fn draw_lumina_and_chrominance_texture(&self) -> CoreResult<()> {
+        let mut backend_texture_desc = std::mem::zeroed();
+        self.backend_texture.GetDesc(&mut backend_texture_desc);
+
+        let shader_resouce_view_desc = D3D11_SHADER_RESOURCE_VIEW_DESC {
+            Format: backend_texture_desc.Format,
+            ViewDimension: D3D11_SRV_DIMENSION_TEXTURE2D,
+            Anonymous: D3D11_SHADER_RESOURCE_VIEW_DESC_0 {
+                Texture2D: D3D11_TEX2D_SRV {
+                    MostDetailedMip: backend_texture_desc.MipLevels - 1,
+                    MipLevels: backend_texture_desc.MipLevels,
+                },
+            },
+        };
+
+        let shader_resouce_view = windows_api_check!(self
+            .device
+            .CreateShaderResourceView(&self.backend_texture, &shader_resouce_view_desc));
+
+        self.device_context
+            .IASetVertexBuffers(0, 1, &self.vertex_buffer, &VERTEX_STRIDES, &0);
+
+        self.device_context
+            .IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+        self.device_context.IASetInputLayout(&self.input_layout);
+
+        self.device_context
+            .PSSetShaderResources(0, &vec![Some(shader_resouce_view)]);
+
+        // draw lumina plane
+
+        self.device_context
+            .OMSetRenderTargets(&self.lumina_rtv, None);
+
+        self.device_context
+            .PSSetShader(&self.pixel_shader_lumina, &[]);
+
+        self.device_context.RSSetViewports(&self.lumina_viewport);
+
+        self.device_context.Draw(VERTICES.len() as u32, 0);
+
+        // draw chrominance plane
+
+        self.device_context
+            .OMSetRenderTargets(&self.chrominance_rtv, None);
+
+        self.device_context
+            .PSSetShader(&self.pixel_shader_chrominance, &[]);
+
+        self.device_context
+            .RSSetViewports(&self.chrominance_viewport);
+
+        self.device_context.Draw(VERTICES.len() as u32, 0);
+
+        self.device_context.Flush();
+
         Ok(())
     }
 
-    unsafe fn draw_mouse(
-        &self,
-        desktop_frame_info: &DXGI_OUTDUPL_FRAME_INFO,
-    ) -> anyhow::Result<()> {
+    unsafe fn create_capture_frame(&self) -> CoreResult<CaptureFrame> {
+        self.device_context
+            .CopyResource(&self.lumina_staging_texture, &self.lumina_render_texture);
+
+        self.device_context.CopyResource(
+            &self.chrominance_staging_texture,
+            &self.chrominance_render_texture,
+        );
+
+        let lumina_mapped_resource = windows_api_check!(self.device_context.Map(
+            &self.lumina_staging_texture,
+            0,
+            D3D11_MAP_READ,
+            0
+        ));
+
+        let lumina_stride = lumina_mapped_resource.RowPitch;
+
+        let lumina_bytes = std::slice::from_raw_parts(
+            lumina_mapped_resource.pData as *mut u8,
+            (self.dxgi_outdupl_desc.ModeDesc.Height * lumina_stride) as usize,
+        )
+        .to_vec();
+
+        self.device_context.Unmap(&self.lumina_staging_texture, 0);
+
+        let chrominance_mapped_resource = windows_api_check!(self.device_context.Map(
+            &self.chrominance_staging_texture,
+            0,
+            D3D11_MAP_READ,
+            0
+        ));
+
+        let chrominance_stride = chrominance_mapped_resource.RowPitch;
+
+        let chrominance_bytes = std::slice::from_raw_parts(
+            chrominance_mapped_resource.pData as *mut u8,
+            (self.dxgi_outdupl_desc.ModeDesc.Height / 2 * chrominance_stride) as usize,
+        )
+        .to_vec();
+
+        self.device_context
+            .Unmap(&self.chrominance_staging_texture, 0);
+
+        Ok(CaptureFrame {
+            width: self.dxgi_outdupl_desc.ModeDesc.Width,
+            height: self.dxgi_outdupl_desc.ModeDesc.Height,
+            lumina_bytes,
+            lumina_stride,
+            chrominance_bytes,
+            chrominance_stride,
+        })
+    }
+
+    unsafe fn draw_mouse(&self, desktop_frame_info: &DXGI_OUTDUPL_FRAME_INFO) -> CoreResult<()> {
         let mut cursor_shape_buffer =
             Vec::with_capacity(desktop_frame_info.PointerShapeBufferSize as usize);
         let mut cursor_shape_buffer_length = 0u32;
         let mut cursor_shape_info: DXGI_OUTDUPL_POINTER_SHAPE_INFO = std::mem::zeroed();
 
-        windows_api_check!(self.output_duplication.GetFramePointerShape(
+        windows_api_check!(self.duplication.GetFramePointerShape(
             desktop_frame_info.PointerShapeBufferSize,
             cursor_shape_buffer.as_mut_ptr() as *mut _,
             &mut cursor_shape_buffer_length,
@@ -305,7 +377,7 @@ impl Duplicator {
                 pointer_height = cursor_shape_info.Height as i32;
             }
             DXGI_OUTDUPL_POINTER_SHAPE_TYPE_MONOCHROME => {
-                tracing::info!(
+                tracing::debug!(
                     "DXGI_OUTDUPL_POINTER_SHAPE_INFO: DXGI_OUTDUPL_POINTER_SHAPE_TYPE_MONOCHROME"
                 );
 
@@ -325,7 +397,7 @@ impl Duplicator {
                 init_buffer = buffer.as_ptr()
             }
             DXGI_OUTDUPL_POINTER_SHAPE_TYPE_MASKED_COLOR => {
-                tracing::info!(
+                tracing::debug!(
                     "DXGI_OUTDUPL_POINTER_SHAPE_INFO: DXGI_OUTDUPL_POINTER_SHAPE_TYPE_MASKED_COLOR"
                 );
 
@@ -387,13 +459,11 @@ impl Duplicator {
         init_data.SysMemSlicePitch = 0;
 
         let pointer_texture = windows_api_check!(self
-            .dx
-            .device()
+            .device
             .CreateTexture2D(&pointer_texture_desc, &init_data));
 
         let shader_res = windows_api_check!(self
-            .dx
-            .device()
+            .device
             .CreateShaderResourceView(&pointer_texture, &shader_resource_view_desc));
 
         let mut buffer_desc: D3D11_BUFFER_DESC = std::mem::zeroed();
@@ -405,53 +475,41 @@ impl Duplicator {
         init_data.pSysMem = vertices.as_ptr() as *const _;
 
         let vertex_buffer = Some(windows_api_check!(self
-            .dx
-            .device()
+            .device
             .CreateBuffer(&buffer_desc, &init_data)));
 
         let blend_factor = [0f32; 4];
         let stride = std::mem::size_of::<VERTEX>() as u32;
         let offset = 0;
 
-        self.dx.device_context().IASetVertexBuffers(
-            0,
-            1,
-            [vertex_buffer].as_ptr(),
-            &stride,
-            &offset,
-        );
+        self.device_context
+            .IASetVertexBuffers(0, 1, [vertex_buffer].as_ptr(), &stride, &offset);
 
-        self.dx.device_context().OMSetBlendState(
-            &self.blend_state,
-            blend_factor.as_ptr(),
-            0xFFFFFFFF,
-        );
+        self.device_context
+            .IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-        self.dx
-            .device_context()
+        self.device_context.IASetInputLayout(&self.input_layout);
+
+        self.device_context
+            .OMSetBlendState(&self.blend_state, blend_factor.as_ptr(), 0xFFFFFFFF);
+
+        self.device_context
             .OMSetRenderTargets(&self.backend_rtv, None);
 
-        self.dx
-            .device_context()
-            .VSSetShader(self.dx.vertex_shader(), &[]);
+        self.device_context.VSSetShader(&self.vertex_shader, &[]);
 
-        self.dx
-            .device_context()
-            .PSSetShader(self.dx.pixel_shader(), &[]);
+        self.device_context.PSSetShader(&self.pixel_shader, &[]);
 
-        self.dx
-            .device_context()
+        self.device_context
             .PSSetShaderResources(0, &[Some(shader_res)]);
 
-        self.dx
-            .device_context()
-            .PSSetSamplers(0, &self.sampler_state);
+        self.device_context.PSSetSamplers(0, &self.sampler_state);
 
-        self.dx
-            .device_context()
-            .RSSetViewports(&self.backend_viewport);
+        self.device_context.RSSetViewports(&self.backend_viewport);
 
-        self.dx.device_context().Draw(VERTICES.len() as u32, 0);
+        self.device_context.Draw(VERTICES.len() as u32, 0);
+
+        self.device_context.Flush();
 
         Ok(())
     }
@@ -516,8 +574,7 @@ impl Duplicator {
         copy_buffer_desc.MiscFlags = D3D11_RESOURCE_MISC_FLAG::default();
 
         let copy_buffer = windows_api_check!(self
-            .dx
-            .device()
+            .device
             .CreateTexture2D(&copy_buffer_desc, std::ptr::null()));
 
         (*pointer_box).left = *pointer_left as u32;
@@ -525,7 +582,7 @@ impl Duplicator {
         (*pointer_box).right = (*pointer_left + *pointer_width) as u32;
         (*pointer_box).bottom = (*pointer_top + *pointer_height) as u32;
 
-        self.dx.device_context().CopySubresourceRegion(
+        self.device_context.CopySubresourceRegion(
             &copy_buffer,
             0,
             0,
@@ -591,7 +648,6 @@ impl Duplicator {
                 }
             }
         } else {
-            tracing::info!("is not mono, modify pointer shape");
             let buffer_32: *mut u32 = std::mem::transmute(pointer_shape_buffer.as_mut_ptr());
             for row in 0..*pointer_height {
                 for col in 0..*pointer_width {
@@ -626,18 +682,122 @@ impl Duplicator {
     }
 }
 
+unsafe fn prepare_desktop() -> CoreResult<()> {
+    let current_desktop = windows_api_check!(OpenInputDesktop(0, false, GENERIC_ALL));
+
+    defer! {
+        let _ = CloseDesktop(current_desktop);
+    }
+
+    if !SetThreadDesktop(current_desktop).as_bool() {
+        return Err(api_error!(
+            "SetThreadDesktop returns false when prepare desktop"
+        ));
+    }
+
+    Ok(())
+}
+
+unsafe fn init_directx() -> CoreResult<(ID3D11Device, ID3D11DeviceContext)> {
+    let driver_types = [
+        D3D_DRIVER_TYPE_HARDWARE,
+        D3D_DRIVER_TYPE_WARP,
+        D3D_DRIVER_TYPE_REFERENCE,
+    ];
+
+    let mut device = None;
+    let mut device_context = None;
+    let mut feature_level = std::mem::zeroed();
+
+    for driver_type in driver_types {
+        match D3D11CreateDevice(
+            None,
+            driver_type,
+            None,
+            D3D11_CREATE_DEVICE_BGRA_SUPPORT,
+            &[],
+            D3D11_SDK_VERSION,
+            &mut device,
+            &mut feature_level,
+            &mut device_context,
+        ) {
+            Ok(_) => {
+                let driver_type_name = match driver_type {
+                    D3D_DRIVER_TYPE_UNKNOWN => "D3D_DRIVER_TYPE_UNKNOWN",
+                    D3D_DRIVER_TYPE_HARDWARE => "D3D_DRIVER_TYPE_HARDWARE",
+                    D3D_DRIVER_TYPE_REFERENCE => "D3D_DRIVER_TYPE_REFERENCE",
+                    D3D_DRIVER_TYPE_NULL => "D3D_DRIVER_TYPE_NULL",
+                    D3D_DRIVER_TYPE_SOFTWARE => "D3D_DRIVER_TYPE_SOFTWARE",
+                    D3D_DRIVER_TYPE_WARP => "D3D_DRIVER_TYPE_WARP",
+                    _ => "Unknown",
+                };
+
+                let feature_level_name = match feature_level {
+                    D3D_FEATURE_LEVEL_12_2 => "D3D_FEATURE_LEVEL_12_2",
+                    D3D_FEATURE_LEVEL_12_1 => "D3D_FEATURE_LEVEL_12_1",
+                    D3D_FEATURE_LEVEL_12_0 => "D3D_FEATURE_LEVEL_12_0",
+                    D3D_FEATURE_LEVEL_11_1 => "D3D_FEATURE_LEVEL_11_1",
+                    D3D_FEATURE_LEVEL_11_0 => "D3D_FEATURE_LEVEL_11_0",
+                    D3D_FEATURE_LEVEL_10_1 => "D3D_FEATURE_LEVEL_10_1",
+                    D3D_FEATURE_LEVEL_10_0 => "D3D_FEATURE_LEVEL_10_0",
+                    D3D_FEATURE_LEVEL_9_3 => "D3D_FEATURE_LEVEL_9_3",
+                    D3D_FEATURE_LEVEL_9_2 => "D3D_FEATURE_LEVEL_9_2",
+                    D3D_FEATURE_LEVEL_9_1 => "D3D_FEATURE_LEVEL_9_1",
+                    D3D_FEATURE_LEVEL_1_0_CORE => "D3D_FEATURE_LEVEL_1_0_CORE",
+                    _ => "Unknown",
+                };
+
+                tracing::info!(
+                    ?driver_type_name,
+                    ?feature_level_name,
+                    "create DirectX device successfully"
+                );
+
+                break;
+            }
+            Err(err) => {
+                let driver_type_name = match driver_type {
+                    D3D_DRIVER_TYPE_UNKNOWN => "D3D_DRIVER_TYPE_UNKNOWN",
+                    D3D_DRIVER_TYPE_HARDWARE => "D3D_DRIVER_TYPE_HARDWARE",
+                    D3D_DRIVER_TYPE_REFERENCE => "D3D_DRIVER_TYPE_REFERENCE",
+                    D3D_DRIVER_TYPE_NULL => "D3D_DRIVER_TYPE_NULL",
+                    D3D_DRIVER_TYPE_SOFTWARE => "D3D_DRIVER_TYPE_SOFTWARE",
+                    D3D_DRIVER_TYPE_WARP => "D3D_DRIVER_TYPE_WARP",
+                    _ => "Unknown",
+                };
+
+                tracing::info!(
+                    ?driver_type_name,
+                    ?err,
+                    "create DirectX device failed, try next one"
+                );
+            }
+        };
+    }
+
+    if let (Some(device), Some(device_context)) = (device, device_context) {
+        Ok((device, device_context))
+    } else {
+        Err(MirrorXError::Other(anyhow::anyhow!(
+            "create DirectX device failed, all driver types had tried"
+        )))
+    }
+}
+
 unsafe fn init_output_duplication(
-    dx: &DX,
-    monitor_id: &str,
-) -> CoreResult<(DXGI_OUTPUT_DESC, IDXGIOutputDuplication)> {
-    let dxgi_device: IDXGIDevice = windows_api_check!(dx.device().cast());
+    device: &ID3D11Device,
+    monitor_id: Option<String>,
+) -> CoreResult<IDXGIOutputDuplication> {
+    let dxgi_device: IDXGIDevice = windows_api_check!(device.cast());
 
     let dxgi_adapter = windows_api_check!(dxgi_device.GetParent::<IDXGIAdapter>());
 
     let adapter_desc = windows_api_check!(dxgi_adapter.GetDesc());
 
-    info!("{:?}", &adapter_desc.AdapterLuid);
-    info!("{:?}", OsString::from_wide_null(&adapter_desc.Description));
+    info!(
+        name = ?OsString::from_wide_null(&adapter_desc.Description),
+        "DXGI Adapter",
+    );
 
     let mut output_index = 0;
 
@@ -674,42 +834,95 @@ unsafe fn init_output_duplication(
             if (display_device.StateFlags & DISPLAY_DEVICE_ATTACHED_TO_DESKTOP) != 0 {
                 let device_id = OsString::from_wide_null(&display_device.DeviceID)
                     .into_string()
-                    .map_err(|_| {
-                        MirrorXError::Other(anyhow::anyhow!("convert OsString to String failed"))
+                    .map_err(|_| MirrorXError::API {
+                        message: String::from("convert OsString to String failed"),
+                        file: file!().to_string(),
+                        line: line!().to_string(),
                     })?;
 
-                if device_id == monitor_id {
-                    let dxgi_output1: IDXGIOutput1 = windows_api_check!(dxgi_output.cast());
-
-                    let dxgi_output_duplication =
-                        windows_api_check!(dxgi_output1.DuplicateOutput(dx.device()));
-
-                    return Ok((dxgi_output_desc, dxgi_output_duplication));
+                if let Some(ref id) = monitor_id {
+                    if *id != device_id {
+                        continue;
+                    }
                 }
+
+                let dxgi_output1: IDXGIOutput1 = windows_api_check!(dxgi_output.cast());
+
+                let dxgi_output_duplication =
+                    windows_api_check!(dxgi_output1.DuplicateOutput(device));
+
+                return Ok(dxgi_output_duplication);
             }
         }
     }
 
-    Err(MirrorXError::Other(anyhow::anyhow!(
-        "init duplication failed"
-    )))
+    Err(api_error!(
+        "create IDXGIOutputDuplication failed, all Outputs had tried"
+    ))
+}
+
+unsafe fn init_shaders(
+    device: &ID3D11Device,
+) -> CoreResult<(
+    ID3D11VertexShader,
+    ID3D11Buffer,
+    ID3D11PixelShader,
+    ID3D11PixelShader,
+    ID3D11PixelShader,
+)> {
+    let vertex_shader =
+        windows_api_check!(device.CreateVertexShader(shader::VERTEX_SHADER_BYTES, None));
+
+    let vertex_buffer_desc = D3D11_BUFFER_DESC {
+        ByteWidth: VERTEX_STRIDES * VERTICES.len() as u32,
+        Usage: D3D11_USAGE_DEFAULT,
+        BindFlags: D3D11_BIND_VERTEX_BUFFER.0,
+        CPUAccessFlags: 0,
+        MiscFlags: 0,
+        StructureByteStride: 0,
+    };
+
+    let subresource_data = D3D11_SUBRESOURCE_DATA {
+        pSysMem: &VERTICES as *const _ as *const c_void,
+        SysMemPitch: 0,
+        SysMemSlicePitch: 0,
+    };
+
+    let vertex_buffer =
+        windows_api_check!(device.CreateBuffer(&vertex_buffer_desc, &subresource_data));
+
+    let pixel_shader =
+        windows_api_check!(device.CreatePixelShader(shader::PIXEL_SHADER_BYTES, None));
+
+    let pixel_shader_lumina =
+        windows_api_check!(device.CreatePixelShader(shader::PIXEL_SHADER_LUMINA_BYTES, None));
+
+    let pixel_shader_chrominance =
+        windows_api_check!(device.CreatePixelShader(shader::PIXEL_SHADER_CHROMINANCE_BYTES, None));
+
+    Ok((
+        vertex_shader,
+        vertex_buffer,
+        pixel_shader,
+        pixel_shader_lumina,
+        pixel_shader_chrominance,
+    ))
 }
 
 unsafe fn init_backend_resources(
     device: &ID3D11Device,
-    width: u32,
-    height: u32,
+    dxgi_outdupl_desc: &DXGI_OUTDUPL_DESC,
 ) -> CoreResult<(ID3D11Texture2D, ID3D11RenderTargetView, D3D11_VIEWPORT)> {
     let mut texture_desc: D3D11_TEXTURE2D_DESC = std::mem::zeroed();
-    texture_desc.Width = width;
-    texture_desc.Height = height;
+    texture_desc.Width = dxgi_outdupl_desc.ModeDesc.Width;
+    texture_desc.Height = dxgi_outdupl_desc.ModeDesc.Height;
     texture_desc.MipLevels = 1;
     texture_desc.ArraySize = 1;
     texture_desc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
     texture_desc.SampleDesc.Count = 1;
     texture_desc.SampleDesc.Quality = 0;
     texture_desc.Usage = D3D11_USAGE_DEFAULT;
-    texture_desc.BindFlags = D3D11_BIND_RENDER_TARGET;
+    texture_desc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
 
     let texture = windows_api_check!(device.CreateTexture2D(&texture_desc, std::ptr::null()));
 
@@ -734,89 +947,92 @@ unsafe fn init_backend_resources(
     Ok((texture, rtv, viewport))
 }
 
-unsafe fn init_video_resources(
+unsafe fn init_lumina_resources(
     device: &ID3D11Device,
-    video_device: &ID3D11VideoDevice,
-    width: u32,
-    height: u32,
-    input_texture: &ID3D11Texture2D,
+    dxgi_outdupl_desc: &DXGI_OUTDUPL_DESC,
 ) -> CoreResult<(
     ID3D11Texture2D,
-    ID3D11VideoProcessor,
-    ID3D11VideoProcessorEnumerator,
-    ID3D11VideoProcessorOutputView,
-    D3D11_VIDEO_PROCESSOR_STREAM,
+    ID3D11Texture2D,
+    D3D11_VIEWPORT,
+    ID3D11RenderTargetView,
 )> {
     let mut texture_desc: D3D11_TEXTURE2D_DESC = std::mem::zeroed();
-    texture_desc.Width = width;
-    texture_desc.Height = height;
+    texture_desc.Width = dxgi_outdupl_desc.ModeDesc.Width;
+    texture_desc.Height = dxgi_outdupl_desc.ModeDesc.Height;
     texture_desc.MipLevels = 1;
     texture_desc.ArraySize = 1;
-    texture_desc.Format = DXGI_FORMAT_NV12;
+    texture_desc.Format = DXGI_FORMAT_R8_UNORM;
     texture_desc.SampleDesc.Count = 1;
     texture_desc.SampleDesc.Quality = 0;
     texture_desc.Usage = D3D11_USAGE_DEFAULT;
     texture_desc.BindFlags = D3D11_BIND_RENDER_TARGET;
 
-    let texture = windows_api_check!(device.CreateTexture2D(&texture_desc, std::ptr::null()));
+    let render_texture =
+        windows_api_check!(device.CreateTexture2D(&texture_desc, std::ptr::null()));
 
-    let mut content_desc: D3D11_VIDEO_PROCESSOR_CONTENT_DESC = std::mem::zeroed();
-    content_desc.InputFrameFormat = D3D11_VIDEO_FRAME_FORMAT_PROGRESSIVE;
-    content_desc.InputFrameRate = DXGI_RATIONAL {
-        Numerator: 1,
-        Denominator: 1,
+    texture_desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+    texture_desc.Usage = D3D11_USAGE_STAGING;
+    texture_desc.BindFlags = D3D11_BIND_FLAG::default();
+
+    let staging_texture =
+        windows_api_check!(device.CreateTexture2D(&texture_desc, std::ptr::null()));
+
+    let viewport = D3D11_VIEWPORT {
+        TopLeftX: 0.0,
+        TopLeftY: 0.0,
+        Width: dxgi_outdupl_desc.ModeDesc.Width as f32,
+        Height: dxgi_outdupl_desc.ModeDesc.Height as f32,
+        MinDepth: 0.0,
+        MaxDepth: 1.0,
     };
-    content_desc.InputWidth = width;
-    content_desc.InputHeight = height;
-    content_desc.OutputFrameRate = DXGI_RATIONAL {
-        Numerator: 1,
-        Denominator: 1,
+
+    let rtv = windows_api_check!(device.CreateRenderTargetView(&render_texture, std::ptr::null()));
+
+    Ok((render_texture, staging_texture, viewport, rtv))
+}
+
+unsafe fn init_chrominance_resources(
+    device: &ID3D11Device,
+    dxgi_outdupl_desc: &DXGI_OUTDUPL_DESC,
+) -> CoreResult<(
+    ID3D11Texture2D,
+    ID3D11Texture2D,
+    D3D11_VIEWPORT,
+    ID3D11RenderTargetView,
+)> {
+    let mut texture_desc: D3D11_TEXTURE2D_DESC = std::mem::zeroed();
+    texture_desc.Width = dxgi_outdupl_desc.ModeDesc.Width / 2;
+    texture_desc.Height = dxgi_outdupl_desc.ModeDesc.Height / 2;
+    texture_desc.MipLevels = 1;
+    texture_desc.ArraySize = 1;
+    texture_desc.Format = DXGI_FORMAT_R8G8_UNORM;
+    texture_desc.SampleDesc.Count = 1;
+    texture_desc.SampleDesc.Quality = 0;
+    texture_desc.Usage = D3D11_USAGE_DEFAULT;
+    texture_desc.BindFlags = D3D11_BIND_RENDER_TARGET;
+
+    let render_texture =
+        windows_api_check!(device.CreateTexture2D(&texture_desc, std::ptr::null()));
+
+    texture_desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+    texture_desc.Usage = D3D11_USAGE_STAGING;
+    texture_desc.BindFlags = D3D11_BIND_FLAG::default();
+
+    let staging_texture =
+        windows_api_check!(device.CreateTexture2D(&texture_desc, std::ptr::null()));
+
+    let viewport = D3D11_VIEWPORT {
+        TopLeftX: 0.0,
+        TopLeftY: 0.0,
+        Width: (dxgi_outdupl_desc.ModeDesc.Width / 2) as f32,
+        Height: (dxgi_outdupl_desc.ModeDesc.Height / 2) as f32,
+        MinDepth: 0.0,
+        MaxDepth: 1.0,
     };
-    content_desc.OutputWidth = width;
-    content_desc.OutputHeight = height;
-    content_desc.Usage = D3D11_VIDEO_USAGE_PLAYBACK_NORMAL;
 
-    let video_processor_enumerator =
-        windows_api_check!(video_device.CreateVideoProcessorEnumerator(&content_desc));
+    let rtv = windows_api_check!(device.CreateRenderTargetView(&render_texture, std::ptr::null()));
 
-    let video_processor =
-        windows_api_check!(video_device.CreateVideoProcessor(&video_processor_enumerator, 0));
-
-    let mut input_view_desc: D3D11_VIDEO_PROCESSOR_INPUT_VIEW_DESC = std::mem::zeroed();
-    input_view_desc.FourCC = 0;
-    input_view_desc.ViewDimension = D3D11_VPIV_DIMENSION_TEXTURE2D;
-    input_view_desc.Anonymous.Texture2D.MipSlice = 0;
-    input_view_desc.Anonymous.Texture2D.ArraySlice = 0;
-
-    let video_processor_input_view = windows_api_check!(video_device.CreateVideoProcessorInputView(
-        input_texture,
-        &video_processor_enumerator,
-        &input_view_desc
-    ));
-
-    let mut output_view_desc: D3D11_VIDEO_PROCESSOR_OUTPUT_VIEW_DESC = std::mem::zeroed();
-    output_view_desc.ViewDimension = D3D11_VPOV_DIMENSION_TEXTURE2D;
-
-    let video_processor_output_view = windows_api_check!(video_device
-        .CreateVideoProcessorOutputView(&texture, &video_processor_enumerator, &output_view_desc));
-
-    let mut video_stream: D3D11_VIDEO_PROCESSOR_STREAM = std::mem::zeroed();
-    video_stream.Enable = true.into();
-    video_stream.OutputIndex = 0;
-    video_stream.InputFrameOrField = 0;
-    video_stream.PastFrames = 0;
-    video_stream.FutureFrames = 0;
-    video_stream.ppPastSurfaces = std::ptr::null_mut();
-    video_stream.pInputSurface = Some(video_processor_input_view);
-    video_stream.ppFutureSurfaces = std::ptr::null_mut();
-
-    Ok((
-        texture,
-        video_processor,
-        video_processor_enumerator,
-        video_processor_output_view,
-        video_stream,
-    ))
+    Ok((render_texture, staging_texture, viewport, rtv))
 }
 
 unsafe fn init_sampler_state(device: &ID3D11Device) -> CoreResult<ID3D11SamplerState> {
@@ -850,4 +1066,50 @@ unsafe fn init_blend_state(device: &ID3D11Device) -> CoreResult<ID3D11BlendState
     let blend_state = windows_api_check!(device.CreateBlendState(&blend_desc));
 
     Ok(blend_state)
+}
+
+unsafe fn init_input_layout(device: &ID3D11Device) -> CoreResult<ID3D11InputLayout> {
+    let input_element_desc_array = [
+        D3D11_INPUT_ELEMENT_DESC {
+            SemanticName: PCSTR(b"POSITION\0".as_ptr()),
+            SemanticIndex: 0,
+            Format: DXGI_FORMAT_R32G32B32_FLOAT,
+            InputSlot: 0,
+            AlignedByteOffset: 0,
+            InputSlotClass: D3D11_INPUT_PER_VERTEX_DATA,
+            InstanceDataStepRate: 0,
+        },
+        D3D11_INPUT_ELEMENT_DESC {
+            SemanticName: PCSTR(b"TEXCOORD\0".as_ptr()),
+            SemanticIndex: 0,
+            Format: DXGI_FORMAT_R32G32_FLOAT,
+            InputSlot: 0,
+            AlignedByteOffset: 12,
+            InputSlotClass: D3D11_INPUT_PER_VERTEX_DATA,
+            InstanceDataStepRate: 0,
+        },
+    ];
+
+    let input_layout = windows_api_check!(
+        device.CreateInputLayout(&input_element_desc_array, shader::VERTEX_SHADER_BYTES)
+    );
+
+    Ok(input_layout)
+}
+
+#[test]
+fn test_duplicator() {
+    tracing_subscriber::fmt::init();
+
+    let duplicator = Duplicator::new(None).unwrap();
+
+    tracing::info!("begin capture frame");
+
+    let capture_frame = duplicator.capture().unwrap();
+
+    tracing::info!(
+        width = capture_frame.width,
+        height = capture_frame.height,
+        "captured frame"
+    );
 }
