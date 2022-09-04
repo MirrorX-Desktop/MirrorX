@@ -12,7 +12,7 @@ use tracing::{error, info};
 
 #[tokio::test]
 async fn test_capture_and_encode_and_decode() -> anyhow::Result<()> {
-    tracing_subscriber::fmt::init();
+    // tracing_subscriber::fmt::init();
 
     // let monitors = monitor::get_active_monitors()?;
     // let monitor = match monitors.iter().find(|v| v.is_primary) {
@@ -33,7 +33,7 @@ async fn test_capture_and_encode_and_decode() -> anyhow::Result<()> {
     //     exit_tx.clone(),
     //     exit_rx.clone(),
     //     capture_frame_tx,
-    //     &monitor.id,
+    //     None,
     //     monitor.refresh_rate,
     // )?;
 

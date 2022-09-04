@@ -18,6 +18,7 @@ pub const SUBTITLE_ASS: AVSubtitleType = 3;
 
 pub const AV_CODEC_FLAG2_LOCAL_HEADER: i32 = 1 << 3;
 pub const AV_CODEC_FLAG_LOW_DELAY: i32 = 1 << 19;
+pub const AV_CODEC_FLAG_GLOBAL_HEADER: i32 = 1 << 22;
 
 pub const FF_PROFILE_H264_CONSTRAINED: i32 = (1 << 9); // 8+1; constraint_set1_flag
 pub const FF_PROFILE_H264_INTRA: i32 = (1 << 11); // 8+3; constraint_set3_flag

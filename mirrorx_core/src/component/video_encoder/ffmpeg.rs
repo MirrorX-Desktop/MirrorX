@@ -1,14 +1,17 @@
 use super::ffmpeg_encoder_config::{FFMPEGEncoderType, Libx264Config};
 use crate::{
     api_error,
-    component::capture_frame::CaptureFrame,
+    component::{capture_frame::CaptureFrame, NALU_HEADER_LENGTH},
     error::MirrorXError,
     ffi::ffmpeg::{avcodec::*, avutil::*},
     service::endpoint::message::{
         EndPointMessage, EndPointMessagePacket, EndPointMessagePacketType, VideoFrame,
     },
 };
-use std::ffi::CStr;
+use futures::AsyncReadExt;
+use std::io::prelude::*;
+use std::io::BufRead;
+use std::{ffi::CStr, ops::Add};
 use tokio::sync::mpsc::Sender;
 
 pub struct Encoder {
@@ -66,7 +69,7 @@ impl Encoder {
             (*encoder.codec_ctx).has_b_frames = 0;
             (*encoder.codec_ctx).max_b_frames = 0;
             (*encoder.codec_ctx).pix_fmt = AV_PIX_FMT_NV12;
-            // (*encoder.codec_ctx).flags |= AV_CODEC_FLAG2_LOCAL_HEADER;
+            (*encoder.codec_ctx).flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
             (*encoder.codec_ctx).color_range = AVCOL_RANGE_JPEG;
             (*encoder.codec_ctx).color_primaries = AVCOL_PRI_BT709;
             (*encoder.codec_ctx).color_trc = AVCOL_TRC_BT709;
@@ -187,27 +190,42 @@ impl Encoder {
                     std::slice::from_raw_parts((*self.packet).data, (*self.packet).size as usize)
                         .to_vec();
 
-                if (*self.packet).flags & 0x0001 != 0 {
-                    let description_data = std::slice::from_raw_parts(
+                // if packet has key frame, copy sps and pps from AVCodecContext
+                if (*self.packet).flags & 0x0001 != 0 && (*self.codec_ctx).extradata_size > 0 {
+                    let extra_data = std::slice::from_raw_parts(
                         (*self.codec_ctx).extradata,
                         (*self.codec_ctx).extradata_size as usize,
                     );
 
-                    for (i, e) in description_data.iter().enumerate() {
-                        if *e == 0x67 || *e == 0x68 {
-                            let n = description_data[i - 1] as u16
-                                | ((description_data[i - 2] as u16) << 8);
+                    let mut delimiter_positions = Vec::new();
 
-                            let data = std::slice::from_raw_parts(
-                                (*self.codec_ctx).extradata.add(i),
-                                n as usize,
-                            )
-                            .to_vec();
+                    for i in 0..extra_data.len() - NALU_HEADER_LENGTH {
+                        if extra_data[i + 0] == 0
+                            && extra_data[i + 1] == 0
+                            && extra_data[i + 2] == 0
+                            && extra_data[i + 3] == 1
+                        {
+                            delimiter_positions.push(i);
+                        }
+                    }
 
-                            if *e == 0x67 {
-                                let _ = sps.set(data);
-                            } else if *e == 0x68 {
-                                let _ = pps.set(data);
+                    delimiter_positions.push(extra_data.len());
+
+                    let mut wd = delimiter_positions.windows(2);
+
+                    while let Some(indexes) = wd.next() {
+                        let (start, end) = (indexes[0], indexes[1]);
+                        let nalu_type = extra_data[start + 4] & 0x1F;
+                        let cell = match nalu_type {
+                            7 => Some(&sps),
+                            8 => Some(&pps),
+                            _ => None,
+                        };
+
+                        if let Some(cell) = cell {
+                            let payload = extra_data[start + 4..end].to_vec();
+                            if let Err(_) = cell.set(payload) {
+                                return Err(api_error!("set SPS or PPS cell repeatly"));
                             }
                         }
                     }
@@ -255,25 +273,6 @@ impl Drop for Encoder {
             if !self.packet.is_null() {
                 av_packet_free(&mut self.packet);
             }
-        }
-    }
-}
-
-#[test]
-fn iter_encoder() {
-    tracing_subscriber::fmt::init();
-
-    unsafe {
-        let mut state = std::ptr::null_mut();
-
-        loop {
-            let av_codec = av_codec_iterate(&mut state);
-            if av_codec.is_null() {
-                break;
-            }
-
-            let name = CStr::from_ptr((*av_codec).name).to_str().unwrap();
-            tracing::info!("{}", name);
         }
     }
 }
