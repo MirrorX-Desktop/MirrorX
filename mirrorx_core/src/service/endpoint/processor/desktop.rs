@@ -7,7 +7,6 @@ use crate::{
 use crossbeam::channel::{Receiver, Sender};
 use scopeguard::defer;
 use std::{os::raw::c_void, time::Duration};
-use tracing::{error, info, trace, warn};
 
 #[cfg(target_os = "windows")]
 pub fn start_desktop_capture_process(
@@ -15,90 +14,62 @@ pub fn start_desktop_capture_process(
     exit_tx: async_broadcast::Sender<()>,
     mut exit_rx: async_broadcast::Receiver<()>,
     capture_frame_tx: crossbeam::channel::Sender<crate::component::capture_frame::CaptureFrame>,
-    display_id: &str,
+    display_id: Option<String>,
     fps: u8,
 ) -> Result<(), MirrorXError> {
+    use std::ops::Sub;
     use tokio::sync::mpsc::error::TrySendError;
-
     use crate::component::capture_frame::CaptureFrame;
 
-    // let mut duplicator = Duplicator::new(display_id)?;
+    TOKIO_RUNTIME.spawn_blocking(move || {
+        defer! {
+            tracing::info!(?remote_device_id, "desktop capture process exit");
+            let _ = exit_tx.try_broadcast(());
+        }
 
-    // let expected_wait_time = Duration::from_secs_f32(1f32 / (fps as f32));
+        let duplicator = match Duplicator::new(display_id) {
+            Ok(duplicator) => duplicator,
+            Err(err) => {
+                tracing::error!(?err, "create Duplicator failed");
+                return;
+            }
+        };
 
-    // TOKIO_RUNTIME.spawn(async move {
-    //     defer! {
-    //         info!(?remote_device_id, "desktop capture process exit");
-    //         let _ = exit_tx.try_broadcast(());
-    //     }
+        let expected_wait_time = Duration::from_secs_f32(1f32 / (fps as f32));
 
-    //     let mut interval = tokio::time::interval(expected_wait_time);
-    //     let epoch = unsafe { crate::ffi::ffmpeg::avutil::av_gettime_relative() };
+        loop {
+            let begin = std::time::Instant::now();
 
-    //     loop {
-    //         tokio::select! {
-    //             _ = exit_rx.recv() => break,
-    //             _ = interval.tick() => match duplicator.capture() {
-    //                 Ok(mut frame) => unsafe {
-    //                     frame.capture_time = crate::ffi::ffmpeg::avutil::av_gettime_relative() - epoch;
+            match exit_rx.try_recv() {
+                Ok(_) => break,
+                Err(err) => {
+                    if err.is_closed() || err.is_overflowed() {
+                        break;
+                    }
+                }
+            };
 
-    //                     trace!(
-    //                         width=?frame.width,
-    //                         height=?frame.height,
-    //                         chrominance_len=?frame.chrominance_buffer.len(),
-    //                         chrominance_stride=?frame.chrominance_stride,
-    //                         luminance_len=?frame.luminance_buffer.len(),
-    //                         luminance_stride=?frame.luminance_stride,
-    //                         capture_time=?frame.capture_time,
-    //                         "desktop capture frame",
-    //                     );
+            let frame = match duplicator.capture() {
+                Ok(frame) => frame,
+                Err(err) => {
+                    tracing::error!(?err, "duplicator capture frame failed");
+                    break;
+                }
+            };
 
-    //                     if let Err(_) = capture_frame_tx.send(frame) {
-    //                         // match err{
-    //                         //     TrySendError::Full(_) => warn!("desktop frame if full"),
-    //                         //     TrySendError::Closed(_) => return,
-    //                         // };
-    //                         return;
-    //                     }
-    //                 },
-    //                 Err(err) => {
-    //                     error!(?err, "capture desktop frame failed");
-    //                     return;
-    //                 }
-    //             }
-    //         }
+            if let Err(err) = capture_frame_tx.try_send(frame) {
+                if err.is_full() {
+                    tracing::warn!("duplicator capture frame tx is full");
+                } else if err.is_disconnected() {
+                    break;
+                }
+            }
 
-    // select! {
-    //     recv(exit_rx) -> _ => {
-    //         return;
-    //     },
-    //     recv(interval) -> _ =>  match duplicator.capture() {
-    //         Ok(mut frame) => unsafe {
-    //             frame.capture_time = av_gettime_relative() - epoch;
-
-    //             trace!(
-    //                 width=?frame.width,
-    //                 height=?frame.height,
-    //                 chrominance_len=?frame.chrominance_buffer.len(),
-    //                 chrominance_stride=?frame.chrominance_stride,
-    //                 luminance_len=?frame.luminance_buffer.len(),
-    //                 luminance_stride=?frame.luminance_stride,
-    //                 capture_time=?frame.capture_time,
-    //                 "desktop capture frame",
-    //             );
-
-    //             if let Err(_) = capture_frame_tx.send(frame) {
-    //                 return;
-    //             }
-    //         },
-    //         Err(err) => {
-    //             error!(?err, "capture desktop frame failed");
-    //             return;
-    //         }
-    //     }
-    // }
-    // }
-    // });
+            if let Some(wait_duration) = expected_wait_time.checked_sub(begin.elapsed()) {
+                std::thread::sleep(wait_duration);
+            }
+        }
+    });
 
     Ok(())
 }
@@ -179,7 +150,7 @@ pub fn start_desktop_render_process(
                 let decoded_video_frame = match decoded_video_frame_rx.recv() {
                     Ok(frame) => frame,
                     Err(_) => {
-                        info!(?remote_device_id, "video decoded channel is closed");
+                        tracing::info!(?remote_device_id, "video decoded channel is closed");
                         break;
                     }
                 };
@@ -200,7 +171,7 @@ pub fn start_desktop_render_process(
                 }
             }
 
-            info!(?remote_device_id, "video render process exit");
+            tracing::info!(?remote_device_id, "video render process exit");
         })
         .and_then(|_| Ok(()))
         .map_err(|err| {

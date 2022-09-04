@@ -1,12 +1,13 @@
 use std::ffi::CStr;
-
 use super::ffmpeg_encoder_config::{FFMPEGEncoderType, Libx264Config};
 use crate::{
     api_error,
     component::capture_frame::CaptureFrame,
     error::MirrorXError,
     ffi::ffmpeg::{avcodec::*, avutil::*},
-    service::endpoint::message::{EndPointMessagePacket, EndPointMessagePacketType, EndPointMessage, VideoFrame},
+    service::endpoint::message::{
+        EndPointMessage, EndPointMessagePacket, EndPointMessagePacketType, VideoFrame,
+    },
 };
 use tokio::sync::mpsc::Sender;
 
@@ -149,16 +150,16 @@ impl Encoder {
                 ));
             }
 
-            // (*self.frame).data[0] = frame.luminance_bytes.as_ptr() as *mut _;
-            // (*self.frame).linesize[0] = frame.luminance_stride as i32;
-            // (*self.frame).data[1] = frame.chrominance_bytes.as_ptr() as *mut _;
-            // (*self.frame).linesize[1] = frame.chrominance_stride as i32;
-            // // (*self.frame).pts = av_rescale_q(
-            // //     frame.capture_time,
-            // //     AV_TIME_BASE_Q,
-            // //     (*self.codec_ctx).time_base,
-            // // );
-            // (*self.frame).pts = chrono::Utc::now().timestamp_millis();
+            (*self.frame).data[0] = frame.lumina_bytes.as_ptr() as *mut _;
+            (*self.frame).linesize[0] = frame.lumina_stride as i32;
+            (*self.frame).data[1] = frame.chrominance_bytes.as_ptr() as *mut _;
+            (*self.frame).linesize[1] = frame.chrominance_stride as i32;
+            // (*self.frame).pts = av_rescale_q(
+            //     frame.capture_time,
+            //     AV_TIME_BASE_Q,
+            //     (*self.codec_ctx).time_base,
+            // );
+            (*self.frame).pts = chrono::Utc::now().timestamp_millis();
 
             ret = avcodec_send_frame(self.codec_ctx, self.frame);
 
@@ -194,7 +195,6 @@ impl Encoder {
 
                     for (i, e) in description_data.iter().enumerate() {
                         if *e == 0x67 || *e == 0x68 {
-                            //
                             let n = description_data[i - 1] as u16
                                 | ((description_data[i - 2] as u16) << 8);
 
