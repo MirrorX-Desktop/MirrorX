@@ -1,5 +1,7 @@
 use crate::{
-    component::video_decoder::DecodedFrame, error::MirrorXError, service::endpoint::message::*,
+    component::{video_decoder::DecodedFrame, video_encoder::FFMPEGEncoderType},
+    error::MirrorXError,
+    service::endpoint::message::*,
     utility::runtime::TOKIO_RUNTIME,
 };
 use async_broadcast::TryRecvError;
@@ -20,65 +22,43 @@ pub fn start_video_encode_process(
     >,
     packet_tx: tokio::sync::mpsc::Sender<EndPointMessagePacket>,
 ) -> Result<(), MirrorXError> {
-    let (encoder_name, options) = if cfg!(target_os = "macos") {
-        (
-            "h264_videotoolbox",
-            HashMap::from([("realtime", "1"), ("allow_sw", "0")]),
-        )
-    } else if cfg!(target_os = "windows") {
-        (
-            "libx264",
-            HashMap::from([
-                ("profile", "high"),
-                ("level", "5.0"),
-                ("preset", "ultrafast"),
-                ("tune", "zerolatency"),
-            ]),
-        )
-    } else {
-        panic!("unsupported platform")
-    };
+    #[cfg(target_os = "macos")]
+    let mut encoder = crate::component::video_encoder::Encoder::new(width, height)?;
+    #[cfg(not(target_os = "macos"))]
+    let mut encoder = crate::component::video_encoder::Encoder::new(
+        FFMPEGEncoderType::Libx264,
+        width,
+        height,
+        fps,
+    )?;
 
-    // let mut encoder = crate::component::video_encoder::videotoolbox::Encoder::new(width, height)?;
+    TOKIO_RUNTIME.spawn_blocking(move || {
+        defer! {
+            info!(?remote_device_id, "video encode process exit");
+            let _ = exit_tx.try_broadcast(());
+        }
 
-    // std::thread::Builder::new().name(format!("video_encode_process:{}", remote_device_id))
-    // .spawn(move || {
-    //     let tx_ptr = Box::into_raw(Box::new(packet_tx));
+        loop {
+            match exit_rx.try_recv() {
+                Ok(_) => return,
+                Err(err) => {
+                    if err == TryRecvError::Closed {
+                        return;
+                    }
+                }
+            };
 
-    //     defer! {
-    //         unsafe {
-    //             let _ = Box::from_raw(tx_ptr);
-    //         }
-
-    //         info!(?remote_device_id, "video encode process exit");
-    //         let _ = exit_tx.try_broadcast(());
-    //     }
-
-    //     loop {
-    //         match exit_rx.try_recv() {
-    //             Ok(_) => return,
-    //             Err(err) => {
-    //                 if err == TryRecvError::Closed {
-    //                     return;
-    //                 }
-    //             }
-    //         };
-
-    //         match capture_frame_rx.recv() {
-    //             Ok(capture_frame) => {
-    //                 if let Err(err) = encoder.encode(capture_frame, tx_ptr) {
-    //                     error!(?err, "video frame encode failed");
-    //                     return;
-    //                 }
-    //             }
-    //             Err(_) => return,
-    //         };
-    //     }
-    // })
-    // .and_then(|_| Ok(()))
-    // .map_err(|err| {
-    //     MirrorXError::Other(anyhow::anyhow!("spawn video encode process failed ({err})"))
-    // })
+            match capture_frame_rx.recv() {
+                Ok(capture_frame) => {
+                    if let Err(err) = encoder.encode(capture_frame, &packet_tx) {
+                        error!(?err, "video frame encode failed");
+                        return;
+                    }
+                }
+                Err(_) => return,
+            };
+        }
+    });
 
     Ok(())
 }

@@ -37,7 +37,7 @@ pub struct Duplicator {
     vertex_buffer: Option<ID3D11Buffer>,
 
     pixel_shader: ID3D11PixelShader,
-    pixel_shader_lumina: ID3D11PixelShader,
+    pixel_shader_luminance: ID3D11PixelShader,
     pixel_shader_chrominance: ID3D11PixelShader,
 
     duplication: IDXGIOutputDuplication,
@@ -47,10 +47,10 @@ pub struct Duplicator {
     backend_viewport: [D3D11_VIEWPORT; 1],
     backend_rtv: [Option<ID3D11RenderTargetView>; 1],
 
-    lumina_render_texture: ID3D11Texture2D,
-    lumina_staging_texture: ID3D11Texture2D,
-    lumina_viewport: [D3D11_VIEWPORT; 1],
-    lumina_rtv: [Option<ID3D11RenderTargetView>; 1],
+    luminance_render_texture: ID3D11Texture2D,
+    luminance_staging_texture: ID3D11Texture2D,
+    luminance_viewport: [D3D11_VIEWPORT; 1],
+    luminance_rtv: [Option<ID3D11RenderTargetView>; 1],
 
     chrominance_render_texture: ID3D11Texture2D,
     chrominance_staging_texture: ID3D11Texture2D,
@@ -109,17 +109,17 @@ impl Duplicator {
                 vertex_shader,
                 vertex_buffer: Some(vertex_buffer),
                 pixel_shader,
-                pixel_shader_lumina,
+                pixel_shader_luminance: pixel_shader_lumina,
                 pixel_shader_chrominance,
                 duplication,
                 dxgi_outdupl_desc,
                 backend_texture,
                 backend_viewport: [backend_viewport],
                 backend_rtv: [Some(backend_rtv)],
-                lumina_render_texture,
-                lumina_staging_texture,
-                lumina_viewport: [lumina_viewport],
-                lumina_rtv: [Some(lumina_rtv)],
+                luminance_render_texture: lumina_render_texture,
+                luminance_staging_texture: lumina_staging_texture,
+                luminance_viewport: [lumina_viewport],
+                luminance_rtv: [Some(lumina_rtv)],
                 chrominance_render_texture,
                 chrominance_staging_texture,
                 chrominance_viewport: [chrominance_viewport],
@@ -233,12 +233,12 @@ impl Duplicator {
         // draw lumina plane
 
         self.device_context
-            .OMSetRenderTargets(&self.lumina_rtv, None);
+            .OMSetRenderTargets(&self.luminance_rtv, None);
 
         self.device_context
-            .PSSetShader(&self.pixel_shader_lumina, &[]);
+            .PSSetShader(&self.pixel_shader_luminance, &[]);
 
-        self.device_context.RSSetViewports(&self.lumina_viewport);
+        self.device_context.RSSetViewports(&self.luminance_viewport);
 
         self.device_context.Draw(VERTICES.len() as u32, 0);
 
@@ -261,8 +261,10 @@ impl Duplicator {
     }
 
     unsafe fn create_capture_frame(&self) -> CoreResult<CaptureFrame> {
-        self.device_context
-            .CopyResource(&self.lumina_staging_texture, &self.lumina_render_texture);
+        self.device_context.CopyResource(
+            &self.luminance_staging_texture,
+            &self.luminance_render_texture,
+        );
 
         self.device_context.CopyResource(
             &self.chrominance_staging_texture,
@@ -270,7 +272,7 @@ impl Duplicator {
         );
 
         let lumina_mapped_resource = windows_api_check!(self.device_context.Map(
-            &self.lumina_staging_texture,
+            &self.luminance_staging_texture,
             0,
             D3D11_MAP_READ,
             0
@@ -284,7 +286,8 @@ impl Duplicator {
         )
         .to_vec();
 
-        self.device_context.Unmap(&self.lumina_staging_texture, 0);
+        self.device_context
+            .Unmap(&self.luminance_staging_texture, 0);
 
         let chrominance_mapped_resource = windows_api_check!(self.device_context.Map(
             &self.chrominance_staging_texture,
@@ -307,8 +310,8 @@ impl Duplicator {
         Ok(CaptureFrame {
             width: self.dxgi_outdupl_desc.ModeDesc.Width,
             height: self.dxgi_outdupl_desc.ModeDesc.Height,
-            lumina_bytes,
-            lumina_stride,
+            luminance_bytes: lumina_bytes,
+            luminance_stride: lumina_stride,
             chrominance_bytes,
             chrominance_stride,
         })

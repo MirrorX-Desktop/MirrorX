@@ -30,7 +30,7 @@ async fn test_capture_and_encode() -> anyhow::Result<()> {
         exit_tx.clone(),
         exit_rx.clone(),
         capture_frame_tx,
-        &monitor.id,
+        Some(monitor.id.clone()),
         monitor.refresh_rate,
     )?;
 
@@ -49,7 +49,7 @@ async fn test_capture_and_encode() -> anyhow::Result<()> {
         loop {
             match packet_rx.recv().await {
                 Some(packet) => {
-                    tracing::info!("recevie packet")
+                    tracing::info!("recevie packet");
                 }
                 None => {
                     tracing::info!("break loop");

@@ -1,4 +1,3 @@
-use std::ffi::CStr;
 use super::ffmpeg_encoder_config::{FFMPEGEncoderType, Libx264Config};
 use crate::{
     api_error,
@@ -9,6 +8,7 @@ use crate::{
         EndPointMessage, EndPointMessagePacket, EndPointMessagePacketType, VideoFrame,
     },
 };
+use std::ffi::CStr;
 use tokio::sync::mpsc::Sender;
 
 pub struct Encoder {
@@ -150,8 +150,8 @@ impl Encoder {
                 ));
             }
 
-            (*self.frame).data[0] = frame.lumina_bytes.as_ptr() as *mut _;
-            (*self.frame).linesize[0] = frame.lumina_stride as i32;
+            (*self.frame).data[0] = frame.luminance_bytes.as_ptr() as *mut _;
+            (*self.frame).linesize[0] = frame.luminance_stride as i32;
             (*self.frame).data[1] = frame.chrominance_bytes.as_ptr() as *mut _;
             (*self.frame).linesize[1] = frame.chrominance_stride as i32;
             // (*self.frame).pts = av_rescale_q(
