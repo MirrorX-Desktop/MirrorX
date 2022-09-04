@@ -60,6 +60,13 @@ pub struct Duplicator {
     sampler_state: [Option<ID3D11SamplerState>; 1],
     blend_state: ID3D11BlendState,
     input_layout: ID3D11InputLayout,
+
+    mouse_position_x: i32,
+    mouse_position_y: i32,
+    mouse_last_timestamp: i64,
+    mouse_visible: bool,
+    mouse_shape_buffer: Vec<u8>,
+    mouse_shape_info: DXGI_OUTDUPL_POINTER_SHAPE_INFO,
 }
 
 unsafe impl Send for Duplicator {}
@@ -127,11 +134,17 @@ impl Duplicator {
                 sampler_state: [Some(sampler_state)],
                 blend_state,
                 input_layout,
+                mouse_position_x: 0,
+                mouse_position_y: 0,
+                mouse_last_timestamp: 0,
+                mouse_visible: false,
+                mouse_shape_buffer: Vec::new(),
+                mouse_shape_info: std::mem::zeroed(),
             })
         }
     }
 
-    pub fn capture(&self) -> CoreResult<CaptureFrame> {
+    pub fn capture(&mut self) -> CoreResult<CaptureFrame> {
         unsafe {
             self.acquire_frame()?;
             self.draw_lumina_and_chrominance_texture()?;
@@ -139,7 +152,7 @@ impl Duplicator {
         }
     }
 
-    unsafe fn acquire_frame(&self) -> CoreResult<()> {
+    unsafe fn acquire_frame(&mut self) -> CoreResult<()> {
         let mut dxgi_resource = None;
         let mut dxgi_outdupl_frame_info = std::mem::zeroed();
 
@@ -178,20 +191,20 @@ impl Duplicator {
             }
         }
 
-        defer! {
-            if let Err(err) = self.duplication.ReleaseFrame() {
-                tracing::error!("DXGI release frame failed ({:?})", err.code());
-            }
-        }
-
         if let Some(resource) = dxgi_resource {
             let desktop_texture: ID3D11Texture2D = windows_api_check!(resource.cast());
 
             self.device_context
                 .CopyResource(&self.backend_texture, desktop_texture);
 
-            if dxgi_outdupl_frame_info.PointerPosition.Visible.as_bool() {
+            self.update_mouse(&dxgi_outdupl_frame_info)?;
+
+            if self.mouse_visible {
                 self.draw_mouse(&dxgi_outdupl_frame_info)?;
+            }
+
+            if let Err(err) = self.duplication.ReleaseFrame() {
+                tracing::error!("DXGI release frame failed ({:?})", err.code());
             }
 
             Ok(())
@@ -317,21 +330,59 @@ impl Duplicator {
         })
     }
 
-    unsafe fn draw_mouse(&self, desktop_frame_info: &DXGI_OUTDUPL_FRAME_INFO) -> CoreResult<()> {
-        let mut cursor_shape_buffer =
-            Vec::with_capacity(desktop_frame_info.PointerShapeBufferSize as usize);
-        let mut cursor_shape_buffer_length = 0u32;
-        let mut cursor_shape_info: DXGI_OUTDUPL_POINTER_SHAPE_INFO = std::mem::zeroed();
+    unsafe fn update_mouse(
+        &mut self,
+        desktop_frame_info: &DXGI_OUTDUPL_FRAME_INFO,
+    ) -> CoreResult<()> {
+        if desktop_frame_info.LastMouseUpdateTime == 0 {
+            return Ok(());
+        }
 
+        let mut update_position = true;
+
+        if !desktop_frame_info.PointerPosition.Visible.as_bool() {
+            update_position = false;
+        }
+
+        if desktop_frame_info.PointerPosition.Visible.as_bool()
+            && self.mouse_visible
+            && self.mouse_last_timestamp > desktop_frame_info.LastMouseUpdateTime
+        {
+            update_position = false;
+        }
+
+        if update_position {
+            self.mouse_position_x = desktop_frame_info.PointerPosition.Position.x;
+            self.mouse_position_y = desktop_frame_info.PointerPosition.Position.y;
+            self.mouse_last_timestamp = desktop_frame_info.LastMouseUpdateTime;
+            self.mouse_visible = desktop_frame_info.PointerPosition.Visible.as_bool();
+        }
+
+        if desktop_frame_info.PointerShapeBufferSize == 0 {
+            return Ok(());
+        }
+
+        if (desktop_frame_info.PointerShapeBufferSize as usize) > self.mouse_shape_buffer.capacity()
+        {
+            self.mouse_shape_buffer
+                .resize(desktop_frame_info.PointerShapeBufferSize as usize, 0);
+        }
+
+        let mut buffer_size_required = 0;
         windows_api_check!(self.duplication.GetFramePointerShape(
             desktop_frame_info.PointerShapeBufferSize,
-            cursor_shape_buffer.as_mut_ptr() as *mut _,
-            &mut cursor_shape_buffer_length,
-            &mut cursor_shape_info,
+            self.mouse_shape_buffer.as_mut_ptr() as *mut _,
+            &mut buffer_size_required,
+            &mut self.mouse_shape_info,
         ));
 
-        cursor_shape_buffer.set_len(desktop_frame_info.PointerShapeBufferSize as usize);
+        Ok(())
+    }
 
+    unsafe fn draw_mouse(
+        &mut self,
+        desktop_frame_info: &DXGI_OUTDUPL_FRAME_INFO,
+    ) -> CoreResult<()> {
         let mut full_desc: D3D11_TEXTURE2D_DESC = std::mem::zeroed();
         self.backend_texture.GetDesc(&mut full_desc);
 
@@ -368,28 +419,26 @@ impl Duplicator {
 
         let mut init_buffer = std::ptr::null();
 
-        match DXGI_OUTDUPL_POINTER_SHAPE_TYPE(cursor_shape_info.Type as i32) {
+        match DXGI_OUTDUPL_POINTER_SHAPE_TYPE(self.mouse_shape_info.Type as i32) {
             DXGI_OUTDUPL_POINTER_SHAPE_TYPE_COLOR => {
-                tracing::info!(
+                tracing::trace!(
                     "DXGI_OUTDUPL_POINTER_SHAPE_INFO: DXGI_OUTDUPL_POINTER_SHAPE_TYPE_COLOR"
                 );
 
                 pointer_left = desktop_frame_info.PointerPosition.Position.x as i32;
                 pointer_top = desktop_frame_info.PointerPosition.Position.y as i32;
-                pointer_width = cursor_shape_info.Width as i32;
-                pointer_height = cursor_shape_info.Height as i32;
+                pointer_width = self.mouse_shape_info.Width as i32;
+                pointer_height = self.mouse_shape_info.Height as i32;
             }
             DXGI_OUTDUPL_POINTER_SHAPE_TYPE_MONOCHROME => {
-                tracing::debug!(
+                tracing::trace!(
                     "DXGI_OUTDUPL_POINTER_SHAPE_INFO: DXGI_OUTDUPL_POINTER_SHAPE_TYPE_MONOCHROME"
                 );
 
                 let buffer = self.process_mono_mask(
                     true,
                     &full_desc,
-                    &mut cursor_shape_info,
                     desktop_frame_info,
-                    &mut cursor_shape_buffer,
                     &mut pointer_width,
                     &mut pointer_height,
                     &mut pointer_left,
@@ -400,16 +449,14 @@ impl Duplicator {
                 init_buffer = buffer.as_ptr()
             }
             DXGI_OUTDUPL_POINTER_SHAPE_TYPE_MASKED_COLOR => {
-                tracing::debug!(
+                tracing::trace!(
                     "DXGI_OUTDUPL_POINTER_SHAPE_INFO: DXGI_OUTDUPL_POINTER_SHAPE_TYPE_MASKED_COLOR"
                 );
 
                 let buffer = self.process_mono_mask(
                     false,
                     &full_desc,
-                    &mut cursor_shape_info,
                     desktop_frame_info,
-                    &mut cursor_shape_buffer,
                     &mut pointer_width,
                     &mut pointer_height,
                     &mut pointer_left,
@@ -419,7 +466,12 @@ impl Duplicator {
 
                 init_buffer = buffer.as_ptr()
             }
-            _ => {}
+            _ => {
+                tracing::error!(
+                    "duplicator mouse shape type is unknown: {}",
+                    self.mouse_shape_info.Type
+                );
+            }
         };
 
         let mut vertices = VERTICES.clone();
@@ -444,18 +496,24 @@ impl Duplicator {
         vertices[5].pos.y = -1f32 * (pointer_top - center_y) as f32 / center_y as f32;
 
         pointer_texture_desc.Width = pointer_width as u32;
+        if pointer_texture_desc.Width == 0 {
+            tracing::error!("pointer width == 0, {:?}", pointer_width);
+        }
         pointer_texture_desc.Height = pointer_height as u32;
+        if pointer_texture_desc.Height == 0 {
+            tracing::error!("pointer height == 0, {:?}", pointer_height);
+        }
 
         let mut init_data: D3D11_SUBRESOURCE_DATA = std::mem::zeroed();
         init_data.pSysMem =
-            if cursor_shape_info.Type == DXGI_OUTDUPL_POINTER_SHAPE_TYPE_COLOR.0 as u32 {
-                cursor_shape_buffer.as_ptr() as *const _
+            if self.mouse_shape_info.Type == DXGI_OUTDUPL_POINTER_SHAPE_TYPE_COLOR.0 as u32 {
+                self.mouse_shape_buffer.as_ptr() as *const _
             } else {
                 init_buffer as *const _
             };
         init_data.SysMemPitch =
-            if cursor_shape_info.Type == DXGI_OUTDUPL_POINTER_SHAPE_TYPE_COLOR.0 as u32 {
-                cursor_shape_info.Pitch
+            if self.mouse_shape_info.Type == DXGI_OUTDUPL_POINTER_SHAPE_TYPE_COLOR.0 as u32 {
+                self.mouse_shape_info.Pitch
             } else {
                 pointer_width as u32 * BPP
             };
@@ -518,12 +576,10 @@ impl Duplicator {
     }
 
     unsafe fn process_mono_mask(
-        &self,
+        &mut self,
         is_mono: bool,
         full_desc: &D3D11_TEXTURE2D_DESC,
-        pointer_info: &mut DXGI_OUTDUPL_POINTER_SHAPE_INFO,
         frame_info: &DXGI_OUTDUPL_FRAME_INFO,
-        pointer_shape_buffer: &mut [u8],
         pointer_width: &mut i32,
         pointer_height: &mut i32,
         pointer_left: &mut i32,
@@ -537,27 +593,27 @@ impl Duplicator {
         let given_top = frame_info.PointerPosition.Position.y;
 
         if given_left < 0 {
-            *pointer_width = given_left + pointer_info.Width as i32;
-        } else if given_left + (pointer_info.Width as i32) > desktop_width {
+            *pointer_width = given_left + self.mouse_shape_info.Width as i32;
+        } else if given_left + (self.mouse_shape_info.Width as i32) > desktop_width {
             *pointer_width = desktop_width - given_left;
         } else {
-            *pointer_width = pointer_info.Width as i32;
+            *pointer_width = self.mouse_shape_info.Width as i32;
         }
 
         if is_mono {
-            pointer_info.Height /= 2;
+            self.mouse_shape_info.Height /= 2;
         }
 
         if given_top < 0 {
-            *pointer_height = given_top + pointer_info.Height as i32;
-        } else if given_top + (pointer_info.Height as i32) > desktop_height {
+            *pointer_height = given_top + self.mouse_shape_info.Height as i32;
+        } else if given_top + (self.mouse_shape_info.Height as i32) > desktop_height {
             *pointer_height = desktop_height - given_top;
         } else {
-            *pointer_height = pointer_info.Height as i32;
+            *pointer_height = self.mouse_shape_info.Height as i32;
         }
 
         if is_mono {
-            pointer_info.Height *= 2;
+            self.mouse_shape_info.Height *= 2;
         }
 
         *pointer_left = given_left.max(0);
@@ -624,14 +680,14 @@ impl Duplicator {
                 mask = mask.wrapping_shr((skip_x % 8) as u32);
 
                 for col in 0..*pointer_width {
-                    let and_mask: u8 = pointer_shape_buffer[((col + skip_x) / 8
-                        + (row + skip_y) * (pointer_info.Pitch as i32))
+                    let and_mask: u8 = self.mouse_shape_buffer[((col + skip_x) / 8
+                        + (row + skip_y) * (self.mouse_shape_info.Pitch as i32))
                         as usize]
                         & mask;
 
-                    let xor_mask: u8 = pointer_shape_buffer[((col + skip_x) / 8
-                        + (row + skip_y + ((pointer_info.Height / 2) as i32))
-                            * (pointer_info.Pitch as i32))
+                    let xor_mask: u8 = self.mouse_shape_buffer[((col + skip_x) / 8
+                        + (row + skip_y + ((self.mouse_shape_info.Height / 2) as i32))
+                            * (self.mouse_shape_info.Pitch as i32))
                         as usize]
                         & mask;
 
@@ -651,12 +707,13 @@ impl Duplicator {
                 }
             }
         } else {
-            let buffer_32: *mut u32 = std::mem::transmute(pointer_shape_buffer.as_mut_ptr());
+            let buffer_32: *mut u32 = std::mem::transmute(self.mouse_shape_buffer.as_mut_ptr());
             for row in 0..*pointer_height {
                 for col in 0..*pointer_width {
                     let mask_val: u32 = 0xFF000000
                         & *buffer_32.add(
-                            ((col + skip_x) + ((row + skip_y) * (pointer_info.Pitch as i32 / 4)))
+                            ((col + skip_x)
+                                + ((row + skip_y) * (self.mouse_shape_info.Pitch as i32 / 4)))
                                 as usize,
                         );
 
@@ -666,14 +723,15 @@ impl Duplicator {
                             .add(((row * desktop_pitch_in_pixels) + col) as usize)
                             ^ *buffer_32.add(
                                 ((col + skip_x)
-                                    + ((row + skip_y) * (pointer_info.Pitch as i32 / 4)))
+                                    + ((row + skip_y) * (self.mouse_shape_info.Pitch as i32 / 4)))
                                     as usize,
                             ))
                             | 0xFF000000;
                     } else {
                         // Mask was 0x00
                         *buffer_32.add(((row * *pointer_width) + col) as usize) = *buffer_32.add(
-                            ((col + skip_x) + ((row + skip_y) * (pointer_info.Pitch as i32 / 4)))
+                            ((col + skip_x)
+                                + ((row + skip_y) * (self.mouse_shape_info.Pitch as i32 / 4)))
                                 as usize,
                         ) | 0xFF000000;
                     }
@@ -717,7 +775,7 @@ unsafe fn init_directx() -> CoreResult<(ID3D11Device, ID3D11DeviceContext)> {
             None,
             driver_type,
             None,
-            D3D11_CREATE_DEVICE_BGRA_SUPPORT,
+            D3D11_CREATE_DEVICE_BGRA_SUPPORT | D3D11_CREATE_DEVICE_DEBUG,
             &[],
             D3D11_SDK_VERSION,
             &mut device,
@@ -921,7 +979,7 @@ unsafe fn init_backend_resources(
     texture_desc.Height = dxgi_outdupl_desc.ModeDesc.Height;
     texture_desc.MipLevels = 1;
     texture_desc.ArraySize = 1;
-    texture_desc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+    texture_desc.Format = dxgi_outdupl_desc.ModeDesc.Format;
     texture_desc.SampleDesc.Count = 1;
     texture_desc.SampleDesc.Quality = 0;
     texture_desc.Usage = D3D11_USAGE_DEFAULT;
@@ -1104,7 +1162,7 @@ unsafe fn init_input_layout(device: &ID3D11Device) -> CoreResult<ID3D11InputLayo
 fn test_duplicator() {
     tracing_subscriber::fmt::init();
 
-    let duplicator = Duplicator::new(None).unwrap();
+    let mut duplicator = Duplicator::new(None).unwrap();
 
     tracing::info!("begin capture frame");
 

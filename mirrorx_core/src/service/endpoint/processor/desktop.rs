@@ -17,9 +17,9 @@ pub fn start_desktop_capture_process(
     display_id: Option<String>,
     fps: u8,
 ) -> Result<(), MirrorXError> {
+    use crate::component::capture_frame::CaptureFrame;
     use std::ops::Sub;
     use tokio::sync::mpsc::error::TrySendError;
-    use crate::component::capture_frame::CaptureFrame;
 
     TOKIO_RUNTIME.spawn_blocking(move || {
         defer! {
@@ -27,7 +27,7 @@ pub fn start_desktop_capture_process(
             let _ = exit_tx.try_broadcast(());
         }
 
-        let duplicator = match Duplicator::new(display_id) {
+        let mut duplicator = match Duplicator::new(display_id) {
             Ok(duplicator) => duplicator,
             Err(err) => {
                 tracing::error!(?err, "create Duplicator failed");
