@@ -1,21 +1,17 @@
 use super::frame::DecodedFrame;
-use crate::ffi::libyuv::*;
 use crate::{
-    error::MirrorXError,
-    ffi::ffmpeg::{avcodec::*, avutil::*},
+    core_error,
+    error::{CoreError, CoreResult},
+    ffi::{
+        ffmpeg::{avcodec::*, avutil::*},
+        libyuv::*,
+    },
     service::endpoint::message::VideoFrame,
 };
-use anyhow::anyhow;
 use crossbeam::channel::Sender;
-use std::{
-    collections::HashMap,
-    ffi::{CStr, CString},
-    panic, ptr,
-};
-use tracing::{error, info, warn};
+use std::ffi::{CStr, CString};
 
 pub struct VideoDecoder {
-    codec: *const AVCodec,
     codec_ctx: *mut AVCodecContext,
     parser_ctx: *mut AVCodecParserContext,
     packet: *mut AVPacket,
@@ -24,171 +20,117 @@ pub struct VideoDecoder {
 }
 
 unsafe impl Send for VideoDecoder {}
-unsafe impl Sync for VideoDecoder {}
 
 impl VideoDecoder {
-    pub fn new(
-        decoder_name: &str,
-        width: i32,
-        height: i32,
-        fps: i32,
-        options: HashMap<&str, &str>,
-    ) -> Result<VideoDecoder, MirrorXError> {
-        let decoder_name_ptr =
-            CString::new(decoder_name).map_err(|err| MirrorXError::Other(anyhow!(err)))?;
-
+    pub fn new(width: i32, height: i32) -> CoreResult<VideoDecoder> {
         unsafe {
             av_log_set_level(AV_LOG_TRACE);
             av_log_set_flags(AV_LOG_SKIP_REPEATED);
 
             let mut decoder = VideoDecoder {
-                codec: ptr::null(),
-                codec_ctx: ptr::null_mut(),
-                parser_ctx: ptr::null_mut(),
-                packet: ptr::null_mut(),
-                decode_frame: ptr::null_mut(),
-                hw_decode_frame: ptr::null_mut(),
+                codec_ctx: std::ptr::null_mut(),
+                parser_ctx: std::ptr::null_mut(),
+                packet: std::ptr::null_mut(),
+                decode_frame: std::ptr::null_mut(),
+                hw_decode_frame: std::ptr::null_mut(),
             };
 
-            let mut support_hw_device_type = AV_HWDEVICE_TYPE_NONE;
-            loop {
-                support_hw_device_type = av_hwdevice_iterate_types(support_hw_device_type);
-                if support_hw_device_type == AV_HWDEVICE_TYPE_NONE {
-                    break;
-                }
-
-                let support_hw_device_name = av_hwdevice_get_type_name(support_hw_device_type);
-                match CStr::from_ptr(support_hw_device_name).to_str() {
-                    Ok(name) => info!(device=?name,"support hw device name"),
-                    Err(err) => warn!(err=?err,"convert hw device name from C str failed"),
-                }
+            let codec = avcodec_find_decoder(AV_CODEC_ID_H264);
+            if codec.is_null() {
+                return Err(core_error!("avcodec_find_decoder returns null"));
             }
 
-            decoder.codec = avcodec_find_decoder(AV_CODEC_ID_H264);
-            if decoder.codec.is_null() {
-                return Err(MirrorXError::MediaVideoDecoderNotFound(
-                    decoder_name.to_string(),
-                ));
-            }
-
-            decoder.codec_ctx = avcodec_alloc_context3(decoder.codec);
+            decoder.codec_ctx = avcodec_alloc_context3(codec);
             if decoder.codec_ctx.is_null() {
-                return Err(MirrorXError::MediaVideoDecoderAllocContextFailed);
+                return Err(core_error!("avcodec_alloc_context3 returns null"));
             }
 
             (*decoder.codec_ctx).width = width;
             (*decoder.codec_ctx).height = height;
-            (*decoder.codec_ctx).framerate = AVRational { num: fps, den: 1 };
+            (*decoder.codec_ctx).framerate = AVRational { num: 1, den: 1 };
             // (*decoder.codec_ctx).pkt_timebase = AVRational { num: 1, den: fps };
             (*decoder.codec_ctx).pix_fmt = AV_PIX_FMT_NV12;
             (*decoder.codec_ctx).color_range = AVCOL_RANGE_JPEG;
-            // (*decoder.codec_ctx).color_primaries = AVCOL_PRI_BT709;
-            // (*decoder.codec_ctx).color_trc = AVCOL_TRC_BT709;
-            // (*decoder.codec_ctx).colorspace = AVCOL_SPC_BT709;
+            (*decoder.codec_ctx).color_primaries = AVCOL_PRI_BT709;
+            (*decoder.codec_ctx).color_trc = AVCOL_TRC_BT709;
+            (*decoder.codec_ctx).colorspace = AVCOL_SPC_BT709;
             (*decoder.codec_ctx).flags |= AV_CODEC_FLAG_LOW_DELAY;
 
-            for (k, v) in options {
-                Self::set_opt(decoder.codec_ctx, k, v, 0)?;
+            let mut hw_device_type =
+                av_hwdevice_find_type_by_name(CString::new("d3d11va")?.as_ptr());
+
+            if hw_device_type == AV_HWDEVICE_TYPE_NONE {
+                tracing::error!("current environment does't support 'd3d11va'");
+
+                let mut devices = Vec::new();
+                loop {
+                    hw_device_type = av_hwdevice_iterate_types(hw_device_type);
+                    if hw_device_type == AV_HWDEVICE_TYPE_NONE {
+                        break;
+                    }
+
+                    let device_name = av_hwdevice_get_type_name(hw_device_type);
+
+                    devices.push(
+                        CStr::from_ptr(device_name)
+                            .to_str()
+                            .map_or("unknown", |v| v),
+                    );
+                }
+
+                tracing::info!(?devices, "support hw device");
+                tracing::info!("init software decoder");
+
+                decoder.parser_ctx = av_parser_init(AV_CODEC_ID_H264);
+                if decoder.parser_ctx.is_null() {
+                    return Err(core_error!("av_parser_init returns null"));
+                }
+            } else {
+                let mut hwdevice_ctx = std::ptr::null_mut();
+
+                let ret = av_hwdevice_ctx_create(
+                    &mut hwdevice_ctx,
+                    hw_device_type,
+                    std::ptr::null(),
+                    std::ptr::null_mut(),
+                    0,
+                );
+
+                if ret < 0 {
+                    return Err(core_error!(
+                        "av_hwdevice_ctx_create returns error code: {}",
+                        ret,
+                    ));
+                }
+
+                (*decoder.codec_ctx).hw_device_ctx = av_buffer_ref(hwdevice_ctx);
             }
 
             decoder.packet = av_packet_alloc();
             if decoder.packet.is_null() {
-                return Err(MirrorXError::MediaVideoDecoderAVPacketAllocFailed);
+                return Err(core_error!("av_packet_alloc returns null"));
             }
 
             decoder.decode_frame = av_frame_alloc();
             if decoder.decode_frame.is_null() {
-                return Err(MirrorXError::MediaVideoDecoderAVFrameAllocFailed);
+                return Err(core_error!("av_frame_alloc returns null"));
             }
-
-            let hw_device_type = if cfg!(target_os = "windows") {
-                AV_HWDEVICE_TYPE_D3D11VA
-            } else if cfg!(target_os = "macos") {
-                AV_HWDEVICE_TYPE_VIDEOTOOLBOX
-            } else {
-                panic!("unsupported platform")
-            };
-
-            let mut hwdevice_ctx = ptr::null_mut();
-
-            let ret = av_hwdevice_ctx_create(
-                &mut hwdevice_ctx,
-                hw_device_type,
-                ptr::null(),
-                ptr::null_mut(),
-                0,
-            );
-
-            if ret < 0 {
-                return Err(MirrorXError::MediaVideoDecoderHWDeviceCreateFailed(ret));
-            }
-
-            (*decoder.codec_ctx).hw_device_ctx = av_buffer_ref(hwdevice_ctx);
 
             decoder.hw_decode_frame = av_frame_alloc();
             if decoder.hw_decode_frame.is_null() {
-                return Err(MirrorXError::MediaVideoDecoderHWAVFrameAllocFailed);
+                return Err(core_error!("av_frame_alloc returns null"));
             }
 
-            let ret = avcodec_open2(decoder.codec_ctx, decoder.codec, ptr::null_mut());
+            let ret = avcodec_open2(decoder.codec_ctx, codec, std::ptr::null_mut());
             if ret != 0 {
-                return Err(MirrorXError::MediaVideoDecoderOpenFailed(ret));
+                return Err(core_error!("avcodec_open2 returns error code: {}", ret));
             }
 
             Ok(decoder)
         }
     }
 
-    pub fn set_opt(
-        codec_ctx: *mut AVCodecContext,
-        key: &str,
-        value: &str,
-        search_flags: i32,
-    ) -> Result<(), MirrorXError> {
-        let opt_name =
-            CString::new(key.to_string()).map_err(|err| MirrorXError::Other(anyhow!(err)))?;
-        let opt_value =
-            CString::new(value.to_string()).map_err(|err| MirrorXError::Other(anyhow!(err)))?;
-
-        unsafe {
-            let ret = av_opt_set(
-                (*codec_ctx).priv_data,
-                opt_name.as_ptr(),
-                opt_value.as_ptr(),
-                search_flags,
-            );
-
-            if ret == AVERROR_OPTION_NOT_FOUND {
-                return Err(MirrorXError::MediaVideoDecoderOptionNotFound(
-                    key.to_string(),
-                ));
-            } else if ret == AVERROR(libc::ERANGE) {
-                return Err(MirrorXError::MediaVideoDecoderOptionValueOutOfRange {
-                    key: key.to_string(),
-                    value: value.to_string(),
-                });
-            } else if ret == AVERROR(libc::EINVAL) {
-                return Err(MirrorXError::MediaVideoDecoderOptionValueInvalid {
-                    key: key.to_string(),
-                    value: value.to_string(),
-                });
-            } else if ret != 0 {
-                return Err(MirrorXError::MediaVideoDecoderOptionSetFailed {
-                    key: key.to_string(),
-                    value: value.to_string(),
-                    error_code: ret,
-                });
-            } else {
-                Ok(())
-            }
-        }
-    }
-
-    pub fn decode(
-        &self,
-        mut frame: VideoFrame,
-        tx: &Sender<DecodedFrame>,
-    ) -> Result<(), MirrorXError> {
+    pub fn decode(&self, mut frame: VideoFrame, tx: &Sender<DecodedFrame>) -> CoreResult<()> {
         unsafe {
             if !self.parser_ctx.is_null() {
                 let ret = av_parser_parse2(
@@ -204,7 +146,7 @@ impl VideoDecoder {
                 );
 
                 if ret < 0 {
-                    return Err(MirrorXError::MediaVideoDecoderParser2Failed(ret));
+                    return Err(core_error!("av_parser_parse2 returns error code: {}", ret));
                 }
             } else {
                 (*self.packet).data = frame.buffer.as_mut_ptr();
@@ -218,12 +160,14 @@ impl VideoDecoder {
             let mut ret = avcodec_send_packet(self.codec_ctx, self.packet);
 
             if ret == AVERROR(libc::EAGAIN) {
-                return Err(MirrorXError::MediaVideoDecoderPacketUnacceptable);
+                return Err(core_error!("avcodec_send_packet returns EAGAIN"));
             } else if ret == AVERROR_EOF {
-                return Err(MirrorXError::MediaVideoDecoderClosed);
+                return Err(core_error!("avcodec_send_packet returns AVERROR_EOF"));
             } else if ret < 0 {
-                error!(size = frame.buffer.len(), "packet size");
-                return Err(MirrorXError::MediaVideoDecoderSendPacketFailed(ret));
+                return Err(core_error!(
+                    "avcodec_send_packet returns error code: {}",
+                    ret
+                ));
             }
 
             loop {
@@ -231,91 +175,46 @@ impl VideoDecoder {
                 if ret == AVERROR(libc::EAGAIN) || ret == AVERROR_EOF {
                     return Ok(());
                 } else if ret < 0 {
-                    return Err(MirrorXError::MediaVideoDecoderReceiveFrameFailed(ret));
+                    return Err(core_error!(
+                        "avcodec_receive_frame returns error code: {}",
+                        ret
+                    ));
                 }
 
+                let mut tmp_frame: *mut AVFrame;
+
                 if !self.parser_ctx.is_null() {
+                    tmp_frame = self.decode_frame;
                 } else {
-                    match self.convert_yuv_to_rgb() {
-                        Ok(frame) => {
-                            if let Err(err) = tx.try_send(frame) {
-                                match err {
-                                    crossbeam::channel::TrySendError::Full(_) => {
-                                        warn!("video decoded frame channel is full")
-                                    }
-                                    crossbeam::channel::TrySendError::Disconnected(_) => {
-                                        return Err(MirrorXError::Other(anyhow::anyhow!(
-                                            "video decoded frame channel closed"
-                                        )));
-                                    }
-                                }
-                            }
-                        }
-                        Err(err) => return Err(err),
-                    };
+                    let ret = av_hwframe_transfer_data(self.hw_decode_frame, self.decode_frame, 0);
+                    if ret < 0 {
+                        return Err(core_error!(
+                            "av_hwframe_transfer_data returns error code: {}",
+                            ret
+                        ));
+                    }
+
+                    tmp_frame = self.hw_decode_frame;
+                }
+
+                av_frame_unref(tmp_frame);
+
+                let decode_frame_buffer = convert_yuv_to_rgb(tmp_frame)?;
+                let decoded_frame = DecodedFrame {
+                    buffer: decode_frame_buffer,
+                    width: (*tmp_frame).width,
+                    height: (*tmp_frame).height,
+                };
+
+                if let Err(err) = tx.try_send(decoded_frame) {
+                    if err.is_full() {
+                        tracing::warn!("decoded frame tx is full");
+                    } else if err.is_disconnected() {
+                        return Err(core_error!("decoded frame tx is disconnected"));
+                    }
                 }
             }
         }
-    }
-
-    unsafe fn convert_yuv_to_rgb(&self) -> Result<DecodedFrame, MirrorXError> {
-        let ret = av_hwframe_transfer_data(self.hw_decode_frame, self.decode_frame, 0);
-        if ret < 0 {
-            error!(ret = ret, "av_hwframe_transfer_data failed");
-            return Err(MirrorXError::MediaVideoDecoderOutputTxSendFailed);
-        }
-
-        let argb_frame_size = ((*self.hw_decode_frame).width as usize)
-            * ((*self.hw_decode_frame).height as usize)
-            * 4;
-
-        let mut argb_frame = Vec::<u8>::with_capacity(argb_frame_size);
-
-        #[cfg(target_os = "macos")]
-        let ret = NV12ToARGBMatrix(
-            (*self.hw_decode_frame).data[0],
-            (*self.hw_decode_frame).linesize[0] as isize,
-            (*self.hw_decode_frame).data[1],
-            (*self.hw_decode_frame).linesize[1] as isize,
-            argb_frame.as_mut_ptr(),
-            ((*self.hw_decode_frame).width as isize) * 4,
-            &kYuvF709Constants,
-            (*self.hw_decode_frame).width as isize,
-            (*self.hw_decode_frame).height as isize,
-        );
-
-        #[cfg(target_os = "windows")]
-        let ret = NV21ToARGBMatrix(
-            (*self.hw_decode_frame).data[0],
-            (*self.hw_decode_frame).linesize[0] as isize,
-            (*self.hw_decode_frame).data[1],
-            (*self.hw_decode_frame).linesize[1] as isize,
-            argb_frame.as_mut_ptr(),
-            ((*self.hw_decode_frame).width as isize) * 4,
-            &kYvuF709Constants,
-            (*self.hw_decode_frame).width as isize,
-            (*self.hw_decode_frame).height as isize,
-        );
-
-        if ret != 0 {
-            return Err(MirrorXError::Other(anyhow::anyhow!(
-                "libyuv::NV21ToARGBMatrix returns {}",
-                ret
-            )));
-        }
-
-        argb_frame.set_len(argb_frame_size);
-
-        #[cfg(target_os = "windows")]
-        let decoded_frame = DecodedFrame {
-            buffer: argb_frame,
-            width: (*self.hw_decode_frame).width as u32,
-            height: (*self.hw_decode_frame).height as u32,
-        };
-
-        av_frame_unref((*self).hw_decode_frame);
-
-        Ok(decoded_frame)
     }
 }
 
@@ -323,7 +222,7 @@ impl Drop for VideoDecoder {
     fn drop(&mut self) {
         unsafe {
             if !self.codec_ctx.is_null() {
-                avcodec_send_packet(self.codec_ctx, ptr::null());
+                avcodec_send_packet(self.codec_ctx, std::ptr::null());
             }
 
             if !self.hw_decode_frame.is_null() {
@@ -350,4 +249,30 @@ impl Drop for VideoDecoder {
             }
         }
     }
+}
+
+unsafe fn convert_yuv_to_rgb(frame: *mut AVFrame) -> CoreResult<Vec<u8>> {
+    let argb_stride = 4 * ((32 * (*frame).width + 31) / 32);
+    let argb_frame_size = (argb_stride as usize) * ((*frame).height as usize) * 4;
+    let mut argb_frame_buffer = Vec::<u8>::with_capacity(argb_frame_size);
+
+    let ret = NV21ToARGBMatrix(
+        (*frame).data[0],
+        (*frame).linesize[0] as isize,
+        (*frame).data[1],
+        (*frame).linesize[1] as isize,
+        argb_frame_buffer.as_mut_ptr(),
+        argb_stride as isize,
+        &kYvuF709Constants,
+        (*frame).width as isize,
+        (*frame).height as isize,
+    );
+
+    if ret != 0 {
+        return Err(core_error!("NV21ToARGBMatrix returns error code: {}", ret));
+    }
+
+    argb_frame_buffer.set_len(argb_frame_size);
+
+    Ok(argb_frame_buffer)
 }

@@ -1,6 +1,6 @@
 use crate::{
     component::{video_decoder::DecodedFrame, video_encoder::FFMPEGEncoderType},
-    error::MirrorXError,
+    error::CoreError,
     service::endpoint::message::*,
     utility::runtime::TOKIO_RUNTIME,
 };
@@ -21,7 +21,7 @@ pub fn start_video_encode_process(
         crate::component::capture_frame::CaptureFrame,
     >,
     packet_tx: tokio::sync::mpsc::Sender<EndPointMessagePacket>,
-) -> Result<(), MirrorXError> {
+) -> Result<(), CoreError> {
     #[cfg(target_os = "macos")]
     let mut encoder = crate::component::video_encoder::Encoder::new(width, height)?;
     #[cfg(not(target_os = "macos"))]
@@ -72,7 +72,7 @@ pub fn start_video_decode_process(
     fps: i32,
     mut video_frame_rx: Receiver<VideoFrame>,
     decoded_frame_tx: Sender<DecodedFrame>,
-) -> Result<(), MirrorXError> {
+) -> Result<(), CoreError> {
     // let (decoder_name, options) = if cfg!(target_os = "macos") {
     //     ("h264", HashMap::new())
     // } else if cfg!(target_os = "windows") {

@@ -8,8 +8,5 @@ pub use frame::DecodedFrame;
 #[cfg(target_os = "windows")]
 pub use video_decoder::VideoDecoder;
 
-#[cfg(target_os="macos")]
+#[cfg(target_os = "macos")]
 pub mod videotoolbox;
-
-#[cfg(target_os="windows")]
-pub mod media_foundation;

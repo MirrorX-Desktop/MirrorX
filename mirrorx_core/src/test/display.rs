@@ -8,7 +8,7 @@ fn test_get_active_displays() -> anyhow::Result<()> {
     let temp_dir = std::env::temp_dir();
     info!("screen shot will wirte to temp dir");
 
-    let monitors = crate::component::monitor::get_active_monitors()?;
+    let monitors = crate::component::desktop::monitor::get_active_monitors()?;
     for monitor in monitors {
         info!(id=?monitor.id,name=?monitor.name,refresh_rate=?monitor.refresh_rate,width=?monitor.width,height=?monitor.height,is_primary=?monitor.is_primary,screen_shot_buffer_length=?monitor.screen_shot.len(), "monitor");
 

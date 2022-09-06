@@ -2,7 +2,8 @@ use crate::{
     component::{
         audio_decoder::audio_decoder::AudioDecoder, audio_encoder::audio_encoder::AudioEncoder,
     },
-    error::MirrorXError,
+    core_error,
+    error::{CoreError, CoreResult},
     service::endpoint::message::*,
 };
 use cpal::{
@@ -15,9 +16,8 @@ use tracing::{error, info};
 
 pub async fn start_audio_capture_process(
     remote_device_id: String,
-
     pcm_tx: crossbeam::channel::Sender<(Vec<f32>, u128)>,
-) -> Result<crossbeam::channel::Sender<()>, MirrorXError> {
+) -> CoreResult<crossbeam::channel::Sender<()>> {
     let (exit_tx, exit_rx) = crossbeam::channel::bounded(1);
     let (inner_error_tx, inner_error_rx) = tokio::sync::oneshot::channel();
 
@@ -29,9 +29,8 @@ pub async fn start_audio_capture_process(
             let device = match host.default_output_device() {
                 Some(device) => device,
                 None => {
-                    let _ = inner_error_tx.send(Some(MirrorXError::Other(anyhow::anyhow!(
-                        "default audio output device is null"
-                    ))));
+                    let _ = inner_error_tx
+                        .send(Some(core_error!("default audio output device is null")));
                     return;
                 }
             };
@@ -41,10 +40,10 @@ pub async fn start_audio_capture_process(
             let supported_configs = match device.supported_output_configs() {
                 Ok(config) => config,
                 Err(err) => {
-                    let _ = inner_error_tx.send(Some(MirrorXError::Other(anyhow::anyhow!(
+                    let _ = inner_error_tx.send(Some(core_error!(
                         "get audio device supported config failed ({})",
                         err
-                    ))));
+                    )));
                     return;
                 }
             };
@@ -53,19 +52,18 @@ pub async fn start_audio_capture_process(
                 supported_configs.into_iter().collect();
 
             if supported_config_vec.len() == 0 {
-                let _ = inner_error_tx.send(Some(MirrorXError::Other(anyhow::anyhow!(
-                    "no supported audio device output config"
-                ))));
+                let _ = inner_error_tx
+                    .send(Some(core_error!("no supported audio device output config")));
                 return;
             }
 
             let sample_format = supported_config_vec[0].sample_format();
 
             if sample_format != SampleFormat::F32 {
-                let _ = inner_error_tx.send(Some(MirrorXError::Other(anyhow::anyhow!(
+                let _ = inner_error_tx.send(Some(core_error!(
                     "unsupported audio sample format {}",
                     sample_format.sample_size()
-                ))));
+                )));
                 return;
             }
 
@@ -94,19 +92,15 @@ pub async fn start_audio_capture_process(
                 match device.build_input_stream(&output_config, input_callback, err_callback) {
                     Ok(stream) => stream,
                     Err(err) => {
-                        let _ = inner_error_tx.send(Some(MirrorXError::Other(anyhow::anyhow!(
-                            "build input stream failed ({})",
-                            err
-                        ))));
+                        let _ = inner_error_tx
+                            .send(Some(core_error!("build input stream failed ({})", err)));
                         return;
                     }
                 };
 
             if let Err(err) = loopback_stream.play() {
-                let _ = inner_error_tx.send(Some(MirrorXError::Other(anyhow::anyhow!(
-                    "loop back stream play failed ({})",
-                    err
-                ))));
+                let _ = inner_error_tx
+                    .send(Some(core_error!("loop back stream play failed ({})", err)));
                 return;
             }
 
@@ -124,17 +118,17 @@ pub async fn start_audio_capture_process(
             Some(err) => Err(err),
             None => Ok(exit_tx),
         },
-        Err(err) => Err(MirrorXError::Other(anyhow::anyhow!(
+        Err(err) => Err(core_error!(
             "receive start_audio_capture_process result failed ({})",
             err
-        ))),
+        )),
     }
 }
 
 pub async fn start_audio_play_process(
     remote_device_id: String,
     mut samples_rx: Consumer<f32>,
-) -> Result<crossbeam::channel::Sender<()>, MirrorXError> {
+) -> Result<crossbeam::channel::Sender<()>, CoreError> {
     let (exit_tx, exit_rx) = crossbeam::channel::bounded(1);
     let (inner_error_tx, inner_error_rx) = tokio::sync::oneshot::channel();
 
@@ -146,9 +140,8 @@ pub async fn start_audio_play_process(
             let device = match host.default_output_device() {
                 Some(device) => device,
                 None => {
-                    let _ = inner_error_tx.send(Some(MirrorXError::Other(anyhow::anyhow!(
-                        "default audio output device is null"
-                    ))));
+                    let _ = inner_error_tx
+                        .send(Some(core_error!("default audio output device is null")));
                     return;
                 }
             };
@@ -158,10 +151,10 @@ pub async fn start_audio_play_process(
             let supported_configs = match device.supported_output_configs() {
                 Ok(config) => config,
                 Err(err) => {
-                    let _ = inner_error_tx.send(Some(MirrorXError::Other(anyhow::anyhow!(
+                    let _ = inner_error_tx.send(Some(core_error!(
                         "get audio device supported config failed ({})",
                         err
-                    ))));
+                    )));
                     return;
                 }
             };
@@ -170,9 +163,8 @@ pub async fn start_audio_play_process(
                 supported_configs.into_iter().collect();
 
             if supported_config_vec.len() == 0 {
-                let _ = inner_error_tx.send(Some(MirrorXError::Other(anyhow::anyhow!(
-                    "no supported audio device output config"
-                ))));
+                let _ = inner_error_tx
+                    .send(Some(core_error!("no supported audio device output config")));
                 return;
             }
 
@@ -182,19 +174,19 @@ pub async fn start_audio_play_process(
             {
                 config.clone().with_sample_rate(SampleRate(48000)).config()
             } else {
-                let _ = inner_error_tx.send(Some(MirrorXError::Other(anyhow::anyhow!(
+                let _ = inner_error_tx.send(Some(core_error!(
                     "no supported audio device output config with sample rate 48000"
-                ))));
+                )));
                 return;
             };
 
             let sample_format = supported_config_vec[0].sample_format();
 
             if sample_format != SampleFormat::F32 {
-                let _ = inner_error_tx.send(Some(MirrorXError::Other(anyhow::anyhow!(
+                let _ = inner_error_tx.send(Some(core_error!(
                     "unsupported audio sample format {}",
                     sample_format.sample_size()
-                ))));
+                )));
                 return;
             }
 
@@ -213,19 +205,15 @@ pub async fn start_audio_play_process(
                 match device.build_output_stream(&output_config, input_callback, err_callback) {
                     Ok(stream) => stream,
                     Err(err) => {
-                        let _ = inner_error_tx.send(Some(MirrorXError::Other(anyhow::anyhow!(
-                            "build output stream failed ({})",
-                            err
-                        ))));
+                        let _ = inner_error_tx
+                            .send(Some(core_error!("build output stream failed ({})", err)));
                         return;
                     }
                 };
 
             if let Err(err) = loopback_stream.play() {
-                let _ = inner_error_tx.send(Some(MirrorXError::Other(anyhow::anyhow!(
-                    "loop back stream play failed ({})",
-                    err
-                ))));
+                let _ = inner_error_tx
+                    .send(Some(core_error!("loop back stream play failed ({})", err)));
                 return;
             }
 
@@ -243,10 +231,10 @@ pub async fn start_audio_play_process(
             Some(err) => Err(err),
             None => Ok(exit_tx),
         },
-        Err(err) => Err(MirrorXError::Other(anyhow::anyhow!(
+        Err(err) => Err(core_error!(
             "receive start_audio_play_process result failed ({})",
             err
-        ))),
+        )),
     }
 }
 
@@ -256,7 +244,7 @@ pub fn start_audio_encode_process(
     packet_tx: tokio::sync::mpsc::Sender<EndPointMessagePacket>,
     sample_rate: i32,
     channels: isize,
-) -> Result<(), MirrorXError> {
+) -> Result<(), CoreError> {
     let mut audio_encoder = AudioEncoder::new(sample_rate, channels)?;
 
     let _ = std::thread::Builder::new()
@@ -302,7 +290,7 @@ pub fn start_audio_decode_process(
     channels: isize,
     audio_frame_rx: crossbeam::channel::Receiver<AudioFrame>,
     mut pcm_producer: Producer<f32>,
-) -> Result<(), MirrorXError> {
+) -> Result<(), CoreError> {
     let mut audio_decoder = AudioDecoder::new(sample_rate, channels)?;
 
     let _ = std::thread::Builder::new()

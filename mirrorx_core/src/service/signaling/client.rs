@@ -8,10 +8,10 @@ use super::{
     },
 };
 use crate::{
-    error::MirrorXError,
+    core_error,
+    error::{CoreError, CoreResult},
     utility::{runtime::TOKIO_RUNTIME, serializer::BINCODE_SERIALIZER},
 };
-use anyhow::anyhow;
 use arc_swap::ArcSwapOption;
 use bincode::Options;
 use bytes::Bytes;
@@ -29,10 +29,8 @@ use std::{
 use tokio::{
     net::{TcpStream, ToSocketAddrs},
     sync::mpsc::{Receiver, Sender},
-    time::timeout,
 };
 use tokio_util::codec::{Framed, LengthDelimitedCodec};
-use tracing::{error, info};
 
 const CALL_TIMEOUT: Duration = Duration::from_secs(60);
 
@@ -44,7 +42,7 @@ macro_rules! make_signaling_call {
             &self,
             remote_device_id: Option<String>,
             req: $req_type,
-        ) -> Result<$resp_type, MirrorXError> {
+        ) -> CoreResult<$resp_type> {
             match self
                 .call(
                     remote_device_id.clone(),
@@ -57,12 +55,12 @@ macro_rules! make_signaling_call {
                     if let $resp_message_type(message) = reply {
                         Ok(message)
                     } else {
-                        Err(MirrorXError::SignalingError(reply))
+                        Err(core_error!("signaling call receive mismatched response message"))
                     }
                 }
                 Err(err) => {
                     let fn_name = stringify!($name);
-                    error!(remote_device_id=?remote_device_id,call_fn=fn_name,err=?err, "signaling call failed");
+                    tracing::error!(remote_device_id=?remote_device_id,call_fn=fn_name,err=?err, "signaling call failed");
                     return Err(err);
                 }
             }
@@ -77,7 +75,7 @@ macro_rules! handle_signaling_call {
                 Ok(resp) => $resp_type(resp),
                 Err(err) => {
                     let fn_name = stringify!($handler);
-                    error!(handler=fn_name,err=?err, "handle signaling call failed");
+                  tracing::  error!(handler=fn_name,err=?err, "handle signaling call failed");
                     SignalingMessage::Error(SignalingMessageError::Internal)
                 }
             };
@@ -87,10 +85,10 @@ macro_rules! handle_signaling_call {
                     if let Err(err) =
                         signaling_client.reply($call_id, resp_message).await
                     {
-                        error!(err=?err,"handle_message: reply message failed");
+                        tracing:: error!(err=?err,"handle_message: reply message failed");
                     }
                 }
-                None => error!("handle_message: current signaling client not exists"),
+                None =>  tracing::error!("handle_message: current signaling client not exists"),
             }
         });
     }};
@@ -100,22 +98,18 @@ pub struct SignalingClient {
     device_id: OnceCell<String>,
     packet_tx: Sender<Vec<u8>>,
     atomic_call_id: AtomicU8,
-    call_reply_tx_map: DashMap<u8, Sender<SignalingMessage>>,
+    call_reply_tx_map: DashMap<u8, tokio::sync::oneshot::Sender<SignalingMessage>>,
 }
 
 impl SignalingClient {
-    pub async fn connect<A>(addr: A) -> Result<Self, MirrorXError>
+    pub async fn connect<A>(addr: A) -> CoreResult<Self>
     where
         A: ToSocketAddrs,
     {
-        let stream = timeout(Duration::from_secs(10), TcpStream::connect(addr))
-            .await
-            .map_err(|_| MirrorXError::Timeout)?
-            .map_err(|err| MirrorXError::IO(err))?;
+        let stream =
+            tokio::time::timeout(Duration::from_secs(10), TcpStream::connect(addr)).await??;
 
-        stream
-            .set_nodelay(true)
-            .map_err(|err| MirrorXError::IO(err))?;
+        stream.set_nodelay(true).map_err(|err| CoreError::IO(err))?;
 
         let framed_stream = LengthDelimitedCodec::builder()
             .little_endian()
@@ -123,9 +117,7 @@ impl SignalingClient {
             .new_framed(stream);
 
         let (sink, stream) = framed_stream.split();
-
         let (packet_tx, packet_rx) = tokio::sync::mpsc::channel(128);
-        // todo: servce_sink should exit
 
         serve_reader(stream);
         serve_writer(packet_rx, sink);
@@ -147,11 +139,11 @@ impl SignalingClient {
         remote_device_id: Option<String>,
         message: SignalingMessage,
         duration: Duration,
-    ) -> Result<SignalingMessage, MirrorXError> {
+    ) -> CoreResult<SignalingMessage> {
         let direction = if let Some(remote_device_id) = remote_device_id {
             match self.device_id.get() {
                 Some(local_device_id) => Some((local_device_id.clone(), remote_device_id)),
-                None => return Err(MirrorXError::ComponentUninitialized),
+                None => return Err(core_error!("local device id is None")),
             }
         } else {
             None
@@ -166,23 +158,21 @@ impl SignalingClient {
             message,
         };
 
-        let mut rx = self.register_call(call_id);
+        let rx = self.register_call(call_id);
         defer! {
             self.remove_call(call_id);
         }
 
-        timeout(duration, async move {
-            if let Err(err) = self.send(packet).await {
-                return Err(err);
-            }
-
-            rx.recv().await.ok_or(MirrorXError::Timeout)
+        tokio::time::timeout(duration, async move {
+            self.send(packet).await?;
+            rx.await.map_err(|err| {
+                core_error!("signaling call reply channel returns error ({:?})", err)
+            })
         })
-        .await
-        .map_err(|_| MirrorXError::Timeout)?
+        .await?
     }
 
-    async fn reply(&self, call_id: u8, message: SignalingMessage) -> Result<(), MirrorXError> {
+    async fn reply(&self, call_id: u8, message: SignalingMessage) -> CoreResult<()> {
         let packet = SignalingMessagePacket {
             direction: None,
             typ: SignalingMessagePacketType::Response,
@@ -193,31 +183,29 @@ impl SignalingClient {
         self.send(packet).await
     }
 
-    async fn send(&self, packet: SignalingMessagePacket) -> Result<(), MirrorXError> {
-        let buffer = BINCODE_SERIALIZER
-            .serialize(&packet)
-            .map_err(|err| MirrorXError::SerializeFailed(err))?;
+    async fn send(&self, packet: SignalingMessagePacket) -> CoreResult<()> {
+        let buffer = BINCODE_SERIALIZER.serialize(&packet)?;
 
         self.packet_tx
             .try_send(buffer)
-            .map_err(|err| MirrorXError::Other(anyhow!(err)))
+            .map_err(|err| core_error!("packet tx try send failed"))
     }
 
     fn set_call_reply(&self, call_id: u8, message: SignalingMessage) {
         self.remove_call(call_id).map(|tx| {
-            if let Err(err) = tx.try_send(message) {
-                error!(err = %err, "set_call_reply: set reply failed")
+            if let Err(_) = tx.send(message) {
+                tracing::error!("singaling set call reply failed");
             }
         });
     }
 
-    fn register_call(&self, call_id: u8) -> Receiver<SignalingMessage> {
-        let (tx, rx) = tokio::sync::mpsc::channel(1);
+    fn register_call(&self, call_id: u8) -> tokio::sync::oneshot::Receiver<SignalingMessage> {
+        let (tx, rx) = tokio::sync::oneshot::channel();
         self.call_reply_tx_map.insert(call_id, tx);
         rx
     }
 
-    fn remove_call(&self, call_id: u8) -> Option<Sender<SignalingMessage>> {
+    fn remove_call(&self, call_id: u8) -> Option<tokio::sync::oneshot::Sender<SignalingMessage>> {
         self.call_reply_tx_map.remove(&call_id).map(|entry| entry.1)
     }
 
@@ -261,12 +249,12 @@ fn serve_reader(mut stream: SplitStream<Framed<TcpStream, LengthDelimitedCodec>>
                 Some(res) => match res {
                     Ok(packet_bytes) => packet_bytes,
                     Err(err) => {
-                        error!(err = ?err, "reader: read packet failed");
+                        tracing::error!(err = ?err, "reader: read packet failed");
                         break;
                     }
                 },
                 None => {
-                    info!("reader: remote closed");
+                    tracing::info!("reader: remote closed");
                     break;
                 }
             };
@@ -275,7 +263,7 @@ fn serve_reader(mut stream: SplitStream<Framed<TcpStream, LengthDelimitedCodec>>
                 match BINCODE_SERIALIZER.deserialize::<SignalingMessagePacket>(&packet_bytes) {
                     Ok(packet) => packet,
                     Err(err) => {
-                        error!(err = ?err, "reader: deserialize packet failed");
+                        tracing::error!(err = ?err, "reader: deserialize packet failed");
                         break;
                     }
                 };
@@ -285,7 +273,7 @@ fn serve_reader(mut stream: SplitStream<Framed<TcpStream, LengthDelimitedCodec>>
             });
         }
 
-        info!("reader: exit");
+        tracing::info!("reader: exit");
     });
 }
 
@@ -298,18 +286,18 @@ fn serve_writer(
             let packet_buffer = match packet_buffer_rx.recv().await {
                 Some(buffer) => buffer,
                 None => {
-                    info!("writer: tx closed");
+                    tracing::info!("writer: tx closed");
                     break;
                 }
             };
 
             if let Err(err) = sink.send(Bytes::from(packet_buffer)).await {
-                error!(err = ?err, "writer: send failed");
+                tracing::error!(err = ?err, "writer: send failed");
                 break;
             }
         }
 
-        info!("writer: exit");
+        tracing::info!("writer: exit");
     });
 }
 
@@ -332,13 +320,13 @@ async fn handle_message(packet: SignalingMessagePacket) {
                     handle_connection_key_exchange_request
                 )
             }
-            _ => error!("handle_message: received unexpected Signaling Request Message"),
+            _ => tracing::error!("handle_message: received unexpected Signaling Request Message"),
         },
         SignalingMessagePacketType::Response => match CURRENT_SIGNALING_CLIENT.load().as_ref() {
             Some(signaling_client) => {
                 signaling_client.set_call_reply(packet.call_id, packet.message)
             }
-            None => error!("handle_message: current signaling client not exists"),
+            None => tracing::error!("handle_message: current signaling client not exists"),
         },
     }
 }

@@ -1,5 +1,6 @@
 use crate::{
-    error::MirrorXError,
+    core_error,
+    error::{CoreError, CoreResult},
     ffi::opus::decoder::{
         opus_decode_float, opus_decoder_create, opus_decoder_destroy, OpusDecoder,
     },
@@ -15,15 +16,20 @@ pub struct AudioDecoder {
 unsafe impl Send for AudioDecoder {}
 
 impl AudioDecoder {
-    pub fn new(sample_rate: i32, channels: isize) -> Result<Self, MirrorXError> {
+    pub fn new(sample_rate: i32, channels: isize) -> CoreResult<Self> {
         unsafe {
-            let mut err: isize = 0;
-            let dec = opus_decoder_create(sample_rate, channels, &mut err as *mut _);
+            let mut error_code = 0;
+            let dec = opus_decoder_create(sample_rate, channels, &mut error_code);
 
-            if err != 0 || dec.is_null() {
-                return Err(MirrorXError::Other(anyhow::anyhow!(
-                    "initialize opus decoder failed"
-                )));
+            if dec.is_null() {
+                return Err(core_error!("opus_decoder_create returns null"));
+            }
+
+            if error_code != 0 {
+                return Err(core_error!(
+                    "opus_decoder_create returns error code: {}",
+                    error_code
+                ));
             }
 
             Ok(Self {
@@ -35,15 +41,7 @@ impl AudioDecoder {
         }
     }
 
-    pub fn decode(
-        &mut self,
-        data: &[u8],
-        frame_size_per_channel: u16,
-    ) -> Result<Vec<f32>, MirrorXError> {
-        if self.dec.is_null() {
-            return Err(MirrorXError::Other(anyhow::anyhow!("opus encoder is null")));
-        }
-
+    pub fn decode(&mut self, data: &[u8], frame_size_per_channel: u16) -> CoreResult<Vec<f32>> {
         unsafe {
             let ret = opus_decode_float(
                 self.dec,
@@ -55,16 +53,14 @@ impl AudioDecoder {
             );
 
             if ret < 0 {
-                return Err(MirrorXError::Other(anyhow::anyhow!(
-                    "opus encode failed ({})",
-                    ret
-                )));
+                return Err(core_error!("opus_decode_float returns error code: {}", ret));
             }
 
             let data = self.dec_buffer
                 [0..(frame_size_per_channel as usize) * (self.channels as usize)]
                 .to_vec();
-            return Ok(data);
+
+            Ok(data)
         }
     }
 }

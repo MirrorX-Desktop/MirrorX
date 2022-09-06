@@ -1,10 +1,13 @@
 #[cfg(target_os = "windows")]
 #[macro_export]
-macro_rules! windows_api_check {
+macro_rules! HRESULT {
     ($exp:expr) => {
-        $exp.map_err(|err| MirrorXError::WindowsAPI {
-            code: err.code(),
-            message: err.message().to_string(),
+        $exp.map_err(|err| CoreError::Other {
+            message: format!(
+                "Windows API returns failed HRESULT (code={:?}, message={:?})",
+                err.code(),
+                err.message()
+            ),
             file: file!().to_string(),
             line: line!().to_string(),
         })?
@@ -12,9 +15,9 @@ macro_rules! windows_api_check {
 }
 
 #[macro_export]
-macro_rules! api_error {
+macro_rules! core_error {
     ($($arg:tt)*) => {
-        MirrorXError::API {
+        CoreError::Other {
             message: format!($($arg)*),
             file: file!().to_string(),
             line: line!().to_string(),

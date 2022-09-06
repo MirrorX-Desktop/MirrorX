@@ -4,7 +4,6 @@ pub mod audio_encoder;
 pub mod capture_frame;
 pub mod desktop;
 pub mod input;
-pub mod monitor;
 pub mod video_decoder;
 pub mod video_encoder;
 

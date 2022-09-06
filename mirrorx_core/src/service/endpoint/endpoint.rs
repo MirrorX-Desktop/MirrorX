@@ -5,15 +5,15 @@ use super::{
     processor::{desktop::start_desktop_render_process, video::*},
 };
 use crate::{
-    component::monitor::{self, Monitor},
-    error::MirrorXError,
+    component::desktop::monitor::Monitor,
+    core_error,
+    error::{CoreError, CoreResult},
     service::endpoint::handler::handle_input,
     utility::{nonce_value::NonceValue, runtime::TOKIO_RUNTIME, serializer::BINCODE_SERIALIZER},
 };
-use anyhow::anyhow;
 use bincode::Options;
 use bytes::Bytes;
-use crossbeam::{channel::Sender, select};
+use crossbeam::channel::Sender;
 use dashmap::DashMap;
 use futures::{
     stream::{SplitSink, SplitStream},
@@ -33,10 +33,8 @@ use std::{
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::{TcpStream, ToSocketAddrs},
-    time::timeout,
 };
 use tokio_util::codec::{Framed, LengthDelimitedCodec};
-use tracing::{error, info, warn};
 
 const CALL_TIMEOUT: Duration = Duration::from_secs(5);
 
@@ -44,13 +42,15 @@ pub static ENDPOINTS: Lazy<DashMap<String, Arc<EndPoint>>> = Lazy::new(|| DashMa
 
 macro_rules! make_endpoint_call {
     ($name:tt, $req_type:ident, $req_message_type:path, $resp_type:ident, $resp_message_type:path) => {
-        pub async fn $name(&self, req: $req_type) -> Result<$resp_type, MirrorXError> {
+        pub async fn $name(&self, req: $req_type) -> CoreResult<$resp_type> {
             let reply = self.call($req_message_type(req), CALL_TIMEOUT).await?;
 
             if let $resp_message_type(message) = reply {
                 Ok(message)
             } else {
-                Err(MirrorXError::EndPointError(self.remote_device_id.clone()))
+                Err(core_error!(
+                    "endpoint call received mismatched response message"
+                ))
             }
         }
     };
@@ -58,7 +58,7 @@ macro_rules! make_endpoint_call {
 
 macro_rules! make_endpoint_push {
     ($name:tt, $req_type:ident, $req_message_type:path) => {
-        pub async fn $name(&self, req: $req_type) -> Result<(), MirrorXError> {
+        pub async fn $name(&self, req: $req_type) -> CoreResult<()> {
             self.send(EndPointMessagePacket {
                 typ: EndPointMessagePacketType::Push,
                 call_id: None,
@@ -77,29 +77,29 @@ macro_rules! handle_call_message {
                 let resp_message = match $handler(&endpoint, $req).await {
                     Ok(resp) => $resp_type(resp),
                     Err(err) => {
-                        error!(?err, "handle_call_message: handler '{}' returns error", stringify!($handler));
+                        tracing::error!(?err, "handler '{}' returns error", stringify!($handler));
                         EndPointMessage::Error
                     }
                 };
 
                 if let Err(err) = endpoint.reply(call_id,resp_message).await{
-                    error!(?err, remote_device_id = ?endpoint.remote_device_id(), "handle_call_message: handler '{}' reply message failed", stringify!($handler));
+                    tracing::error!(?err, remote_device_id = ?endpoint.remote_device_id(), "handler '{}' reply message failed", stringify!($handler));
                 }
             } else {
-                error!("handle_call_message: received request message '{}' without call id", stringify!($req));
+                tracing::error!("received request message '{}' without call id", stringify!($req));
             }
         });
     }};
 }
 
 macro_rules! handle_push_message {
-     ($endpoint:expr, $req:tt, $handler:tt) => {{
-         let endpoint = $endpoint.clone();
-         TOKIO_RUNTIME.spawn(async move {
-             if let Err(err) = $handler(&endpoint, $req).await {
-                 error!(?err, remote_device_id = ?endpoint.remote_device_id(), "handle_push_message: handler '{}' returns error", stringify!($handler));
-             }
-         });
+    ($endpoint:expr, $req:tt, $handler:tt) => {{
+        let endpoint = $endpoint.clone();
+        TOKIO_RUNTIME.spawn(async move {
+            if let Err(err) = $handler(&endpoint, $req).await {
+                tracing::error!(?err, remote_device_id = ?endpoint.remote_device_id(), "handle_push_message: handler '{}' returns error", stringify!($handler));
+            }
+        });
     }};
 }
 
@@ -123,18 +123,13 @@ pub async fn connect<A>(
     remote_device_id: String,
     opening_key: OpeningKey<NonceValue>,
     sealing_key: SealingKey<NonceValue>,
-) -> Result<(), MirrorXError>
+) -> CoreResult<()>
 where
     A: ToSocketAddrs,
 {
-    let mut stream = timeout(Duration::from_secs(10), TcpStream::connect(addr))
-        .await
-        .map_err(|_| MirrorXError::Timeout)?
-        .map_err(|err| MirrorXError::IO(err))?;
-
-    stream
-        .set_nodelay(true)
-        .map_err(|err| MirrorXError::IO(err))?;
+    let mut stream =
+        tokio::time::timeout(Duration::from_secs(10), TcpStream::connect(addr)).await??;
+    stream.set_nodelay(true)?;
 
     // handshake for endpoint
 
@@ -152,40 +147,28 @@ where
 
     let active_device_id_buf = active_device_id.as_bytes();
     if active_device_id_buf.len() != 10 {
-        return Err(MirrorXError::Other(anyhow::anyhow!(
-            "active device id bytes length is not 10"
-        )));
+        return Err(core_error!("active device id bytes length is not 10"));
     }
 
     let passive_device_id_buf = passive_device_id.as_bytes();
     if passive_device_id_buf.len() != 10 {
-        return Err(MirrorXError::Other(anyhow::anyhow!(
-            "passive device id bytes length is not 10"
-        )));
+        return Err(core_error!("passive device id bytes length is not 10"));
     }
 
-    stream
-        .write(active_device_id_buf)
-        .await
-        .map_err(|err| MirrorXError::IO(err))?;
-    stream
-        .write(passive_device_id_buf)
-        .await
-        .map_err(|err| MirrorXError::IO(err))?;
+    stream.write(active_device_id_buf).await?;
+    stream.write(passive_device_id_buf).await?;
 
     let mut handshake_response_buf = [0u8; 1];
-    timeout(
+    tokio::time::timeout(
         Duration::from_secs(60),
         stream.read_exact(&mut handshake_response_buf),
     )
-    .await
-    .map_err(|_| MirrorXError::Timeout)?
-    .map_err(|err| MirrorXError::IO(err))?;
+    .await??;
 
     if handshake_response_buf[0] != 1 {
-        return Err(MirrorXError::EndPointError(String::from(
-            "handshake failed",
-        )));
+        return Err(core_error!(
+            "endpoint handshake failed, response returns false"
+        ));
     }
 
     let framed_stream = LengthDelimitedCodec::builder()
@@ -218,6 +201,7 @@ where
         stream,
         opening_key,
     );
+
     serve_writer(
         endpoint.clone(),
         remote_device_id.clone(),
@@ -255,7 +239,7 @@ impl EndPoint {
         &self,
         message: EndPointMessage,
         duration: Duration,
-    ) -> Result<EndPointMessage, MirrorXError> {
+    ) -> CoreResult<EndPointMessage> {
         let call_id = self.atomic_call_id.fetch_add(1, Ordering::SeqCst);
 
         let packet = EndPointMessagePacket {
@@ -269,21 +253,15 @@ impl EndPoint {
             self.remove_call(call_id);
         }
 
-        timeout(duration, async move {
-            if let Err(err) = self.send(packet).await {
-                return Err(err);
-            }
-
-            match rx.await {
-                Ok(message) => Ok(message),
-                Err(_) => Err(MirrorXError::Timeout),
-            }
+        tokio::time::timeout(duration, async move {
+            self.send(packet).await?;
+            rx.await
+                .map_err(|err| core_error!("endpoint call reply channel returns error ({:?})", err))
         })
-        .await
-        .map_err(|_| MirrorXError::Timeout)?
+        .await?
     }
 
-    async fn reply(&self, call_id: u16, message: EndPointMessage) -> Result<(), MirrorXError> {
+    async fn reply(&self, call_id: u16, message: EndPointMessage) -> CoreResult<()> {
         let packet = EndPointMessagePacket {
             typ: EndPointMessagePacketType::Response,
             call_id: Some(call_id),
@@ -293,16 +271,16 @@ impl EndPoint {
         self.send(packet).await
     }
 
-    async fn send(&self, packet: EndPointMessagePacket) -> Result<(), MirrorXError> {
+    async fn send(&self, packet: EndPointMessagePacket) -> CoreResult<()> {
         self.packet_tx
             .try_send(packet)
-            .map_err(|err| MirrorXError::Other(anyhow!(err)))
+            .map_err(|err| core_error!("packet tx try send failed"))
     }
 
     fn set_call_reply(&self, call_id: u16, message: EndPointMessage) {
         self.remove_call(call_id).map(|tx| {
             if let Err(_) = tx.send(message) {
-                error!(remote_device_id=?self.remote_device_id,"set_call_reply: set reply failed")
+                tracing::error!(remote_device_id=?self.remote_device_id, "endpoint set call reply failed");
             }
         });
     }
@@ -321,17 +299,18 @@ impl EndPoint {
         &self,
         display_id: &str,
         except_fps: u8,
-    ) -> Result<Monitor, MirrorXError> {
-        let monitors = monitor::get_active_monitors()?;
+    ) -> CoreResult<Monitor> {
+        let monitors = crate::component::desktop::monitor::get_active_monitors()?;
 
         let monitor = match monitors.iter().find(|m| m.id == display_id) {
             Some(m) => m,
             None => match monitors.iter().find(|m| m.is_primary) {
                 Some(m) => m,
                 None => {
-                    return Err(MirrorXError::Other(anyhow::anyhow!(
-                        "can not find specified monitor or primary monitor"
-                    )));
+                    return Err(core_error!(
+                        "can not find primary monitor or monitor with id ({})",
+                        display_id
+                    ));
                 }
             },
         };
@@ -375,7 +354,7 @@ impl EndPoint {
         texture_id: i64,
         video_texture_ptr: i64,
         update_frame_callback_ptr: i64,
-    ) -> Result<(), MirrorXError> {
+    ) -> Result<(), CoreError> {
         let (video_frame_tx, video_frame_rx) = crossbeam::channel::bounded(600);
         let (decoded_frame_tx, decoded_frame_rx) = crossbeam::channel::bounded(600);
 
@@ -403,7 +382,7 @@ impl EndPoint {
         Ok(())
     }
 
-    pub async fn start_audio_capture(&self) -> Result<(), MirrorXError> {
+    pub async fn start_audio_capture(&self) -> Result<(), CoreError> {
         let (pcm_tx, pcm_rx) = crossbeam::channel::bounded(48000 / 960 * 2);
 
         start_audio_encode_process(
@@ -419,7 +398,7 @@ impl EndPoint {
         Ok(())
     }
 
-    pub async fn start_audio_play(&self) -> Result<(), MirrorXError> {
+    pub async fn start_audio_play(&self) -> Result<(), CoreError> {
         let (audio_frame_tx, audio_frame_rx) =
             crossbeam::channel::bounded::<AudioFrame>(48000 / 960 * 2);
         let (pcm_producer, pcm_consumer) = RingBuffer::new(48000 * 2);
@@ -465,7 +444,7 @@ impl EndPoint {
 impl Drop for EndPoint {
     fn drop(&mut self) {
         let _ = self.exit_tx.try_broadcast(());
-        info!(remote_device_id = ?self.remote_device_id, "endpoint dropped");
+        tracing::info!(remote_device_id = ?self.remote_device_id, "endpoint dropped");
     }
 }
 
@@ -484,7 +463,7 @@ fn serve_reader(
                         let mut packet_bytes = match res {
                             Ok(packet_bytes) => packet_bytes,
                             Err(err) => {
-                                error!(remote_device_id=?endpoint.remote_device_id(), ?err, "read from network stream failed");
+                                tracing::error!(remote_device_id=?endpoint.remote_device_id(), ?err, "read from network stream failed");
                                 break;
                             }
                         };
@@ -493,7 +472,7 @@ fn serve_reader(
                             match opening_key.open_in_place(ring::aead::Aad::empty(), &mut packet_bytes) {
                                 Ok(v) => v,
                                 Err(err) => {
-                                    error!(remote_device_id=?endpoint.remote_device_id(), ?err, "decrypt packet data failed");
+                                    tracing::error!(remote_device_id=?endpoint.remote_device_id(), ?err, "decrypt packet data failed");
                                     break;
                                 }
                             };
@@ -503,7 +482,7 @@ fn serve_reader(
                         {
                             Ok(packet) => packet,
                             Err(err) => {
-                                error!(remote_device_id=?endpoint.remote_device_id(), ?err, "deserialize packet failed");
+                                tracing::error!(remote_device_id=?endpoint.remote_device_id(), ?err, "deserialize packet failed");
                                 break;
                             }
                         };
@@ -511,7 +490,7 @@ fn serve_reader(
                         handle_message(&endpoint, packet);
                     },
                     None => {
-                        info!(remote_device_id=?endpoint.remote_device_id(), "network stream closed");
+                        tracing::info!(remote_device_id=?endpoint.remote_device_id(), "network stream closed");
                         break;
                     },
                 }
@@ -519,7 +498,7 @@ fn serve_reader(
         }
 
         endpoint.manually_close();
-        info!(remote_device_id=?endpoint.remote_device_id(), "read process exit");
+        tracing::info!(remote_device_id=?endpoint.remote_device_id(), "read process exit");
     });
 }
 
@@ -535,7 +514,7 @@ fn serve_writer(
         loop {
             tokio::select! {
                 _ = exit_rx.recv() => {
-                    info!("serve writer receive");
+                    tracing::info!("serve writer receive");
                     break;
                 },
                 res = packet_rx.recv() => match res {
@@ -543,7 +522,7 @@ fn serve_writer(
                         let mut packet_buffer = match BINCODE_SERIALIZER.serialize(&packet) {
                             Ok(buffer) => buffer,
                             Err(err) => {
-                                error!(?remote_device_id, ?err, "packet serialize failed");
+                                tracing::error!(?remote_device_id, ?err, "packet serialize failed");
                                 break;
                             }
                         };
@@ -551,17 +530,17 @@ fn serve_writer(
                         if let Err(err) = sealing_key
                             .seal_in_place_append_tag(ring::aead::Aad::empty(), &mut packet_buffer)
                         {
-                            error!(?remote_device_id, ?err, "crypt packet data failed");
+                            tracing::error!(?remote_device_id, ?err, "crypt packet data failed");
                             break;
                         }
 
                         if let Err(_) = sink.send(Bytes::from(packet_buffer)).await {
-                            error!(?remote_device_id, "write to network stream failed");
+                            tracing::error!(?remote_device_id, "write to network stream failed");
                             break;
                         }
                     },
                     None => {
-                        info!(?remote_device_id, "writer tx closed");
+                        tracing::info!(?remote_device_id, "writer tx closed");
                         break;
                     }
                 }
@@ -569,7 +548,7 @@ fn serve_writer(
         }
 
         endpoint.manually_close();
-        info!(?remote_device_id, "write process exit");
+        tracing::info!(?remote_device_id, "write process exit");
     });
 }
 
@@ -594,13 +573,13 @@ fn handle_message(endpoint: &Arc<EndPoint>, packet: EndPointMessagePacket) {
                     handle_start_media_transmission_request
                 )
             }
-            _ => error!("handle_message: received unknown request message"),
+            _ => tracing::error!("handle_message: received unknown request message"),
         },
         EndPointMessagePacketType::Response => {
             if let Some(call_id) = packet.call_id {
                 endpoint.set_call_reply(call_id, packet.message);
             } else {
-                error!("handle_message: received response message without call_id")
+                tracing::error!("handle_message: received response message without call_id")
             }
         }
         EndPointMessagePacketType::Push => match packet.message {
@@ -608,7 +587,7 @@ fn handle_message(endpoint: &Arc<EndPoint>, packet: EndPointMessagePacket) {
                 if let Some(tx) = endpoint.video_frame_tx.get() {
                     if let Err(err) = tx.try_send(req) {
                         if err.is_full() {
-                            warn!(remote_device_id = ?endpoint.remote_device_id, "video frame queue is full");
+                            tracing::warn!(remote_device_id = ?endpoint.remote_device_id, "video frame queue is full");
                         }
                     }
                 }
@@ -617,7 +596,7 @@ fn handle_message(endpoint: &Arc<EndPoint>, packet: EndPointMessagePacket) {
                 if let Some(tx) = endpoint.audio_frame_tx.get() {
                     if let Err(err) = tx.try_send(req) {
                         if err.is_full() {
-                            warn!(remote_device_id = ?endpoint.remote_device_id, "audio frame queue is full");
+                            tracing::warn!(remote_device_id = ?endpoint.remote_device_id, "audio frame queue is full");
                         }
                     }
                 }
@@ -625,7 +604,7 @@ fn handle_message(endpoint: &Arc<EndPoint>, packet: EndPointMessagePacket) {
             EndPointMessage::Input(req) => {
                 handle_push_message!(endpoint, req, handle_input);
             }
-            _ => error!("handle_message: received unknown push message"),
+            _ => tracing::error!("handle_message: received unknown push message"),
         },
     }
 }

@@ -1,13 +1,17 @@
 use super::key::{KeyboardKey, MouseKey};
-use crate::{component::monitor::Monitor, error::MirrorXError};
+use crate::{
+    component::desktop::monitor::Monitor,
+    core_error,
+    error::{CoreError, CoreResult},
+};
 use windows::Win32::{
     Foundation::GetLastError,
     UI::{Input::KeyboardAndMouse::*, WindowsAndMessaging::*},
 };
 
-pub fn mouse_up(monitor: &Monitor, key: MouseKey, x: f32, y: f32) -> Result<(), MirrorXError> {
+pub fn mouse_up(monitor: &Monitor, key: MouseKey, x: f32, y: f32) -> CoreResult<()> {
     let dw_flags = match key {
-        MouseKey::None => return Err(MirrorXError::Other(anyhow::anyhow!("unsupport key"))),
+        MouseKey::None => return Err(core_error!("unsupport key")),
         MouseKey::Left => MOUSEEVENTF_LEFTUP | MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_VIRTUALDESK,
         MouseKey::Right => MOUSEEVENTF_RIGHTUP | MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_VIRTUALDESK,
         MouseKey::Wheel => MOUSEEVENTF_MIDDLEUP | MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_VIRTUALDESK,
@@ -26,9 +30,9 @@ pub fn mouse_up(monitor: &Monitor, key: MouseKey, x: f32, y: f32) -> Result<(), 
     unsafe { send_input(&[(mouse_data, dw_flags)], monitor.left, monitor.top, x, y) }
 }
 
-pub fn mouse_down(monitor: &Monitor, key: MouseKey, x: f32, y: f32) -> Result<(), MirrorXError> {
+pub fn mouse_down(monitor: &Monitor, key: MouseKey, x: f32, y: f32) -> CoreResult<()> {
     let dw_flags = match key {
-        MouseKey::None => return Err(MirrorXError::Other(anyhow::anyhow!("unsupport key"))),
+        MouseKey::None => return Err(core_error!("unsupport key")),
         MouseKey::Left => MOUSEEVENTF_LEFTDOWN | MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_VIRTUALDESK,
         MouseKey::Right => MOUSEEVENTF_RIGHTDOWN | MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_VIRTUALDESK,
         MouseKey::Wheel => MOUSEEVENTF_MIDDLEDOWN | MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_VIRTUALDESK,
@@ -47,7 +51,7 @@ pub fn mouse_down(monitor: &Monitor, key: MouseKey, x: f32, y: f32) -> Result<()
     unsafe { send_input(&[(mouse_data, dw_flags)], monitor.left, monitor.top, x, y) }
 }
 
-pub fn mouse_move(monitor: &Monitor, key: MouseKey, x: f32, y: f32) -> Result<(), MirrorXError> {
+pub fn mouse_move(monitor: &Monitor, key: MouseKey, x: f32, y: f32) -> CoreResult<()> {
     let dw_flags = match key {
         MouseKey::None => MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_VIRTUALDESK,
         MouseKey::Left => {
@@ -84,7 +88,7 @@ pub fn mouse_move(monitor: &Monitor, key: MouseKey, x: f32, y: f32) -> Result<()
     unsafe { send_input(&[(mouse_data, dw_flags)], monitor.left, monitor.top, x, y) }
 }
 
-pub fn mouse_scroll_wheel(monitor: &Monitor, delta: f32) -> Result<(), MirrorXError> {
+pub fn mouse_scroll_wheel(monitor: &Monitor, delta: f32) -> CoreResult<()> {
     unsafe {
         send_input(
             &[(delta.round() as i32, MOUSEEVENTF_WHEEL)],
@@ -96,11 +100,11 @@ pub fn mouse_scroll_wheel(monitor: &Monitor, delta: f32) -> Result<(), MirrorXEr
     }
 }
 
-pub fn keyboard_up(key: KeyboardKey) -> Result<(), MirrorXError> {
+pub fn keyboard_up(key: KeyboardKey) -> CoreResult<()> {
     unsafe { post_keyboard_event(key, false) }
 }
 
-pub fn keyboard_down(key: KeyboardKey) -> Result<(), MirrorXError> {
+pub fn keyboard_down(key: KeyboardKey) -> CoreResult<()> {
     unsafe { post_keyboard_event(key, true) }
 }
 
@@ -110,7 +114,7 @@ unsafe fn send_input(
     top: u16,
     screen_coordinate_x: f32,
     screen_coordinate_y: f32,
-) -> Result<(), MirrorXError> {
+) -> CoreResult<()> {
     let dx = ((left as f32 + screen_coordinate_x) * 65535f32
         / GetSystemMetrics(SM_CXVIRTUALSCREEN) as f32)
         .round() as i32;
@@ -141,14 +145,14 @@ unsafe fn send_input(
     if SendInput(&inputs, std::mem::size_of::<INPUT>() as i32) as usize == inputs.len() {
         Ok(())
     } else {
-        Err(MirrorXError::Other(anyhow::anyhow!(
+        Err(core_error!(
             "SendInput failed ({:?})",
             GetLastError().to_hresult()
-        )))
+        ))
     }
 }
 
-unsafe fn post_keyboard_event(key: KeyboardKey, press: bool) -> Result<(), MirrorXError> {
+unsafe fn post_keyboard_event(key: KeyboardKey, press: bool) -> CoreResult<()> {
     let vk_key = map_key_code(key);
 
     let mut flags: KEYBD_EVENT_FLAGS = KEYBD_EVENT_FLAGS(0);
@@ -175,10 +179,10 @@ unsafe fn post_keyboard_event(key: KeyboardKey, press: bool) -> Result<(), Mirro
     if SendInput(&inputs, std::mem::size_of::<INPUT>() as i32) as usize == inputs.len() {
         Ok(())
     } else {
-        Err(MirrorXError::Other(anyhow::anyhow!(
+        Err(core_error!(
             "SendInput failed ({:?})",
             GetLastError().to_hresult()
-        )))
+        ))
     }
 }
 

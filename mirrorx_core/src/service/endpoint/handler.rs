@@ -7,7 +7,8 @@ use super::{
     processor,
 };
 use crate::{
-    error::MirrorXError,
+    core_error,
+    error::{CoreError, CoreResult},
     service::endpoint::message::{
         Input,
         InputEvent::{Keyboard, Mouse},
@@ -16,13 +17,12 @@ use crate::{
         StartMediaTransmissionRequest,
     },
 };
-use std::sync::Arc;
 
 pub async fn handle_get_display_info_request(
     endpoint: &EndPoint,
     req: GetDisplayInfoRequest,
-) -> Result<GetDisplayInfoResponse, MirrorXError> {
-    let monitors = crate::component::monitor::get_active_monitors()?;
+) -> CoreResult<GetDisplayInfoResponse> {
+    let monitors = crate::component::desktop::monitor::get_active_monitors()?;
 
     // todo: monitor and display_info has same memory layout, use memory block copy?
     let mut displays = Vec::new();
@@ -45,7 +45,7 @@ pub async fn handle_get_display_info_request(
 pub async fn handle_start_media_transmission_request(
     endpoint: &EndPoint,
     req: StartMediaTransmissionRequest,
-) -> Result<StartMediaTransmissionResponse, MirrorXError> {
+) -> CoreResult<StartMediaTransmissionResponse> {
     // endpoint.start_audio_capture().await?;
 
     let monitor = endpoint
@@ -67,7 +67,7 @@ pub async fn handle_start_media_transmission_request(
     Ok(reply)
 }
 
-pub async fn handle_input(endpoint: &EndPoint, input: Input) -> Result<(), MirrorXError> {
+pub async fn handle_input(endpoint: &EndPoint, input: Input) -> CoreResult<()> {
     match input.event {
         Mouse(event) => {
             if let Some(monitor) = endpoint.monitor() {
@@ -78,9 +78,7 @@ pub async fn handle_input(endpoint: &EndPoint, input: Input) -> Result<(), Mirro
                     MouseScrollWheel(delta) => processor::input::mouse_scroll_whell(monitor, delta),
                 }
             } else {
-                Err(MirrorXError::Other(anyhow::anyhow!(
-                    "no associate monitor with current session"
-                )))
+                Err(core_error!("no associate monitor with current session"))
             }
         }
         Keyboard(event) => match event {

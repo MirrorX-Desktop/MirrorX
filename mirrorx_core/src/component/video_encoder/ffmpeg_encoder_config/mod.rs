@@ -1,5 +1,6 @@
 use crate::{
-    error::{CoreResult, MirrorXError},
+    core_error,
+    error::{CoreError, CoreResult},
     ffi::ffmpeg::{
         avcodec::AVCodecContext,
         avutil::{av_opt_set, AVERROR, AVERROR_OPTION_NOT_FOUND},
@@ -16,7 +17,6 @@ pub enum FFMPEGEncoderType {
 
 pub trait FFMPEGEncoderConfig {
     fn apply_option(&self, codec_ctx: *mut AVCodecContext) -> CoreResult<()>;
-
     fn ffmpeg_encoder_name(&self) -> *const i8;
 }
 
@@ -38,22 +38,18 @@ fn set_codec_ctx_option(
         );
 
         if ret == AVERROR_OPTION_NOT_FOUND {
-            return Err(MirrorXError::AVError(
-                stringify!(AVERROR_OPTION_NOT_FOUND).to_string(),
-                AVERROR_OPTION_NOT_FOUND,
+            return Err(core_error!(
+                "set AVCodecContext returns AVERROR_OPTION_NOT_FOUND"
             ));
         } else if ret == AVERROR(libc::ERANGE) {
-            return Err(MirrorXError::AVError(
-                String::from("ERANGE"),
-                AVERROR(libc::ERANGE),
-            ));
+            return Err(core_error!("set AVCodecContext returns ERANGE"));
         } else if ret == AVERROR(libc::EINVAL) {
-            return Err(MirrorXError::AVError(
-                String::from("EINVAL"),
-                AVERROR(libc::EINVAL),
-            ));
+            return Err(core_error!("set AVCodecContext returns EINVAL"));
         } else if ret != 0 {
-            return Err(MirrorXError::AVError(String::from("Other"), ret));
+            return Err(core_error!(
+                "set AVCodecContext returns error code: {}",
+                ret
+            ));
         } else {
             Ok(())
         }

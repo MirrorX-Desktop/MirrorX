@@ -1,17 +1,13 @@
 use super::ffmpeg_encoder_config::{FFMPEGEncoderType, Libx264Config};
 use crate::{
-    api_error,
     component::{capture_frame::CaptureFrame, NALU_HEADER_LENGTH},
-    error::MirrorXError,
+    core_error,
+    error::{CoreError, CoreResult},
     ffi::ffmpeg::{avcodec::*, avutil::*},
     service::endpoint::message::{
         EndPointMessage, EndPointMessagePacket, EndPointMessagePacketType, VideoFrame,
     },
 };
-use futures::AsyncReadExt;
-use std::io::prelude::*;
-use std::io::BufRead;
-use std::{ffi::CStr, ops::Add};
 use tokio::sync::mpsc::Sender;
 
 pub struct Encoder {
@@ -28,7 +24,7 @@ impl Encoder {
         frame_width: i32,
         frame_height: i32,
         excepted_fps: i32,
-    ) -> Result<Encoder, MirrorXError> {
+    ) -> CoreResult<Encoder> {
         let encoder_config = match encoder_type {
             FFMPEGEncoderType::Libx264 => Libx264Config::new()?,
         };
@@ -45,14 +41,14 @@ impl Encoder {
 
             let codec = avcodec_find_encoder_by_name(encoder_config.ffmpeg_encoder_name());
             if codec.is_null() {
-                return Err(api_error!(
+                return Err(core_error!(
                     "avcodec_find_encoder_by_name returns null pointer"
                 ));
             }
 
             encoder.codec_ctx = avcodec_alloc_context3(codec);
             if encoder.codec_ctx.is_null() {
-                return Err(api_error!("avcodec_alloc_context3 returns null pointer"));
+                return Err(core_error!("avcodec_alloc_context3 returns null pointer"));
             }
 
             (*encoder.codec_ctx).width = frame_width;
@@ -79,7 +75,7 @@ impl Encoder {
 
             let ret = avcodec_open2(encoder.codec_ctx, codec, std::ptr::null_mut());
             if ret != 0 {
-                return Err(api_error!("avcodec_open2 returns null pointer"));
+                return Err(core_error!("avcodec_open2 returns null pointer"));
             }
 
             Ok(encoder)
@@ -90,7 +86,7 @@ impl Encoder {
         &mut self,
         frame: CaptureFrame,
         tx: &Sender<EndPointMessagePacket>,
-    ) -> Result<(), MirrorXError> {
+    ) -> CoreResult<()> {
         unsafe {
             let mut ret: i32;
 
@@ -108,7 +104,7 @@ impl Encoder {
 
                 let new_frame = av_frame_alloc();
                 if new_frame.is_null() {
-                    return Err(api_error!("av_frame_alloc returns null pointer"));
+                    return Err(core_error!("av_frame_alloc returns null pointer"));
                 }
 
                 (*new_frame).width = frame.width as i32;
@@ -118,7 +114,7 @@ impl Encoder {
 
                 ret = av_frame_get_buffer(new_frame, 1);
                 if ret < 0 {
-                    return Err(api_error!(
+                    return Err(core_error!(
                         "av_frame_get_buffer returns error code: {}",
                         ret
                     ));
@@ -126,7 +122,7 @@ impl Encoder {
 
                 let packet = av_packet_alloc();
                 if packet.is_null() {
-                    return Err(api_error!("av_packet_alloc returns null pointer"));
+                    return Err(core_error!("av_packet_alloc returns null pointer"));
                 }
 
                 let packet_size = av_image_get_buffer_size(
@@ -138,7 +134,7 @@ impl Encoder {
 
                 ret = av_new_packet(packet, packet_size);
                 if ret < 0 {
-                    return Err(api_error!("av_new_packet returns error code: {}", ret));
+                    return Err(core_error!("av_new_packet returns error code: {}", ret));
                 }
 
                 self.frame = new_frame;
@@ -147,7 +143,7 @@ impl Encoder {
 
             ret = av_frame_make_writable(self.frame);
             if ret < 0 {
-                return Err(api_error!(
+                return Err(core_error!(
                     "av_frame_make_writable returns error code: {}",
                     ret
                 ));
@@ -168,11 +164,14 @@ impl Encoder {
 
             if ret != 0 {
                 if ret == AVERROR(libc::EAGAIN) {
-                    return Err(MirrorXError::MediaVideoEncoderFrameUnacceptable);
+                    return Err(core_error!("avcodec_send_frame returns EAGAIN"));
                 } else if ret == AVERROR_EOF {
-                    return Err(MirrorXError::MediaVideoEncoderClosed);
+                    return Err(core_error!("avcodec_send_frame returns AVERROR_EOF"));
                 }
-                return Err(MirrorXError::MediaVideoEncoderSendFrameFailed(ret));
+                return Err(core_error!(
+                    "avcodec_send_frame returns error code: {}",
+                    ret
+                ));
             }
 
             loop {
@@ -180,7 +179,10 @@ impl Encoder {
                 if ret == AVERROR(libc::EAGAIN) || ret == AVERROR_EOF {
                     return Ok(());
                 } else if ret < 0 {
-                    return Err(MirrorXError::MediaVideoDecoderReceiveFrameFailed(ret));
+                    return Err(core_error!(
+                        "avcodec_receive_packet returns error code: {}",
+                        ret
+                    ));
                 }
 
                 let mut sps = once_cell::unsync::OnceCell::new();
@@ -225,7 +227,7 @@ impl Encoder {
                         if let Some(cell) = cell {
                             let payload = extra_data[start + 4..end].to_vec();
                             if let Err(_) = cell.set(payload) {
-                                return Err(api_error!("set SPS or PPS cell repeatly"));
+                                return Err(core_error!("set SPS or PPS cell repeatly"));
                             }
                         }
                     }
@@ -247,7 +249,7 @@ impl Encoder {
                             tracing::warn!("network send channel is full")
                         }
                         tokio::sync::mpsc::error::TrySendError::Closed(_) => {
-                            return Err(api_error!("channel closed"));
+                            return Err(core_error!("channel closed"));
                         }
                     }
                 }

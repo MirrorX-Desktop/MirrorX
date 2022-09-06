@@ -3,7 +3,7 @@ use std::time::Duration;
 use tracing::{error, info};
 
 use crate::{
-    component::{desktop::Duplicator, monitor},
+    component::desktop::Duplicator,
     service::endpoint::processor::{
         desktop::start_desktop_capture_process, video::start_video_encode_process,
     },
@@ -13,7 +13,7 @@ use crate::{
 async fn test_capture_and_encode() -> anyhow::Result<()> {
     tracing_subscriber::fmt::init();
 
-    let monitors = monitor::get_active_monitors()?;
+    let monitors = crate::component::desktop::monitor::get_active_monitors()?;
     let monitor = match monitors.iter().find(|v| v.is_primary) {
         Some(v) => v,
         None => {

@@ -1,9 +1,7 @@
 use crate::{
-    error::MirrorXError,
-    service::endpoint::message::{
-        GetDisplayInfoRequest, GetDisplayInfoResponse, Input, InputEvent, MouseEvent,
-        StartMediaTransmissionRequest, StartMediaTransmissionResponse,
-    },
+    core_error,
+    error::{CoreError, CoreResult},
+    service::endpoint::message::*,
     utility::nonce_value::NonceValue,
 };
 use ring::aead::{OpeningKey, SealingKey};
@@ -14,7 +12,7 @@ pub async fn connect(
     remote_device_id: String,
     sealing_key: SealingKey<NonceValue>,
     opening_key: OpeningKey<NonceValue>,
-) -> Result<(), MirrorXError> {
+) -> CoreResult<()> {
     crate::service::endpoint::connect(
         "192.168.0.101:28001",
         is_active_side,
@@ -26,12 +24,15 @@ pub async fn connect(
     .await
 }
 
-pub async fn get_display_info(
-    remote_device_id: String,
-) -> Result<GetDisplayInfoResponse, MirrorXError> {
+pub async fn get_display_info(remote_device_id: String) -> CoreResult<GetDisplayInfoResponse> {
     let endpoint = match crate::service::endpoint::ENDPOINTS.get(&remote_device_id) {
         Some(pair) => pair,
-        None => return Err(MirrorXError::EndPointNotFound(remote_device_id)),
+        None => {
+            return Err(core_error!(
+                "remote EndPoint({}) isn't exists",
+                remote_device_id
+            ))
+        }
     };
 
     endpoint.get_display_info(GetDisplayInfoRequest {}).await
@@ -44,10 +45,15 @@ pub async fn start_media_transmission(
     texture_id: i64,
     video_texture_ptr: i64,
     update_frame_callback_ptr: i64,
-) -> Result<StartMediaTransmissionResponse, MirrorXError> {
+) -> CoreResult<StartMediaTransmissionResponse> {
     let endpoint = match crate::service::endpoint::ENDPOINTS.get(&remote_device_id) {
         Some(pair) => pair,
-        None => return Err(MirrorXError::EndPointNotFound(remote_device_id)),
+        None => {
+            return Err(core_error!(
+                "remote EndPoint({}) isn't exists",
+                remote_device_id
+            ))
+        }
     };
 
     let resp = endpoint
@@ -73,16 +79,16 @@ pub async fn start_media_transmission(
     Ok(resp)
 }
 
-pub async fn input(remote_device_id: String, event: InputEvent) -> Result<(), MirrorXError> {
+pub async fn input(remote_device_id: String, event: InputEvent) -> CoreResult<()> {
     let endpoint = match crate::service::endpoint::ENDPOINTS.get(&remote_device_id) {
         Some(pair) => pair,
-        None => return Err(MirrorXError::EndPointNotFound(remote_device_id)),
+        None => return Err(core_error!("endpoint not exists")),
     };
 
     endpoint.trigger_input(Input { event }).await
 }
 
-pub fn manually_close(remote_device_id: String) -> Result<(), MirrorXError> {
+pub fn manually_close(remote_device_id: String) -> CoreResult<()> {
     // let endpoint = match crate::service::endpoint::ENDPOINTS.get(&remote_device_id) {
     //     Some(pair) => pair,
     //     None => return Err(MirrorXError::EndPointNotFound(remote_device_id)),
@@ -97,10 +103,10 @@ pub fn manually_close(remote_device_id: String) -> Result<(), MirrorXError> {
 
 pub fn register_close_notificaton(
     remote_device_id: String,
-) -> Result<async_broadcast::Receiver<()>, MirrorXError> {
+) -> CoreResult<async_broadcast::Receiver<()>> {
     let endpoint = match crate::service::endpoint::ENDPOINTS.get(&remote_device_id) {
         Some(pair) => pair,
-        None => return Err(MirrorXError::EndPointNotFound(remote_device_id)),
+        None => return Err(core_error!("endpoint not exists")),
     };
 
     Ok(endpoint.subscribe_exit())

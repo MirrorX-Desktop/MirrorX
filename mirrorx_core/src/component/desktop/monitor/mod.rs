@@ -1,3 +1,9 @@
+#[cfg(target_os = "windows")]
+mod windows;
+
+#[cfg(target_os = "windows")]
+pub use self::windows::get_active_monitors;
+
 #[derive(Debug, Clone)]
 pub struct Monitor {
     pub id: String,

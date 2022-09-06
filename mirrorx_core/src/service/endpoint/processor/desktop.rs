@@ -1,9 +1,9 @@
-use crate::utility::runtime::TOKIO_RUNTIME;
 use crate::{
     component::{desktop::Duplicator, video_decoder::DecodedFrame},
-    error::MirrorXError,
+    error::CoreError,
     service::endpoint::ffi::create_callback_fn,
 };
+use crate::{core_error, utility::runtime::TOKIO_RUNTIME};
 use crossbeam::channel::{Receiver, Sender};
 use scopeguard::defer;
 use std::{os::raw::c_void, time::Duration};
@@ -16,7 +16,7 @@ pub fn start_desktop_capture_process(
     capture_frame_tx: crossbeam::channel::Sender<crate::component::capture_frame::CaptureFrame>,
     display_id: Option<String>,
     fps: u8,
-) -> Result<(), MirrorXError> {
+) -> Result<(), CoreError> {
     use crate::component::capture_frame::CaptureFrame;
     use std::ops::Sub;
     use tokio::sync::mpsc::error::TrySendError;
@@ -82,10 +82,10 @@ pub fn start_desktop_capture_process(
     capture_frame_tx: crossbeam::channel::Sender<CaptureFrame>,
     display_id: &str,
     fps: u8,
-) -> Result<(), MirrorXError> {
+) -> Result<(), CoreError> {
     let display_id = match display_id.parse::<u32>() {
         Ok(display_id) => display_id,
-        Err(err) => return Err(MirrorXError::Other(anyhow::anyhow!(err))),
+        Err(err) => return Err(CoreError::Other(anyhow::anyhow!(err))),
     };
 
     let mut duplicator = Duplicator::new(display_id, capture_frame_tx)?;
@@ -140,7 +140,7 @@ pub fn start_desktop_render_process(
     texture_id: i64,
     video_texture_ptr: i64,
     update_frame_callback_ptr: i64,
-) -> Result<(), MirrorXError> {
+) -> Result<(), CoreError> {
     let update_callback_fn = unsafe { create_callback_fn(update_frame_callback_ptr) };
 
     std::thread::Builder::new()
@@ -174,9 +174,5 @@ pub fn start_desktop_render_process(
             tracing::info!(?remote_device_id, "video render process exit");
         })
         .and_then(|_| Ok(()))
-        .map_err(|err| {
-            MirrorXError::Other(anyhow::anyhow!(
-                "spawn desktop render process failed ({err})"
-            ))
-        })
+        .map_err(|err| core_error!("spawn desktop render process failed ({})", err))
 }
