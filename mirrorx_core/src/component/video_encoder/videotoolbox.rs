@@ -1,6 +1,7 @@
 use crate::{
-    component::{desktop::CaptureFrame, NALU_HEADER_LENGTH},
-    error::MirrorXError,
+    component::{capture_frame::CaptureFrame, NALU_HEADER_LENGTH},
+    core_error,
+    error::{CoreError, CoreResult},
     ffi::os::macos::{core_media::*, videotoolbox::*},
     service::endpoint::message::{
         EndPointMessage, EndPointMessagePacket, EndPointMessagePacketType, VideoFrame,
@@ -21,7 +22,7 @@ pub struct Encoder {
 unsafe impl Send for Encoder {}
 
 impl Encoder {
-    pub fn new(frame_width: i32, frame_height: i32) -> Result<Encoder, MirrorXError> {
+    pub fn new(frame_width: i32, frame_height: i32) -> CoreResult<Encoder> {
         unsafe {
             let session = create_compression_session(frame_width, frame_height)?;
             Ok(Encoder { session })
@@ -31,8 +32,8 @@ impl Encoder {
     pub fn encode(
         &mut self,
         capture_frame: CaptureFrame,
-        endpoint_message_tx: *mut tokio::sync::mpsc::Sender<EndPointMessagePacket>,
-    ) -> Result<(), MirrorXError> {
+        endpoint_message_tx: &mut tokio::sync::mpsc::Sender<EndPointMessagePacket>,
+    ) -> CoreResult<()> {
         unsafe {
             let ret = VTCompressionSessionEncodeFrame(
                 self.session,
@@ -40,15 +41,15 @@ impl Encoder {
                 capture_frame.pts.clone(),
                 CMTime::invalid(),
                 std::ptr::null_mut(),
-                endpoint_message_tx as *mut c_void,
+                endpoint_message_tx as *mut _ as *mut c_void,
                 std::ptr::null_mut(),
             );
 
             if ret != 0 {
-                return Err(MirrorXError::Other(anyhow::anyhow!(
-                    "VTCompressionSessionEncodeFrame failed ({})",
+                return Err(core_error!(
+                    "VTCompressionSessionEncodeFrame returns error code: {}",
                     ret
-                )));
+                ));
             }
 
             Ok(())
@@ -71,7 +72,7 @@ impl Drop for Encoder {
 unsafe fn create_compression_session(
     frame_width: i32,
     frame_height: i32,
-) -> Result<VTCompressionSessionRef, MirrorXError> {
+) -> CoreResult<VTCompressionSessionRef> {
     let mut session = std::ptr::null_mut();
     let mut ret = VTCompressionSessionCreate(
         std::ptr::null_mut(),
@@ -87,10 +88,10 @@ unsafe fn create_compression_session(
     );
 
     if ret != 0 {
-        return Err(MirrorXError::Other(anyhow::anyhow!(
-            "VTCompressionSessionCreate failed ({})",
+        return Err(core_error!(
+            "VTCompressionSessionCreate returns error code: {}",
             ret
-        )));
+        ));
     }
 
     ret = VTSessionSetProperty(
@@ -100,12 +101,10 @@ unsafe fn create_compression_session(
     );
 
     if ret != 0 {
-        return Err(MirrorXError::Other(anyhow::anyhow!(
-            "VTSessionSetProperty failed ({}) key={} value={}",
+        return Err(core_error!(
+            "VTSessionSetProperty returns error code: {}",
             ret,
-            "kVTCompressionPropertyKey_ProfileLevel",
-            "kVTProfileLevel_H264_Main_5_0"
-        )));
+        ));
     }
 
     ret = VTSessionSetProperty(
@@ -115,12 +114,10 @@ unsafe fn create_compression_session(
     );
 
     if ret != 0 {
-        return Err(MirrorXError::Other(anyhow::anyhow!(
-            "VTSessionSetProperty failed ({}) key={} value={}",
+        return Err(core_error!(
+            "VTSessionSetProperty returns error code: {}",
             ret,
-            "kVTCompressionPropertyKey_RealTime",
-            "kCFBooleanTrue"
-        )));
+        ));
     }
 
     ret = VTSessionSetProperty(
@@ -130,12 +127,10 @@ unsafe fn create_compression_session(
     );
 
     if ret != 0 {
-        return Err(MirrorXError::Other(anyhow::anyhow!(
-            "VTSessionSetProperty failed ({}) key={} value={}",
+        return Err(core_error!(
+            "VTSessionSetProperty returns error code: {}",
             ret,
-            "kVTCompressionPropertyKey_AllowFrameReordering",
-            "kCFBooleanFalse"
-        )));
+        ));
     }
 
     ret = VTSessionSetProperty(
@@ -145,12 +140,10 @@ unsafe fn create_compression_session(
     );
 
     if ret != 0 {
-        return Err(MirrorXError::Other(anyhow::anyhow!(
-            "VTSessionSetProperty failed ({}) key={} value={}",
+        return Err(core_error!(
+            "VTSessionSetProperty returns error code: {}",
             ret,
-            "kVTCompressionPropertyKey_AllowFrameReordering",
-            "kCFBooleanFalse"
-        )));
+        ));
     }
 
     ret = VTSessionSetProperty(
@@ -160,12 +153,10 @@ unsafe fn create_compression_session(
     );
 
     if ret != 0 {
-        return Err(MirrorXError::Other(anyhow::anyhow!(
-            "VTSessionSetProperty failed ({}) key={} value={}",
+        return Err(core_error!(
+            "VTSessionSetProperty returns error code: {}",
             ret,
-            "kVTCompressionPropertyKey_MaxKeyFrameInterval",
-            "120"
-        )));
+        ));
     }
 
     ret = VTSessionSetProperty(
@@ -175,12 +166,10 @@ unsafe fn create_compression_session(
     );
 
     if ret != 0 {
-        return Err(MirrorXError::Other(anyhow::anyhow!(
-            "VTSessionSetProperty failed ({}) key={} value={}",
+        return Err(core_error!(
+            "VTSessionSetProperty returns error code: {}",
             ret,
-            "kVTCompressionPropertyKey_ExpectedFrameRate",
-            "60"
-        )));
+        ));
     }
 
     ret = VTSessionSetProperty(
@@ -190,12 +179,10 @@ unsafe fn create_compression_session(
     );
 
     if ret != 0 {
-        return Err(MirrorXError::Other(anyhow::anyhow!(
-            "VTSessionSetProperty failed ({}) key={} value={}",
+        return Err(core_error!(
+            "VTSessionSetProperty returns error code: {}",
             ret,
-            "kVTCompressionPropertyKey_AverageBitRate",
-            "4000_0000"
-        )));
+        ));
     }
 
     ret = VTSessionSetProperty(
@@ -207,21 +194,19 @@ unsafe fn create_compression_session(
     );
 
     if ret != 0 {
-        return Err(MirrorXError::Other(anyhow::anyhow!(
-            "VTSessionSetProperty failed ({}) key={} value={}",
+        return Err(core_error!(
+            "VTSessionSetProperty returns error code: {}",
             ret,
-            "kVTCompressionPropertyKey_DataRateLimits",
-            "[4000_0000,1]"
-        )));
+        ));
     }
 
     ret = VTCompressionSessionPrepareToEncodeFrames(session);
 
     if ret != 0 {
-        return Err(MirrorXError::Other(anyhow::anyhow!(
-            "VTCompressionSessionPrepareToEncodeFrames failed ({})",
+        return Err(core_error!(
+            "VTSessionSetProperty returns error code: {}",
             ret,
-        )));
+        ));
     }
 
     Ok(session)

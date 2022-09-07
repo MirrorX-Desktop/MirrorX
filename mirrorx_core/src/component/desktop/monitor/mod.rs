@@ -4,6 +4,12 @@ mod windows;
 #[cfg(target_os = "windows")]
 pub use self::windows::get_active_monitors;
 
+#[cfg(target_os = "macos")]
+mod macos;
+
+#[cfg(target_os = "macos")]
+pub use macos::{get_active_monitors, NSScreen};
+
 #[derive(Debug, Clone)]
 pub struct Monitor {
     pub id: String,

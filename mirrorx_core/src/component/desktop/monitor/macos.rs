@@ -1,22 +1,23 @@
-use super::ns_screen::NSScreen;
-use crate::error::MirrorXError;
+use super::Monitor;
 use crate::{
-    component::monitor::Monitor,
-    error::MirrorXError,
-    ffi::os::{macos::core_graphics::*, *},
+    core_error,
+    error::{CoreError, CoreResult},
+    ffi::os::macos::core_graphics::*,
 };
-use core_graphics::display::*;
-use core_graphics::display::{CGDirectDisplayID, CGRect};
+use core_graphics::display::{CGDirectDisplayID, CGRect, *};
 use objc::{class, msg_send, runtime::Class, sel, sel_impl};
-use objc_foundation::{INSArray, INSObject, INSString, NSArray, NSDictionary, NSObject, NSString};
-use objc_foundation::{INSData, INSObject, NSMutableData};
+use objc_foundation::{
+    INSArray, INSData, INSObject, INSString, NSArray, NSDictionary, NSMutableData, NSObject,
+    NSString,
+};
 use objc_id::{Id, Owned};
 use scopeguard::defer;
-use std::ops::Index;
-use std::{ops::DerefMut, os::raw::c_void};
-use tracing::error;
+use std::{
+    ops::{DerefMut, Index},
+    os::raw::c_void,
+};
 
-pub fn get_active_monitors() -> Result<Vec<Monitor>, MirrorXError> {
+pub fn get_active_monitors() -> CoreResult<Vec<Monitor>> {
     unsafe {
         let main_display_id = CGMainDisplayID();
         let ns_screens = NSScreen::screens()?;
@@ -53,7 +54,7 @@ pub fn get_active_monitors() -> Result<Vec<Monitor>, MirrorXError> {
 unsafe fn take_screen_shot_as_png(display_id: CGDirectDisplayID) -> Option<Vec<u8>> {
     let image_ref = CGDisplayCreateImage(display_id);
     if image_ref.is_null() {
-        error!("CGDisplayCreateImage failed");
+        tracing::error!("CGDisplayCreateImage returns null");
         return None;
     }
 
@@ -66,14 +67,14 @@ unsafe fn take_screen_shot_as_png(display_id: CGDirectDisplayID) -> Option<Vec<u
 
     let dest = CGImageDestinationCreateWithData(data_ptr, kUTTypePNG, 1, std::ptr::null());
     if dest.is_null() {
-        error!("CGImageDestinationCreateWithData failed");
+        tracing::error!("CGImageDestinationCreateWithData returns null");
         return None;
     }
 
     CGImageDestinationAddImage(dest, image_ref, std::ptr::null());
 
     if !CGImageDestinationFinalize(dest) {
-        error!("CGImageDestinationFinalize failed");
+        tracing::error!("CGImageDestinationFinalize returns false");
         return None;
     }
 
@@ -95,11 +96,11 @@ pub struct NSScreen {
 }
 
 impl NSScreen {
-    pub fn screens() -> Result<Vec<NSScreen>, MirrorXError> {
+    pub fn screens() -> CoreResult<Vec<NSScreen>> {
         unsafe {
             let ns_screens_ptr: *mut NSArray<NSScreenClass> = msg_send![class!(NSScreen), screens];
             if ns_screens_ptr.is_null() {
-                return Err(MirrorXError::Other(anyhow::anyhow!("get ns screen failed")));
+                return Err(core_error!("NSScreen.screens returns null"));
             }
 
             let ns_screens: Id<_, Owned> = Id::from_ptr(ns_screens_ptr);

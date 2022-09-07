@@ -1,8 +1,8 @@
-use std::os::raw::c_void;
-
+use super::DecodedFrame;
 use crate::{
     component::NALU_HEADER_LENGTH,
-    error::MirrorXError,
+    core_error,
+    error::{CoreError, CoreResult},
     ffi::os::macos::{core_media::*, core_video::*, videotoolbox::*},
     service::endpoint::message::VideoFrame,
 };
@@ -16,8 +16,7 @@ use core_foundation::{
     number::{kCFBooleanTrue, CFNumber},
 };
 use scopeguard::defer;
-
-use super::DecodedFrame;
+use std::os::raw::c_void;
 
 pub struct Decoder {
     format_description: CMVideoFormatDescriptionRef,
@@ -38,7 +37,7 @@ impl Decoder {
         &mut self,
         mut video_frame: VideoFrame,
         decoded_frame_tx: *mut crossbeam::channel::Sender<DecodedFrame>,
-    ) -> Result<(), MirrorXError> {
+    ) -> CoreResult<()> {
         unsafe {
             if let (Some(sps), Some(pps)) = (video_frame.sps, video_frame.pps) {
                 let format_description = create_format_description(&sps, &pps)?;
@@ -58,15 +57,11 @@ impl Decoder {
             }
 
             if self.session.is_null() {
-                return Err(MirrorXError::Other(anyhow::anyhow!(
-                    "decompression session is null"
-                )));
+                return Err(core_error!("decompression session is null"));
             }
 
             if self.format_description.is_null() {
-                return Err(MirrorXError::Other(anyhow::anyhow!(
-                    "decompression format description is null"
-                )));
+                return Err(core_error!("decompression format description is null"));
             }
 
             let nalu_header_bytes =
@@ -91,10 +86,10 @@ impl Decoder {
             );
 
             if ret != 0 {
-                return Err(MirrorXError::Other(anyhow::anyhow!(
-                    "CMBlockBufferCreateWithMemoryBlock failed ({})",
+                return Err(core_error!(
+                    "CMBlockBufferCreateWithMemoryBlock returns error code: {}",
                     ret
-                )));
+                ));
             }
 
             let mut sample_buffer = std::ptr::null_mut();
@@ -111,10 +106,10 @@ impl Decoder {
             );
 
             if ret != 0 {
-                return Err(MirrorXError::Other(anyhow::anyhow!(
-                    "CMSampleBufferCreateReady failed ({})",
+                return Err(core_error!(
+                    "CMSampleBufferCreateReady returns error code: {}",
                     ret
-                )));
+                ));
             }
 
             let ret = VTDecompressionSessionDecodeFrame(
@@ -126,10 +121,10 @@ impl Decoder {
             );
 
             if ret != 0 {
-                return Err(MirrorXError::Other(anyhow::anyhow!(
-                    "VTDecompressionSessionDecodeFrame failed ({})",
+                return Err(core_error!(
+                    "VTDecompressionSessionDecodeFrame returns error code: {}",
                     ret
-                )));
+                ));
             }
 
             Ok(())
@@ -137,10 +132,7 @@ impl Decoder {
     }
 }
 
-unsafe fn create_format_description(
-    sps: &[u8],
-    pps: &[u8],
-) -> Result<CMFormatDescriptionRef, MirrorXError> {
+unsafe fn create_format_description(sps: &[u8], pps: &[u8]) -> CoreResult<CMFormatDescriptionRef> {
     let parameter_set = [sps.as_ptr(), pps.as_ptr()];
     let parameter_set_size = [sps.len() as isize, pps.len() as isize];
 
@@ -155,10 +147,10 @@ unsafe fn create_format_description(
     );
 
     if ret != 0 {
-        return Err(MirrorXError::Other(anyhow::anyhow!(
-            "CMVideoFormatDescriptionCreateFromH264ParameterSets failed ({})",
+        return Err(core_error!(
+            "CMVideoFormatDescriptionCreateFromH264ParameterSets returns error code: {}",
             ret
-        )));
+        ));
     }
 
     Ok(format_description)
@@ -166,7 +158,7 @@ unsafe fn create_format_description(
 
 unsafe fn create_decompression_session(
     format_description: CMVideoFormatDescriptionRef,
-) -> Result<VTDecompressionSessionRef, MirrorXError> {
+) -> CoreResult<VTDecompressionSessionRef> {
     let keys = [
         kCVPixelBufferPixelFormatTypeKey.to_void(),
         kCVPixelBufferMetalCompatibilityKey.to_void(),
@@ -208,10 +200,10 @@ unsafe fn create_decompression_session(
     );
 
     if ret != 0 {
-        return Err(MirrorXError::Other(anyhow::anyhow!(
-            "VTDecompressionSessionCreate failed ({})",
+        return Err(core_error!(
+            "VTDecompressionSessionCreate returns error code: {}",
             ret
-        )));
+        ));
     }
 
     let ret = VTSessionSetProperty(
@@ -221,12 +213,10 @@ unsafe fn create_decompression_session(
     );
 
     if ret != 0 {
-        return Err(MirrorXError::Other(anyhow::anyhow!(
-            "VTSessionSetProperty failed ({}) key={} value={}",
+        return Err(core_error!(
+            "VTSessionSetProperty returns error code: {}",
             ret,
-            "kVTDecompressionPropertyKey_RealTime",
-            "true"
-        )));
+        ));
     }
 
     Ok(session)

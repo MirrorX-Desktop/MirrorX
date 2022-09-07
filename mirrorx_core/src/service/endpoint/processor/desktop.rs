@@ -1,12 +1,12 @@
+use crate::component::capture_frame::CaptureFrame;
 use crate::{
     component::{desktop::Duplicator, video_decoder::DecodedFrame},
-    error::CoreError,
+    error::{CoreError, CoreResult},
     service::endpoint::ffi::create_callback_fn,
 };
 use crate::{core_error, utility::runtime::TOKIO_RUNTIME};
-use crossbeam::channel::{Receiver, Sender};
 use scopeguard::defer;
-use std::{os::raw::c_void, time::Duration};
+use std::os::raw::c_void;
 
 #[cfg(target_os = "windows")]
 pub fn start_desktop_capture_process(
@@ -16,8 +16,7 @@ pub fn start_desktop_capture_process(
     capture_frame_tx: crossbeam::channel::Sender<crate::component::capture_frame::CaptureFrame>,
     display_id: Option<String>,
     fps: u8,
-) -> Result<(), CoreError> {
-    use crate::component::capture_frame::CaptureFrame;
+) -> CoreResult<()> {
     use std::ops::Sub;
     use tokio::sync::mpsc::error::TrySendError;
 
@@ -80,13 +79,10 @@ pub fn start_desktop_capture_process(
     exit_tx: async_broadcast::Sender<()>,
     mut exit_rx: async_broadcast::Receiver<()>,
     capture_frame_tx: crossbeam::channel::Sender<CaptureFrame>,
-    display_id: &str,
+    display_id: Option<String>,
     fps: u8,
-) -> Result<(), CoreError> {
-    let display_id = match display_id.parse::<u32>() {
-        Ok(display_id) => display_id,
-        Err(err) => return Err(CoreError::Other(anyhow::anyhow!(err))),
-    };
+) -> CoreResult<()> {
+    let display_id = display_id.unwrap_or(String::from("0")).parse::<u32>()?;
 
     let mut duplicator = Duplicator::new(display_id, capture_frame_tx)?;
 
@@ -117,12 +113,12 @@ pub fn start_desktop_capture_process(
 
     TOKIO_RUNTIME.spawn(async move {
         defer! {
-            info!(?remote_device_id, "desktop capture process exit");
+            tracing::info!(?remote_device_id, "desktop capture process exit");
             let _ = exit_tx.try_broadcast(());
         }
 
         if let Err(err) = duplicator.start() {
-            error!(?err, "duplicator start failed");
+            tracing::error!(?err, "duplicator start failed");
             return;
         }
 

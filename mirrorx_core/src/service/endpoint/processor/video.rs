@@ -1,14 +1,12 @@
 use crate::{
-    component::{video_decoder::DecodedFrame, video_encoder::FFMPEGEncoderType},
-    error::CoreError,
+    component::video_decoder::DecodedFrame,
+    error::{CoreError, CoreResult},
     service::endpoint::message::*,
     utility::runtime::TOKIO_RUNTIME,
 };
 use async_broadcast::TryRecvError;
 use crossbeam::channel::{Receiver, Sender};
 use scopeguard::defer;
-use std::{collections::HashMap, time::Duration};
-use tracing::{error, info, trace, warn};
 
 pub fn start_video_encode_process(
     remote_device_id: String,
@@ -20,8 +18,8 @@ pub fn start_video_encode_process(
     mut capture_frame_rx: crossbeam::channel::Receiver<
         crate::component::capture_frame::CaptureFrame,
     >,
-    packet_tx: tokio::sync::mpsc::Sender<EndPointMessagePacket>,
-) -> Result<(), CoreError> {
+    mut packet_tx: tokio::sync::mpsc::Sender<EndPointMessagePacket>,
+) -> CoreResult<()> {
     #[cfg(target_os = "macos")]
     let mut encoder = crate::component::video_encoder::Encoder::new(width, height)?;
     #[cfg(not(target_os = "macos"))]
@@ -34,7 +32,7 @@ pub fn start_video_encode_process(
 
     TOKIO_RUNTIME.spawn_blocking(move || {
         defer! {
-            info!(?remote_device_id, "video encode process exit");
+            tracing::info!(?remote_device_id, "video encode process exit");
             let _ = exit_tx.try_broadcast(());
         }
 
@@ -50,8 +48,8 @@ pub fn start_video_encode_process(
 
             match capture_frame_rx.recv() {
                 Ok(capture_frame) => {
-                    if let Err(err) = encoder.encode(capture_frame, &packet_tx) {
-                        error!(?err, "video frame encode failed");
+                    if let Err(err) = encoder.encode(capture_frame, &mut packet_tx) {
+                        tracing::error!(?err, "video frame encode failed");
                         return;
                     }
                 }
@@ -72,7 +70,7 @@ pub fn start_video_decode_process(
     fps: i32,
     mut video_frame_rx: Receiver<VideoFrame>,
     decoded_frame_tx: Sender<DecodedFrame>,
-) -> Result<(), CoreError> {
+) -> CoreResult<()> {
     // let (decoder_name, options) = if cfg!(target_os = "macos") {
     //     ("h264", HashMap::new())
     // } else if cfg!(target_os = "windows") {

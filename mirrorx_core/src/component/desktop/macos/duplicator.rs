@@ -1,6 +1,7 @@
 use crate::{
-    component::{desktop::frame::CaptureFrame, monitor::NSScreen},
-    error::MirrorXError,
+    component::{capture_frame::CaptureFrame, desktop::monitor::NSScreen},
+    core_error,
+    error::{CoreError, CoreResult},
     ffi::os::macos::{core_graphics::*, core_media::*, core_video::*, io_surface::*},
 };
 use block::ConcreteBlock;
@@ -8,69 +9,6 @@ use core_foundation::base::CFRelease;
 use dispatch::ffi::{dispatch_queue_create, dispatch_release, DISPATCH_QUEUE_SERIAL};
 use scopeguard::defer;
 use std::{cell::Cell, ffi::CString, ops::Deref, rc::Rc};
-
-// pub struct Duplicator {
-//     capture_session: AVCaptureSession,
-// }
-
-// unsafe impl Send for Duplicator {}
-
-// impl Duplicator {
-//     pub fn new(
-//         capture_frame_tx: crossbeam::channel::Sender<Frame>,
-//         display_id: &str,
-//         fps: u8,
-//     ) -> anyhow::Result<Self> {
-//         let display_id: u32 = match display_id.parse() {
-//             Ok(v) => v,
-//             Err(_) => return Err(anyhow::anyhow!("convert display id failed")),
-//         };
-
-//         let mut capture_session = AVCaptureSession::new();
-//         capture_session.begin_configuration();
-//         capture_session.set_session_preset(AVCaptureSessionPreset::AVCaptureSessionPresetHigh);
-
-//         let capture_screen_input = AVCaptureScreenInput::new(display_id);
-//         capture_screen_input.set_captures_cursor(true);
-//         capture_screen_input.set_captures_mouse_clicks(false);
-//         capture_screen_input.set_min_frame_duration(unsafe { CMTimeMake(1, fps as i32) });
-
-//         if capture_session.can_add_input(&capture_screen_input) {
-//             capture_session.add_input(capture_screen_input);
-//         } else {
-//             bail!("can't add input");
-//         }
-
-//         let capture_video_data_output = AVCaptureVideoDataOutput::new(capture_frame_tx);
-
-//         if capture_session.can_add_output(&capture_video_data_output) {
-//             capture_session.add_output(capture_video_data_output);
-//         } else {
-//             bail!("can't add output");
-//         }
-
-//         capture_session.commit_configuration();
-
-//         Ok(Duplicator { capture_session })
-//     }
-
-//     pub fn start(&mut self) -> anyhow::Result<()> {
-//         self.capture_session.start_running();
-//         Ok(())
-//     }
-
-//     pub fn stop(&mut self) {
-//         self.capture_session.stop_running();
-//     }
-// }
-
-// impl Drop for Duplicator {
-//     fn drop(&mut self) {
-//         self.capture_session.stop_running();
-//         info!("DesktopDuplicator dropped");
-//     }
-// }
-
 pub struct Duplicator {
     display_stream: CGDisplayStreamRef,
 }
@@ -81,7 +19,7 @@ impl Duplicator {
     pub fn new(
         display: core_graphics::display::CGDirectDisplayID,
         capture_frame_tx: crossbeam::channel::Sender<CaptureFrame>,
-    ) -> Result<Self, MirrorXError> {
+    ) -> CoreResult<Self> {
         unsafe {
             let screens = NSScreen::screens()?;
             let screen = match screens.iter().find(|s| s.screenNumber() == display) {
@@ -89,8 +27,7 @@ impl Duplicator {
                 None => &screens[0],
             };
 
-            let queue_label = CString::new("queue.duplicator.mirrorx")
-                .map_err(|err| MirrorXError::Other(anyhow::anyhow!(err)))?;
+            let queue_label = CString::new("queue.duplicator.mirrorx")?;
 
             let dispatch_queue = dispatch_queue_create(queue_label.as_ptr(), DISPATCH_QUEUE_SERIAL);
 
@@ -136,30 +73,30 @@ impl Duplicator {
         }
     }
 
-    pub fn start(&self) -> Result<(), MirrorXError> {
+    pub fn start(&self) -> CoreResult<()> {
         unsafe {
             let error_code = CGDisplayStreamStart(self.display_stream);
             if error_code == 0 {
                 Ok(())
             } else {
-                Err(MirrorXError::Other(anyhow::anyhow!(
-                    "CGDisplayStreamStart returns error({})",
+                Err(core_error!(
+                    "CGDisplayStreamStart returns error code: {}",
                     error_code
-                )))
+                ))
             }
         }
     }
 
-    pub fn stop(&self) -> Result<(), MirrorXError> {
+    pub fn stop(&self) -> CoreResult<()> {
         unsafe {
             let error_code = CGDisplayStreamStop(self.display_stream);
             if error_code == 0 {
                 Ok(())
             } else {
-                Err(MirrorXError::Other(anyhow::anyhow!(
-                    "CGDisplayStreamStop returns error({})",
+                Err(core_error!(
+                    "CGDisplayStreamStop returns error code: {}",
                     error_code
-                )))
+                ))
             }
         }
     }

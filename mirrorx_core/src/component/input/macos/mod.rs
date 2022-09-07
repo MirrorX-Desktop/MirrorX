@@ -2,7 +2,11 @@ mod key_code;
 
 use self::key_code::*;
 use super::key::{KeyboardKey, MouseKey};
-use crate::{component::monitor::Monitor, error::MirrorXError};
+use crate::{
+    component::desktop::monitor::Monitor,
+    core_error,
+    error::{CoreError, CoreResult},
+};
 use core_graphics::{
     display::{CGDirectDisplayID, CGDisplayMoveCursorToPoint, CGPoint},
     event::{
@@ -14,14 +18,11 @@ use core_graphics::{
 
 // https://developer.mozilla.org/en-US/docs/Web/API/UI_Events/Keyboard_event_code_values
 
-pub fn mouse_up(monitor: &Monitor, key: MouseKey, x: f32, y: f32) -> Result<(), MirrorXError> {
-    let display_id = monitor
-        .id
-        .parse::<u32>()
-        .map_err(|err| MirrorXError::Other(anyhow::anyhow!(err)))?;
+pub fn mouse_up(monitor: &Monitor, key: MouseKey, x: f32, y: f32) -> CoreResult<()> {
+    let display_id = monitor.id.parse::<u32>()?;
 
     let (event_type, mouse_button) = match key {
-        MouseKey::None => return Err(MirrorXError::Other(anyhow::anyhow!("unsupport key"))),
+        MouseKey::None => return Err(core_error!("unsupport key")),
         MouseKey::Left => (CGEventType::LeftMouseUp, CGMouseButton::Left),
         MouseKey::Right => (CGEventType::RightMouseUp, CGMouseButton::Right),
         MouseKey::Wheel => (CGEventType::ScrollWheel, CGMouseButton::Center),
@@ -32,7 +33,7 @@ pub fn mouse_up(monitor: &Monitor, key: MouseKey, x: f32, y: f32) -> Result<(), 
     unsafe {
         post_mouse_event(display_id, x, y, move |event_source, point| {
             let event = CGEvent::new_mouse_event(event_source, event_type, point, mouse_button)
-                .map_err(|_| MirrorXError::Other(anyhow::anyhow!("create CGEvent failed")))?;
+                .map_err(|_| core_error!("create mouse CGEvent failed"))?;
 
             match event_type {
                 CGEventType::OtherMouseUp => {
@@ -50,14 +51,11 @@ pub fn mouse_up(monitor: &Monitor, key: MouseKey, x: f32, y: f32) -> Result<(), 
     }
 }
 
-pub fn mouse_down(monitor: &Monitor, key: MouseKey, x: f32, y: f32) -> Result<(), MirrorXError> {
-    let display_id = monitor
-        .id
-        .parse::<u32>()
-        .map_err(|err| MirrorXError::Other(anyhow::anyhow!(err)))?;
+pub fn mouse_down(monitor: &Monitor, key: MouseKey, x: f32, y: f32) -> CoreResult<()> {
+    let display_id = monitor.id.parse::<u32>()?;
 
     let (event_type, mouse_button) = match key {
-        MouseKey::None => return Err(MirrorXError::Other(anyhow::anyhow!("unsupport key"))),
+        MouseKey::None => return Err(core_error!("unsupport key")),
         MouseKey::Left => (CGEventType::LeftMouseDown, CGMouseButton::Left),
         MouseKey::Right => (CGEventType::RightMouseDown, CGMouseButton::Right),
         MouseKey::Wheel => (CGEventType::ScrollWheel, CGMouseButton::Center),
@@ -68,7 +66,7 @@ pub fn mouse_down(monitor: &Monitor, key: MouseKey, x: f32, y: f32) -> Result<()
     unsafe {
         post_mouse_event(display_id, x, y, move |event_source, point| {
             let event = CGEvent::new_mouse_event(event_source, event_type, point, mouse_button)
-                .map_err(|_| MirrorXError::Other(anyhow::anyhow!("create CGEvent failed")))?;
+                .map_err(|_| core_error!("create mouse CGEvent failed"))?;
 
             match event_type {
                 CGEventType::OtherMouseDown => {
@@ -86,11 +84,8 @@ pub fn mouse_down(monitor: &Monitor, key: MouseKey, x: f32, y: f32) -> Result<()
     }
 }
 
-pub fn mouse_move(monitor: &Monitor, key: MouseKey, x: f32, y: f32) -> Result<(), MirrorXError> {
-    let display_id = monitor
-        .id
-        .parse::<u32>()
-        .map_err(|err| MirrorXError::Other(anyhow::anyhow!(err)))?;
+pub fn mouse_move(monitor: &Monitor, key: MouseKey, x: f32, y: f32) -> CoreResult<()> {
+    let display_id = monitor.id.parse::<u32>()?;
 
     let (event_type, mouse_button) = match key {
         MouseKey::None => (CGEventType::MouseMoved, CGMouseButton::Left),
@@ -104,7 +99,7 @@ pub fn mouse_move(monitor: &Monitor, key: MouseKey, x: f32, y: f32) -> Result<()
     unsafe {
         post_mouse_event(display_id, x, y, move |event_source, point| {
             let event = CGEvent::new_mouse_event(event_source, event_type, point, mouse_button)
-                .map_err(|_| MirrorXError::Other(anyhow::anyhow!("create CGEvent failed")))?;
+                .map_err(|_| core_error!("create mouse CGEvent failed"))?;
 
             match event_type {
                 CGEventType::OtherMouseDragged => {
@@ -122,11 +117,8 @@ pub fn mouse_move(monitor: &Monitor, key: MouseKey, x: f32, y: f32) -> Result<()
     }
 }
 
-pub fn mouse_scroll_wheel(monitor: &Monitor, delta: f32) -> Result<(), MirrorXError> {
-    let display_id = monitor
-        .id
-        .parse::<u32>()
-        .map_err(|err| MirrorXError::Other(anyhow::anyhow!(err)))?;
+pub fn mouse_scroll_wheel(monitor: &Monitor, delta: f32) -> CoreResult<()> {
+    let display_id = monitor.id.parse::<u32>()?;
 
     unsafe {
         post_mouse_event(display_id, 0f32, 0f32, move |event_source, _| {
@@ -138,16 +130,16 @@ pub fn mouse_scroll_wheel(monitor: &Monitor, delta: f32) -> Result<(), MirrorXEr
                 0,
                 0,
             )
-            .map_err(|_| MirrorXError::Other(anyhow::anyhow!("create CGEvent failed")))
+            .map_err(|_| core_error!("create scroll CGEvent failed"))
         })
     }
 }
 
-pub fn keyboard_up(key: KeyboardKey) -> Result<(), MirrorXError> {
+pub fn keyboard_up(key: KeyboardKey) -> CoreResult<()> {
     post_keyboard_event(key, false)
 }
 
-pub fn keyboard_down(key: KeyboardKey) -> Result<(), MirrorXError> {
+pub fn keyboard_down(key: KeyboardKey) -> CoreResult<()> {
     post_keyboard_event(key, true)
 }
 
@@ -155,8 +147,8 @@ unsafe fn post_mouse_event(
     display_id: CGDirectDisplayID,
     x: f32,
     y: f32,
-    event_create_fn: impl Fn(CGEventSource, CGPoint) -> Result<CGEvent, MirrorXError> + 'static + Send,
-) -> Result<(), MirrorXError> {
+    event_create_fn: impl Fn(CGEventSource, CGPoint) -> CoreResult<CGEvent> + 'static + Send,
+) -> CoreResult<()> {
     // todo: use self created serial queue
     dispatch::Queue::global(dispatch::QueuePriority::High).barrier_async(move || {
         if let Ok(event_source) = CGEventSource::new(CGEventSourceStateID::HIDSystemState) {
@@ -172,7 +164,7 @@ unsafe fn post_mouse_event(
     Ok(())
 }
 
-fn post_keyboard_event(key: KeyboardKey, press: bool) -> Result<(), MirrorXError> {
+fn post_keyboard_event(key: KeyboardKey, press: bool) -> CoreResult<()> {
     let vk_key = map_key_code(key);
 
     if let Ok(source) = CGEventSource::new(CGEventSourceStateID::HIDSystemState) {
@@ -180,14 +172,10 @@ fn post_keyboard_event(key: KeyboardKey, press: bool) -> Result<(), MirrorXError
             event.post(CGEventTapLocation::HID);
             Ok(())
         } else {
-            Err(MirrorXError::Other(anyhow::anyhow!(
-                "create CGEvent failed"
-            )))
+            Err(core_error!("create keyboard CGEvent failed"))
         }
     } else {
-        Err(MirrorXError::Other(anyhow::anyhow!(
-            "create CGEventSource failed"
-        )))
+        Err(core_error!("create CGEventSource failed"))
     }
 }
 
