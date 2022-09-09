@@ -37,20 +37,20 @@ mixin _$InputEvent {
       throw _privateConstructorUsedError;
   @optionalTypeArgs
   TResult map<TResult extends Object?>({
-    required TResult Function(Mouse value) mouse,
-    required TResult Function(Keyboard value) keyboard,
+    required TResult Function(InputEvent_Mouse value) mouse,
+    required TResult Function(InputEvent_Keyboard value) keyboard,
   }) =>
       throw _privateConstructorUsedError;
   @optionalTypeArgs
   TResult? mapOrNull<TResult extends Object?>({
-    TResult Function(Mouse value)? mouse,
-    TResult Function(Keyboard value)? keyboard,
+    TResult Function(InputEvent_Mouse value)? mouse,
+    TResult Function(InputEvent_Keyboard value)? keyboard,
   }) =>
       throw _privateConstructorUsedError;
   @optionalTypeArgs
   TResult maybeMap<TResult extends Object?>({
-    TResult Function(Mouse value)? mouse,
-    TResult Function(Keyboard value)? keyboard,
+    TResult Function(InputEvent_Mouse value)? mouse,
+    TResult Function(InputEvent_Keyboard value)? keyboard,
     required TResult orElse(),
   }) =>
       throw _privateConstructorUsedError;
@@ -73,28 +73,31 @@ class _$InputEventCopyWithImpl<$Res> implements $InputEventCopyWith<$Res> {
 }
 
 /// @nodoc
-abstract class _$$MouseCopyWith<$Res> {
-  factory _$$MouseCopyWith(_$Mouse value, $Res Function(_$Mouse) then) =
-      __$$MouseCopyWithImpl<$Res>;
+abstract class _$$InputEvent_MouseCopyWith<$Res> {
+  factory _$$InputEvent_MouseCopyWith(
+          _$InputEvent_Mouse value, $Res Function(_$InputEvent_Mouse) then) =
+      __$$InputEvent_MouseCopyWithImpl<$Res>;
   $Res call({MouseEvent field0});
 
   $MouseEventCopyWith<$Res> get field0;
 }
 
 /// @nodoc
-class __$$MouseCopyWithImpl<$Res> extends _$InputEventCopyWithImpl<$Res>
-    implements _$$MouseCopyWith<$Res> {
-  __$$MouseCopyWithImpl(_$Mouse _value, $Res Function(_$Mouse) _then)
-      : super(_value, (v) => _then(v as _$Mouse));
+class __$$InputEvent_MouseCopyWithImpl<$Res>
+    extends _$InputEventCopyWithImpl<$Res>
+    implements _$$InputEvent_MouseCopyWith<$Res> {
+  __$$InputEvent_MouseCopyWithImpl(
+      _$InputEvent_Mouse _value, $Res Function(_$InputEvent_Mouse) _then)
+      : super(_value, (v) => _then(v as _$InputEvent_Mouse));
 
   @override
-  _$Mouse get _value => super._value as _$Mouse;
+  _$InputEvent_Mouse get _value => super._value as _$InputEvent_Mouse;
 
   @override
   $Res call({
     Object? field0 = freezed,
   }) {
-    return _then(_$Mouse(
+    return _then(_$InputEvent_Mouse(
       field0 == freezed
           ? _value.field0
           : field0 // ignore: cast_nullable_to_non_nullable
@@ -112,8 +115,8 @@ class __$$MouseCopyWithImpl<$Res> extends _$InputEventCopyWithImpl<$Res>
 
 /// @nodoc
 
-class _$Mouse implements Mouse {
-  const _$Mouse(this.field0);
+class _$InputEvent_Mouse implements InputEvent_Mouse {
+  const _$InputEvent_Mouse(this.field0);
 
   @override
   final MouseEvent field0;
@@ -127,7 +130,7 @@ class _$Mouse implements Mouse {
   bool operator ==(dynamic other) {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
-            other is _$Mouse &&
+            other is _$InputEvent_Mouse &&
             const DeepCollectionEquality().equals(other.field0, field0));
   }
 
@@ -137,8 +140,8 @@ class _$Mouse implements Mouse {
 
   @JsonKey(ignore: true)
   @override
-  _$$MouseCopyWith<_$Mouse> get copyWith =>
-      __$$MouseCopyWithImpl<_$Mouse>(this, _$identity);
+  _$$InputEvent_MouseCopyWith<_$InputEvent_Mouse> get copyWith =>
+      __$$InputEvent_MouseCopyWithImpl<_$InputEvent_Mouse>(this, _$identity);
 
   @override
   @optionalTypeArgs
@@ -174,8 +177,8 @@ class _$Mouse implements Mouse {
   @override
   @optionalTypeArgs
   TResult map<TResult extends Object?>({
-    required TResult Function(Mouse value) mouse,
-    required TResult Function(Keyboard value) keyboard,
+    required TResult Function(InputEvent_Mouse value) mouse,
+    required TResult Function(InputEvent_Keyboard value) keyboard,
   }) {
     return mouse(this);
   }
@@ -183,8 +186,8 @@ class _$Mouse implements Mouse {
   @override
   @optionalTypeArgs
   TResult? mapOrNull<TResult extends Object?>({
-    TResult Function(Mouse value)? mouse,
-    TResult Function(Keyboard value)? keyboard,
+    TResult Function(InputEvent_Mouse value)? mouse,
+    TResult Function(InputEvent_Keyboard value)? keyboard,
   }) {
     return mouse?.call(this);
   }
@@ -192,8 +195,8 @@ class _$Mouse implements Mouse {
   @override
   @optionalTypeArgs
   TResult maybeMap<TResult extends Object?>({
-    TResult Function(Mouse value)? mouse,
-    TResult Function(Keyboard value)? keyboard,
+    TResult Function(InputEvent_Mouse value)? mouse,
+    TResult Function(InputEvent_Keyboard value)? keyboard,
     required TResult orElse(),
   }) {
     if (mouse != null) {
@@ -203,38 +206,41 @@ class _$Mouse implements Mouse {
   }
 }
 
-abstract class Mouse implements InputEvent {
-  const factory Mouse(final MouseEvent field0) = _$Mouse;
+abstract class InputEvent_Mouse implements InputEvent {
+  const factory InputEvent_Mouse(final MouseEvent field0) = _$InputEvent_Mouse;
 
   MouseEvent get field0;
   @JsonKey(ignore: true)
-  _$$MouseCopyWith<_$Mouse> get copyWith => throw _privateConstructorUsedError;
+  _$$InputEvent_MouseCopyWith<_$InputEvent_Mouse> get copyWith =>
+      throw _privateConstructorUsedError;
 }
 
 /// @nodoc
-abstract class _$$KeyboardCopyWith<$Res> {
-  factory _$$KeyboardCopyWith(
-          _$Keyboard value, $Res Function(_$Keyboard) then) =
-      __$$KeyboardCopyWithImpl<$Res>;
+abstract class _$$InputEvent_KeyboardCopyWith<$Res> {
+  factory _$$InputEvent_KeyboardCopyWith(_$InputEvent_Keyboard value,
+          $Res Function(_$InputEvent_Keyboard) then) =
+      __$$InputEvent_KeyboardCopyWithImpl<$Res>;
   $Res call({KeyboardEvent field0});
 
   $KeyboardEventCopyWith<$Res> get field0;
 }
 
 /// @nodoc
-class __$$KeyboardCopyWithImpl<$Res> extends _$InputEventCopyWithImpl<$Res>
-    implements _$$KeyboardCopyWith<$Res> {
-  __$$KeyboardCopyWithImpl(_$Keyboard _value, $Res Function(_$Keyboard) _then)
-      : super(_value, (v) => _then(v as _$Keyboard));
+class __$$InputEvent_KeyboardCopyWithImpl<$Res>
+    extends _$InputEventCopyWithImpl<$Res>
+    implements _$$InputEvent_KeyboardCopyWith<$Res> {
+  __$$InputEvent_KeyboardCopyWithImpl(
+      _$InputEvent_Keyboard _value, $Res Function(_$InputEvent_Keyboard) _then)
+      : super(_value, (v) => _then(v as _$InputEvent_Keyboard));
 
   @override
-  _$Keyboard get _value => super._value as _$Keyboard;
+  _$InputEvent_Keyboard get _value => super._value as _$InputEvent_Keyboard;
 
   @override
   $Res call({
     Object? field0 = freezed,
   }) {
-    return _then(_$Keyboard(
+    return _then(_$InputEvent_Keyboard(
       field0 == freezed
           ? _value.field0
           : field0 // ignore: cast_nullable_to_non_nullable
@@ -252,8 +258,8 @@ class __$$KeyboardCopyWithImpl<$Res> extends _$InputEventCopyWithImpl<$Res>
 
 /// @nodoc
 
-class _$Keyboard implements Keyboard {
-  const _$Keyboard(this.field0);
+class _$InputEvent_Keyboard implements InputEvent_Keyboard {
+  const _$InputEvent_Keyboard(this.field0);
 
   @override
   final KeyboardEvent field0;
@@ -267,7 +273,7 @@ class _$Keyboard implements Keyboard {
   bool operator ==(dynamic other) {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
-            other is _$Keyboard &&
+            other is _$InputEvent_Keyboard &&
             const DeepCollectionEquality().equals(other.field0, field0));
   }
 
@@ -277,8 +283,9 @@ class _$Keyboard implements Keyboard {
 
   @JsonKey(ignore: true)
   @override
-  _$$KeyboardCopyWith<_$Keyboard> get copyWith =>
-      __$$KeyboardCopyWithImpl<_$Keyboard>(this, _$identity);
+  _$$InputEvent_KeyboardCopyWith<_$InputEvent_Keyboard> get copyWith =>
+      __$$InputEvent_KeyboardCopyWithImpl<_$InputEvent_Keyboard>(
+          this, _$identity);
 
   @override
   @optionalTypeArgs
@@ -314,8 +321,8 @@ class _$Keyboard implements Keyboard {
   @override
   @optionalTypeArgs
   TResult map<TResult extends Object?>({
-    required TResult Function(Mouse value) mouse,
-    required TResult Function(Keyboard value) keyboard,
+    required TResult Function(InputEvent_Mouse value) mouse,
+    required TResult Function(InputEvent_Keyboard value) keyboard,
   }) {
     return keyboard(this);
   }
@@ -323,8 +330,8 @@ class _$Keyboard implements Keyboard {
   @override
   @optionalTypeArgs
   TResult? mapOrNull<TResult extends Object?>({
-    TResult Function(Mouse value)? mouse,
-    TResult Function(Keyboard value)? keyboard,
+    TResult Function(InputEvent_Mouse value)? mouse,
+    TResult Function(InputEvent_Keyboard value)? keyboard,
   }) {
     return keyboard?.call(this);
   }
@@ -332,8 +339,8 @@ class _$Keyboard implements Keyboard {
   @override
   @optionalTypeArgs
   TResult maybeMap<TResult extends Object?>({
-    TResult Function(Mouse value)? mouse,
-    TResult Function(Keyboard value)? keyboard,
+    TResult Function(InputEvent_Mouse value)? mouse,
+    TResult Function(InputEvent_Keyboard value)? keyboard,
     required TResult orElse(),
   }) {
     if (keyboard != null) {
@@ -343,12 +350,13 @@ class _$Keyboard implements Keyboard {
   }
 }
 
-abstract class Keyboard implements InputEvent {
-  const factory Keyboard(final KeyboardEvent field0) = _$Keyboard;
+abstract class InputEvent_Keyboard implements InputEvent {
+  const factory InputEvent_Keyboard(final KeyboardEvent field0) =
+      _$InputEvent_Keyboard;
 
   KeyboardEvent get field0;
   @JsonKey(ignore: true)
-  _$$KeyboardCopyWith<_$Keyboard> get copyWith =>
+  _$$InputEvent_KeyboardCopyWith<_$InputEvent_Keyboard> get copyWith =>
       throw _privateConstructorUsedError;
 }
 
@@ -376,20 +384,20 @@ mixin _$KeyboardEvent {
       throw _privateConstructorUsedError;
   @optionalTypeArgs
   TResult map<TResult extends Object?>({
-    required TResult Function(KeyUp value) keyUp,
-    required TResult Function(KeyDown value) keyDown,
+    required TResult Function(KeyboardEvent_KeyUp value) keyUp,
+    required TResult Function(KeyboardEvent_KeyDown value) keyDown,
   }) =>
       throw _privateConstructorUsedError;
   @optionalTypeArgs
   TResult? mapOrNull<TResult extends Object?>({
-    TResult Function(KeyUp value)? keyUp,
-    TResult Function(KeyDown value)? keyDown,
+    TResult Function(KeyboardEvent_KeyUp value)? keyUp,
+    TResult Function(KeyboardEvent_KeyDown value)? keyDown,
   }) =>
       throw _privateConstructorUsedError;
   @optionalTypeArgs
   TResult maybeMap<TResult extends Object?>({
-    TResult Function(KeyUp value)? keyUp,
-    TResult Function(KeyDown value)? keyDown,
+    TResult Function(KeyboardEvent_KeyUp value)? keyUp,
+    TResult Function(KeyboardEvent_KeyDown value)? keyDown,
     required TResult orElse(),
   }) =>
       throw _privateConstructorUsedError;
@@ -430,27 +438,31 @@ class _$KeyboardEventCopyWithImpl<$Res>
 }
 
 /// @nodoc
-abstract class _$$KeyUpCopyWith<$Res> implements $KeyboardEventCopyWith<$Res> {
-  factory _$$KeyUpCopyWith(_$KeyUp value, $Res Function(_$KeyUp) then) =
-      __$$KeyUpCopyWithImpl<$Res>;
+abstract class _$$KeyboardEvent_KeyUpCopyWith<$Res>
+    implements $KeyboardEventCopyWith<$Res> {
+  factory _$$KeyboardEvent_KeyUpCopyWith(_$KeyboardEvent_KeyUp value,
+          $Res Function(_$KeyboardEvent_KeyUp) then) =
+      __$$KeyboardEvent_KeyUpCopyWithImpl<$Res>;
   @override
   $Res call({KeyboardKey field0});
 }
 
 /// @nodoc
-class __$$KeyUpCopyWithImpl<$Res> extends _$KeyboardEventCopyWithImpl<$Res>
-    implements _$$KeyUpCopyWith<$Res> {
-  __$$KeyUpCopyWithImpl(_$KeyUp _value, $Res Function(_$KeyUp) _then)
-      : super(_value, (v) => _then(v as _$KeyUp));
+class __$$KeyboardEvent_KeyUpCopyWithImpl<$Res>
+    extends _$KeyboardEventCopyWithImpl<$Res>
+    implements _$$KeyboardEvent_KeyUpCopyWith<$Res> {
+  __$$KeyboardEvent_KeyUpCopyWithImpl(
+      _$KeyboardEvent_KeyUp _value, $Res Function(_$KeyboardEvent_KeyUp) _then)
+      : super(_value, (v) => _then(v as _$KeyboardEvent_KeyUp));
 
   @override
-  _$KeyUp get _value => super._value as _$KeyUp;
+  _$KeyboardEvent_KeyUp get _value => super._value as _$KeyboardEvent_KeyUp;
 
   @override
   $Res call({
     Object? field0 = freezed,
   }) {
-    return _then(_$KeyUp(
+    return _then(_$KeyboardEvent_KeyUp(
       field0 == freezed
           ? _value.field0
           : field0 // ignore: cast_nullable_to_non_nullable
@@ -461,8 +473,8 @@ class __$$KeyUpCopyWithImpl<$Res> extends _$KeyboardEventCopyWithImpl<$Res>
 
 /// @nodoc
 
-class _$KeyUp implements KeyUp {
-  const _$KeyUp(this.field0);
+class _$KeyboardEvent_KeyUp implements KeyboardEvent_KeyUp {
+  const _$KeyboardEvent_KeyUp(this.field0);
 
   @override
   final KeyboardKey field0;
@@ -476,7 +488,7 @@ class _$KeyUp implements KeyUp {
   bool operator ==(dynamic other) {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
-            other is _$KeyUp &&
+            other is _$KeyboardEvent_KeyUp &&
             const DeepCollectionEquality().equals(other.field0, field0));
   }
 
@@ -486,8 +498,9 @@ class _$KeyUp implements KeyUp {
 
   @JsonKey(ignore: true)
   @override
-  _$$KeyUpCopyWith<_$KeyUp> get copyWith =>
-      __$$KeyUpCopyWithImpl<_$KeyUp>(this, _$identity);
+  _$$KeyboardEvent_KeyUpCopyWith<_$KeyboardEvent_KeyUp> get copyWith =>
+      __$$KeyboardEvent_KeyUpCopyWithImpl<_$KeyboardEvent_KeyUp>(
+          this, _$identity);
 
   @override
   @optionalTypeArgs
@@ -523,8 +536,8 @@ class _$KeyUp implements KeyUp {
   @override
   @optionalTypeArgs
   TResult map<TResult extends Object?>({
-    required TResult Function(KeyUp value) keyUp,
-    required TResult Function(KeyDown value) keyDown,
+    required TResult Function(KeyboardEvent_KeyUp value) keyUp,
+    required TResult Function(KeyboardEvent_KeyDown value) keyDown,
   }) {
     return keyUp(this);
   }
@@ -532,8 +545,8 @@ class _$KeyUp implements KeyUp {
   @override
   @optionalTypeArgs
   TResult? mapOrNull<TResult extends Object?>({
-    TResult Function(KeyUp value)? keyUp,
-    TResult Function(KeyDown value)? keyDown,
+    TResult Function(KeyboardEvent_KeyUp value)? keyUp,
+    TResult Function(KeyboardEvent_KeyDown value)? keyDown,
   }) {
     return keyUp?.call(this);
   }
@@ -541,8 +554,8 @@ class _$KeyUp implements KeyUp {
   @override
   @optionalTypeArgs
   TResult maybeMap<TResult extends Object?>({
-    TResult Function(KeyUp value)? keyUp,
-    TResult Function(KeyDown value)? keyDown,
+    TResult Function(KeyboardEvent_KeyUp value)? keyUp,
+    TResult Function(KeyboardEvent_KeyDown value)? keyDown,
     required TResult orElse(),
   }) {
     if (keyUp != null) {
@@ -552,39 +565,44 @@ class _$KeyUp implements KeyUp {
   }
 }
 
-abstract class KeyUp implements KeyboardEvent {
-  const factory KeyUp(final KeyboardKey field0) = _$KeyUp;
+abstract class KeyboardEvent_KeyUp implements KeyboardEvent {
+  const factory KeyboardEvent_KeyUp(final KeyboardKey field0) =
+      _$KeyboardEvent_KeyUp;
 
   @override
   KeyboardKey get field0;
   @override
   @JsonKey(ignore: true)
-  _$$KeyUpCopyWith<_$KeyUp> get copyWith => throw _privateConstructorUsedError;
+  _$$KeyboardEvent_KeyUpCopyWith<_$KeyboardEvent_KeyUp> get copyWith =>
+      throw _privateConstructorUsedError;
 }
 
 /// @nodoc
-abstract class _$$KeyDownCopyWith<$Res>
+abstract class _$$KeyboardEvent_KeyDownCopyWith<$Res>
     implements $KeyboardEventCopyWith<$Res> {
-  factory _$$KeyDownCopyWith(_$KeyDown value, $Res Function(_$KeyDown) then) =
-      __$$KeyDownCopyWithImpl<$Res>;
+  factory _$$KeyboardEvent_KeyDownCopyWith(_$KeyboardEvent_KeyDown value,
+          $Res Function(_$KeyboardEvent_KeyDown) then) =
+      __$$KeyboardEvent_KeyDownCopyWithImpl<$Res>;
   @override
   $Res call({KeyboardKey field0});
 }
 
 /// @nodoc
-class __$$KeyDownCopyWithImpl<$Res> extends _$KeyboardEventCopyWithImpl<$Res>
-    implements _$$KeyDownCopyWith<$Res> {
-  __$$KeyDownCopyWithImpl(_$KeyDown _value, $Res Function(_$KeyDown) _then)
-      : super(_value, (v) => _then(v as _$KeyDown));
+class __$$KeyboardEvent_KeyDownCopyWithImpl<$Res>
+    extends _$KeyboardEventCopyWithImpl<$Res>
+    implements _$$KeyboardEvent_KeyDownCopyWith<$Res> {
+  __$$KeyboardEvent_KeyDownCopyWithImpl(_$KeyboardEvent_KeyDown _value,
+      $Res Function(_$KeyboardEvent_KeyDown) _then)
+      : super(_value, (v) => _then(v as _$KeyboardEvent_KeyDown));
 
   @override
-  _$KeyDown get _value => super._value as _$KeyDown;
+  _$KeyboardEvent_KeyDown get _value => super._value as _$KeyboardEvent_KeyDown;
 
   @override
   $Res call({
     Object? field0 = freezed,
   }) {
-    return _then(_$KeyDown(
+    return _then(_$KeyboardEvent_KeyDown(
       field0 == freezed
           ? _value.field0
           : field0 // ignore: cast_nullable_to_non_nullable
@@ -595,8 +613,8 @@ class __$$KeyDownCopyWithImpl<$Res> extends _$KeyboardEventCopyWithImpl<$Res>
 
 /// @nodoc
 
-class _$KeyDown implements KeyDown {
-  const _$KeyDown(this.field0);
+class _$KeyboardEvent_KeyDown implements KeyboardEvent_KeyDown {
+  const _$KeyboardEvent_KeyDown(this.field0);
 
   @override
   final KeyboardKey field0;
@@ -610,7 +628,7 @@ class _$KeyDown implements KeyDown {
   bool operator ==(dynamic other) {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
-            other is _$KeyDown &&
+            other is _$KeyboardEvent_KeyDown &&
             const DeepCollectionEquality().equals(other.field0, field0));
   }
 
@@ -620,8 +638,9 @@ class _$KeyDown implements KeyDown {
 
   @JsonKey(ignore: true)
   @override
-  _$$KeyDownCopyWith<_$KeyDown> get copyWith =>
-      __$$KeyDownCopyWithImpl<_$KeyDown>(this, _$identity);
+  _$$KeyboardEvent_KeyDownCopyWith<_$KeyboardEvent_KeyDown> get copyWith =>
+      __$$KeyboardEvent_KeyDownCopyWithImpl<_$KeyboardEvent_KeyDown>(
+          this, _$identity);
 
   @override
   @optionalTypeArgs
@@ -657,8 +676,8 @@ class _$KeyDown implements KeyDown {
   @override
   @optionalTypeArgs
   TResult map<TResult extends Object?>({
-    required TResult Function(KeyUp value) keyUp,
-    required TResult Function(KeyDown value) keyDown,
+    required TResult Function(KeyboardEvent_KeyUp value) keyUp,
+    required TResult Function(KeyboardEvent_KeyDown value) keyDown,
   }) {
     return keyDown(this);
   }
@@ -666,8 +685,8 @@ class _$KeyDown implements KeyDown {
   @override
   @optionalTypeArgs
   TResult? mapOrNull<TResult extends Object?>({
-    TResult Function(KeyUp value)? keyUp,
-    TResult Function(KeyDown value)? keyDown,
+    TResult Function(KeyboardEvent_KeyUp value)? keyUp,
+    TResult Function(KeyboardEvent_KeyDown value)? keyDown,
   }) {
     return keyDown?.call(this);
   }
@@ -675,8 +694,8 @@ class _$KeyDown implements KeyDown {
   @override
   @optionalTypeArgs
   TResult maybeMap<TResult extends Object?>({
-    TResult Function(KeyUp value)? keyUp,
-    TResult Function(KeyDown value)? keyDown,
+    TResult Function(KeyboardEvent_KeyUp value)? keyUp,
+    TResult Function(KeyboardEvent_KeyDown value)? keyDown,
     required TResult orElse(),
   }) {
     if (keyDown != null) {
@@ -686,14 +705,15 @@ class _$KeyDown implements KeyDown {
   }
 }
 
-abstract class KeyDown implements KeyboardEvent {
-  const factory KeyDown(final KeyboardKey field0) = _$KeyDown;
+abstract class KeyboardEvent_KeyDown implements KeyboardEvent {
+  const factory KeyboardEvent_KeyDown(final KeyboardKey field0) =
+      _$KeyboardEvent_KeyDown;
 
   @override
   KeyboardKey get field0;
   @override
   @JsonKey(ignore: true)
-  _$$KeyDownCopyWith<_$KeyDown> get copyWith =>
+  _$$KeyboardEvent_KeyDownCopyWith<_$KeyboardEvent_KeyDown> get copyWith =>
       throw _privateConstructorUsedError;
 }
 
@@ -729,26 +749,27 @@ mixin _$MouseEvent {
       throw _privateConstructorUsedError;
   @optionalTypeArgs
   TResult map<TResult extends Object?>({
-    required TResult Function(MouseUp value) mouseUp,
-    required TResult Function(MouseDown value) mouseDown,
-    required TResult Function(MouseMove value) mouseMove,
-    required TResult Function(MouseScrollWheel value) mouseScrollWheel,
+    required TResult Function(MouseEvent_MouseUp value) mouseUp,
+    required TResult Function(MouseEvent_MouseDown value) mouseDown,
+    required TResult Function(MouseEvent_MouseMove value) mouseMove,
+    required TResult Function(MouseEvent_MouseScrollWheel value)
+        mouseScrollWheel,
   }) =>
       throw _privateConstructorUsedError;
   @optionalTypeArgs
   TResult? mapOrNull<TResult extends Object?>({
-    TResult Function(MouseUp value)? mouseUp,
-    TResult Function(MouseDown value)? mouseDown,
-    TResult Function(MouseMove value)? mouseMove,
-    TResult Function(MouseScrollWheel value)? mouseScrollWheel,
+    TResult Function(MouseEvent_MouseUp value)? mouseUp,
+    TResult Function(MouseEvent_MouseDown value)? mouseDown,
+    TResult Function(MouseEvent_MouseMove value)? mouseMove,
+    TResult Function(MouseEvent_MouseScrollWheel value)? mouseScrollWheel,
   }) =>
       throw _privateConstructorUsedError;
   @optionalTypeArgs
   TResult maybeMap<TResult extends Object?>({
-    TResult Function(MouseUp value)? mouseUp,
-    TResult Function(MouseDown value)? mouseDown,
-    TResult Function(MouseMove value)? mouseMove,
-    TResult Function(MouseScrollWheel value)? mouseScrollWheel,
+    TResult Function(MouseEvent_MouseUp value)? mouseUp,
+    TResult Function(MouseEvent_MouseDown value)? mouseDown,
+    TResult Function(MouseEvent_MouseMove value)? mouseMove,
+    TResult Function(MouseEvent_MouseScrollWheel value)? mouseScrollWheel,
     required TResult orElse(),
   }) =>
       throw _privateConstructorUsedError;
@@ -771,20 +792,23 @@ class _$MouseEventCopyWithImpl<$Res> implements $MouseEventCopyWith<$Res> {
 }
 
 /// @nodoc
-abstract class _$$MouseUpCopyWith<$Res> {
-  factory _$$MouseUpCopyWith(_$MouseUp value, $Res Function(_$MouseUp) then) =
-      __$$MouseUpCopyWithImpl<$Res>;
+abstract class _$$MouseEvent_MouseUpCopyWith<$Res> {
+  factory _$$MouseEvent_MouseUpCopyWith(_$MouseEvent_MouseUp value,
+          $Res Function(_$MouseEvent_MouseUp) then) =
+      __$$MouseEvent_MouseUpCopyWithImpl<$Res>;
   $Res call({MouseKey field0, double field1, double field2});
 }
 
 /// @nodoc
-class __$$MouseUpCopyWithImpl<$Res> extends _$MouseEventCopyWithImpl<$Res>
-    implements _$$MouseUpCopyWith<$Res> {
-  __$$MouseUpCopyWithImpl(_$MouseUp _value, $Res Function(_$MouseUp) _then)
-      : super(_value, (v) => _then(v as _$MouseUp));
+class __$$MouseEvent_MouseUpCopyWithImpl<$Res>
+    extends _$MouseEventCopyWithImpl<$Res>
+    implements _$$MouseEvent_MouseUpCopyWith<$Res> {
+  __$$MouseEvent_MouseUpCopyWithImpl(
+      _$MouseEvent_MouseUp _value, $Res Function(_$MouseEvent_MouseUp) _then)
+      : super(_value, (v) => _then(v as _$MouseEvent_MouseUp));
 
   @override
-  _$MouseUp get _value => super._value as _$MouseUp;
+  _$MouseEvent_MouseUp get _value => super._value as _$MouseEvent_MouseUp;
 
   @override
   $Res call({
@@ -792,7 +816,7 @@ class __$$MouseUpCopyWithImpl<$Res> extends _$MouseEventCopyWithImpl<$Res>
     Object? field1 = freezed,
     Object? field2 = freezed,
   }) {
-    return _then(_$MouseUp(
+    return _then(_$MouseEvent_MouseUp(
       field0 == freezed
           ? _value.field0
           : field0 // ignore: cast_nullable_to_non_nullable
@@ -811,8 +835,8 @@ class __$$MouseUpCopyWithImpl<$Res> extends _$MouseEventCopyWithImpl<$Res>
 
 /// @nodoc
 
-class _$MouseUp implements MouseUp {
-  const _$MouseUp(this.field0, this.field1, this.field2);
+class _$MouseEvent_MouseUp implements MouseEvent_MouseUp {
+  const _$MouseEvent_MouseUp(this.field0, this.field1, this.field2);
 
   @override
   final MouseKey field0;
@@ -830,7 +854,7 @@ class _$MouseUp implements MouseUp {
   bool operator ==(dynamic other) {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
-            other is _$MouseUp &&
+            other is _$MouseEvent_MouseUp &&
             const DeepCollectionEquality().equals(other.field0, field0) &&
             const DeepCollectionEquality().equals(other.field1, field1) &&
             const DeepCollectionEquality().equals(other.field2, field2));
@@ -845,8 +869,9 @@ class _$MouseUp implements MouseUp {
 
   @JsonKey(ignore: true)
   @override
-  _$$MouseUpCopyWith<_$MouseUp> get copyWith =>
-      __$$MouseUpCopyWithImpl<_$MouseUp>(this, _$identity);
+  _$$MouseEvent_MouseUpCopyWith<_$MouseEvent_MouseUp> get copyWith =>
+      __$$MouseEvent_MouseUpCopyWithImpl<_$MouseEvent_MouseUp>(
+          this, _$identity);
 
   @override
   @optionalTypeArgs
@@ -891,10 +916,11 @@ class _$MouseUp implements MouseUp {
   @override
   @optionalTypeArgs
   TResult map<TResult extends Object?>({
-    required TResult Function(MouseUp value) mouseUp,
-    required TResult Function(MouseDown value) mouseDown,
-    required TResult Function(MouseMove value) mouseMove,
-    required TResult Function(MouseScrollWheel value) mouseScrollWheel,
+    required TResult Function(MouseEvent_MouseUp value) mouseUp,
+    required TResult Function(MouseEvent_MouseDown value) mouseDown,
+    required TResult Function(MouseEvent_MouseMove value) mouseMove,
+    required TResult Function(MouseEvent_MouseScrollWheel value)
+        mouseScrollWheel,
   }) {
     return mouseUp(this);
   }
@@ -902,10 +928,10 @@ class _$MouseUp implements MouseUp {
   @override
   @optionalTypeArgs
   TResult? mapOrNull<TResult extends Object?>({
-    TResult Function(MouseUp value)? mouseUp,
-    TResult Function(MouseDown value)? mouseDown,
-    TResult Function(MouseMove value)? mouseMove,
-    TResult Function(MouseScrollWheel value)? mouseScrollWheel,
+    TResult Function(MouseEvent_MouseUp value)? mouseUp,
+    TResult Function(MouseEvent_MouseDown value)? mouseDown,
+    TResult Function(MouseEvent_MouseMove value)? mouseMove,
+    TResult Function(MouseEvent_MouseScrollWheel value)? mouseScrollWheel,
   }) {
     return mouseUp?.call(this);
   }
@@ -913,10 +939,10 @@ class _$MouseUp implements MouseUp {
   @override
   @optionalTypeArgs
   TResult maybeMap<TResult extends Object?>({
-    TResult Function(MouseUp value)? mouseUp,
-    TResult Function(MouseDown value)? mouseDown,
-    TResult Function(MouseMove value)? mouseMove,
-    TResult Function(MouseScrollWheel value)? mouseScrollWheel,
+    TResult Function(MouseEvent_MouseUp value)? mouseUp,
+    TResult Function(MouseEvent_MouseDown value)? mouseDown,
+    TResult Function(MouseEvent_MouseMove value)? mouseMove,
+    TResult Function(MouseEvent_MouseScrollWheel value)? mouseScrollWheel,
     required TResult orElse(),
   }) {
     if (mouseUp != null) {
@@ -926,36 +952,37 @@ class _$MouseUp implements MouseUp {
   }
 }
 
-abstract class MouseUp implements MouseEvent {
-  const factory MouseUp(
+abstract class MouseEvent_MouseUp implements MouseEvent {
+  const factory MouseEvent_MouseUp(
           final MouseKey field0, final double field1, final double field2) =
-      _$MouseUp;
+      _$MouseEvent_MouseUp;
 
   MouseKey get field0;
   double get field1;
   double get field2;
   @JsonKey(ignore: true)
-  _$$MouseUpCopyWith<_$MouseUp> get copyWith =>
+  _$$MouseEvent_MouseUpCopyWith<_$MouseEvent_MouseUp> get copyWith =>
       throw _privateConstructorUsedError;
 }
 
 /// @nodoc
-abstract class _$$MouseDownCopyWith<$Res> {
-  factory _$$MouseDownCopyWith(
-          _$MouseDown value, $Res Function(_$MouseDown) then) =
-      __$$MouseDownCopyWithImpl<$Res>;
+abstract class _$$MouseEvent_MouseDownCopyWith<$Res> {
+  factory _$$MouseEvent_MouseDownCopyWith(_$MouseEvent_MouseDown value,
+          $Res Function(_$MouseEvent_MouseDown) then) =
+      __$$MouseEvent_MouseDownCopyWithImpl<$Res>;
   $Res call({MouseKey field0, double field1, double field2});
 }
 
 /// @nodoc
-class __$$MouseDownCopyWithImpl<$Res> extends _$MouseEventCopyWithImpl<$Res>
-    implements _$$MouseDownCopyWith<$Res> {
-  __$$MouseDownCopyWithImpl(
-      _$MouseDown _value, $Res Function(_$MouseDown) _then)
-      : super(_value, (v) => _then(v as _$MouseDown));
+class __$$MouseEvent_MouseDownCopyWithImpl<$Res>
+    extends _$MouseEventCopyWithImpl<$Res>
+    implements _$$MouseEvent_MouseDownCopyWith<$Res> {
+  __$$MouseEvent_MouseDownCopyWithImpl(_$MouseEvent_MouseDown _value,
+      $Res Function(_$MouseEvent_MouseDown) _then)
+      : super(_value, (v) => _then(v as _$MouseEvent_MouseDown));
 
   @override
-  _$MouseDown get _value => super._value as _$MouseDown;
+  _$MouseEvent_MouseDown get _value => super._value as _$MouseEvent_MouseDown;
 
   @override
   $Res call({
@@ -963,7 +990,7 @@ class __$$MouseDownCopyWithImpl<$Res> extends _$MouseEventCopyWithImpl<$Res>
     Object? field1 = freezed,
     Object? field2 = freezed,
   }) {
-    return _then(_$MouseDown(
+    return _then(_$MouseEvent_MouseDown(
       field0 == freezed
           ? _value.field0
           : field0 // ignore: cast_nullable_to_non_nullable
@@ -982,8 +1009,8 @@ class __$$MouseDownCopyWithImpl<$Res> extends _$MouseEventCopyWithImpl<$Res>
 
 /// @nodoc
 
-class _$MouseDown implements MouseDown {
-  const _$MouseDown(this.field0, this.field1, this.field2);
+class _$MouseEvent_MouseDown implements MouseEvent_MouseDown {
+  const _$MouseEvent_MouseDown(this.field0, this.field1, this.field2);
 
   @override
   final MouseKey field0;
@@ -1001,7 +1028,7 @@ class _$MouseDown implements MouseDown {
   bool operator ==(dynamic other) {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
-            other is _$MouseDown &&
+            other is _$MouseEvent_MouseDown &&
             const DeepCollectionEquality().equals(other.field0, field0) &&
             const DeepCollectionEquality().equals(other.field1, field1) &&
             const DeepCollectionEquality().equals(other.field2, field2));
@@ -1016,8 +1043,9 @@ class _$MouseDown implements MouseDown {
 
   @JsonKey(ignore: true)
   @override
-  _$$MouseDownCopyWith<_$MouseDown> get copyWith =>
-      __$$MouseDownCopyWithImpl<_$MouseDown>(this, _$identity);
+  _$$MouseEvent_MouseDownCopyWith<_$MouseEvent_MouseDown> get copyWith =>
+      __$$MouseEvent_MouseDownCopyWithImpl<_$MouseEvent_MouseDown>(
+          this, _$identity);
 
   @override
   @optionalTypeArgs
@@ -1062,10 +1090,11 @@ class _$MouseDown implements MouseDown {
   @override
   @optionalTypeArgs
   TResult map<TResult extends Object?>({
-    required TResult Function(MouseUp value) mouseUp,
-    required TResult Function(MouseDown value) mouseDown,
-    required TResult Function(MouseMove value) mouseMove,
-    required TResult Function(MouseScrollWheel value) mouseScrollWheel,
+    required TResult Function(MouseEvent_MouseUp value) mouseUp,
+    required TResult Function(MouseEvent_MouseDown value) mouseDown,
+    required TResult Function(MouseEvent_MouseMove value) mouseMove,
+    required TResult Function(MouseEvent_MouseScrollWheel value)
+        mouseScrollWheel,
   }) {
     return mouseDown(this);
   }
@@ -1073,10 +1102,10 @@ class _$MouseDown implements MouseDown {
   @override
   @optionalTypeArgs
   TResult? mapOrNull<TResult extends Object?>({
-    TResult Function(MouseUp value)? mouseUp,
-    TResult Function(MouseDown value)? mouseDown,
-    TResult Function(MouseMove value)? mouseMove,
-    TResult Function(MouseScrollWheel value)? mouseScrollWheel,
+    TResult Function(MouseEvent_MouseUp value)? mouseUp,
+    TResult Function(MouseEvent_MouseDown value)? mouseDown,
+    TResult Function(MouseEvent_MouseMove value)? mouseMove,
+    TResult Function(MouseEvent_MouseScrollWheel value)? mouseScrollWheel,
   }) {
     return mouseDown?.call(this);
   }
@@ -1084,10 +1113,10 @@ class _$MouseDown implements MouseDown {
   @override
   @optionalTypeArgs
   TResult maybeMap<TResult extends Object?>({
-    TResult Function(MouseUp value)? mouseUp,
-    TResult Function(MouseDown value)? mouseDown,
-    TResult Function(MouseMove value)? mouseMove,
-    TResult Function(MouseScrollWheel value)? mouseScrollWheel,
+    TResult Function(MouseEvent_MouseUp value)? mouseUp,
+    TResult Function(MouseEvent_MouseDown value)? mouseDown,
+    TResult Function(MouseEvent_MouseMove value)? mouseMove,
+    TResult Function(MouseEvent_MouseScrollWheel value)? mouseScrollWheel,
     required TResult orElse(),
   }) {
     if (mouseDown != null) {
@@ -1097,36 +1126,37 @@ class _$MouseDown implements MouseDown {
   }
 }
 
-abstract class MouseDown implements MouseEvent {
-  const factory MouseDown(
+abstract class MouseEvent_MouseDown implements MouseEvent {
+  const factory MouseEvent_MouseDown(
           final MouseKey field0, final double field1, final double field2) =
-      _$MouseDown;
+      _$MouseEvent_MouseDown;
 
   MouseKey get field0;
   double get field1;
   double get field2;
   @JsonKey(ignore: true)
-  _$$MouseDownCopyWith<_$MouseDown> get copyWith =>
+  _$$MouseEvent_MouseDownCopyWith<_$MouseEvent_MouseDown> get copyWith =>
       throw _privateConstructorUsedError;
 }
 
 /// @nodoc
-abstract class _$$MouseMoveCopyWith<$Res> {
-  factory _$$MouseMoveCopyWith(
-          _$MouseMove value, $Res Function(_$MouseMove) then) =
-      __$$MouseMoveCopyWithImpl<$Res>;
+abstract class _$$MouseEvent_MouseMoveCopyWith<$Res> {
+  factory _$$MouseEvent_MouseMoveCopyWith(_$MouseEvent_MouseMove value,
+          $Res Function(_$MouseEvent_MouseMove) then) =
+      __$$MouseEvent_MouseMoveCopyWithImpl<$Res>;
   $Res call({MouseKey field0, double field1, double field2});
 }
 
 /// @nodoc
-class __$$MouseMoveCopyWithImpl<$Res> extends _$MouseEventCopyWithImpl<$Res>
-    implements _$$MouseMoveCopyWith<$Res> {
-  __$$MouseMoveCopyWithImpl(
-      _$MouseMove _value, $Res Function(_$MouseMove) _then)
-      : super(_value, (v) => _then(v as _$MouseMove));
+class __$$MouseEvent_MouseMoveCopyWithImpl<$Res>
+    extends _$MouseEventCopyWithImpl<$Res>
+    implements _$$MouseEvent_MouseMoveCopyWith<$Res> {
+  __$$MouseEvent_MouseMoveCopyWithImpl(_$MouseEvent_MouseMove _value,
+      $Res Function(_$MouseEvent_MouseMove) _then)
+      : super(_value, (v) => _then(v as _$MouseEvent_MouseMove));
 
   @override
-  _$MouseMove get _value => super._value as _$MouseMove;
+  _$MouseEvent_MouseMove get _value => super._value as _$MouseEvent_MouseMove;
 
   @override
   $Res call({
@@ -1134,7 +1164,7 @@ class __$$MouseMoveCopyWithImpl<$Res> extends _$MouseEventCopyWithImpl<$Res>
     Object? field1 = freezed,
     Object? field2 = freezed,
   }) {
-    return _then(_$MouseMove(
+    return _then(_$MouseEvent_MouseMove(
       field0 == freezed
           ? _value.field0
           : field0 // ignore: cast_nullable_to_non_nullable
@@ -1153,8 +1183,8 @@ class __$$MouseMoveCopyWithImpl<$Res> extends _$MouseEventCopyWithImpl<$Res>
 
 /// @nodoc
 
-class _$MouseMove implements MouseMove {
-  const _$MouseMove(this.field0, this.field1, this.field2);
+class _$MouseEvent_MouseMove implements MouseEvent_MouseMove {
+  const _$MouseEvent_MouseMove(this.field0, this.field1, this.field2);
 
   @override
   final MouseKey field0;
@@ -1172,7 +1202,7 @@ class _$MouseMove implements MouseMove {
   bool operator ==(dynamic other) {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
-            other is _$MouseMove &&
+            other is _$MouseEvent_MouseMove &&
             const DeepCollectionEquality().equals(other.field0, field0) &&
             const DeepCollectionEquality().equals(other.field1, field1) &&
             const DeepCollectionEquality().equals(other.field2, field2));
@@ -1187,8 +1217,9 @@ class _$MouseMove implements MouseMove {
 
   @JsonKey(ignore: true)
   @override
-  _$$MouseMoveCopyWith<_$MouseMove> get copyWith =>
-      __$$MouseMoveCopyWithImpl<_$MouseMove>(this, _$identity);
+  _$$MouseEvent_MouseMoveCopyWith<_$MouseEvent_MouseMove> get copyWith =>
+      __$$MouseEvent_MouseMoveCopyWithImpl<_$MouseEvent_MouseMove>(
+          this, _$identity);
 
   @override
   @optionalTypeArgs
@@ -1233,10 +1264,11 @@ class _$MouseMove implements MouseMove {
   @override
   @optionalTypeArgs
   TResult map<TResult extends Object?>({
-    required TResult Function(MouseUp value) mouseUp,
-    required TResult Function(MouseDown value) mouseDown,
-    required TResult Function(MouseMove value) mouseMove,
-    required TResult Function(MouseScrollWheel value) mouseScrollWheel,
+    required TResult Function(MouseEvent_MouseUp value) mouseUp,
+    required TResult Function(MouseEvent_MouseDown value) mouseDown,
+    required TResult Function(MouseEvent_MouseMove value) mouseMove,
+    required TResult Function(MouseEvent_MouseScrollWheel value)
+        mouseScrollWheel,
   }) {
     return mouseMove(this);
   }
@@ -1244,10 +1276,10 @@ class _$MouseMove implements MouseMove {
   @override
   @optionalTypeArgs
   TResult? mapOrNull<TResult extends Object?>({
-    TResult Function(MouseUp value)? mouseUp,
-    TResult Function(MouseDown value)? mouseDown,
-    TResult Function(MouseMove value)? mouseMove,
-    TResult Function(MouseScrollWheel value)? mouseScrollWheel,
+    TResult Function(MouseEvent_MouseUp value)? mouseUp,
+    TResult Function(MouseEvent_MouseDown value)? mouseDown,
+    TResult Function(MouseEvent_MouseMove value)? mouseMove,
+    TResult Function(MouseEvent_MouseScrollWheel value)? mouseScrollWheel,
   }) {
     return mouseMove?.call(this);
   }
@@ -1255,10 +1287,10 @@ class _$MouseMove implements MouseMove {
   @override
   @optionalTypeArgs
   TResult maybeMap<TResult extends Object?>({
-    TResult Function(MouseUp value)? mouseUp,
-    TResult Function(MouseDown value)? mouseDown,
-    TResult Function(MouseMove value)? mouseMove,
-    TResult Function(MouseScrollWheel value)? mouseScrollWheel,
+    TResult Function(MouseEvent_MouseUp value)? mouseUp,
+    TResult Function(MouseEvent_MouseDown value)? mouseDown,
+    TResult Function(MouseEvent_MouseMove value)? mouseMove,
+    TResult Function(MouseEvent_MouseScrollWheel value)? mouseScrollWheel,
     required TResult orElse(),
   }) {
     if (mouseMove != null) {
@@ -1268,43 +1300,46 @@ class _$MouseMove implements MouseMove {
   }
 }
 
-abstract class MouseMove implements MouseEvent {
-  const factory MouseMove(
+abstract class MouseEvent_MouseMove implements MouseEvent {
+  const factory MouseEvent_MouseMove(
           final MouseKey field0, final double field1, final double field2) =
-      _$MouseMove;
+      _$MouseEvent_MouseMove;
 
   MouseKey get field0;
   double get field1;
   double get field2;
   @JsonKey(ignore: true)
-  _$$MouseMoveCopyWith<_$MouseMove> get copyWith =>
+  _$$MouseEvent_MouseMoveCopyWith<_$MouseEvent_MouseMove> get copyWith =>
       throw _privateConstructorUsedError;
 }
 
 /// @nodoc
-abstract class _$$MouseScrollWheelCopyWith<$Res> {
-  factory _$$MouseScrollWheelCopyWith(
-          _$MouseScrollWheel value, $Res Function(_$MouseScrollWheel) then) =
-      __$$MouseScrollWheelCopyWithImpl<$Res>;
+abstract class _$$MouseEvent_MouseScrollWheelCopyWith<$Res> {
+  factory _$$MouseEvent_MouseScrollWheelCopyWith(
+          _$MouseEvent_MouseScrollWheel value,
+          $Res Function(_$MouseEvent_MouseScrollWheel) then) =
+      __$$MouseEvent_MouseScrollWheelCopyWithImpl<$Res>;
   $Res call({double field0});
 }
 
 /// @nodoc
-class __$$MouseScrollWheelCopyWithImpl<$Res>
+class __$$MouseEvent_MouseScrollWheelCopyWithImpl<$Res>
     extends _$MouseEventCopyWithImpl<$Res>
-    implements _$$MouseScrollWheelCopyWith<$Res> {
-  __$$MouseScrollWheelCopyWithImpl(
-      _$MouseScrollWheel _value, $Res Function(_$MouseScrollWheel) _then)
-      : super(_value, (v) => _then(v as _$MouseScrollWheel));
+    implements _$$MouseEvent_MouseScrollWheelCopyWith<$Res> {
+  __$$MouseEvent_MouseScrollWheelCopyWithImpl(
+      _$MouseEvent_MouseScrollWheel _value,
+      $Res Function(_$MouseEvent_MouseScrollWheel) _then)
+      : super(_value, (v) => _then(v as _$MouseEvent_MouseScrollWheel));
 
   @override
-  _$MouseScrollWheel get _value => super._value as _$MouseScrollWheel;
+  _$MouseEvent_MouseScrollWheel get _value =>
+      super._value as _$MouseEvent_MouseScrollWheel;
 
   @override
   $Res call({
     Object? field0 = freezed,
   }) {
-    return _then(_$MouseScrollWheel(
+    return _then(_$MouseEvent_MouseScrollWheel(
       field0 == freezed
           ? _value.field0
           : field0 // ignore: cast_nullable_to_non_nullable
@@ -1315,8 +1350,8 @@ class __$$MouseScrollWheelCopyWithImpl<$Res>
 
 /// @nodoc
 
-class _$MouseScrollWheel implements MouseScrollWheel {
-  const _$MouseScrollWheel(this.field0);
+class _$MouseEvent_MouseScrollWheel implements MouseEvent_MouseScrollWheel {
+  const _$MouseEvent_MouseScrollWheel(this.field0);
 
   @override
   final double field0;
@@ -1330,7 +1365,7 @@ class _$MouseScrollWheel implements MouseScrollWheel {
   bool operator ==(dynamic other) {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
-            other is _$MouseScrollWheel &&
+            other is _$MouseEvent_MouseScrollWheel &&
             const DeepCollectionEquality().equals(other.field0, field0));
   }
 
@@ -1340,8 +1375,9 @@ class _$MouseScrollWheel implements MouseScrollWheel {
 
   @JsonKey(ignore: true)
   @override
-  _$$MouseScrollWheelCopyWith<_$MouseScrollWheel> get copyWith =>
-      __$$MouseScrollWheelCopyWithImpl<_$MouseScrollWheel>(this, _$identity);
+  _$$MouseEvent_MouseScrollWheelCopyWith<_$MouseEvent_MouseScrollWheel>
+      get copyWith => __$$MouseEvent_MouseScrollWheelCopyWithImpl<
+          _$MouseEvent_MouseScrollWheel>(this, _$identity);
 
   @override
   @optionalTypeArgs
@@ -1386,10 +1422,11 @@ class _$MouseScrollWheel implements MouseScrollWheel {
   @override
   @optionalTypeArgs
   TResult map<TResult extends Object?>({
-    required TResult Function(MouseUp value) mouseUp,
-    required TResult Function(MouseDown value) mouseDown,
-    required TResult Function(MouseMove value) mouseMove,
-    required TResult Function(MouseScrollWheel value) mouseScrollWheel,
+    required TResult Function(MouseEvent_MouseUp value) mouseUp,
+    required TResult Function(MouseEvent_MouseDown value) mouseDown,
+    required TResult Function(MouseEvent_MouseMove value) mouseMove,
+    required TResult Function(MouseEvent_MouseScrollWheel value)
+        mouseScrollWheel,
   }) {
     return mouseScrollWheel(this);
   }
@@ -1397,10 +1434,10 @@ class _$MouseScrollWheel implements MouseScrollWheel {
   @override
   @optionalTypeArgs
   TResult? mapOrNull<TResult extends Object?>({
-    TResult Function(MouseUp value)? mouseUp,
-    TResult Function(MouseDown value)? mouseDown,
-    TResult Function(MouseMove value)? mouseMove,
-    TResult Function(MouseScrollWheel value)? mouseScrollWheel,
+    TResult Function(MouseEvent_MouseUp value)? mouseUp,
+    TResult Function(MouseEvent_MouseDown value)? mouseDown,
+    TResult Function(MouseEvent_MouseMove value)? mouseMove,
+    TResult Function(MouseEvent_MouseScrollWheel value)? mouseScrollWheel,
   }) {
     return mouseScrollWheel?.call(this);
   }
@@ -1408,10 +1445,10 @@ class _$MouseScrollWheel implements MouseScrollWheel {
   @override
   @optionalTypeArgs
   TResult maybeMap<TResult extends Object?>({
-    TResult Function(MouseUp value)? mouseUp,
-    TResult Function(MouseDown value)? mouseDown,
-    TResult Function(MouseMove value)? mouseMove,
-    TResult Function(MouseScrollWheel value)? mouseScrollWheel,
+    TResult Function(MouseEvent_MouseUp value)? mouseUp,
+    TResult Function(MouseEvent_MouseDown value)? mouseDown,
+    TResult Function(MouseEvent_MouseMove value)? mouseMove,
+    TResult Function(MouseEvent_MouseScrollWheel value)? mouseScrollWheel,
     required TResult orElse(),
   }) {
     if (mouseScrollWheel != null) {
@@ -1421,13 +1458,14 @@ class _$MouseScrollWheel implements MouseScrollWheel {
   }
 }
 
-abstract class MouseScrollWheel implements MouseEvent {
-  const factory MouseScrollWheel(final double field0) = _$MouseScrollWheel;
+abstract class MouseEvent_MouseScrollWheel implements MouseEvent {
+  const factory MouseEvent_MouseScrollWheel(final double field0) =
+      _$MouseEvent_MouseScrollWheel;
 
   double get field0;
   @JsonKey(ignore: true)
-  _$$MouseScrollWheelCopyWith<_$MouseScrollWheel> get copyWith =>
-      throw _privateConstructorUsedError;
+  _$$MouseEvent_MouseScrollWheelCopyWith<_$MouseEvent_MouseScrollWheel>
+      get copyWith => throw _privateConstructorUsedError;
 }
 
 /// @nodoc
@@ -1465,32 +1503,32 @@ mixin _$OperatingSystemType {
       throw _privateConstructorUsedError;
   @optionalTypeArgs
   TResult map<TResult extends Object?>({
-    required TResult Function(Windows value) windows,
-    required TResult Function(macOS value) macOs,
-    required TResult Function(iOS value) iOs,
-    required TResult Function(Android value) android,
-    required TResult Function(Linux value) linux,
-    required TResult Function(Unknown value) unknown,
+    required TResult Function(OperatingSystemType_Windows value) windows,
+    required TResult Function(OperatingSystemType_macOS value) macOs,
+    required TResult Function(OperatingSystemType_iOS value) iOs,
+    required TResult Function(OperatingSystemType_Android value) android,
+    required TResult Function(OperatingSystemType_Linux value) linux,
+    required TResult Function(OperatingSystemType_Unknown value) unknown,
   }) =>
       throw _privateConstructorUsedError;
   @optionalTypeArgs
   TResult? mapOrNull<TResult extends Object?>({
-    TResult Function(Windows value)? windows,
-    TResult Function(macOS value)? macOs,
-    TResult Function(iOS value)? iOs,
-    TResult Function(Android value)? android,
-    TResult Function(Linux value)? linux,
-    TResult Function(Unknown value)? unknown,
+    TResult Function(OperatingSystemType_Windows value)? windows,
+    TResult Function(OperatingSystemType_macOS value)? macOs,
+    TResult Function(OperatingSystemType_iOS value)? iOs,
+    TResult Function(OperatingSystemType_Android value)? android,
+    TResult Function(OperatingSystemType_Linux value)? linux,
+    TResult Function(OperatingSystemType_Unknown value)? unknown,
   }) =>
       throw _privateConstructorUsedError;
   @optionalTypeArgs
   TResult maybeMap<TResult extends Object?>({
-    TResult Function(Windows value)? windows,
-    TResult Function(macOS value)? macOs,
-    TResult Function(iOS value)? iOs,
-    TResult Function(Android value)? android,
-    TResult Function(Linux value)? linux,
-    TResult Function(Unknown value)? unknown,
+    TResult Function(OperatingSystemType_Windows value)? windows,
+    TResult Function(OperatingSystemType_macOS value)? macOs,
+    TResult Function(OperatingSystemType_iOS value)? iOs,
+    TResult Function(OperatingSystemType_Android value)? android,
+    TResult Function(OperatingSystemType_Linux value)? linux,
+    TResult Function(OperatingSystemType_Unknown value)? unknown,
     required TResult orElse(),
   }) =>
       throw _privateConstructorUsedError;
@@ -1514,26 +1552,31 @@ class _$OperatingSystemTypeCopyWithImpl<$Res>
 }
 
 /// @nodoc
-abstract class _$$WindowsCopyWith<$Res> {
-  factory _$$WindowsCopyWith(_$Windows value, $Res Function(_$Windows) then) =
-      __$$WindowsCopyWithImpl<$Res>;
+abstract class _$$OperatingSystemType_WindowsCopyWith<$Res> {
+  factory _$$OperatingSystemType_WindowsCopyWith(
+          _$OperatingSystemType_Windows value,
+          $Res Function(_$OperatingSystemType_Windows) then) =
+      __$$OperatingSystemType_WindowsCopyWithImpl<$Res>;
 }
 
 /// @nodoc
-class __$$WindowsCopyWithImpl<$Res>
+class __$$OperatingSystemType_WindowsCopyWithImpl<$Res>
     extends _$OperatingSystemTypeCopyWithImpl<$Res>
-    implements _$$WindowsCopyWith<$Res> {
-  __$$WindowsCopyWithImpl(_$Windows _value, $Res Function(_$Windows) _then)
-      : super(_value, (v) => _then(v as _$Windows));
+    implements _$$OperatingSystemType_WindowsCopyWith<$Res> {
+  __$$OperatingSystemType_WindowsCopyWithImpl(
+      _$OperatingSystemType_Windows _value,
+      $Res Function(_$OperatingSystemType_Windows) _then)
+      : super(_value, (v) => _then(v as _$OperatingSystemType_Windows));
 
   @override
-  _$Windows get _value => super._value as _$Windows;
+  _$OperatingSystemType_Windows get _value =>
+      super._value as _$OperatingSystemType_Windows;
 }
 
 /// @nodoc
 
-class _$Windows implements Windows {
-  const _$Windows();
+class _$OperatingSystemType_Windows implements OperatingSystemType_Windows {
+  const _$OperatingSystemType_Windows();
 
   @override
   String toString() {
@@ -1543,7 +1586,8 @@ class _$Windows implements Windows {
   @override
   bool operator ==(dynamic other) {
     return identical(this, other) ||
-        (other.runtimeType == runtimeType && other is _$Windows);
+        (other.runtimeType == runtimeType &&
+            other is _$OperatingSystemType_Windows);
   }
 
   @override
@@ -1595,12 +1639,12 @@ class _$Windows implements Windows {
   @override
   @optionalTypeArgs
   TResult map<TResult extends Object?>({
-    required TResult Function(Windows value) windows,
-    required TResult Function(macOS value) macOs,
-    required TResult Function(iOS value) iOs,
-    required TResult Function(Android value) android,
-    required TResult Function(Linux value) linux,
-    required TResult Function(Unknown value) unknown,
+    required TResult Function(OperatingSystemType_Windows value) windows,
+    required TResult Function(OperatingSystemType_macOS value) macOs,
+    required TResult Function(OperatingSystemType_iOS value) iOs,
+    required TResult Function(OperatingSystemType_Android value) android,
+    required TResult Function(OperatingSystemType_Linux value) linux,
+    required TResult Function(OperatingSystemType_Unknown value) unknown,
   }) {
     return windows(this);
   }
@@ -1608,12 +1652,12 @@ class _$Windows implements Windows {
   @override
   @optionalTypeArgs
   TResult? mapOrNull<TResult extends Object?>({
-    TResult Function(Windows value)? windows,
-    TResult Function(macOS value)? macOs,
-    TResult Function(iOS value)? iOs,
-    TResult Function(Android value)? android,
-    TResult Function(Linux value)? linux,
-    TResult Function(Unknown value)? unknown,
+    TResult Function(OperatingSystemType_Windows value)? windows,
+    TResult Function(OperatingSystemType_macOS value)? macOs,
+    TResult Function(OperatingSystemType_iOS value)? iOs,
+    TResult Function(OperatingSystemType_Android value)? android,
+    TResult Function(OperatingSystemType_Linux value)? linux,
+    TResult Function(OperatingSystemType_Unknown value)? unknown,
   }) {
     return windows?.call(this);
   }
@@ -1621,12 +1665,12 @@ class _$Windows implements Windows {
   @override
   @optionalTypeArgs
   TResult maybeMap<TResult extends Object?>({
-    TResult Function(Windows value)? windows,
-    TResult Function(macOS value)? macOs,
-    TResult Function(iOS value)? iOs,
-    TResult Function(Android value)? android,
-    TResult Function(Linux value)? linux,
-    TResult Function(Unknown value)? unknown,
+    TResult Function(OperatingSystemType_Windows value)? windows,
+    TResult Function(OperatingSystemType_macOS value)? macOs,
+    TResult Function(OperatingSystemType_iOS value)? iOs,
+    TResult Function(OperatingSystemType_Android value)? android,
+    TResult Function(OperatingSystemType_Linux value)? linux,
+    TResult Function(OperatingSystemType_Unknown value)? unknown,
     required TResult orElse(),
   }) {
     if (windows != null) {
@@ -1636,31 +1680,35 @@ class _$Windows implements Windows {
   }
 }
 
-abstract class Windows implements OperatingSystemType {
-  const factory Windows() = _$Windows;
+abstract class OperatingSystemType_Windows implements OperatingSystemType {
+  const factory OperatingSystemType_Windows() = _$OperatingSystemType_Windows;
 }
 
 /// @nodoc
-abstract class _$$macOSCopyWith<$Res> {
-  factory _$$macOSCopyWith(_$macOS value, $Res Function(_$macOS) then) =
-      __$$macOSCopyWithImpl<$Res>;
+abstract class _$$OperatingSystemType_macOSCopyWith<$Res> {
+  factory _$$OperatingSystemType_macOSCopyWith(
+          _$OperatingSystemType_macOS value,
+          $Res Function(_$OperatingSystemType_macOS) then) =
+      __$$OperatingSystemType_macOSCopyWithImpl<$Res>;
 }
 
 /// @nodoc
-class __$$macOSCopyWithImpl<$Res>
+class __$$OperatingSystemType_macOSCopyWithImpl<$Res>
     extends _$OperatingSystemTypeCopyWithImpl<$Res>
-    implements _$$macOSCopyWith<$Res> {
-  __$$macOSCopyWithImpl(_$macOS _value, $Res Function(_$macOS) _then)
-      : super(_value, (v) => _then(v as _$macOS));
+    implements _$$OperatingSystemType_macOSCopyWith<$Res> {
+  __$$OperatingSystemType_macOSCopyWithImpl(_$OperatingSystemType_macOS _value,
+      $Res Function(_$OperatingSystemType_macOS) _then)
+      : super(_value, (v) => _then(v as _$OperatingSystemType_macOS));
 
   @override
-  _$macOS get _value => super._value as _$macOS;
+  _$OperatingSystemType_macOS get _value =>
+      super._value as _$OperatingSystemType_macOS;
 }
 
 /// @nodoc
 
-class _$macOS implements macOS {
-  const _$macOS();
+class _$OperatingSystemType_macOS implements OperatingSystemType_macOS {
+  const _$OperatingSystemType_macOS();
 
   @override
   String toString() {
@@ -1670,7 +1718,8 @@ class _$macOS implements macOS {
   @override
   bool operator ==(dynamic other) {
     return identical(this, other) ||
-        (other.runtimeType == runtimeType && other is _$macOS);
+        (other.runtimeType == runtimeType &&
+            other is _$OperatingSystemType_macOS);
   }
 
   @override
@@ -1722,12 +1771,12 @@ class _$macOS implements macOS {
   @override
   @optionalTypeArgs
   TResult map<TResult extends Object?>({
-    required TResult Function(Windows value) windows,
-    required TResult Function(macOS value) macOs,
-    required TResult Function(iOS value) iOs,
-    required TResult Function(Android value) android,
-    required TResult Function(Linux value) linux,
-    required TResult Function(Unknown value) unknown,
+    required TResult Function(OperatingSystemType_Windows value) windows,
+    required TResult Function(OperatingSystemType_macOS value) macOs,
+    required TResult Function(OperatingSystemType_iOS value) iOs,
+    required TResult Function(OperatingSystemType_Android value) android,
+    required TResult Function(OperatingSystemType_Linux value) linux,
+    required TResult Function(OperatingSystemType_Unknown value) unknown,
   }) {
     return macOs(this);
   }
@@ -1735,12 +1784,12 @@ class _$macOS implements macOS {
   @override
   @optionalTypeArgs
   TResult? mapOrNull<TResult extends Object?>({
-    TResult Function(Windows value)? windows,
-    TResult Function(macOS value)? macOs,
-    TResult Function(iOS value)? iOs,
-    TResult Function(Android value)? android,
-    TResult Function(Linux value)? linux,
-    TResult Function(Unknown value)? unknown,
+    TResult Function(OperatingSystemType_Windows value)? windows,
+    TResult Function(OperatingSystemType_macOS value)? macOs,
+    TResult Function(OperatingSystemType_iOS value)? iOs,
+    TResult Function(OperatingSystemType_Android value)? android,
+    TResult Function(OperatingSystemType_Linux value)? linux,
+    TResult Function(OperatingSystemType_Unknown value)? unknown,
   }) {
     return macOs?.call(this);
   }
@@ -1748,12 +1797,12 @@ class _$macOS implements macOS {
   @override
   @optionalTypeArgs
   TResult maybeMap<TResult extends Object?>({
-    TResult Function(Windows value)? windows,
-    TResult Function(macOS value)? macOs,
-    TResult Function(iOS value)? iOs,
-    TResult Function(Android value)? android,
-    TResult Function(Linux value)? linux,
-    TResult Function(Unknown value)? unknown,
+    TResult Function(OperatingSystemType_Windows value)? windows,
+    TResult Function(OperatingSystemType_macOS value)? macOs,
+    TResult Function(OperatingSystemType_iOS value)? iOs,
+    TResult Function(OperatingSystemType_Android value)? android,
+    TResult Function(OperatingSystemType_Linux value)? linux,
+    TResult Function(OperatingSystemType_Unknown value)? unknown,
     required TResult orElse(),
   }) {
     if (macOs != null) {
@@ -1763,30 +1812,34 @@ class _$macOS implements macOS {
   }
 }
 
-abstract class macOS implements OperatingSystemType {
-  const factory macOS() = _$macOS;
+abstract class OperatingSystemType_macOS implements OperatingSystemType {
+  const factory OperatingSystemType_macOS() = _$OperatingSystemType_macOS;
 }
 
 /// @nodoc
-abstract class _$$iOSCopyWith<$Res> {
-  factory _$$iOSCopyWith(_$iOS value, $Res Function(_$iOS) then) =
-      __$$iOSCopyWithImpl<$Res>;
+abstract class _$$OperatingSystemType_iOSCopyWith<$Res> {
+  factory _$$OperatingSystemType_iOSCopyWith(_$OperatingSystemType_iOS value,
+          $Res Function(_$OperatingSystemType_iOS) then) =
+      __$$OperatingSystemType_iOSCopyWithImpl<$Res>;
 }
 
 /// @nodoc
-class __$$iOSCopyWithImpl<$Res> extends _$OperatingSystemTypeCopyWithImpl<$Res>
-    implements _$$iOSCopyWith<$Res> {
-  __$$iOSCopyWithImpl(_$iOS _value, $Res Function(_$iOS) _then)
-      : super(_value, (v) => _then(v as _$iOS));
+class __$$OperatingSystemType_iOSCopyWithImpl<$Res>
+    extends _$OperatingSystemTypeCopyWithImpl<$Res>
+    implements _$$OperatingSystemType_iOSCopyWith<$Res> {
+  __$$OperatingSystemType_iOSCopyWithImpl(_$OperatingSystemType_iOS _value,
+      $Res Function(_$OperatingSystemType_iOS) _then)
+      : super(_value, (v) => _then(v as _$OperatingSystemType_iOS));
 
   @override
-  _$iOS get _value => super._value as _$iOS;
+  _$OperatingSystemType_iOS get _value =>
+      super._value as _$OperatingSystemType_iOS;
 }
 
 /// @nodoc
 
-class _$iOS implements iOS {
-  const _$iOS();
+class _$OperatingSystemType_iOS implements OperatingSystemType_iOS {
+  const _$OperatingSystemType_iOS();
 
   @override
   String toString() {
@@ -1796,7 +1849,8 @@ class _$iOS implements iOS {
   @override
   bool operator ==(dynamic other) {
     return identical(this, other) ||
-        (other.runtimeType == runtimeType && other is _$iOS);
+        (other.runtimeType == runtimeType &&
+            other is _$OperatingSystemType_iOS);
   }
 
   @override
@@ -1848,12 +1902,12 @@ class _$iOS implements iOS {
   @override
   @optionalTypeArgs
   TResult map<TResult extends Object?>({
-    required TResult Function(Windows value) windows,
-    required TResult Function(macOS value) macOs,
-    required TResult Function(iOS value) iOs,
-    required TResult Function(Android value) android,
-    required TResult Function(Linux value) linux,
-    required TResult Function(Unknown value) unknown,
+    required TResult Function(OperatingSystemType_Windows value) windows,
+    required TResult Function(OperatingSystemType_macOS value) macOs,
+    required TResult Function(OperatingSystemType_iOS value) iOs,
+    required TResult Function(OperatingSystemType_Android value) android,
+    required TResult Function(OperatingSystemType_Linux value) linux,
+    required TResult Function(OperatingSystemType_Unknown value) unknown,
   }) {
     return iOs(this);
   }
@@ -1861,12 +1915,12 @@ class _$iOS implements iOS {
   @override
   @optionalTypeArgs
   TResult? mapOrNull<TResult extends Object?>({
-    TResult Function(Windows value)? windows,
-    TResult Function(macOS value)? macOs,
-    TResult Function(iOS value)? iOs,
-    TResult Function(Android value)? android,
-    TResult Function(Linux value)? linux,
-    TResult Function(Unknown value)? unknown,
+    TResult Function(OperatingSystemType_Windows value)? windows,
+    TResult Function(OperatingSystemType_macOS value)? macOs,
+    TResult Function(OperatingSystemType_iOS value)? iOs,
+    TResult Function(OperatingSystemType_Android value)? android,
+    TResult Function(OperatingSystemType_Linux value)? linux,
+    TResult Function(OperatingSystemType_Unknown value)? unknown,
   }) {
     return iOs?.call(this);
   }
@@ -1874,12 +1928,12 @@ class _$iOS implements iOS {
   @override
   @optionalTypeArgs
   TResult maybeMap<TResult extends Object?>({
-    TResult Function(Windows value)? windows,
-    TResult Function(macOS value)? macOs,
-    TResult Function(iOS value)? iOs,
-    TResult Function(Android value)? android,
-    TResult Function(Linux value)? linux,
-    TResult Function(Unknown value)? unknown,
+    TResult Function(OperatingSystemType_Windows value)? windows,
+    TResult Function(OperatingSystemType_macOS value)? macOs,
+    TResult Function(OperatingSystemType_iOS value)? iOs,
+    TResult Function(OperatingSystemType_Android value)? android,
+    TResult Function(OperatingSystemType_Linux value)? linux,
+    TResult Function(OperatingSystemType_Unknown value)? unknown,
     required TResult orElse(),
   }) {
     if (iOs != null) {
@@ -1889,31 +1943,36 @@ class _$iOS implements iOS {
   }
 }
 
-abstract class iOS implements OperatingSystemType {
-  const factory iOS() = _$iOS;
+abstract class OperatingSystemType_iOS implements OperatingSystemType {
+  const factory OperatingSystemType_iOS() = _$OperatingSystemType_iOS;
 }
 
 /// @nodoc
-abstract class _$$AndroidCopyWith<$Res> {
-  factory _$$AndroidCopyWith(_$Android value, $Res Function(_$Android) then) =
-      __$$AndroidCopyWithImpl<$Res>;
+abstract class _$$OperatingSystemType_AndroidCopyWith<$Res> {
+  factory _$$OperatingSystemType_AndroidCopyWith(
+          _$OperatingSystemType_Android value,
+          $Res Function(_$OperatingSystemType_Android) then) =
+      __$$OperatingSystemType_AndroidCopyWithImpl<$Res>;
 }
 
 /// @nodoc
-class __$$AndroidCopyWithImpl<$Res>
+class __$$OperatingSystemType_AndroidCopyWithImpl<$Res>
     extends _$OperatingSystemTypeCopyWithImpl<$Res>
-    implements _$$AndroidCopyWith<$Res> {
-  __$$AndroidCopyWithImpl(_$Android _value, $Res Function(_$Android) _then)
-      : super(_value, (v) => _then(v as _$Android));
+    implements _$$OperatingSystemType_AndroidCopyWith<$Res> {
+  __$$OperatingSystemType_AndroidCopyWithImpl(
+      _$OperatingSystemType_Android _value,
+      $Res Function(_$OperatingSystemType_Android) _then)
+      : super(_value, (v) => _then(v as _$OperatingSystemType_Android));
 
   @override
-  _$Android get _value => super._value as _$Android;
+  _$OperatingSystemType_Android get _value =>
+      super._value as _$OperatingSystemType_Android;
 }
 
 /// @nodoc
 
-class _$Android implements Android {
-  const _$Android();
+class _$OperatingSystemType_Android implements OperatingSystemType_Android {
+  const _$OperatingSystemType_Android();
 
   @override
   String toString() {
@@ -1923,7 +1982,8 @@ class _$Android implements Android {
   @override
   bool operator ==(dynamic other) {
     return identical(this, other) ||
-        (other.runtimeType == runtimeType && other is _$Android);
+        (other.runtimeType == runtimeType &&
+            other is _$OperatingSystemType_Android);
   }
 
   @override
@@ -1975,12 +2035,12 @@ class _$Android implements Android {
   @override
   @optionalTypeArgs
   TResult map<TResult extends Object?>({
-    required TResult Function(Windows value) windows,
-    required TResult Function(macOS value) macOs,
-    required TResult Function(iOS value) iOs,
-    required TResult Function(Android value) android,
-    required TResult Function(Linux value) linux,
-    required TResult Function(Unknown value) unknown,
+    required TResult Function(OperatingSystemType_Windows value) windows,
+    required TResult Function(OperatingSystemType_macOS value) macOs,
+    required TResult Function(OperatingSystemType_iOS value) iOs,
+    required TResult Function(OperatingSystemType_Android value) android,
+    required TResult Function(OperatingSystemType_Linux value) linux,
+    required TResult Function(OperatingSystemType_Unknown value) unknown,
   }) {
     return android(this);
   }
@@ -1988,12 +2048,12 @@ class _$Android implements Android {
   @override
   @optionalTypeArgs
   TResult? mapOrNull<TResult extends Object?>({
-    TResult Function(Windows value)? windows,
-    TResult Function(macOS value)? macOs,
-    TResult Function(iOS value)? iOs,
-    TResult Function(Android value)? android,
-    TResult Function(Linux value)? linux,
-    TResult Function(Unknown value)? unknown,
+    TResult Function(OperatingSystemType_Windows value)? windows,
+    TResult Function(OperatingSystemType_macOS value)? macOs,
+    TResult Function(OperatingSystemType_iOS value)? iOs,
+    TResult Function(OperatingSystemType_Android value)? android,
+    TResult Function(OperatingSystemType_Linux value)? linux,
+    TResult Function(OperatingSystemType_Unknown value)? unknown,
   }) {
     return android?.call(this);
   }
@@ -2001,12 +2061,12 @@ class _$Android implements Android {
   @override
   @optionalTypeArgs
   TResult maybeMap<TResult extends Object?>({
-    TResult Function(Windows value)? windows,
-    TResult Function(macOS value)? macOs,
-    TResult Function(iOS value)? iOs,
-    TResult Function(Android value)? android,
-    TResult Function(Linux value)? linux,
-    TResult Function(Unknown value)? unknown,
+    TResult Function(OperatingSystemType_Windows value)? windows,
+    TResult Function(OperatingSystemType_macOS value)? macOs,
+    TResult Function(OperatingSystemType_iOS value)? iOs,
+    TResult Function(OperatingSystemType_Android value)? android,
+    TResult Function(OperatingSystemType_Linux value)? linux,
+    TResult Function(OperatingSystemType_Unknown value)? unknown,
     required TResult orElse(),
   }) {
     if (android != null) {
@@ -2016,32 +2076,36 @@ class _$Android implements Android {
   }
 }
 
-abstract class Android implements OperatingSystemType {
-  const factory Android() = _$Android;
+abstract class OperatingSystemType_Android implements OperatingSystemType {
+  const factory OperatingSystemType_Android() = _$OperatingSystemType_Android;
 }
 
 /// @nodoc
-abstract class _$$LinuxCopyWith<$Res> {
-  factory _$$LinuxCopyWith(_$Linux value, $Res Function(_$Linux) then) =
-      __$$LinuxCopyWithImpl<$Res>;
+abstract class _$$OperatingSystemType_LinuxCopyWith<$Res> {
+  factory _$$OperatingSystemType_LinuxCopyWith(
+          _$OperatingSystemType_Linux value,
+          $Res Function(_$OperatingSystemType_Linux) then) =
+      __$$OperatingSystemType_LinuxCopyWithImpl<$Res>;
   $Res call({LinuxType field0});
 }
 
 /// @nodoc
-class __$$LinuxCopyWithImpl<$Res>
+class __$$OperatingSystemType_LinuxCopyWithImpl<$Res>
     extends _$OperatingSystemTypeCopyWithImpl<$Res>
-    implements _$$LinuxCopyWith<$Res> {
-  __$$LinuxCopyWithImpl(_$Linux _value, $Res Function(_$Linux) _then)
-      : super(_value, (v) => _then(v as _$Linux));
+    implements _$$OperatingSystemType_LinuxCopyWith<$Res> {
+  __$$OperatingSystemType_LinuxCopyWithImpl(_$OperatingSystemType_Linux _value,
+      $Res Function(_$OperatingSystemType_Linux) _then)
+      : super(_value, (v) => _then(v as _$OperatingSystemType_Linux));
 
   @override
-  _$Linux get _value => super._value as _$Linux;
+  _$OperatingSystemType_Linux get _value =>
+      super._value as _$OperatingSystemType_Linux;
 
   @override
   $Res call({
     Object? field0 = freezed,
   }) {
-    return _then(_$Linux(
+    return _then(_$OperatingSystemType_Linux(
       field0 == freezed
           ? _value.field0
           : field0 // ignore: cast_nullable_to_non_nullable
@@ -2052,8 +2116,8 @@ class __$$LinuxCopyWithImpl<$Res>
 
 /// @nodoc
 
-class _$Linux implements Linux {
-  const _$Linux(this.field0);
+class _$OperatingSystemType_Linux implements OperatingSystemType_Linux {
+  const _$OperatingSystemType_Linux(this.field0);
 
   @override
   final LinuxType field0;
@@ -2067,7 +2131,7 @@ class _$Linux implements Linux {
   bool operator ==(dynamic other) {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
-            other is _$Linux &&
+            other is _$OperatingSystemType_Linux &&
             const DeepCollectionEquality().equals(other.field0, field0));
   }
 
@@ -2077,8 +2141,9 @@ class _$Linux implements Linux {
 
   @JsonKey(ignore: true)
   @override
-  _$$LinuxCopyWith<_$Linux> get copyWith =>
-      __$$LinuxCopyWithImpl<_$Linux>(this, _$identity);
+  _$$OperatingSystemType_LinuxCopyWith<_$OperatingSystemType_Linux>
+      get copyWith => __$$OperatingSystemType_LinuxCopyWithImpl<
+          _$OperatingSystemType_Linux>(this, _$identity);
 
   @override
   @optionalTypeArgs
@@ -2126,12 +2191,12 @@ class _$Linux implements Linux {
   @override
   @optionalTypeArgs
   TResult map<TResult extends Object?>({
-    required TResult Function(Windows value) windows,
-    required TResult Function(macOS value) macOs,
-    required TResult Function(iOS value) iOs,
-    required TResult Function(Android value) android,
-    required TResult Function(Linux value) linux,
-    required TResult Function(Unknown value) unknown,
+    required TResult Function(OperatingSystemType_Windows value) windows,
+    required TResult Function(OperatingSystemType_macOS value) macOs,
+    required TResult Function(OperatingSystemType_iOS value) iOs,
+    required TResult Function(OperatingSystemType_Android value) android,
+    required TResult Function(OperatingSystemType_Linux value) linux,
+    required TResult Function(OperatingSystemType_Unknown value) unknown,
   }) {
     return linux(this);
   }
@@ -2139,12 +2204,12 @@ class _$Linux implements Linux {
   @override
   @optionalTypeArgs
   TResult? mapOrNull<TResult extends Object?>({
-    TResult Function(Windows value)? windows,
-    TResult Function(macOS value)? macOs,
-    TResult Function(iOS value)? iOs,
-    TResult Function(Android value)? android,
-    TResult Function(Linux value)? linux,
-    TResult Function(Unknown value)? unknown,
+    TResult Function(OperatingSystemType_Windows value)? windows,
+    TResult Function(OperatingSystemType_macOS value)? macOs,
+    TResult Function(OperatingSystemType_iOS value)? iOs,
+    TResult Function(OperatingSystemType_Android value)? android,
+    TResult Function(OperatingSystemType_Linux value)? linux,
+    TResult Function(OperatingSystemType_Unknown value)? unknown,
   }) {
     return linux?.call(this);
   }
@@ -2152,12 +2217,12 @@ class _$Linux implements Linux {
   @override
   @optionalTypeArgs
   TResult maybeMap<TResult extends Object?>({
-    TResult Function(Windows value)? windows,
-    TResult Function(macOS value)? macOs,
-    TResult Function(iOS value)? iOs,
-    TResult Function(Android value)? android,
-    TResult Function(Linux value)? linux,
-    TResult Function(Unknown value)? unknown,
+    TResult Function(OperatingSystemType_Windows value)? windows,
+    TResult Function(OperatingSystemType_macOS value)? macOs,
+    TResult Function(OperatingSystemType_iOS value)? iOs,
+    TResult Function(OperatingSystemType_Android value)? android,
+    TResult Function(OperatingSystemType_Linux value)? linux,
+    TResult Function(OperatingSystemType_Unknown value)? unknown,
     required TResult orElse(),
   }) {
     if (linux != null) {
@@ -2167,35 +2232,42 @@ class _$Linux implements Linux {
   }
 }
 
-abstract class Linux implements OperatingSystemType {
-  const factory Linux(final LinuxType field0) = _$Linux;
+abstract class OperatingSystemType_Linux implements OperatingSystemType {
+  const factory OperatingSystemType_Linux(final LinuxType field0) =
+      _$OperatingSystemType_Linux;
 
   LinuxType get field0;
   @JsonKey(ignore: true)
-  _$$LinuxCopyWith<_$Linux> get copyWith => throw _privateConstructorUsedError;
+  _$$OperatingSystemType_LinuxCopyWith<_$OperatingSystemType_Linux>
+      get copyWith => throw _privateConstructorUsedError;
 }
 
 /// @nodoc
-abstract class _$$UnknownCopyWith<$Res> {
-  factory _$$UnknownCopyWith(_$Unknown value, $Res Function(_$Unknown) then) =
-      __$$UnknownCopyWithImpl<$Res>;
+abstract class _$$OperatingSystemType_UnknownCopyWith<$Res> {
+  factory _$$OperatingSystemType_UnknownCopyWith(
+          _$OperatingSystemType_Unknown value,
+          $Res Function(_$OperatingSystemType_Unknown) then) =
+      __$$OperatingSystemType_UnknownCopyWithImpl<$Res>;
 }
 
 /// @nodoc
-class __$$UnknownCopyWithImpl<$Res>
+class __$$OperatingSystemType_UnknownCopyWithImpl<$Res>
     extends _$OperatingSystemTypeCopyWithImpl<$Res>
-    implements _$$UnknownCopyWith<$Res> {
-  __$$UnknownCopyWithImpl(_$Unknown _value, $Res Function(_$Unknown) _then)
-      : super(_value, (v) => _then(v as _$Unknown));
+    implements _$$OperatingSystemType_UnknownCopyWith<$Res> {
+  __$$OperatingSystemType_UnknownCopyWithImpl(
+      _$OperatingSystemType_Unknown _value,
+      $Res Function(_$OperatingSystemType_Unknown) _then)
+      : super(_value, (v) => _then(v as _$OperatingSystemType_Unknown));
 
   @override
-  _$Unknown get _value => super._value as _$Unknown;
+  _$OperatingSystemType_Unknown get _value =>
+      super._value as _$OperatingSystemType_Unknown;
 }
 
 /// @nodoc
 
-class _$Unknown implements Unknown {
-  const _$Unknown();
+class _$OperatingSystemType_Unknown implements OperatingSystemType_Unknown {
+  const _$OperatingSystemType_Unknown();
 
   @override
   String toString() {
@@ -2205,7 +2277,8 @@ class _$Unknown implements Unknown {
   @override
   bool operator ==(dynamic other) {
     return identical(this, other) ||
-        (other.runtimeType == runtimeType && other is _$Unknown);
+        (other.runtimeType == runtimeType &&
+            other is _$OperatingSystemType_Unknown);
   }
 
   @override
@@ -2257,12 +2330,12 @@ class _$Unknown implements Unknown {
   @override
   @optionalTypeArgs
   TResult map<TResult extends Object?>({
-    required TResult Function(Windows value) windows,
-    required TResult Function(macOS value) macOs,
-    required TResult Function(iOS value) iOs,
-    required TResult Function(Android value) android,
-    required TResult Function(Linux value) linux,
-    required TResult Function(Unknown value) unknown,
+    required TResult Function(OperatingSystemType_Windows value) windows,
+    required TResult Function(OperatingSystemType_macOS value) macOs,
+    required TResult Function(OperatingSystemType_iOS value) iOs,
+    required TResult Function(OperatingSystemType_Android value) android,
+    required TResult Function(OperatingSystemType_Linux value) linux,
+    required TResult Function(OperatingSystemType_Unknown value) unknown,
   }) {
     return unknown(this);
   }
@@ -2270,12 +2343,12 @@ class _$Unknown implements Unknown {
   @override
   @optionalTypeArgs
   TResult? mapOrNull<TResult extends Object?>({
-    TResult Function(Windows value)? windows,
-    TResult Function(macOS value)? macOs,
-    TResult Function(iOS value)? iOs,
-    TResult Function(Android value)? android,
-    TResult Function(Linux value)? linux,
-    TResult Function(Unknown value)? unknown,
+    TResult Function(OperatingSystemType_Windows value)? windows,
+    TResult Function(OperatingSystemType_macOS value)? macOs,
+    TResult Function(OperatingSystemType_iOS value)? iOs,
+    TResult Function(OperatingSystemType_Android value)? android,
+    TResult Function(OperatingSystemType_Linux value)? linux,
+    TResult Function(OperatingSystemType_Unknown value)? unknown,
   }) {
     return unknown?.call(this);
   }
@@ -2283,12 +2356,12 @@ class _$Unknown implements Unknown {
   @override
   @optionalTypeArgs
   TResult maybeMap<TResult extends Object?>({
-    TResult Function(Windows value)? windows,
-    TResult Function(macOS value)? macOs,
-    TResult Function(iOS value)? iOs,
-    TResult Function(Android value)? android,
-    TResult Function(Linux value)? linux,
-    TResult Function(Unknown value)? unknown,
+    TResult Function(OperatingSystemType_Windows value)? windows,
+    TResult Function(OperatingSystemType_macOS value)? macOs,
+    TResult Function(OperatingSystemType_iOS value)? iOs,
+    TResult Function(OperatingSystemType_Android value)? android,
+    TResult Function(OperatingSystemType_Linux value)? linux,
+    TResult Function(OperatingSystemType_Unknown value)? unknown,
     required TResult orElse(),
   }) {
     if (unknown != null) {
@@ -2298,6 +2371,6 @@ class _$Unknown implements Unknown {
   }
 }
 
-abstract class Unknown implements OperatingSystemType {
-  const factory Unknown() = _$Unknown;
+abstract class OperatingSystemType_Unknown implements OperatingSystemType {
+  const factory OperatingSystemType_Unknown() = _$OperatingSystemType_Unknown;
 }

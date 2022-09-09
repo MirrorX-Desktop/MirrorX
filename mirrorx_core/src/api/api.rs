@@ -36,7 +36,13 @@ pub fn init(os_version: String, config_dir: String) -> anyhow::Result<()> {
     crate::constants::os::OS_VERSION.get_or_init(|| os_version);
 
     api::config::init(config_dir)?;
-    async_block_on!(api::signaling::init("192.168.0.101:28000"))?;
+    async_block_on!(api::signaling::signaling_connect(
+        tonic::transport::Uri::builder()
+            .scheme("https")
+            .path_and_query("192.168.0.101:28000")
+            .build()
+            .unwrap()
+    ))?;
     async_block_on!(api::signaling::handshake())?;
     api::signaling::begin_heartbeat();
 
@@ -57,7 +63,7 @@ pub fn config_read_device_id_expiration() -> anyhow::Result<Option<u32>> {
     api::config::read_device_id_expiration().map_err(|err| anyhow::anyhow!(err))
 }
 
-pub fn config_save_device_id_expiration(time_stamp: i32) -> anyhow::Result<()> {
+pub fn config_save_device_id_expiration(time_stamp: u32) -> anyhow::Result<()> {
     api::config::save_device_id_expiration(&time_stamp).map_err(|err| anyhow::anyhow!(err))
 }
 
@@ -70,18 +76,33 @@ pub fn config_save_device_password(device_password: String) -> anyhow::Result<()
 }
 
 pub fn signaling_connect(remote_device_id: String) -> anyhow::Result<bool> {
-    async_block_on! {
-        api::signaling::connect(remote_device_id)
-    }
+    // async_block_on! {
+    //     // api::signaling::connect(remote_device_id)
+    // }
+    Ok(true)
+}
+
+pub struct KeyExchangeResp {
+    pub sealing_key_bytes: Vec<u8>,
+    pub sealing_nonce_bytes: Vec<u8>,
+    pub opening_key_bytes: Vec<u8>,
+    pub opening_nonce_bytes: Vec<u8>,
 }
 
 pub fn signaling_connection_key_exchange(
     remote_device_id: String,
     password: String,
-) -> anyhow::Result<()> {
-    async_block_on! {
+) -> anyhow::Result<KeyExchangeResp> {
+    let (sealing_key_bytes, sealing_nonce_bytes, opening_key_bytes, opening_nonce_bytes) = async_block_on! {
         api::signaling::connection_key_exchange(remote_device_id, password)
-    }
+    }?;
+
+    Ok(KeyExchangeResp {
+        sealing_key_bytes,
+        sealing_nonce_bytes,
+        opening_key_bytes,
+        opening_nonce_bytes,
+    })
 }
 
 pub fn endpoint_get_display_info(

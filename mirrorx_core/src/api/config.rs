@@ -47,7 +47,7 @@ pub fn read_device_id_expiration() -> CoreResult<Option<u32>> {
 }
 
 #[inline(always)]
-pub fn save_device_id_expiration(time_stamp: &i32) -> CoreResult<()> {
+pub fn save_device_id_expiration(time_stamp: &u32) -> CoreResult<()> {
     save_item("device_id_expiration", &time_stamp.to_string())
 }
 

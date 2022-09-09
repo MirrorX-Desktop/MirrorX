@@ -1,5 +1,10 @@
 fn main() {
-    println!("cargo:rerun-if-changed=build.rs");
+    // println!("cargo:rerun-if-changed=build.rs");
+
+    tonic_build::configure()
+        .build_server(false)
+        .compile(&["src/proto/signaling/signaling.proto"], &["."])
+        .unwrap();
 
     link_ffmpeg();
 }
@@ -42,7 +47,7 @@ fn link_ffmpeg() {
         println!("cargo:rustc-link-lib=libavutil");
         println!("cargo:rustc-link-lib=libavformat");
         println!("cargo:rustc-link-lib=libavdevice");
-       
+
         // println!("cargo:rustc-link-search=../third/dependencies/libyuv/Release");
         // println!("cargo:rustc-link-lib=yuv");
 

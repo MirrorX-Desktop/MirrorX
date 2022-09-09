@@ -3,6 +3,7 @@ import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mirrorx/env/sdk/mirrorx_core.dart';
+import 'package:mirrorx/env/sdk/mirrorx_core.dart';
 import 'package:mirrorx/state/desktop_manager/desktop_manager_cubit.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
@@ -109,15 +110,15 @@ class NavigationMenu extends StatelessWidget {
   }
 
   IconData _getOSIcon(OperatingSystemType osType) {
-    if (osType is Windows) {
+    if (osType is OperatingSystemType_Windows) {
       return FontAwesomeIcons.windows;
-    } else if (osType is macOS) {
+    } else if (osType is OperatingSystemType_macOS) {
       return FontAwesomeIcons.apple;
-    } else if (osType is iOS) {
+    } else if (osType is OperatingSystemType_iOS) {
       return FontAwesomeIcons.apple;
-    } else if (osType is Android) {
+    } else if (osType is OperatingSystemType_Android) {
       return FontAwesomeIcons.android;
-    } else if (osType is Linux) {
+    } else if (osType is OperatingSystemType_Linux) {
       switch (osType.field0) {
         case LinuxType.CentOS:
           return FontAwesomeIcons.centos;

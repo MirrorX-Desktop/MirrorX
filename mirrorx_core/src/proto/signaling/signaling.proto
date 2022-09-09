@@ -1,0 +1,89 @@
+syntax = "proto3";
+
+package signaling;
+
+service Signaling {
+  rpc Register(RegisterRequest) returns (RegisterResponse) {}
+  rpc Heartbeat(HeartbeatRequest) returns (HeartbeatResponse) {}
+  rpc ConnectDevice(ConnectDeviceRequest) returns (ConnectDeviceResponse) {}
+  rpc KeyExchange(KeyExchangeRequest) returns (KeyExchangeResponse) {}
+  rpc KeyExchangeReply(KeyExchangeReplyRequest)
+      returns (KeyExchangeReplyResponse) {}
+  rpc Subscribe(SubscribeRequest) returns (stream PublishMessage) {}
+  rpc ReplyRemoteDeviceConnect(ReplyRemoteDeviceConnectRequest)
+      returns (ReplyRemoteDeviceConnectResponse) {}
+}
+
+message RegisterRequest {
+  optional string device_id = 1;
+  string device_fingerprint = 2;
+  string device_public_key = 3;
+}
+
+message RegisterResponse {
+  string device_id = 1;
+  fixed32 device_id_expire = 2;
+}
+
+message HeartbeatRequest { fixed32 timestamp = 1; }
+
+message HeartbeatResponse { fixed32 timestamp = 1; }
+
+message ConnectDeviceRequest { string remote_device_id = 1; }
+
+message ConnectDeviceResponse { bool allow = 1; }
+
+message KeyExchangeRequest {
+  string active_device_id = 1;
+  string passive_device_id = 2;
+  bytes secret_salt = 3;
+  bytes secret = 4;
+}
+
+message KeyExchangeResponse {
+  string active_device_id = 1;
+  string passive_device_id = 2;
+  bytes secret = 3;
+}
+
+message KeyExchangeReplyRequest {
+  string active_device_id = 1;
+  string passive_device_id = 2;
+  bytes secret = 3;
+}
+
+message KeyExchangeReplyResponse {}
+
+message SubscribeRequest {
+  string device_id = 1;
+  string device_fingerprint = 2;
+  string device_public_key = 3;
+}
+
+message PublishMessage {
+  oneof inner {
+    RemoteDeviceConnectRequest remote_device_connect_request = 1;
+    KeyExchangeRequest key_exchange_request = 2;
+  }
+}
+
+message RemoteDeviceConnectRequest { string remote_device_id = 1; }
+
+message ReplyRemoteDeviceConnectRequest {
+  string remote_device_id = 1;
+  bool allow = 2;
+}
+
+message ReplyRemoteDeviceConnectResponse {}
+
+message KeyExchangeActiveDeviceSecret {
+  bytes exchange_reply_public_key_n = 1;
+  bytes exchange_reply_public_key_e = 2;
+  bytes active_exchange_public_key = 3;
+  bytes active_exchange_nonce = 4;
+}
+
+message KeyExchangePassiveDeviceSecret {
+  bytes passive_exchange_public_key = 1;
+  bytes passive_exchange_nonce = 2;
+}
