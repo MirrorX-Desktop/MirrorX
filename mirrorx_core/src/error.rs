@@ -47,4 +47,10 @@ pub enum CoreError {
 
     #[error("prost decode error")]
     ProstDecodeError(#[from] prost::DecodeError),
+
+    #[error("serde json serialize/deserialize error ({0:?})")]
+    SerdeJsonError(#[from] serde_json::Error),
+
+    #[error("key exchange reply error ({0:?})")]
+    KeyExchangeReplyError(crate::proto::signaling::KeyExchangeReplyError),
 }

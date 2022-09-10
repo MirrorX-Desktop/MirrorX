@@ -14,317 +14,179 @@ import 'dart:ffi' as ffi;
 part 'mirrorx_core.freezed.dart';
 
 abstract class MirrorXCore {
-  Future<void> init(
-      {required String osVersion, required String configDir, dynamic hint});
+  Future<void> loggerInit({dynamic hint});
 
-  FlutterRustBridgeTaskConstMeta get kInitConstMeta;
+  FlutterRustBridgeTaskConstMeta get kLoggerInitConstMeta;
 
-  Future<String?> configReadDeviceId({dynamic hint});
+  Future<ConfigProperties?> configRead(
+      {required String path, required String key, dynamic hint});
 
-  FlutterRustBridgeTaskConstMeta get kConfigReadDeviceIdConstMeta;
+  FlutterRustBridgeTaskConstMeta get kConfigReadConstMeta;
 
-  Future<void> configSaveDeviceId({required String deviceId, dynamic hint});
-
-  FlutterRustBridgeTaskConstMeta get kConfigSaveDeviceIdConstMeta;
-
-  Future<int?> configReadDeviceIdExpiration({dynamic hint});
-
-  FlutterRustBridgeTaskConstMeta get kConfigReadDeviceIdExpirationConstMeta;
-
-  Future<void> configSaveDeviceIdExpiration(
-      {required int timeStamp, dynamic hint});
-
-  FlutterRustBridgeTaskConstMeta get kConfigSaveDeviceIdExpirationConstMeta;
-
-  Future<String?> configReadDevicePassword({dynamic hint});
-
-  FlutterRustBridgeTaskConstMeta get kConfigReadDevicePasswordConstMeta;
-
-  Future<void> configSaveDevicePassword(
-      {required String devicePassword, dynamic hint});
-
-  FlutterRustBridgeTaskConstMeta get kConfigSaveDevicePasswordConstMeta;
-
-  Future<bool> signalingConnect({required String remoteDeviceId, dynamic hint});
-
-  FlutterRustBridgeTaskConstMeta get kSignalingConnectConstMeta;
-
-  Future<KeyExchangeResp> signalingConnectionKeyExchange(
-      {required String remoteDeviceId, required String password, dynamic hint});
-
-  FlutterRustBridgeTaskConstMeta get kSignalingConnectionKeyExchangeConstMeta;
-
-  Future<GetDisplayInfoResponse> endpointGetDisplayInfo(
-      {required String remoteDeviceId, dynamic hint});
-
-  FlutterRustBridgeTaskConstMeta get kEndpointGetDisplayInfoConstMeta;
-
-  Future<StartMediaTransmissionResponse> endpointStartMediaTransmission(
-      {required String remoteDeviceId,
-      required int expectFps,
-      required String expectDisplayId,
-      required int textureId,
-      required int videoTexturePtr,
-      required int updateFrameCallbackPtr,
+  Future<void> configSave(
+      {required String path,
+      required String key,
+      required ConfigProperties properties,
       dynamic hint});
 
-  FlutterRustBridgeTaskConstMeta get kEndpointStartMediaTransmissionConstMeta;
+  FlutterRustBridgeTaskConstMeta get kConfigSaveConstMeta;
 
-  Future<void> endpointInput(
-      {required String remoteDeviceId,
-      required InputEvent event,
-      dynamic hint});
+  Future<void> signalingDial({required DialRequest req, dynamic hint});
 
-  FlutterRustBridgeTaskConstMeta get kEndpointInputConstMeta;
+  FlutterRustBridgeTaskConstMeta get kSignalingDialConstMeta;
 
-  Future<void> endpointManuallyClose(
-      {required String remoteDeviceId, dynamic hint});
+  Future<RegisterResponse> signalingRegister(
+      {required RegisterRequest req, dynamic hint});
 
-  FlutterRustBridgeTaskConstMeta get kEndpointManuallyCloseConstMeta;
+  FlutterRustBridgeTaskConstMeta get kSignalingRegisterConstMeta;
 
-  Stream<void> endpointCloseNotify(
-      {required String remoteDeviceId, dynamic hint});
+  Stream<PublishMessage> signalingSubscribe(
+      {required SubscribeRequest req, dynamic hint});
 
-  FlutterRustBridgeTaskConstMeta get kEndpointCloseNotifyConstMeta;
+  FlutterRustBridgeTaskConstMeta get kSignalingSubscribeConstMeta;
+
+  Future<HeartbeatResponse> signalingHeartbeat(
+      {required HeartbeatRequest req, dynamic hint});
+
+  FlutterRustBridgeTaskConstMeta get kSignalingHeartbeatConstMeta;
+
+  Future<VisitResponse> signalingVisit(
+      {required VisitRequest req, dynamic hint});
+
+  FlutterRustBridgeTaskConstMeta get kSignalingVisitConstMeta;
+
+  Future<KeyExchangeResponse> signalingKeyExchange(
+      {required KeyExchangeRequest req, dynamic hint});
+
+  FlutterRustBridgeTaskConstMeta get kSignalingKeyExchangeConstMeta;
 }
 
-class DisplayInfo {
-  final String id;
-  final String name;
-  final int refreshRate;
-  final int width;
-  final int height;
-  final bool isPrimary;
-  final Uint8List screenShot;
+class ConfigProperties {
+  final String deviceId;
+  final String deviceFingerPrint;
+  final String devicePassword;
 
-  DisplayInfo({
-    required this.id,
-    required this.name,
-    required this.refreshRate,
-    required this.width,
-    required this.height,
-    required this.isPrimary,
-    required this.screenShot,
+  ConfigProperties({
+    required this.deviceId,
+    required this.deviceFingerPrint,
+    required this.devicePassword,
   });
 }
 
-class GetDisplayInfoResponse {
-  final List<DisplayInfo> displays;
+class DialRequest {
+  final String uri;
 
-  GetDisplayInfoResponse({
-    required this.displays,
+  DialRequest({
+    required this.uri,
   });
 }
 
-@freezed
-class InputEvent with _$InputEvent {
-  const factory InputEvent.mouse(
-    MouseEvent field0,
-  ) = InputEvent_Mouse;
-  const factory InputEvent.keyboard(
-    KeyboardEvent field0,
-  ) = InputEvent_Keyboard;
+class HeartbeatRequest {
+  final String localDeviceId;
+  final int timestamp;
+
+  HeartbeatRequest({
+    required this.localDeviceId,
+    required this.timestamp,
+  });
 }
 
-class KeyExchangeResp {
-  final Uint8List sealingKeyBytes;
-  final Uint8List sealingNonceBytes;
+class HeartbeatResponse {
+  final int timestamp;
+
+  HeartbeatResponse({
+    required this.timestamp,
+  });
+}
+
+class KeyExchangeRequest {
+  final String localDeviceId;
+  final String remoteDeviceId;
+  final String password;
+
+  KeyExchangeRequest({
+    required this.localDeviceId,
+    required this.remoteDeviceId,
+    required this.password,
+  });
+}
+
+class KeyExchangeResponse {
   final Uint8List openingKeyBytes;
   final Uint8List openingNonceBytes;
+  final Uint8List sealingKeyBytes;
+  final Uint8List sealingNonceBytes;
 
-  KeyExchangeResp({
-    required this.sealingKeyBytes,
-    required this.sealingNonceBytes,
+  KeyExchangeResponse({
     required this.openingKeyBytes,
     required this.openingNonceBytes,
+    required this.sealingKeyBytes,
+    required this.sealingNonceBytes,
   });
 }
 
 @freezed
-class KeyboardEvent with _$KeyboardEvent {
-  const factory KeyboardEvent.keyUp(
-    KeyboardKey field0,
-  ) = KeyboardEvent_KeyUp;
-  const factory KeyboardEvent.keyDown(
-    KeyboardKey field0,
-  ) = KeyboardEvent_KeyDown;
+class PublishMessage with _$PublishMessage {
+  const factory PublishMessage.streamClosed() = PublishMessage_StreamClosed;
+  const factory PublishMessage.visitRequest({
+    required String activeDeviceId,
+    required String passiveDeviceId,
+    required ResourceType resourceType,
+  }) = PublishMessage_VisitRequest;
 }
 
-enum KeyboardKey {
-  A,
-  B,
-  C,
-  D,
-  E,
-  F,
-  G,
-  H,
-  I,
-  J,
-  K,
-  L,
-  M,
-  N,
-  O,
-  P,
-  Q,
-  R,
-  S,
-  T,
-  U,
-  V,
-  W,
-  X,
-  Y,
-  Z,
-  BackQuote,
-  Digit0,
-  Digit1,
-  Digit2,
-  Digit3,
-  Digit4,
-  Digit5,
-  Digit6,
-  Digit7,
-  Digit8,
-  Digit9,
-  Minus,
-  Equal,
-  Tab,
-  CapsLock,
-  LeftShift,
-  LeftControl,
-  LeftAlt,
-  LeftMeta,
-  Space,
-  RightMeta,
-  RightControl,
-  RightAlt,
-  RightShift,
-  Comma,
-  Period,
-  Slash,
-  Semicolon,
-  QuoteSingle,
-  Enter,
-  BracketLeft,
-  BracketRight,
-  BackSlash,
-  Backspace,
-  NumLock,
-  NumpadEquals,
-  NumpadDivide,
-  NumpadMultiply,
-  NumpadSubtract,
-  NumpadAdd,
-  NumpadEnter,
-  Numpad0,
-  Numpad1,
-  Numpad2,
-  Numpad3,
-  Numpad4,
-  Numpad5,
-  Numpad6,
-  Numpad7,
-  Numpad8,
-  Numpad9,
-  NumpadDecimal,
-  ArrowLeft,
-  ArrowUp,
-  ArrowRight,
-  ArrowDown,
-  Escape,
-  PrintScreen,
-  ScrollLock,
-  Pause,
-  Insert,
-  Delete,
-  Home,
-  End,
-  PageUp,
-  PageDown,
-  F1,
-  F2,
-  F3,
-  F4,
-  F5,
-  F6,
-  F7,
-  F8,
-  F9,
-  F10,
-  F11,
-  F12,
-  Fn,
+class RegisterRequest {
+  final String? localDeviceId;
+  final String deviceFingerPrint;
+
+  RegisterRequest({
+    this.localDeviceId,
+    required this.deviceFingerPrint,
+  });
 }
 
-enum LinuxType {
-  CentOS,
-  Fedora,
-  Redhat,
-  openSUSE,
-  Ubuntu,
-  Other,
+class RegisterResponse {
+  final String deviceId;
+
+  RegisterResponse({
+    required this.deviceId,
+  });
 }
 
-@freezed
-class MouseEvent with _$MouseEvent {
-  const factory MouseEvent.mouseUp(
-    MouseKey field0,
-    double field1,
-    double field2,
-  ) = MouseEvent_MouseUp;
-  const factory MouseEvent.mouseDown(
-    MouseKey field0,
-    double field1,
-    double field2,
-  ) = MouseEvent_MouseDown;
-  const factory MouseEvent.mouseMove(
-    MouseKey field0,
-    double field1,
-    double field2,
-  ) = MouseEvent_MouseMove;
-  const factory MouseEvent.mouseScrollWheel(
-    double field0,
-  ) = MouseEvent_MouseScrollWheel;
+enum ResourceType {
+  Desktop,
+  Files,
 }
 
-enum MouseKey {
-  None,
-  Left,
-  Right,
-  Wheel,
-  SideForward,
-  SideBack,
+class SubscribeRequest {
+  final String localDeviceId;
+  final String deviceFingerPrint;
+  final String configPath;
+
+  SubscribeRequest({
+    required this.localDeviceId,
+    required this.deviceFingerPrint,
+    required this.configPath,
+  });
 }
 
-@freezed
-class OperatingSystemType with _$OperatingSystemType {
-  const factory OperatingSystemType.windows() = OperatingSystemType_Windows;
-  const factory OperatingSystemType.macOs() = OperatingSystemType_macOS;
-  const factory OperatingSystemType.iOs() = OperatingSystemType_iOS;
-  const factory OperatingSystemType.android() = OperatingSystemType_Android;
-  const factory OperatingSystemType.linux(
-    LinuxType field0,
-  ) = OperatingSystemType_Linux;
-  const factory OperatingSystemType.unknown() = OperatingSystemType_Unknown;
+class VisitRequest {
+  final String localDeviceId;
+  final String remoteDeviceId;
+  final ResourceType resourceType;
+
+  VisitRequest({
+    required this.localDeviceId,
+    required this.remoteDeviceId,
+    required this.resourceType,
+  });
 }
 
-class StartMediaTransmissionResponse {
-  final OperatingSystemType osType;
-  final String osVersion;
-  final int screenWidth;
-  final int screenHeight;
-  final String videoType;
-  final String audioType;
+class VisitResponse {
+  final bool allow;
 
-  StartMediaTransmissionResponse({
-    required this.osType,
-    required this.osVersion,
-    required this.screenWidth,
-    required this.screenHeight,
-    required this.videoType,
-    required this.audioType,
+  VisitResponse({
+    required this.allow,
   });
 }
 
@@ -337,287 +199,164 @@ class MirrorXCoreImpl implements MirrorXCore {
   factory MirrorXCoreImpl.wasm(FutureOr<WasmModule> module) =>
       MirrorXCoreImpl(module as ExternalLibrary);
   MirrorXCoreImpl.raw(this._platform);
-  Future<void> init(
-          {required String osVersion,
-          required String configDir,
+  Future<void> loggerInit({dynamic hint}) =>
+      _platform.executeNormal(FlutterRustBridgeTask(
+        callFfi: (port_) => _platform.inner.wire_logger_init(port_),
+        parseSuccessData: _wire2api_unit,
+        constMeta: kLoggerInitConstMeta,
+        argValues: [],
+        hint: hint,
+      ));
+
+  FlutterRustBridgeTaskConstMeta get kLoggerInitConstMeta =>
+      const FlutterRustBridgeTaskConstMeta(
+        debugName: "logger_init",
+        argNames: [],
+      );
+
+  Future<ConfigProperties?> configRead(
+          {required String path, required String key, dynamic hint}) =>
+      _platform.executeNormal(FlutterRustBridgeTask(
+        callFfi: (port_) => _platform.inner.wire_config_read(port_,
+            _platform.api2wire_String(path), _platform.api2wire_String(key)),
+        parseSuccessData: _wire2api_opt_box_autoadd_config_properties,
+        constMeta: kConfigReadConstMeta,
+        argValues: [path, key],
+        hint: hint,
+      ));
+
+  FlutterRustBridgeTaskConstMeta get kConfigReadConstMeta =>
+      const FlutterRustBridgeTaskConstMeta(
+        debugName: "config_read",
+        argNames: ["path", "key"],
+      );
+
+  Future<void> configSave(
+          {required String path,
+          required String key,
+          required ConfigProperties properties,
           dynamic hint}) =>
       _platform.executeNormal(FlutterRustBridgeTask(
-        callFfi: (port_) => _platform.inner.wire_init(
+        callFfi: (port_) => _platform.inner.wire_config_save(
             port_,
-            _platform.api2wire_String(osVersion),
-            _platform.api2wire_String(configDir)),
+            _platform.api2wire_String(path),
+            _platform.api2wire_String(key),
+            _platform.api2wire_box_autoadd_config_properties(properties)),
         parseSuccessData: _wire2api_unit,
-        constMeta: kInitConstMeta,
-        argValues: [osVersion, configDir],
+        constMeta: kConfigSaveConstMeta,
+        argValues: [path, key, properties],
         hint: hint,
       ));
 
-  FlutterRustBridgeTaskConstMeta get kInitConstMeta =>
+  FlutterRustBridgeTaskConstMeta get kConfigSaveConstMeta =>
       const FlutterRustBridgeTaskConstMeta(
-        debugName: "init",
-        argNames: ["osVersion", "configDir"],
+        debugName: "config_save",
+        argNames: ["path", "key", "properties"],
       );
 
-  Future<String?> configReadDeviceId({dynamic hint}) =>
+  Future<void> signalingDial({required DialRequest req, dynamic hint}) =>
       _platform.executeNormal(FlutterRustBridgeTask(
-        callFfi: (port_) => _platform.inner.wire_config_read_device_id(port_),
-        parseSuccessData: _wire2api_opt_String,
-        constMeta: kConfigReadDeviceIdConstMeta,
-        argValues: [],
-        hint: hint,
-      ));
-
-  FlutterRustBridgeTaskConstMeta get kConfigReadDeviceIdConstMeta =>
-      const FlutterRustBridgeTaskConstMeta(
-        debugName: "config_read_device_id",
-        argNames: [],
-      );
-
-  Future<void> configSaveDeviceId({required String deviceId, dynamic hint}) =>
-      _platform.executeNormal(FlutterRustBridgeTask(
-        callFfi: (port_) => _platform.inner.wire_config_save_device_id(
-            port_, _platform.api2wire_String(deviceId)),
+        callFfi: (port_) => _platform.inner.wire_signaling_dial(
+            port_, _platform.api2wire_box_autoadd_dial_request(req)),
         parseSuccessData: _wire2api_unit,
-        constMeta: kConfigSaveDeviceIdConstMeta,
-        argValues: [deviceId],
+        constMeta: kSignalingDialConstMeta,
+        argValues: [req],
         hint: hint,
       ));
 
-  FlutterRustBridgeTaskConstMeta get kConfigSaveDeviceIdConstMeta =>
+  FlutterRustBridgeTaskConstMeta get kSignalingDialConstMeta =>
       const FlutterRustBridgeTaskConstMeta(
-        debugName: "config_save_device_id",
-        argNames: ["deviceId"],
+        debugName: "signaling_dial",
+        argNames: ["req"],
       );
 
-  Future<int?> configReadDeviceIdExpiration({dynamic hint}) =>
+  Future<RegisterResponse> signalingRegister(
+          {required RegisterRequest req, dynamic hint}) =>
       _platform.executeNormal(FlutterRustBridgeTask(
-        callFfi: (port_) =>
-            _platform.inner.wire_config_read_device_id_expiration(port_),
-        parseSuccessData: _wire2api_opt_box_autoadd_u32,
-        constMeta: kConfigReadDeviceIdExpirationConstMeta,
-        argValues: [],
+        callFfi: (port_) => _platform.inner.wire_signaling_register(
+            port_, _platform.api2wire_box_autoadd_register_request(req)),
+        parseSuccessData: _wire2api_register_response,
+        constMeta: kSignalingRegisterConstMeta,
+        argValues: [req],
         hint: hint,
       ));
 
-  FlutterRustBridgeTaskConstMeta get kConfigReadDeviceIdExpirationConstMeta =>
+  FlutterRustBridgeTaskConstMeta get kSignalingRegisterConstMeta =>
       const FlutterRustBridgeTaskConstMeta(
-        debugName: "config_read_device_id_expiration",
-        argNames: [],
+        debugName: "signaling_register",
+        argNames: ["req"],
       );
 
-  Future<void> configSaveDeviceIdExpiration(
-          {required int timeStamp, dynamic hint}) =>
-      _platform.executeNormal(FlutterRustBridgeTask(
-        callFfi: (port_) => _platform.inner
-            .wire_config_save_device_id_expiration(
-                port_, api2wire_u32(timeStamp)),
-        parseSuccessData: _wire2api_unit,
-        constMeta: kConfigSaveDeviceIdExpirationConstMeta,
-        argValues: [timeStamp],
-        hint: hint,
-      ));
-
-  FlutterRustBridgeTaskConstMeta get kConfigSaveDeviceIdExpirationConstMeta =>
-      const FlutterRustBridgeTaskConstMeta(
-        debugName: "config_save_device_id_expiration",
-        argNames: ["timeStamp"],
-      );
-
-  Future<String?> configReadDevicePassword({dynamic hint}) =>
-      _platform.executeNormal(FlutterRustBridgeTask(
-        callFfi: (port_) =>
-            _platform.inner.wire_config_read_device_password(port_),
-        parseSuccessData: _wire2api_opt_String,
-        constMeta: kConfigReadDevicePasswordConstMeta,
-        argValues: [],
-        hint: hint,
-      ));
-
-  FlutterRustBridgeTaskConstMeta get kConfigReadDevicePasswordConstMeta =>
-      const FlutterRustBridgeTaskConstMeta(
-        debugName: "config_read_device_password",
-        argNames: [],
-      );
-
-  Future<void> configSaveDevicePassword(
-          {required String devicePassword, dynamic hint}) =>
-      _platform.executeNormal(FlutterRustBridgeTask(
-        callFfi: (port_) => _platform.inner.wire_config_save_device_password(
-            port_, _platform.api2wire_String(devicePassword)),
-        parseSuccessData: _wire2api_unit,
-        constMeta: kConfigSaveDevicePasswordConstMeta,
-        argValues: [devicePassword],
-        hint: hint,
-      ));
-
-  FlutterRustBridgeTaskConstMeta get kConfigSaveDevicePasswordConstMeta =>
-      const FlutterRustBridgeTaskConstMeta(
-        debugName: "config_save_device_password",
-        argNames: ["devicePassword"],
-      );
-
-  Future<bool> signalingConnect(
-          {required String remoteDeviceId, dynamic hint}) =>
-      _platform.executeNormal(FlutterRustBridgeTask(
-        callFfi: (port_) => _platform.inner.wire_signaling_connect(
-            port_, _platform.api2wire_String(remoteDeviceId)),
-        parseSuccessData: _wire2api_bool,
-        constMeta: kSignalingConnectConstMeta,
-        argValues: [remoteDeviceId],
-        hint: hint,
-      ));
-
-  FlutterRustBridgeTaskConstMeta get kSignalingConnectConstMeta =>
-      const FlutterRustBridgeTaskConstMeta(
-        debugName: "signaling_connect",
-        argNames: ["remoteDeviceId"],
-      );
-
-  Future<KeyExchangeResp> signalingConnectionKeyExchange(
-          {required String remoteDeviceId,
-          required String password,
-          dynamic hint}) =>
-      _platform.executeNormal(FlutterRustBridgeTask(
-        callFfi: (port_) => _platform.inner
-            .wire_signaling_connection_key_exchange(
-                port_,
-                _platform.api2wire_String(remoteDeviceId),
-                _platform.api2wire_String(password)),
-        parseSuccessData: _wire2api_key_exchange_resp,
-        constMeta: kSignalingConnectionKeyExchangeConstMeta,
-        argValues: [remoteDeviceId, password],
-        hint: hint,
-      ));
-
-  FlutterRustBridgeTaskConstMeta get kSignalingConnectionKeyExchangeConstMeta =>
-      const FlutterRustBridgeTaskConstMeta(
-        debugName: "signaling_connection_key_exchange",
-        argNames: ["remoteDeviceId", "password"],
-      );
-
-  Future<GetDisplayInfoResponse> endpointGetDisplayInfo(
-          {required String remoteDeviceId, dynamic hint}) =>
-      _platform.executeNormal(FlutterRustBridgeTask(
-        callFfi: (port_) => _platform.inner.wire_endpoint_get_display_info(
-            port_, _platform.api2wire_String(remoteDeviceId)),
-        parseSuccessData: _wire2api_get_display_info_response,
-        constMeta: kEndpointGetDisplayInfoConstMeta,
-        argValues: [remoteDeviceId],
-        hint: hint,
-      ));
-
-  FlutterRustBridgeTaskConstMeta get kEndpointGetDisplayInfoConstMeta =>
-      const FlutterRustBridgeTaskConstMeta(
-        debugName: "endpoint_get_display_info",
-        argNames: ["remoteDeviceId"],
-      );
-
-  Future<StartMediaTransmissionResponse> endpointStartMediaTransmission(
-          {required String remoteDeviceId,
-          required int expectFps,
-          required String expectDisplayId,
-          required int textureId,
-          required int videoTexturePtr,
-          required int updateFrameCallbackPtr,
-          dynamic hint}) =>
-      _platform.executeNormal(FlutterRustBridgeTask(
-        callFfi: (port_) => _platform.inner
-            .wire_endpoint_start_media_transmission(
-                port_,
-                _platform.api2wire_String(remoteDeviceId),
-                api2wire_u8(expectFps),
-                _platform.api2wire_String(expectDisplayId),
-                _platform.api2wire_i64(textureId),
-                _platform.api2wire_i64(videoTexturePtr),
-                _platform.api2wire_i64(updateFrameCallbackPtr)),
-        parseSuccessData: _wire2api_start_media_transmission_response,
-        constMeta: kEndpointStartMediaTransmissionConstMeta,
-        argValues: [
-          remoteDeviceId,
-          expectFps,
-          expectDisplayId,
-          textureId,
-          videoTexturePtr,
-          updateFrameCallbackPtr
-        ],
-        hint: hint,
-      ));
-
-  FlutterRustBridgeTaskConstMeta get kEndpointStartMediaTransmissionConstMeta =>
-      const FlutterRustBridgeTaskConstMeta(
-        debugName: "endpoint_start_media_transmission",
-        argNames: [
-          "remoteDeviceId",
-          "expectFps",
-          "expectDisplayId",
-          "textureId",
-          "videoTexturePtr",
-          "updateFrameCallbackPtr"
-        ],
-      );
-
-  Future<void> endpointInput(
-          {required String remoteDeviceId,
-          required InputEvent event,
-          dynamic hint}) =>
-      _platform.executeNormal(FlutterRustBridgeTask(
-        callFfi: (port_) => _platform.inner.wire_endpoint_input(
-            port_,
-            _platform.api2wire_String(remoteDeviceId),
-            _platform.api2wire_box_autoadd_input_event(event)),
-        parseSuccessData: _wire2api_unit,
-        constMeta: kEndpointInputConstMeta,
-        argValues: [remoteDeviceId, event],
-        hint: hint,
-      ));
-
-  FlutterRustBridgeTaskConstMeta get kEndpointInputConstMeta =>
-      const FlutterRustBridgeTaskConstMeta(
-        debugName: "endpoint_input",
-        argNames: ["remoteDeviceId", "event"],
-      );
-
-  Future<void> endpointManuallyClose(
-          {required String remoteDeviceId, dynamic hint}) =>
-      _platform.executeNormal(FlutterRustBridgeTask(
-        callFfi: (port_) => _platform.inner.wire_endpoint_manually_close(
-            port_, _platform.api2wire_String(remoteDeviceId)),
-        parseSuccessData: _wire2api_unit,
-        constMeta: kEndpointManuallyCloseConstMeta,
-        argValues: [remoteDeviceId],
-        hint: hint,
-      ));
-
-  FlutterRustBridgeTaskConstMeta get kEndpointManuallyCloseConstMeta =>
-      const FlutterRustBridgeTaskConstMeta(
-        debugName: "endpoint_manually_close",
-        argNames: ["remoteDeviceId"],
-      );
-
-  Stream<void> endpointCloseNotify(
-          {required String remoteDeviceId, dynamic hint}) =>
+  Stream<PublishMessage> signalingSubscribe(
+          {required SubscribeRequest req, dynamic hint}) =>
       _platform.executeStream(FlutterRustBridgeTask(
-        callFfi: (port_) => _platform.inner.wire_endpoint_close_notify(
-            port_, _platform.api2wire_String(remoteDeviceId)),
-        parseSuccessData: _wire2api_unit,
-        constMeta: kEndpointCloseNotifyConstMeta,
-        argValues: [remoteDeviceId],
+        callFfi: (port_) => _platform.inner.wire_signaling_subscribe(
+            port_, _platform.api2wire_box_autoadd_subscribe_request(req)),
+        parseSuccessData: _wire2api_publish_message,
+        constMeta: kSignalingSubscribeConstMeta,
+        argValues: [req],
         hint: hint,
       ));
 
-  FlutterRustBridgeTaskConstMeta get kEndpointCloseNotifyConstMeta =>
+  FlutterRustBridgeTaskConstMeta get kSignalingSubscribeConstMeta =>
       const FlutterRustBridgeTaskConstMeta(
-        debugName: "endpoint_close_notify",
-        argNames: ["remoteDeviceId"],
+        debugName: "signaling_subscribe",
+        argNames: ["req"],
+      );
+
+  Future<HeartbeatResponse> signalingHeartbeat(
+          {required HeartbeatRequest req, dynamic hint}) =>
+      _platform.executeNormal(FlutterRustBridgeTask(
+        callFfi: (port_) => _platform.inner.wire_signaling_heartbeat(
+            port_, _platform.api2wire_box_autoadd_heartbeat_request(req)),
+        parseSuccessData: _wire2api_heartbeat_response,
+        constMeta: kSignalingHeartbeatConstMeta,
+        argValues: [req],
+        hint: hint,
+      ));
+
+  FlutterRustBridgeTaskConstMeta get kSignalingHeartbeatConstMeta =>
+      const FlutterRustBridgeTaskConstMeta(
+        debugName: "signaling_heartbeat",
+        argNames: ["req"],
+      );
+
+  Future<VisitResponse> signalingVisit(
+          {required VisitRequest req, dynamic hint}) =>
+      _platform.executeNormal(FlutterRustBridgeTask(
+        callFfi: (port_) => _platform.inner.wire_signaling_visit(
+            port_, _platform.api2wire_box_autoadd_visit_request(req)),
+        parseSuccessData: _wire2api_visit_response,
+        constMeta: kSignalingVisitConstMeta,
+        argValues: [req],
+        hint: hint,
+      ));
+
+  FlutterRustBridgeTaskConstMeta get kSignalingVisitConstMeta =>
+      const FlutterRustBridgeTaskConstMeta(
+        debugName: "signaling_visit",
+        argNames: ["req"],
+      );
+
+  Future<KeyExchangeResponse> signalingKeyExchange(
+          {required KeyExchangeRequest req, dynamic hint}) =>
+      _platform.executeNormal(FlutterRustBridgeTask(
+        callFfi: (port_) => _platform.inner.wire_signaling_key_exchange(
+            port_, _platform.api2wire_box_autoadd_key_exchange_request(req)),
+        parseSuccessData: _wire2api_key_exchange_response,
+        constMeta: kSignalingKeyExchangeConstMeta,
+        argValues: [req],
+        hint: hint,
+      ));
+
+  FlutterRustBridgeTaskConstMeta get kSignalingKeyExchangeConstMeta =>
+      const FlutterRustBridgeTaskConstMeta(
+        debugName: "signaling_key_exchange",
+        argNames: ["req"],
       );
 }
 
 // Section: api2wire
-
-@protected
-double api2wire_f32(double raw) {
-  return raw;
-}
 
 @protected
 int api2wire_i32(int raw) {
@@ -625,12 +364,7 @@ int api2wire_i32(int raw) {
 }
 
 @protected
-int api2wire_keyboard_key(KeyboardKey raw) {
-  return api2wire_i32(raw.index);
-}
-
-@protected
-int api2wire_mouse_key(MouseKey raw) {
+int api2wire_resource_type(ResourceType raw) {
   return api2wire_i32(raw.index);
 }
 
@@ -654,31 +388,27 @@ bool _wire2api_bool(dynamic raw) {
   return raw as bool;
 }
 
-int _wire2api_box_autoadd_u32(dynamic raw) {
-  return raw as int;
+ConfigProperties _wire2api_box_autoadd_config_properties(dynamic raw) {
+  return _wire2api_config_properties(raw);
 }
 
-DisplayInfo _wire2api_display_info(dynamic raw) {
+ConfigProperties _wire2api_config_properties(dynamic raw) {
   final arr = raw as List<dynamic>;
-  if (arr.length != 7)
-    throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
-  return DisplayInfo(
-    id: _wire2api_String(arr[0]),
-    name: _wire2api_String(arr[1]),
-    refreshRate: _wire2api_u8(arr[2]),
-    width: _wire2api_u16(arr[3]),
-    height: _wire2api_u16(arr[4]),
-    isPrimary: _wire2api_bool(arr[5]),
-    screenShot: _wire2api_uint_8_list(arr[6]),
+  if (arr.length != 3)
+    throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+  return ConfigProperties(
+    deviceId: _wire2api_String(arr[0]),
+    deviceFingerPrint: _wire2api_String(arr[1]),
+    devicePassword: _wire2api_String(arr[2]),
   );
 }
 
-GetDisplayInfoResponse _wire2api_get_display_info_response(dynamic raw) {
+HeartbeatResponse _wire2api_heartbeat_response(dynamic raw) {
   final arr = raw as List<dynamic>;
   if (arr.length != 1)
     throw Exception('unexpected arr length: expect 1 but see ${arr.length}');
-  return GetDisplayInfoResponse(
-    displays: _wire2api_list_display_info(arr[0]),
+  return HeartbeatResponse(
+    timestamp: _wire2api_u32(arr[0]),
   );
 }
 
@@ -686,72 +416,48 @@ int _wire2api_i32(dynamic raw) {
   return raw as int;
 }
 
-KeyExchangeResp _wire2api_key_exchange_resp(dynamic raw) {
+KeyExchangeResponse _wire2api_key_exchange_response(dynamic raw) {
   final arr = raw as List<dynamic>;
   if (arr.length != 4)
     throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
-  return KeyExchangeResp(
-    sealingKeyBytes: _wire2api_uint_8_list(arr[0]),
-    sealingNonceBytes: _wire2api_uint_8_list(arr[1]),
-    openingKeyBytes: _wire2api_uint_8_list(arr[2]),
-    openingNonceBytes: _wire2api_uint_8_list(arr[3]),
+  return KeyExchangeResponse(
+    openingKeyBytes: _wire2api_uint_8_list(arr[0]),
+    openingNonceBytes: _wire2api_uint_8_list(arr[1]),
+    sealingKeyBytes: _wire2api_uint_8_list(arr[2]),
+    sealingNonceBytes: _wire2api_uint_8_list(arr[3]),
   );
 }
 
-LinuxType _wire2api_linux_type(dynamic raw) {
-  return LinuxType.values[raw];
+ConfigProperties? _wire2api_opt_box_autoadd_config_properties(dynamic raw) {
+  return raw == null ? null : _wire2api_box_autoadd_config_properties(raw);
 }
 
-List<DisplayInfo> _wire2api_list_display_info(dynamic raw) {
-  return (raw as List<dynamic>).map(_wire2api_display_info).toList();
-}
-
-OperatingSystemType _wire2api_operating_system_type(dynamic raw) {
+PublishMessage _wire2api_publish_message(dynamic raw) {
   switch (raw[0]) {
     case 0:
-      return OperatingSystemType_Windows();
+      return PublishMessage_StreamClosed();
     case 1:
-      return OperatingSystemType_macOS();
-    case 2:
-      return OperatingSystemType_iOS();
-    case 3:
-      return OperatingSystemType_Android();
-    case 4:
-      return OperatingSystemType_Linux(
-        _wire2api_linux_type(raw[1]),
+      return PublishMessage_VisitRequest(
+        activeDeviceId: _wire2api_String(raw[1]),
+        passiveDeviceId: _wire2api_String(raw[2]),
+        resourceType: _wire2api_resource_type(raw[3]),
       );
-    case 5:
-      return OperatingSystemType_Unknown();
     default:
       throw Exception("unreachable");
   }
 }
 
-String? _wire2api_opt_String(dynamic raw) {
-  return raw == null ? null : _wire2api_String(raw);
-}
-
-int? _wire2api_opt_box_autoadd_u32(dynamic raw) {
-  return raw == null ? null : _wire2api_box_autoadd_u32(raw);
-}
-
-StartMediaTransmissionResponse _wire2api_start_media_transmission_response(
-    dynamic raw) {
+RegisterResponse _wire2api_register_response(dynamic raw) {
   final arr = raw as List<dynamic>;
-  if (arr.length != 6)
-    throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
-  return StartMediaTransmissionResponse(
-    osType: _wire2api_operating_system_type(arr[0]),
-    osVersion: _wire2api_String(arr[1]),
-    screenWidth: _wire2api_u16(arr[2]),
-    screenHeight: _wire2api_u16(arr[3]),
-    videoType: _wire2api_String(arr[4]),
-    audioType: _wire2api_String(arr[5]),
+  if (arr.length != 1)
+    throw Exception('unexpected arr length: expect 1 but see ${arr.length}');
+  return RegisterResponse(
+    deviceId: _wire2api_String(arr[0]),
   );
 }
 
-int _wire2api_u16(dynamic raw) {
-  return raw as int;
+ResourceType _wire2api_resource_type(dynamic raw) {
+  return ResourceType.values[raw];
 }
 
 int _wire2api_u32(dynamic raw) {
@@ -770,6 +476,15 @@ void _wire2api_unit(dynamic raw) {
   return;
 }
 
+VisitResponse _wire2api_visit_response(dynamic raw) {
+  final arr = raw as List<dynamic>;
+  if (arr.length != 1)
+    throw Exception('unexpected arr length: expect 1 but see ${arr.length}');
+  return VisitResponse(
+    allow: _wire2api_bool(arr[0]),
+  );
+}
+
 class MirrorXCorePlatform extends FlutterRustBridgeBase<MirrorXCoreWire> {
   MirrorXCorePlatform(ffi.DynamicLibrary dylib) : super(MirrorXCoreWire(dylib));
 // Section: api2wire
@@ -780,32 +495,64 @@ class MirrorXCorePlatform extends FlutterRustBridgeBase<MirrorXCoreWire> {
   }
 
   @protected
-  ffi.Pointer<wire_InputEvent> api2wire_box_autoadd_input_event(
-      InputEvent raw) {
-    final ptr = inner.new_box_autoadd_input_event_0();
-    _api_fill_to_wire_input_event(raw, ptr.ref);
+  ffi.Pointer<wire_ConfigProperties> api2wire_box_autoadd_config_properties(
+      ConfigProperties raw) {
+    final ptr = inner.new_box_autoadd_config_properties_0();
+    _api_fill_to_wire_config_properties(raw, ptr.ref);
     return ptr;
   }
 
   @protected
-  ffi.Pointer<wire_KeyboardEvent> api2wire_box_autoadd_keyboard_event(
-      KeyboardEvent raw) {
-    final ptr = inner.new_box_autoadd_keyboard_event_0();
-    _api_fill_to_wire_keyboard_event(raw, ptr.ref);
+  ffi.Pointer<wire_DialRequest> api2wire_box_autoadd_dial_request(
+      DialRequest raw) {
+    final ptr = inner.new_box_autoadd_dial_request_0();
+    _api_fill_to_wire_dial_request(raw, ptr.ref);
     return ptr;
   }
 
   @protected
-  ffi.Pointer<wire_MouseEvent> api2wire_box_autoadd_mouse_event(
-      MouseEvent raw) {
-    final ptr = inner.new_box_autoadd_mouse_event_0();
-    _api_fill_to_wire_mouse_event(raw, ptr.ref);
+  ffi.Pointer<wire_HeartbeatRequest> api2wire_box_autoadd_heartbeat_request(
+      HeartbeatRequest raw) {
+    final ptr = inner.new_box_autoadd_heartbeat_request_0();
+    _api_fill_to_wire_heartbeat_request(raw, ptr.ref);
     return ptr;
   }
 
   @protected
-  int api2wire_i64(int raw) {
-    return raw;
+  ffi.Pointer<wire_KeyExchangeRequest>
+      api2wire_box_autoadd_key_exchange_request(KeyExchangeRequest raw) {
+    final ptr = inner.new_box_autoadd_key_exchange_request_0();
+    _api_fill_to_wire_key_exchange_request(raw, ptr.ref);
+    return ptr;
+  }
+
+  @protected
+  ffi.Pointer<wire_RegisterRequest> api2wire_box_autoadd_register_request(
+      RegisterRequest raw) {
+    final ptr = inner.new_box_autoadd_register_request_0();
+    _api_fill_to_wire_register_request(raw, ptr.ref);
+    return ptr;
+  }
+
+  @protected
+  ffi.Pointer<wire_SubscribeRequest> api2wire_box_autoadd_subscribe_request(
+      SubscribeRequest raw) {
+    final ptr = inner.new_box_autoadd_subscribe_request_0();
+    _api_fill_to_wire_subscribe_request(raw, ptr.ref);
+    return ptr;
+  }
+
+  @protected
+  ffi.Pointer<wire_VisitRequest> api2wire_box_autoadd_visit_request(
+      VisitRequest raw) {
+    final ptr = inner.new_box_autoadd_visit_request_0();
+    _api_fill_to_wire_visit_request(raw, ptr.ref);
+    return ptr;
+  }
+
+  @protected
+  ffi.Pointer<wire_uint_8_list> api2wire_opt_String(String? raw) {
+    return raw == null ? ffi.nullptr : api2wire_String(raw);
   }
 
   @protected
@@ -814,91 +561,87 @@ class MirrorXCorePlatform extends FlutterRustBridgeBase<MirrorXCoreWire> {
     ans.ref.ptr.asTypedList(raw.length).setAll(0, raw);
     return ans;
   }
+
 // Section: api_fill_to_wire
 
-  void _api_fill_to_wire_box_autoadd_input_event(
-      InputEvent apiObj, ffi.Pointer<wire_InputEvent> wireObj) {
-    _api_fill_to_wire_input_event(apiObj, wireObj.ref);
+  void _api_fill_to_wire_box_autoadd_config_properties(
+      ConfigProperties apiObj, ffi.Pointer<wire_ConfigProperties> wireObj) {
+    _api_fill_to_wire_config_properties(apiObj, wireObj.ref);
   }
 
-  void _api_fill_to_wire_box_autoadd_keyboard_event(
-      KeyboardEvent apiObj, ffi.Pointer<wire_KeyboardEvent> wireObj) {
-    _api_fill_to_wire_keyboard_event(apiObj, wireObj.ref);
+  void _api_fill_to_wire_box_autoadd_dial_request(
+      DialRequest apiObj, ffi.Pointer<wire_DialRequest> wireObj) {
+    _api_fill_to_wire_dial_request(apiObj, wireObj.ref);
   }
 
-  void _api_fill_to_wire_box_autoadd_mouse_event(
-      MouseEvent apiObj, ffi.Pointer<wire_MouseEvent> wireObj) {
-    _api_fill_to_wire_mouse_event(apiObj, wireObj.ref);
+  void _api_fill_to_wire_box_autoadd_heartbeat_request(
+      HeartbeatRequest apiObj, ffi.Pointer<wire_HeartbeatRequest> wireObj) {
+    _api_fill_to_wire_heartbeat_request(apiObj, wireObj.ref);
   }
 
-  void _api_fill_to_wire_input_event(
-      InputEvent apiObj, wire_InputEvent wireObj) {
-    if (apiObj is InputEvent_Mouse) {
-      wireObj.tag = 0;
-      wireObj.kind = inner.inflate_InputEvent_Mouse();
-      wireObj.kind.ref.Mouse.ref.field0 =
-          api2wire_box_autoadd_mouse_event(apiObj.field0);
-      return;
-    }
-    if (apiObj is InputEvent_Keyboard) {
-      wireObj.tag = 1;
-      wireObj.kind = inner.inflate_InputEvent_Keyboard();
-      wireObj.kind.ref.Keyboard.ref.field0 =
-          api2wire_box_autoadd_keyboard_event(apiObj.field0);
-      return;
-    }
+  void _api_fill_to_wire_box_autoadd_key_exchange_request(
+      KeyExchangeRequest apiObj, ffi.Pointer<wire_KeyExchangeRequest> wireObj) {
+    _api_fill_to_wire_key_exchange_request(apiObj, wireObj.ref);
   }
 
-  void _api_fill_to_wire_keyboard_event(
-      KeyboardEvent apiObj, wire_KeyboardEvent wireObj) {
-    if (apiObj is KeyboardEvent_KeyUp) {
-      wireObj.tag = 0;
-      wireObj.kind = inner.inflate_KeyboardEvent_KeyUp();
-      wireObj.kind.ref.KeyUp.ref.field0 = api2wire_keyboard_key(apiObj.field0);
-      return;
-    }
-    if (apiObj is KeyboardEvent_KeyDown) {
-      wireObj.tag = 1;
-      wireObj.kind = inner.inflate_KeyboardEvent_KeyDown();
-      wireObj.kind.ref.KeyDown.ref.field0 =
-          api2wire_keyboard_key(apiObj.field0);
-      return;
-    }
+  void _api_fill_to_wire_box_autoadd_register_request(
+      RegisterRequest apiObj, ffi.Pointer<wire_RegisterRequest> wireObj) {
+    _api_fill_to_wire_register_request(apiObj, wireObj.ref);
   }
 
-  void _api_fill_to_wire_mouse_event(
-      MouseEvent apiObj, wire_MouseEvent wireObj) {
-    if (apiObj is MouseEvent_MouseUp) {
-      wireObj.tag = 0;
-      wireObj.kind = inner.inflate_MouseEvent_MouseUp();
-      wireObj.kind.ref.MouseUp.ref.field0 = api2wire_mouse_key(apiObj.field0);
-      wireObj.kind.ref.MouseUp.ref.field1 = api2wire_f32(apiObj.field1);
-      wireObj.kind.ref.MouseUp.ref.field2 = api2wire_f32(apiObj.field2);
-      return;
-    }
-    if (apiObj is MouseEvent_MouseDown) {
-      wireObj.tag = 1;
-      wireObj.kind = inner.inflate_MouseEvent_MouseDown();
-      wireObj.kind.ref.MouseDown.ref.field0 = api2wire_mouse_key(apiObj.field0);
-      wireObj.kind.ref.MouseDown.ref.field1 = api2wire_f32(apiObj.field1);
-      wireObj.kind.ref.MouseDown.ref.field2 = api2wire_f32(apiObj.field2);
-      return;
-    }
-    if (apiObj is MouseEvent_MouseMove) {
-      wireObj.tag = 2;
-      wireObj.kind = inner.inflate_MouseEvent_MouseMove();
-      wireObj.kind.ref.MouseMove.ref.field0 = api2wire_mouse_key(apiObj.field0);
-      wireObj.kind.ref.MouseMove.ref.field1 = api2wire_f32(apiObj.field1);
-      wireObj.kind.ref.MouseMove.ref.field2 = api2wire_f32(apiObj.field2);
-      return;
-    }
-    if (apiObj is MouseEvent_MouseScrollWheel) {
-      wireObj.tag = 3;
-      wireObj.kind = inner.inflate_MouseEvent_MouseScrollWheel();
-      wireObj.kind.ref.MouseScrollWheel.ref.field0 =
-          api2wire_f32(apiObj.field0);
-      return;
-    }
+  void _api_fill_to_wire_box_autoadd_subscribe_request(
+      SubscribeRequest apiObj, ffi.Pointer<wire_SubscribeRequest> wireObj) {
+    _api_fill_to_wire_subscribe_request(apiObj, wireObj.ref);
+  }
+
+  void _api_fill_to_wire_box_autoadd_visit_request(
+      VisitRequest apiObj, ffi.Pointer<wire_VisitRequest> wireObj) {
+    _api_fill_to_wire_visit_request(apiObj, wireObj.ref);
+  }
+
+  void _api_fill_to_wire_config_properties(
+      ConfigProperties apiObj, wire_ConfigProperties wireObj) {
+    wireObj.device_id = api2wire_String(apiObj.deviceId);
+    wireObj.device_finger_print = api2wire_String(apiObj.deviceFingerPrint);
+    wireObj.device_password = api2wire_String(apiObj.devicePassword);
+  }
+
+  void _api_fill_to_wire_dial_request(
+      DialRequest apiObj, wire_DialRequest wireObj) {
+    wireObj.uri = api2wire_String(apiObj.uri);
+  }
+
+  void _api_fill_to_wire_heartbeat_request(
+      HeartbeatRequest apiObj, wire_HeartbeatRequest wireObj) {
+    wireObj.local_device_id = api2wire_String(apiObj.localDeviceId);
+    wireObj.timestamp = api2wire_u32(apiObj.timestamp);
+  }
+
+  void _api_fill_to_wire_key_exchange_request(
+      KeyExchangeRequest apiObj, wire_KeyExchangeRequest wireObj) {
+    wireObj.local_device_id = api2wire_String(apiObj.localDeviceId);
+    wireObj.remote_device_id = api2wire_String(apiObj.remoteDeviceId);
+    wireObj.password = api2wire_String(apiObj.password);
+  }
+
+  void _api_fill_to_wire_register_request(
+      RegisterRequest apiObj, wire_RegisterRequest wireObj) {
+    wireObj.local_device_id = api2wire_opt_String(apiObj.localDeviceId);
+    wireObj.device_finger_print = api2wire_String(apiObj.deviceFingerPrint);
+  }
+
+  void _api_fill_to_wire_subscribe_request(
+      SubscribeRequest apiObj, wire_SubscribeRequest wireObj) {
+    wireObj.local_device_id = api2wire_String(apiObj.localDeviceId);
+    wireObj.device_finger_print = api2wire_String(apiObj.deviceFingerPrint);
+    wireObj.config_path = api2wire_String(apiObj.configPath);
+  }
+
+  void _api_fill_to_wire_visit_request(
+      VisitRequest apiObj, wire_VisitRequest wireObj) {
+    wireObj.local_device_id = api2wire_String(apiObj.localDeviceId);
+    wireObj.remote_device_id = api2wire_String(apiObj.remoteDeviceId);
+    wireObj.resource_type = api2wire_resource_type(apiObj.resourceType);
   }
 }
 
@@ -938,297 +681,245 @@ class MirrorXCoreWire implements FlutterRustBridgeWireBase {
   late final _store_dart_post_cobject = _store_dart_post_cobjectPtr
       .asFunction<void Function(DartPostCObjectFnType)>();
 
-  void wire_init(
+  void wire_logger_init(
     int port_,
-    ffi.Pointer<wire_uint_8_list> os_version,
-    ffi.Pointer<wire_uint_8_list> config_dir,
   ) {
-    return _wire_init(
+    return _wire_logger_init(
       port_,
-      os_version,
-      config_dir,
     );
   }
 
-  late final _wire_initPtr = _lookup<
+  late final _wire_logger_initPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
+          'wire_logger_init');
+  late final _wire_logger_init =
+      _wire_logger_initPtr.asFunction<void Function(int)>();
+
+  void wire_config_read(
+    int port_,
+    ffi.Pointer<wire_uint_8_list> path,
+    ffi.Pointer<wire_uint_8_list> key,
+  ) {
+    return _wire_config_read(
+      port_,
+      path,
+      key,
+    );
+  }
+
+  late final _wire_config_readPtr = _lookup<
       ffi.NativeFunction<
           ffi.Void Function(ffi.Int64, ffi.Pointer<wire_uint_8_list>,
-              ffi.Pointer<wire_uint_8_list>)>>('wire_init');
-  late final _wire_init = _wire_initPtr.asFunction<
+              ffi.Pointer<wire_uint_8_list>)>>('wire_config_read');
+  late final _wire_config_read = _wire_config_readPtr.asFunction<
       void Function(
           int, ffi.Pointer<wire_uint_8_list>, ffi.Pointer<wire_uint_8_list>)>();
 
-  void wire_config_read_device_id(
+  void wire_config_save(
     int port_,
+    ffi.Pointer<wire_uint_8_list> path,
+    ffi.Pointer<wire_uint_8_list> key,
+    ffi.Pointer<wire_ConfigProperties> properties,
   ) {
-    return _wire_config_read_device_id(
+    return _wire_config_save(
       port_,
+      path,
+      key,
+      properties,
     );
   }
 
-  late final _wire_config_read_device_idPtr =
-      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
-          'wire_config_read_device_id');
-  late final _wire_config_read_device_id =
-      _wire_config_read_device_idPtr.asFunction<void Function(int)>();
-
-  void wire_config_save_device_id(
-    int port_,
-    ffi.Pointer<wire_uint_8_list> device_id,
-  ) {
-    return _wire_config_save_device_id(
-      port_,
-      device_id,
-    );
-  }
-
-  late final _wire_config_save_device_idPtr = _lookup<
-      ffi.NativeFunction<
-          ffi.Void Function(ffi.Int64,
-              ffi.Pointer<wire_uint_8_list>)>>('wire_config_save_device_id');
-  late final _wire_config_save_device_id = _wire_config_save_device_idPtr
-      .asFunction<void Function(int, ffi.Pointer<wire_uint_8_list>)>();
-
-  void wire_config_read_device_id_expiration(
-    int port_,
-  ) {
-    return _wire_config_read_device_id_expiration(
-      port_,
-    );
-  }
-
-  late final _wire_config_read_device_id_expirationPtr =
-      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
-          'wire_config_read_device_id_expiration');
-  late final _wire_config_read_device_id_expiration =
-      _wire_config_read_device_id_expirationPtr
-          .asFunction<void Function(int)>();
-
-  void wire_config_save_device_id_expiration(
-    int port_,
-    int time_stamp,
-  ) {
-    return _wire_config_save_device_id_expiration(
-      port_,
-      time_stamp,
-    );
-  }
-
-  late final _wire_config_save_device_id_expirationPtr =
-      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64, ffi.Uint32)>>(
-          'wire_config_save_device_id_expiration');
-  late final _wire_config_save_device_id_expiration =
-      _wire_config_save_device_id_expirationPtr
-          .asFunction<void Function(int, int)>();
-
-  void wire_config_read_device_password(
-    int port_,
-  ) {
-    return _wire_config_read_device_password(
-      port_,
-    );
-  }
-
-  late final _wire_config_read_device_passwordPtr =
-      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
-          'wire_config_read_device_password');
-  late final _wire_config_read_device_password =
-      _wire_config_read_device_passwordPtr.asFunction<void Function(int)>();
-
-  void wire_config_save_device_password(
-    int port_,
-    ffi.Pointer<wire_uint_8_list> device_password,
-  ) {
-    return _wire_config_save_device_password(
-      port_,
-      device_password,
-    );
-  }
-
-  late final _wire_config_save_device_passwordPtr = _lookup<
-          ffi.NativeFunction<
-              ffi.Void Function(ffi.Int64, ffi.Pointer<wire_uint_8_list>)>>(
-      'wire_config_save_device_password');
-  late final _wire_config_save_device_password =
-      _wire_config_save_device_passwordPtr
-          .asFunction<void Function(int, ffi.Pointer<wire_uint_8_list>)>();
-
-  void wire_signaling_connect(
-    int port_,
-    ffi.Pointer<wire_uint_8_list> remote_device_id,
-  ) {
-    return _wire_signaling_connect(
-      port_,
-      remote_device_id,
-    );
-  }
-
-  late final _wire_signaling_connectPtr = _lookup<
-      ffi.NativeFunction<
-          ffi.Void Function(ffi.Int64,
-              ffi.Pointer<wire_uint_8_list>)>>('wire_signaling_connect');
-  late final _wire_signaling_connect = _wire_signaling_connectPtr
-      .asFunction<void Function(int, ffi.Pointer<wire_uint_8_list>)>();
-
-  void wire_signaling_connection_key_exchange(
-    int port_,
-    ffi.Pointer<wire_uint_8_list> remote_device_id,
-    ffi.Pointer<wire_uint_8_list> password,
-  ) {
-    return _wire_signaling_connection_key_exchange(
-      port_,
-      remote_device_id,
-      password,
-    );
-  }
-
-  late final _wire_signaling_connection_key_exchangePtr = _lookup<
-          ffi.NativeFunction<
-              ffi.Void Function(ffi.Int64, ffi.Pointer<wire_uint_8_list>,
-                  ffi.Pointer<wire_uint_8_list>)>>(
-      'wire_signaling_connection_key_exchange');
-  late final _wire_signaling_connection_key_exchange =
-      _wire_signaling_connection_key_exchangePtr.asFunction<
-          void Function(int, ffi.Pointer<wire_uint_8_list>,
-              ffi.Pointer<wire_uint_8_list>)>();
-
-  void wire_endpoint_get_display_info(
-    int port_,
-    ffi.Pointer<wire_uint_8_list> remote_device_id,
-  ) {
-    return _wire_endpoint_get_display_info(
-      port_,
-      remote_device_id,
-    );
-  }
-
-  late final _wire_endpoint_get_display_infoPtr = _lookup<
-          ffi.NativeFunction<
-              ffi.Void Function(ffi.Int64, ffi.Pointer<wire_uint_8_list>)>>(
-      'wire_endpoint_get_display_info');
-  late final _wire_endpoint_get_display_info =
-      _wire_endpoint_get_display_infoPtr
-          .asFunction<void Function(int, ffi.Pointer<wire_uint_8_list>)>();
-
-  void wire_endpoint_start_media_transmission(
-    int port_,
-    ffi.Pointer<wire_uint_8_list> remote_device_id,
-    int expect_fps,
-    ffi.Pointer<wire_uint_8_list> expect_display_id,
-    int texture_id,
-    int video_texture_ptr,
-    int update_frame_callback_ptr,
-  ) {
-    return _wire_endpoint_start_media_transmission(
-      port_,
-      remote_device_id,
-      expect_fps,
-      expect_display_id,
-      texture_id,
-      video_texture_ptr,
-      update_frame_callback_ptr,
-    );
-  }
-
-  late final _wire_endpoint_start_media_transmissionPtr = _lookup<
+  late final _wire_config_savePtr = _lookup<
       ffi.NativeFunction<
           ffi.Void Function(
               ffi.Int64,
               ffi.Pointer<wire_uint_8_list>,
-              ffi.Uint8,
               ffi.Pointer<wire_uint_8_list>,
-              ffi.Int64,
-              ffi.Int64,
-              ffi.Int64)>>('wire_endpoint_start_media_transmission');
-  late final _wire_endpoint_start_media_transmission =
-      _wire_endpoint_start_media_transmissionPtr.asFunction<
-          void Function(int, ffi.Pointer<wire_uint_8_list>, int,
-              ffi.Pointer<wire_uint_8_list>, int, int, int)>();
+              ffi.Pointer<wire_ConfigProperties>)>>('wire_config_save');
+  late final _wire_config_save = _wire_config_savePtr.asFunction<
+      void Function(int, ffi.Pointer<wire_uint_8_list>,
+          ffi.Pointer<wire_uint_8_list>, ffi.Pointer<wire_ConfigProperties>)>();
 
-  void wire_endpoint_input(
+  void wire_signaling_dial(
     int port_,
-    ffi.Pointer<wire_uint_8_list> remote_device_id,
-    ffi.Pointer<wire_InputEvent> event,
+    ffi.Pointer<wire_DialRequest> req,
   ) {
-    return _wire_endpoint_input(
+    return _wire_signaling_dial(
       port_,
-      remote_device_id,
-      event,
+      req,
     );
   }
 
-  late final _wire_endpoint_inputPtr = _lookup<
-      ffi.NativeFunction<
-          ffi.Void Function(ffi.Int64, ffi.Pointer<wire_uint_8_list>,
-              ffi.Pointer<wire_InputEvent>)>>('wire_endpoint_input');
-  late final _wire_endpoint_input = _wire_endpoint_inputPtr.asFunction<
-      void Function(
-          int, ffi.Pointer<wire_uint_8_list>, ffi.Pointer<wire_InputEvent>)>();
-
-  void wire_endpoint_manually_close(
-    int port_,
-    ffi.Pointer<wire_uint_8_list> remote_device_id,
-  ) {
-    return _wire_endpoint_manually_close(
-      port_,
-      remote_device_id,
-    );
-  }
-
-  late final _wire_endpoint_manually_closePtr = _lookup<
+  late final _wire_signaling_dialPtr = _lookup<
       ffi.NativeFunction<
           ffi.Void Function(ffi.Int64,
-              ffi.Pointer<wire_uint_8_list>)>>('wire_endpoint_manually_close');
-  late final _wire_endpoint_manually_close = _wire_endpoint_manually_closePtr
-      .asFunction<void Function(int, ffi.Pointer<wire_uint_8_list>)>();
+              ffi.Pointer<wire_DialRequest>)>>('wire_signaling_dial');
+  late final _wire_signaling_dial = _wire_signaling_dialPtr
+      .asFunction<void Function(int, ffi.Pointer<wire_DialRequest>)>();
 
-  void wire_endpoint_close_notify(
+  void wire_signaling_register(
     int port_,
-    ffi.Pointer<wire_uint_8_list> remote_device_id,
+    ffi.Pointer<wire_RegisterRequest> req,
   ) {
-    return _wire_endpoint_close_notify(
+    return _wire_signaling_register(
       port_,
-      remote_device_id,
+      req,
     );
   }
 
-  late final _wire_endpoint_close_notifyPtr = _lookup<
+  late final _wire_signaling_registerPtr = _lookup<
       ffi.NativeFunction<
           ffi.Void Function(ffi.Int64,
-              ffi.Pointer<wire_uint_8_list>)>>('wire_endpoint_close_notify');
-  late final _wire_endpoint_close_notify = _wire_endpoint_close_notifyPtr
-      .asFunction<void Function(int, ffi.Pointer<wire_uint_8_list>)>();
+              ffi.Pointer<wire_RegisterRequest>)>>('wire_signaling_register');
+  late final _wire_signaling_register = _wire_signaling_registerPtr
+      .asFunction<void Function(int, ffi.Pointer<wire_RegisterRequest>)>();
 
-  ffi.Pointer<wire_InputEvent> new_box_autoadd_input_event_0() {
-    return _new_box_autoadd_input_event_0();
+  void wire_signaling_subscribe(
+    int port_,
+    ffi.Pointer<wire_SubscribeRequest> req,
+  ) {
+    return _wire_signaling_subscribe(
+      port_,
+      req,
+    );
   }
 
-  late final _new_box_autoadd_input_event_0Ptr =
-      _lookup<ffi.NativeFunction<ffi.Pointer<wire_InputEvent> Function()>>(
-          'new_box_autoadd_input_event_0');
-  late final _new_box_autoadd_input_event_0 = _new_box_autoadd_input_event_0Ptr
-      .asFunction<ffi.Pointer<wire_InputEvent> Function()>();
+  late final _wire_signaling_subscribePtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Void Function(ffi.Int64,
+              ffi.Pointer<wire_SubscribeRequest>)>>('wire_signaling_subscribe');
+  late final _wire_signaling_subscribe = _wire_signaling_subscribePtr
+      .asFunction<void Function(int, ffi.Pointer<wire_SubscribeRequest>)>();
 
-  ffi.Pointer<wire_KeyboardEvent> new_box_autoadd_keyboard_event_0() {
-    return _new_box_autoadd_keyboard_event_0();
+  void wire_signaling_heartbeat(
+    int port_,
+    ffi.Pointer<wire_HeartbeatRequest> req,
+  ) {
+    return _wire_signaling_heartbeat(
+      port_,
+      req,
+    );
   }
 
-  late final _new_box_autoadd_keyboard_event_0Ptr =
-      _lookup<ffi.NativeFunction<ffi.Pointer<wire_KeyboardEvent> Function()>>(
-          'new_box_autoadd_keyboard_event_0');
-  late final _new_box_autoadd_keyboard_event_0 =
-      _new_box_autoadd_keyboard_event_0Ptr
-          .asFunction<ffi.Pointer<wire_KeyboardEvent> Function()>();
+  late final _wire_signaling_heartbeatPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Void Function(ffi.Int64,
+              ffi.Pointer<wire_HeartbeatRequest>)>>('wire_signaling_heartbeat');
+  late final _wire_signaling_heartbeat = _wire_signaling_heartbeatPtr
+      .asFunction<void Function(int, ffi.Pointer<wire_HeartbeatRequest>)>();
 
-  ffi.Pointer<wire_MouseEvent> new_box_autoadd_mouse_event_0() {
-    return _new_box_autoadd_mouse_event_0();
+  void wire_signaling_visit(
+    int port_,
+    ffi.Pointer<wire_VisitRequest> req,
+  ) {
+    return _wire_signaling_visit(
+      port_,
+      req,
+    );
   }
 
-  late final _new_box_autoadd_mouse_event_0Ptr =
-      _lookup<ffi.NativeFunction<ffi.Pointer<wire_MouseEvent> Function()>>(
-          'new_box_autoadd_mouse_event_0');
-  late final _new_box_autoadd_mouse_event_0 = _new_box_autoadd_mouse_event_0Ptr
-      .asFunction<ffi.Pointer<wire_MouseEvent> Function()>();
+  late final _wire_signaling_visitPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Void Function(ffi.Int64,
+              ffi.Pointer<wire_VisitRequest>)>>('wire_signaling_visit');
+  late final _wire_signaling_visit = _wire_signaling_visitPtr
+      .asFunction<void Function(int, ffi.Pointer<wire_VisitRequest>)>();
+
+  void wire_signaling_key_exchange(
+    int port_,
+    ffi.Pointer<wire_KeyExchangeRequest> req,
+  ) {
+    return _wire_signaling_key_exchange(
+      port_,
+      req,
+    );
+  }
+
+  late final _wire_signaling_key_exchangePtr = _lookup<
+          ffi.NativeFunction<
+              ffi.Void Function(
+                  ffi.Int64, ffi.Pointer<wire_KeyExchangeRequest>)>>(
+      'wire_signaling_key_exchange');
+  late final _wire_signaling_key_exchange = _wire_signaling_key_exchangePtr
+      .asFunction<void Function(int, ffi.Pointer<wire_KeyExchangeRequest>)>();
+
+  ffi.Pointer<wire_ConfigProperties> new_box_autoadd_config_properties_0() {
+    return _new_box_autoadd_config_properties_0();
+  }
+
+  late final _new_box_autoadd_config_properties_0Ptr = _lookup<
+          ffi.NativeFunction<ffi.Pointer<wire_ConfigProperties> Function()>>(
+      'new_box_autoadd_config_properties_0');
+  late final _new_box_autoadd_config_properties_0 =
+      _new_box_autoadd_config_properties_0Ptr
+          .asFunction<ffi.Pointer<wire_ConfigProperties> Function()>();
+
+  ffi.Pointer<wire_DialRequest> new_box_autoadd_dial_request_0() {
+    return _new_box_autoadd_dial_request_0();
+  }
+
+  late final _new_box_autoadd_dial_request_0Ptr =
+      _lookup<ffi.NativeFunction<ffi.Pointer<wire_DialRequest> Function()>>(
+          'new_box_autoadd_dial_request_0');
+  late final _new_box_autoadd_dial_request_0 =
+      _new_box_autoadd_dial_request_0Ptr
+          .asFunction<ffi.Pointer<wire_DialRequest> Function()>();
+
+  ffi.Pointer<wire_HeartbeatRequest> new_box_autoadd_heartbeat_request_0() {
+    return _new_box_autoadd_heartbeat_request_0();
+  }
+
+  late final _new_box_autoadd_heartbeat_request_0Ptr = _lookup<
+          ffi.NativeFunction<ffi.Pointer<wire_HeartbeatRequest> Function()>>(
+      'new_box_autoadd_heartbeat_request_0');
+  late final _new_box_autoadd_heartbeat_request_0 =
+      _new_box_autoadd_heartbeat_request_0Ptr
+          .asFunction<ffi.Pointer<wire_HeartbeatRequest> Function()>();
+
+  ffi.Pointer<wire_KeyExchangeRequest>
+      new_box_autoadd_key_exchange_request_0() {
+    return _new_box_autoadd_key_exchange_request_0();
+  }
+
+  late final _new_box_autoadd_key_exchange_request_0Ptr = _lookup<
+          ffi.NativeFunction<ffi.Pointer<wire_KeyExchangeRequest> Function()>>(
+      'new_box_autoadd_key_exchange_request_0');
+  late final _new_box_autoadd_key_exchange_request_0 =
+      _new_box_autoadd_key_exchange_request_0Ptr
+          .asFunction<ffi.Pointer<wire_KeyExchangeRequest> Function()>();
+
+  ffi.Pointer<wire_RegisterRequest> new_box_autoadd_register_request_0() {
+    return _new_box_autoadd_register_request_0();
+  }
+
+  late final _new_box_autoadd_register_request_0Ptr =
+      _lookup<ffi.NativeFunction<ffi.Pointer<wire_RegisterRequest> Function()>>(
+          'new_box_autoadd_register_request_0');
+  late final _new_box_autoadd_register_request_0 =
+      _new_box_autoadd_register_request_0Ptr
+          .asFunction<ffi.Pointer<wire_RegisterRequest> Function()>();
+
+  ffi.Pointer<wire_SubscribeRequest> new_box_autoadd_subscribe_request_0() {
+    return _new_box_autoadd_subscribe_request_0();
+  }
+
+  late final _new_box_autoadd_subscribe_request_0Ptr = _lookup<
+          ffi.NativeFunction<ffi.Pointer<wire_SubscribeRequest> Function()>>(
+      'new_box_autoadd_subscribe_request_0');
+  late final _new_box_autoadd_subscribe_request_0 =
+      _new_box_autoadd_subscribe_request_0Ptr
+          .asFunction<ffi.Pointer<wire_SubscribeRequest> Function()>();
+
+  ffi.Pointer<wire_VisitRequest> new_box_autoadd_visit_request_0() {
+    return _new_box_autoadd_visit_request_0();
+  }
+
+  late final _new_box_autoadd_visit_request_0Ptr =
+      _lookup<ffi.NativeFunction<ffi.Pointer<wire_VisitRequest> Function()>>(
+          'new_box_autoadd_visit_request_0');
+  late final _new_box_autoadd_visit_request_0 =
+      _new_box_autoadd_visit_request_0Ptr
+          .asFunction<ffi.Pointer<wire_VisitRequest> Function()>();
 
   ffi.Pointer<wire_uint_8_list> new_uint_8_list_0(
     int len,
@@ -1244,87 +935,6 @@ class MirrorXCoreWire implements FlutterRustBridgeWireBase {
               ffi.Int32)>>('new_uint_8_list_0');
   late final _new_uint_8_list_0 = _new_uint_8_list_0Ptr
       .asFunction<ffi.Pointer<wire_uint_8_list> Function(int)>();
-
-  ffi.Pointer<InputEventKind> inflate_InputEvent_Mouse() {
-    return _inflate_InputEvent_Mouse();
-  }
-
-  late final _inflate_InputEvent_MousePtr =
-      _lookup<ffi.NativeFunction<ffi.Pointer<InputEventKind> Function()>>(
-          'inflate_InputEvent_Mouse');
-  late final _inflate_InputEvent_Mouse = _inflate_InputEvent_MousePtr
-      .asFunction<ffi.Pointer<InputEventKind> Function()>();
-
-  ffi.Pointer<InputEventKind> inflate_InputEvent_Keyboard() {
-    return _inflate_InputEvent_Keyboard();
-  }
-
-  late final _inflate_InputEvent_KeyboardPtr =
-      _lookup<ffi.NativeFunction<ffi.Pointer<InputEventKind> Function()>>(
-          'inflate_InputEvent_Keyboard');
-  late final _inflate_InputEvent_Keyboard = _inflate_InputEvent_KeyboardPtr
-      .asFunction<ffi.Pointer<InputEventKind> Function()>();
-
-  ffi.Pointer<KeyboardEventKind> inflate_KeyboardEvent_KeyUp() {
-    return _inflate_KeyboardEvent_KeyUp();
-  }
-
-  late final _inflate_KeyboardEvent_KeyUpPtr =
-      _lookup<ffi.NativeFunction<ffi.Pointer<KeyboardEventKind> Function()>>(
-          'inflate_KeyboardEvent_KeyUp');
-  late final _inflate_KeyboardEvent_KeyUp = _inflate_KeyboardEvent_KeyUpPtr
-      .asFunction<ffi.Pointer<KeyboardEventKind> Function()>();
-
-  ffi.Pointer<KeyboardEventKind> inflate_KeyboardEvent_KeyDown() {
-    return _inflate_KeyboardEvent_KeyDown();
-  }
-
-  late final _inflate_KeyboardEvent_KeyDownPtr =
-      _lookup<ffi.NativeFunction<ffi.Pointer<KeyboardEventKind> Function()>>(
-          'inflate_KeyboardEvent_KeyDown');
-  late final _inflate_KeyboardEvent_KeyDown = _inflate_KeyboardEvent_KeyDownPtr
-      .asFunction<ffi.Pointer<KeyboardEventKind> Function()>();
-
-  ffi.Pointer<MouseEventKind> inflate_MouseEvent_MouseUp() {
-    return _inflate_MouseEvent_MouseUp();
-  }
-
-  late final _inflate_MouseEvent_MouseUpPtr =
-      _lookup<ffi.NativeFunction<ffi.Pointer<MouseEventKind> Function()>>(
-          'inflate_MouseEvent_MouseUp');
-  late final _inflate_MouseEvent_MouseUp = _inflate_MouseEvent_MouseUpPtr
-      .asFunction<ffi.Pointer<MouseEventKind> Function()>();
-
-  ffi.Pointer<MouseEventKind> inflate_MouseEvent_MouseDown() {
-    return _inflate_MouseEvent_MouseDown();
-  }
-
-  late final _inflate_MouseEvent_MouseDownPtr =
-      _lookup<ffi.NativeFunction<ffi.Pointer<MouseEventKind> Function()>>(
-          'inflate_MouseEvent_MouseDown');
-  late final _inflate_MouseEvent_MouseDown = _inflate_MouseEvent_MouseDownPtr
-      .asFunction<ffi.Pointer<MouseEventKind> Function()>();
-
-  ffi.Pointer<MouseEventKind> inflate_MouseEvent_MouseMove() {
-    return _inflate_MouseEvent_MouseMove();
-  }
-
-  late final _inflate_MouseEvent_MouseMovePtr =
-      _lookup<ffi.NativeFunction<ffi.Pointer<MouseEventKind> Function()>>(
-          'inflate_MouseEvent_MouseMove');
-  late final _inflate_MouseEvent_MouseMove = _inflate_MouseEvent_MouseMovePtr
-      .asFunction<ffi.Pointer<MouseEventKind> Function()>();
-
-  ffi.Pointer<MouseEventKind> inflate_MouseEvent_MouseScrollWheel() {
-    return _inflate_MouseEvent_MouseScrollWheel();
-  }
-
-  late final _inflate_MouseEvent_MouseScrollWheelPtr =
-      _lookup<ffi.NativeFunction<ffi.Pointer<MouseEventKind> Function()>>(
-          'inflate_MouseEvent_MouseScrollWheel');
-  late final _inflate_MouseEvent_MouseScrollWheel =
-      _inflate_MouseEvent_MouseScrollWheelPtr
-          .asFunction<ffi.Pointer<MouseEventKind> Function()>();
 
   void free_WireSyncReturnStruct(
     WireSyncReturnStruct val,
@@ -1348,103 +958,54 @@ class wire_uint_8_list extends ffi.Struct {
   external int len;
 }
 
-class wire_MouseEvent_MouseUp extends ffi.Struct {
+class wire_ConfigProperties extends ffi.Struct {
+  external ffi.Pointer<wire_uint_8_list> device_id;
+
+  external ffi.Pointer<wire_uint_8_list> device_finger_print;
+
+  external ffi.Pointer<wire_uint_8_list> device_password;
+}
+
+class wire_DialRequest extends ffi.Struct {
+  external ffi.Pointer<wire_uint_8_list> uri;
+}
+
+class wire_RegisterRequest extends ffi.Struct {
+  external ffi.Pointer<wire_uint_8_list> local_device_id;
+
+  external ffi.Pointer<wire_uint_8_list> device_finger_print;
+}
+
+class wire_SubscribeRequest extends ffi.Struct {
+  external ffi.Pointer<wire_uint_8_list> local_device_id;
+
+  external ffi.Pointer<wire_uint_8_list> device_finger_print;
+
+  external ffi.Pointer<wire_uint_8_list> config_path;
+}
+
+class wire_HeartbeatRequest extends ffi.Struct {
+  external ffi.Pointer<wire_uint_8_list> local_device_id;
+
+  @ffi.Uint32()
+  external int timestamp;
+}
+
+class wire_VisitRequest extends ffi.Struct {
+  external ffi.Pointer<wire_uint_8_list> local_device_id;
+
+  external ffi.Pointer<wire_uint_8_list> remote_device_id;
+
   @ffi.Int32()
-  external int field0;
-
-  @ffi.Float()
-  external double field1;
-
-  @ffi.Float()
-  external double field2;
+  external int resource_type;
 }
 
-class wire_MouseEvent_MouseDown extends ffi.Struct {
-  @ffi.Int32()
-  external int field0;
+class wire_KeyExchangeRequest extends ffi.Struct {
+  external ffi.Pointer<wire_uint_8_list> local_device_id;
 
-  @ffi.Float()
-  external double field1;
+  external ffi.Pointer<wire_uint_8_list> remote_device_id;
 
-  @ffi.Float()
-  external double field2;
-}
-
-class wire_MouseEvent_MouseMove extends ffi.Struct {
-  @ffi.Int32()
-  external int field0;
-
-  @ffi.Float()
-  external double field1;
-
-  @ffi.Float()
-  external double field2;
-}
-
-class wire_MouseEvent_MouseScrollWheel extends ffi.Struct {
-  @ffi.Float()
-  external double field0;
-}
-
-class MouseEventKind extends ffi.Union {
-  external ffi.Pointer<wire_MouseEvent_MouseUp> MouseUp;
-
-  external ffi.Pointer<wire_MouseEvent_MouseDown> MouseDown;
-
-  external ffi.Pointer<wire_MouseEvent_MouseMove> MouseMove;
-
-  external ffi.Pointer<wire_MouseEvent_MouseScrollWheel> MouseScrollWheel;
-}
-
-class wire_MouseEvent extends ffi.Struct {
-  @ffi.Int32()
-  external int tag;
-
-  external ffi.Pointer<MouseEventKind> kind;
-}
-
-class wire_InputEvent_Mouse extends ffi.Struct {
-  external ffi.Pointer<wire_MouseEvent> field0;
-}
-
-class wire_KeyboardEvent_KeyUp extends ffi.Struct {
-  @ffi.Int32()
-  external int field0;
-}
-
-class wire_KeyboardEvent_KeyDown extends ffi.Struct {
-  @ffi.Int32()
-  external int field0;
-}
-
-class KeyboardEventKind extends ffi.Union {
-  external ffi.Pointer<wire_KeyboardEvent_KeyUp> KeyUp;
-
-  external ffi.Pointer<wire_KeyboardEvent_KeyDown> KeyDown;
-}
-
-class wire_KeyboardEvent extends ffi.Struct {
-  @ffi.Int32()
-  external int tag;
-
-  external ffi.Pointer<KeyboardEventKind> kind;
-}
-
-class wire_InputEvent_Keyboard extends ffi.Struct {
-  external ffi.Pointer<wire_KeyboardEvent> field0;
-}
-
-class InputEventKind extends ffi.Union {
-  external ffi.Pointer<wire_InputEvent_Mouse> Mouse;
-
-  external ffi.Pointer<wire_InputEvent_Keyboard> Keyboard;
-}
-
-class wire_InputEvent extends ffi.Struct {
-  @ffi.Int32()
-  external int tag;
-
-  external ffi.Pointer<InputEventKind> kind;
+  external ffi.Pointer<wire_uint_8_list> password;
 }
 
 typedef DartPostCObjectFnType = ffi.Pointer<

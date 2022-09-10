@@ -1,74 +1,14 @@
-use crate::{
-    core_error,
-    error::{CoreError, CoreResult},
-};
-use once_cell::sync::OnceCell;
+use std::collections::HashMap;
+
+use crate::error::CoreResult;
 use rusqlite::{params, Connection, OptionalExtension};
-use std::path::PathBuf;
+use serde::{Deserialize, Serialize};
 
-static CURRENT_CONFIG_DB_PATH: OnceCell<PathBuf> = OnceCell::new();
-
-#[inline(always)]
-pub fn init(config_db_path: String) -> CoreResult<()> {
-    CURRENT_CONFIG_DB_PATH
-        .set(PathBuf::from(config_db_path).join("config.db"))
-        .map_err(|p| core_error!("set CURRENT_CONFIG_DB_PATH failed with path: {:?}", p))
-}
-
-#[inline(always)]
-pub fn read_device_id() -> CoreResult<Option<String>> {
-    read_item("device_id")
-}
-
-#[inline(always)]
-pub fn save_device_id(device_id: &str) -> CoreResult<()> {
-    save_item("device_id", device_id)
-}
-
-#[inline(always)]
-pub fn read_device_hash() -> CoreResult<Option<String>> {
-    read_item("device_hash")
-}
-
-#[inline(always)]
-pub fn save_device_hash(device_hash: &str) -> CoreResult<()> {
-    save_item("device_hash", device_hash)
-}
-
-#[inline(always)]
-pub fn read_device_id_expiration() -> CoreResult<Option<u32>> {
-    match read_item("device_id_expiration")? {
-        Some(value) => {
-            let exp = u32::from_str_radix(&value, 10)?;
-            Ok(Some(exp))
-        }
-        None => Ok(None),
-    }
-}
-
-#[inline(always)]
-pub fn save_device_id_expiration(time_stamp: &u32) -> CoreResult<()> {
-    save_item("device_id_expiration", &time_stamp.to_string())
-}
-
-#[inline(always)]
-pub fn read_device_password() -> CoreResult<Option<String>> {
-    read_item("device_password")
-}
-
-#[inline(always)]
-pub fn save_device_password(device_password: &str) -> CoreResult<()> {
-    save_item("device_password", device_password)
-}
-
-fn open_connection() -> CoreResult<Connection> {
-    let path = CURRENT_CONFIG_DB_PATH
-        .get()
-        .ok_or(core_error!("get CURRENT_CONFIG_DB_PATH failed, it's None"))?;
-
-    let conn = Connection::open(path)?;
-
-    Ok(conn)
+#[derive(Serialize, Deserialize)]
+pub struct ConfigProperties {
+    pub device_id: String,
+    pub device_finger_print: String,
+    pub device_password: String,
 }
 
 fn ensure_db_exist(conn: &Connection) -> CoreResult<()> {
@@ -79,32 +19,57 @@ fn ensure_db_exist(conn: &Connection) -> CoreResult<()> {
         );
         "#;
 
-    conn.execute(SQL_COMMAND, []).map(|_| ())?;
+    conn.execute(SQL_COMMAND, [])?;
 
     Ok(())
 }
 
-fn read_item(key: &str) -> CoreResult<Option<String>> {
-    let conn = open_connection()?;
+pub fn read(path: &str, key: &str) -> CoreResult<Option<ConfigProperties>> {
+    let conn = Connection::open(path)?;
     ensure_db_exist(&conn)?;
 
-    let item = conn
+    match conn
         .query_row(
             "SELECT value FROM kv WHERE key = ?1 LIMIT 1;",
             [key],
-            |row| row.get(0),
+            |row| row.get::<_, String>(0),
         )
-        .optional()?;
-
-    Ok(item)
+        .optional()?
+    {
+        Some(res) => Ok(serde_json::from_str(&res)?),
+        None => Ok(None),
+    }
 }
 
-fn save_item(key: &str, value: &str) -> CoreResult<()> {
-    let conn = open_connection()?;
+pub fn read_all(path: &str) -> CoreResult<HashMap<String, ConfigProperties>> {
+    let conn = Connection::open(path)?;
+    ensure_db_exist(&conn)?;
+
+    let mut stmt = conn.prepare("SELECT * FROM kv;")?;
+    let entry_iter = stmt.query_map([], |row| {
+        let key = row.get::<_, String>(0)?;
+        let value = row.get::<_, String>(1)?;
+        Ok((key, value))
+    })?;
+
+    let mut all_config_properties = HashMap::new();
+    for entry in entry_iter {
+        let (key, value) = entry?;
+        let config_properties = serde_json::from_str(&value)?;
+        all_config_properties.insert(key, config_properties);
+    }
+
+    Ok(all_config_properties)
+}
+
+pub fn save(path: &str, key: &str, value: &ConfigProperties) -> CoreResult<()> {
+    let model_json_string = serde_json::to_string(value)?;
+
+    let conn = Connection::open(path)?;
     ensure_db_exist(&conn)?;
 
     let mut stmt = conn.prepare("INSERT OR REPLACE INTO kv (key, value) VALUES (?1,?2);")?;
-    stmt.execute(params![key, value]).map(|_| ())?;
+    stmt.execute(params![key, model_json_string]).map(|_| ())?;
 
     Ok(())
 }
