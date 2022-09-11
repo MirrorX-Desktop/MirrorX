@@ -18,9 +18,6 @@ mod error;
 mod ffi;
 
 /// cbindgen:ignore
-mod service;
-
-/// cbindgen:ignore
 mod utility;
 
 #[cfg(test)]

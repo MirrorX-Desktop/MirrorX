@@ -1,8 +1,8 @@
 use super::{
     endpoint::EndPoint,
     message::{
-        AudioFrame, DisplayInfo, GetDisplayInfoRequest, GetDisplayInfoResponse,
-        StartMediaTransmissionResponse, VideoFrame,
+        AudioFrame, MonitorDescription, NegotiateSelectMonitorRequest,
+        NegotiateSelectMonitorResponse, StartMediaTransmissionResponse, VideoFrame,
     },
     processor,
 };
@@ -20,18 +20,18 @@ use crate::{
 
 pub async fn handle_get_display_info_request(
     endpoint: &EndPoint,
-    req: GetDisplayInfoRequest,
-) -> CoreResult<GetDisplayInfoResponse> {
+    req: NegotiateSelectMonitorRequest,
+) -> CoreResult<NegotiateSelectMonitorResponse> {
     let monitors = crate::component::desktop::monitor::get_active_monitors()?;
 
     // todo: monitor and display_info has same memory layout, use memory block copy?
     let mut displays = Vec::new();
 
     for monitor in monitors {
-        displays.push(DisplayInfo {
+        displays.push(MonitorDescription {
             id: monitor.id,
             name: monitor.name,
-            refresh_rate: monitor.refresh_rate,
+            frame_rate: monitor.refresh_rate,
             width: monitor.width,
             height: monitor.height,
             is_primary: monitor.is_primary,
@@ -39,7 +39,7 @@ pub async fn handle_get_display_info_request(
         });
     }
 
-    Ok(GetDisplayInfoResponse { displays })
+    Ok(NegotiateSelectMonitorResponse { displays })
 }
 
 pub async fn handle_start_media_transmission_request(

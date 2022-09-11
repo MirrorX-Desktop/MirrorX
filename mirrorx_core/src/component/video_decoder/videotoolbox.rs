@@ -4,7 +4,6 @@ use crate::{
     core_error,
     error::{CoreError, CoreResult},
     ffi::os::macos::{core_media::*, core_video::*, videotoolbox::*},
-    service::endpoint::message::VideoFrame,
 };
 use core_foundation::{
     base::{kCFAllocatorDefault, kCFAllocatorNull, CFRelease, OSStatus, ToVoid},
@@ -35,7 +34,7 @@ impl Decoder {
 
     pub fn decode(
         &mut self,
-        mut video_frame: VideoFrame,
+        mut video_frame: crate::api::endpoint::message::VideoFrame,
         decoded_frame_tx: *mut crossbeam::channel::Sender<DecodedFrame>,
     ) -> CoreResult<()> {
         unsafe {

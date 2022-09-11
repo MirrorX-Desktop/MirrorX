@@ -3,9 +3,6 @@ use crate::{
     core_error,
     error::{CoreError, CoreResult},
     ffi::os::macos::{core_media::*, videotoolbox::*},
-    service::endpoint::message::{
-        EndPointMessage, EndPointMessagePacket, EndPointMessagePacketType, VideoFrame,
-    },
 };
 use core_foundation::{
     array::{CFArray, CFArrayGetValueAtIndex},
@@ -32,7 +29,9 @@ impl Encoder {
     pub fn encode(
         &mut self,
         capture_frame: CaptureFrame,
-        endpoint_message_tx: &mut tokio::sync::mpsc::Sender<EndPointMessagePacket>,
+        endpoint_message_tx: &mut tokio::sync::mpsc::Sender<
+            crate::api::endpoint::message::EndPointMessage,
+        >,
     ) -> CoreResult<()> {
         unsafe {
             let ret = VTCompressionSessionEncodeFrame(
@@ -240,8 +239,8 @@ extern "C" fn encode_output_callback(
             return;
         }
 
-        let endpoint_message_tx =
-            source_frame_ref_con as *mut tokio::sync::mpsc::Sender<EndPointMessagePacket>;
+        let endpoint_message_tx = source_frame_ref_con
+            as *mut tokio::sync::mpsc::Sender<crate::api::endpoint::message::EndPointMessage>;
 
         if endpoint_message_tx.is_null() {
             tracing::error!("transmute source_frame_ref_con to *mut tokio::sync::mpsc::Sender<EndPointMessagePacket> is null");
@@ -370,15 +369,15 @@ extern "C" fn encode_output_callback(
             )
             .to_vec();
 
-            if let Err(err) = (*endpoint_message_tx).try_send(EndPointMessagePacket {
-                typ: EndPointMessagePacketType::Push,
-                call_id: None,
-                message: EndPointMessage::VideoFrame(VideoFrame {
-                    sps: sps.take(),
-                    pps: pps.take(),
-                    buffer: nalu_body_bytes,
-                }),
-            }) {
+            if let Err(err) = (*endpoint_message_tx).try_send(
+                crate::api::endpoint::message::EndPointMessage::VideoFrame(
+                    crate::api::endpoint::message::VideoFrame {
+                        sps: sps.take(),
+                        pps: pps.take(),
+                        buffer: nalu_body_bytes,
+                    },
+                ),
+            ) {
                 tracing::warn!("send message 'VideoFrame' failed ({})", err);
             }
 

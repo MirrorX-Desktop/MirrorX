@@ -143,25 +143,6 @@ pub async fn key_exchange(req: KeyExchangeRequest) -> CoreResult<KeyExchangeResp
         },
     )?;
 
-    // let mut passive_exchange_nonce = [0u8; ring::aead::NONCE_LEN];
-    // for i in 0..ring::aead::NONCE_LEN {
-    //     passive_exchange_nonce[i] = passive_device_secret.passive_exchange_nonce[i];
-    // }
-
-    // create opening and sealing key
-
-    // let unbound_sealing_key =
-    //     ring::aead::UnboundKey::new(&ring::aead::AES_256_GCM, &raw_sealing_key)?;
-
-    // let sealing_key =
-    //     ring::aead::SealingKey::new(unbound_sealing_key, NonceValue::new(passive_exchange_nonce));
-
-    // let unbound_opening_key =
-    //     ring::aead::UnboundKey::new(&ring::aead::AES_256_GCM, &raw_opening_key)?;
-
-    // let opening_key =
-    //     ring::aead::OpeningKey::new(unbound_opening_key, NonceValue::new(active_exchange_nonce));
-
     Ok(KeyExchangeResponse {
         opening_key_bytes: raw_sealing_key,
         opening_nonce_bytes: passive_device_secret.passive_exchange_nonce,
