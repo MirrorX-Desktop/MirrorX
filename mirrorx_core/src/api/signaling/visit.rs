@@ -18,13 +18,13 @@ pub struct VisitResponse {
 
 pub async fn visit(req: VisitRequest) -> CoreResult<VisitResponse> {
     let resource_type = match req.resource_type {
-        ResourceType::Desktop => crate::proto::signaling::ResourceType::Desktop,
-        ResourceType::Files => crate::proto::signaling::ResourceType::Files,
+        ResourceType::Desktop => signaling_proto::ResourceType::Desktop,
+        ResourceType::Files => signaling_proto::ResourceType::Files,
     };
 
     let resp = SignalingClientManager::get_client()
         .await?
-        .visit(crate::proto::signaling::VisitRequest {
+        .visit(signaling_proto::VisitRequest {
             active_device_id: req.local_device_id,
             passive_device_id: req.remote_device_id,
             resource_type: resource_type.into(),

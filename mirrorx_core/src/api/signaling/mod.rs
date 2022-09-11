@@ -9,9 +9,9 @@ pub mod visit;
 use crate::{
     core_error,
     error::{CoreError, CoreResult},
-    proto::signaling::signaling_client::SignalingClient,
 };
 use once_cell::sync::Lazy;
+use signaling_proto::signaling_client::SignalingClient;
 use tokio::sync::RwLock;
 use tonic::transport::Channel;
 

@@ -26,7 +26,7 @@ pub async fn subscribe(
 ) -> CoreResult<()> {
     let mut server_stream = SignalingClientManager::get_client()
         .await?
-        .subscribe(crate::proto::signaling::SubscribeRequest {
+        .subscribe(signaling_proto::SubscribeRequest {
             device_id: req.local_device_id.to_owned(),
             device_finger_print: req.device_finger_print,
         })
@@ -58,7 +58,7 @@ pub async fn subscribe(
 
             if let Some(inner_message) = publish_message.inner {
                 match inner_message {
-                    crate::proto::signaling::publish_message::Inner::VisitRequest(visit_request) => {
+                    signaling_proto::publish_message::Inner::VisitRequest(visit_request) => {
                         let resource_type = if visit_request.resource_type == 0 {
                             crate::api::signaling::visit::ResourceType::Desktop
                         } else if visit_request.resource_type ==1 {
@@ -77,7 +77,7 @@ pub async fn subscribe(
                             tracing::error!(device_id=?req.local_device_id, message_type=stringify!(PublishMessage::VisitRequest), "add message to stream failed");
                         }
                     }
-                    crate::proto::signaling::publish_message::Inner::KeyExchangeRequest( key_exchange_request) => {
+                    signaling_proto::publish_message::Inner::KeyExchangeRequest( key_exchange_request) => {
                         let config_path = req.config_path.clone();
                         TOKIO_RUNTIME.spawn(async move{
                             key_exchange::handle(&config_path, &key_exchange_request).await

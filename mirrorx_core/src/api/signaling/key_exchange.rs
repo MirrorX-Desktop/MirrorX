@@ -2,7 +2,6 @@ use super::SignalingClientManager;
 use crate::{
     core_error,
     error::{CoreError, CoreResult},
-    proto::signaling::{KeyExchangeActiveDeviceSecret, KeyExchangePassiveDeviceSecret},
     utility::nonce_value::NonceValue,
 };
 use hmac::Hmac;
@@ -11,6 +10,7 @@ use rand::RngCore;
 use ring::aead::BoundKey;
 use rsa::{rand_core::OsRng, PublicKeyParts};
 use sha2::Sha256;
+use signaling_proto::{KeyExchangeActiveDeviceSecret, KeyExchangePassiveDeviceSecret};
 
 pub struct KeyExchangeRequest {
     pub local_device_id: String,
@@ -80,7 +80,7 @@ pub async fn key_exchange(req: KeyExchangeRequest) -> CoreResult<KeyExchangeResp
 
     let resp = SignalingClientManager::get_client()
         .await?
-        .key_exchange(crate::proto::signaling::KeyExchangeRequest {
+        .key_exchange(signaling_proto::KeyExchangeRequest {
             active_device_id: req.local_device_id.to_owned(),
             passive_device_id: req.remote_device_id.to_owned(),
             password_salt: active_device_secret_salt.to_vec(),

@@ -13,7 +13,7 @@ pub struct RegisterResponse {
 pub async fn register(req: RegisterRequest) -> CoreResult<RegisterResponse> {
     let resp = SignalingClientManager::get_client()
         .await?
-        .register(crate::proto::signaling::RegisterRequest {
+        .register(signaling_proto::RegisterRequest {
             device_id: req.local_device_id,
             device_finger_print: req.device_finger_print,
         })

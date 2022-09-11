@@ -1,11 +1,6 @@
 use crate::{
     api::signaling::SignalingClientManager,
     error::{CoreError, CoreResult},
-    proto::signaling::{
-        key_exchange_reply_request::KeyExchangeReply, KeyExchangeActiveDeviceSecret,
-        KeyExchangePassiveDeviceSecret, KeyExchangeReplyError, KeyExchangeReplyRequest,
-        KeyExchangeRequest,
-    },
     utility::nonce_value::NonceValue,
 };
 use either::Either;
@@ -15,6 +10,11 @@ use rand::RngCore;
 use ring::aead::{BoundKey, OpeningKey, SealingKey};
 use rsa::{rand_core::OsRng, BigUint, PublicKey};
 use sha2::Sha256;
+use signaling_proto::{
+    key_exchange_reply_request::KeyExchangeReply, KeyExchangeActiveDeviceSecret,
+    KeyExchangePassiveDeviceSecret, KeyExchangeReplyError, KeyExchangeReplyRequest,
+    KeyExchangeRequest,
+};
 
 pub async fn handle(config_path: &str, req: &KeyExchangeRequest) {
     let reply = match handle_key_agreement(config_path, req).await {

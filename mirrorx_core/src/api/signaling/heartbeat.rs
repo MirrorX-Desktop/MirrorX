@@ -12,7 +12,7 @@ pub struct HeartbeatResponse {
 pub async fn heartbeat(req: HeartbeatRequest) -> CoreResult<HeartbeatResponse> {
     let resp = SignalingClientManager::get_client()
         .await?
-        .heartbeat(crate::proto::signaling::HeartbeatRequest {
+        .heartbeat(signaling_proto::HeartbeatRequest {
             local_device_id: req.local_device_id,
             timestamp: req.timestamp,
         })

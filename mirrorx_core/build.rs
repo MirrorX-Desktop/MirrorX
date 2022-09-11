@@ -1,10 +1,5 @@
 fn main() {
-    // println!("cargo:rerun-if-changed=build.rs");
-
-    tonic_build::configure()
-        .build_server(false)
-        .compile(&["src/proto/signaling/signaling.proto"], &["."])
-        .unwrap();
+    println!("cargo:rerun-if-changed=build.rs");
 
     link_ffmpeg();
 }
