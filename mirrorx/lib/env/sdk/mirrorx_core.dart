@@ -31,6 +31,11 @@ abstract class MirrorXCore {
 
   FlutterRustBridgeTaskConstMeta get kConfigSaveConstMeta;
 
+  Future<List<ConfigProperties>> configReadAll(
+      {required String path, dynamic hint});
+
+  FlutterRustBridgeTaskConstMeta get kConfigReadAllConstMeta;
+
   Future<void> signalingDial({required DialRequest req, dynamic hint});
 
   FlutterRustBridgeTaskConstMeta get kSignalingDialConstMeta;
@@ -105,11 +110,13 @@ enum AudioSampleRate {
 }
 
 class ConfigProperties {
+  final String domain;
   final String deviceId;
   final String deviceFingerPrint;
   final String devicePassword;
 
   ConfigProperties({
+    required this.domain,
     required this.deviceId,
     required this.deviceFingerPrint,
     required this.devicePassword,
@@ -587,6 +594,23 @@ class MirrorXCoreImpl implements MirrorXCore {
         argNames: ["path", "domain", "properties"],
       );
 
+  Future<List<ConfigProperties>> configReadAll(
+          {required String path, dynamic hint}) =>
+      _platform.executeNormal(FlutterRustBridgeTask(
+        callFfi: (port_) => _platform.inner
+            .wire_config_read_all(port_, _platform.api2wire_String(path)),
+        parseSuccessData: _wire2api_list_config_properties,
+        constMeta: kConfigReadAllConstMeta,
+        argValues: [path],
+        hint: hint,
+      ));
+
+  FlutterRustBridgeTaskConstMeta get kConfigReadAllConstMeta =>
+      const FlutterRustBridgeTaskConstMeta(
+        debugName: "config_read_all",
+        argNames: ["path"],
+      );
+
   Future<void> signalingDial({required DialRequest req, dynamic hint}) =>
       _platform.executeNormal(FlutterRustBridgeTask(
         callFfi: (port_) => _platform.inner.wire_signaling_dial(
@@ -861,12 +885,13 @@ ConfigProperties _wire2api_box_autoadd_config_properties(dynamic raw) {
 
 ConfigProperties _wire2api_config_properties(dynamic raw) {
   final arr = raw as List<dynamic>;
-  if (arr.length != 3)
-    throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+  if (arr.length != 4)
+    throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
   return ConfigProperties(
-    deviceId: _wire2api_String(arr[0]),
-    deviceFingerPrint: _wire2api_String(arr[1]),
-    devicePassword: _wire2api_String(arr[2]),
+    domain: _wire2api_String(arr[0]),
+    deviceId: _wire2api_String(arr[1]),
+    deviceFingerPrint: _wire2api_String(arr[2]),
+    devicePassword: _wire2api_String(arr[3]),
   );
 }
 
@@ -893,6 +918,10 @@ KeyExchangeResponse _wire2api_key_exchange_response(dynamic raw) {
     sealingKeyBytes: _wire2api_uint_8_list(arr[2]),
     sealingNonceBytes: _wire2api_uint_8_list(arr[3]),
   );
+}
+
+List<ConfigProperties> _wire2api_list_config_properties(dynamic raw) {
+  return (raw as List<dynamic>).map(_wire2api_config_properties).toList();
 }
 
 List<MonitorDescription> _wire2api_list_monitor_description(dynamic raw) {
@@ -1244,6 +1273,7 @@ class MirrorXCorePlatform extends FlutterRustBridgeBase<MirrorXCoreWire> {
 
   void _api_fill_to_wire_config_properties(
       ConfigProperties apiObj, wire_ConfigProperties wireObj) {
+    wireObj.domain = api2wire_String(apiObj.domain);
     wireObj.device_id = api2wire_String(apiObj.deviceId);
     wireObj.device_finger_print = api2wire_String(apiObj.deviceFingerPrint);
     wireObj.device_password = api2wire_String(apiObj.devicePassword);
@@ -1501,6 +1531,23 @@ class MirrorXCoreWire implements FlutterRustBridgeWireBase {
   late final _wire_config_save = _wire_config_savePtr.asFunction<
       void Function(int, ffi.Pointer<wire_uint_8_list>,
           ffi.Pointer<wire_uint_8_list>, ffi.Pointer<wire_ConfigProperties>)>();
+
+  void wire_config_read_all(
+    int port_,
+    ffi.Pointer<wire_uint_8_list> path,
+  ) {
+    return _wire_config_read_all(
+      port_,
+      path,
+    );
+  }
+
+  late final _wire_config_read_allPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Void Function(ffi.Int64,
+              ffi.Pointer<wire_uint_8_list>)>>('wire_config_read_all');
+  late final _wire_config_read_all = _wire_config_read_allPtr
+      .asFunction<void Function(int, ffi.Pointer<wire_uint_8_list>)>();
 
   void wire_signaling_dial(
     int port_,
@@ -2017,6 +2064,8 @@ class wire_uint_8_list extends ffi.Struct {
 }
 
 class wire_ConfigProperties extends ffi.Struct {
+  external ffi.Pointer<wire_uint_8_list> domain;
+
   external ffi.Pointer<wire_uint_8_list> device_id;
 
   external ffi.Pointer<wire_uint_8_list> device_finger_print;

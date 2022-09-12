@@ -98,6 +98,19 @@ fn wire_config_save_impl(
         },
     )
 }
+fn wire_config_read_all_impl(port_: MessagePort, path: impl Wire2Api<String> + UnwindSafe) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap(
+        WrapInfo {
+            debug_name: "config_read_all",
+            port: Some(port_),
+            mode: FfiCallMode::Normal,
+        },
+        move || {
+            let api_path = path.wire2api();
+            move |task_callback| config_read_all(api_path)
+        },
+    )
+}
 fn wire_signaling_dial_impl(port_: MessagePort, req: impl Wire2Api<DialRequest> + UnwindSafe) {
     FLUTTER_RUST_BRIDGE_HANDLER.wrap(
         WrapInfo {
@@ -487,6 +500,7 @@ impl support::IntoDart for AudioSampleRate {
 impl support::IntoDart for ConfigProperties {
     fn into_dart(self) -> support::DartAbi {
         vec![
+            self.domain.into_dart(),
             self.device_id.into_dart(),
             self.device_finger_print.into_dart(),
             self.device_password.into_dart(),

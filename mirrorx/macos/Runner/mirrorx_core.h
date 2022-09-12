@@ -12,6 +12,7 @@ typedef struct wire_uint_8_list {
 } wire_uint_8_list;
 
 typedef struct wire_ConfigProperties {
+  struct wire_uint_8_list *domain;
   struct wire_uint_8_list *device_id;
   struct wire_uint_8_list *device_finger_print;
   struct wire_uint_8_list *device_password;
@@ -177,6 +178,8 @@ void wire_config_save(int64_t port_,
                       struct wire_uint_8_list *domain,
                       struct wire_ConfigProperties *properties);
 
+void wire_config_read_all(int64_t port_, struct wire_uint_8_list *path);
+
 void wire_signaling_dial(int64_t port_, struct wire_DialRequest *req);
 
 void wire_signaling_register(int64_t port_, struct wire_RegisterRequest *req);
@@ -260,6 +263,7 @@ static int64_t dummy_method_to_enforce_bundling(void) {
     dummy_var ^= ((int64_t) (void*) wire_init_logger);
     dummy_var ^= ((int64_t) (void*) wire_config_read);
     dummy_var ^= ((int64_t) (void*) wire_config_save);
+    dummy_var ^= ((int64_t) (void*) wire_config_read_all);
     dummy_var ^= ((int64_t) (void*) wire_signaling_dial);
     dummy_var ^= ((int64_t) (void*) wire_signaling_register);
     dummy_var ^= ((int64_t) (void*) wire_signaling_subscribe);

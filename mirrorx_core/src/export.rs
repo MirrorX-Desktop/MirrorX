@@ -1,3 +1,5 @@
+use std::{collections::HashMap, iter::FromIterator};
+
 use crate::{
     api::{
         config::ConfigProperties,
@@ -46,8 +48,8 @@ pub fn init_logger() -> anyhow::Result<()> {
 */
 
 pub fn config_read(path: String, domain: String) -> anyhow::Result<Option<ConfigProperties>> {
-    let model = crate::api::config::read(&path, &domain)?;
-    Ok(model)
+    let properties = crate::api::config::read(&path, &domain)?;
+    Ok(properties)
 }
 
 pub fn config_save(
@@ -57,6 +59,15 @@ pub fn config_save(
 ) -> anyhow::Result<()> {
     crate::api::config::save(&path, &domain, &properties)?;
     Ok(())
+}
+
+pub fn config_read_all(path: String) -> anyhow::Result<Vec<ConfigProperties>> {
+    let all_properties = crate::api::config::read_all(&path)?
+        .into_iter()
+        .map(|entry| entry.1)
+        .collect();
+
+    Ok(all_properties)
 }
 
 /*

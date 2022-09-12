@@ -1,11 +1,11 @@
-use std::collections::HashMap;
-
 use crate::error::CoreResult;
 use rusqlite::{params, Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 #[derive(Serialize, Deserialize)]
 pub struct ConfigProperties {
+    pub domain: String,
     pub device_id: String,
     pub device_finger_print: String,
     pub device_password: String,

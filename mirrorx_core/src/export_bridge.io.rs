@@ -26,6 +26,11 @@ pub extern "C" fn wire_config_save(
 }
 
 #[no_mangle]
+pub extern "C" fn wire_config_read_all(port_: i64, path: *mut wire_uint_8_list) {
+    wire_config_read_all_impl(port_, path)
+}
+
+#[no_mangle]
 pub extern "C" fn wire_signaling_dial(port_: i64, req: *mut wire_DialRequest) {
     wire_signaling_dial_impl(port_, req)
 }
@@ -295,6 +300,7 @@ impl Wire2Api<Box<InputEvent>> for *mut wire_InputEvent {
 impl Wire2Api<ConfigProperties> for wire_ConfigProperties {
     fn wire2api(self) -> ConfigProperties {
         ConfigProperties {
+            domain: self.domain.wire2api(),
             device_id: self.device_id.wire2api(),
             device_finger_print: self.device_finger_print.wire2api(),
             device_password: self.device_password.wire2api(),
@@ -501,6 +507,7 @@ impl Wire2Api<VisitRequest> for wire_VisitRequest {
 #[repr(C)]
 #[derive(Clone)]
 pub struct wire_ConfigProperties {
+    domain: *mut wire_uint_8_list,
     device_id: *mut wire_uint_8_list,
     device_finger_print: *mut wire_uint_8_list,
     device_password: *mut wire_uint_8_list,
@@ -718,6 +725,7 @@ impl<T> NewWithNullPtr for *mut T {
 impl NewWithNullPtr for wire_ConfigProperties {
     fn new_with_null_ptr() -> Self {
         Self {
+            domain: core::ptr::null_mut(),
             device_id: core::ptr::null_mut(),
             device_finger_print: core::ptr::null_mut(),
             device_password: core::ptr::null_mut(),
