@@ -14,9 +14,9 @@ import 'dart:ffi' as ffi;
 part 'mirrorx_core.freezed.dart';
 
 abstract class MirrorXCore {
-  Future<void> loggerInit({dynamic hint});
+  Future<void> initLogger({dynamic hint});
 
-  FlutterRustBridgeTaskConstMeta get kLoggerInitConstMeta;
+  FlutterRustBridgeTaskConstMeta get kInitLoggerConstMeta;
 
   Future<ConfigProperties?> configRead(
       {required String path, required String key, dynamic hint});
@@ -59,6 +59,49 @@ abstract class MirrorXCore {
       {required KeyExchangeRequest req, dynamic hint});
 
   FlutterRustBridgeTaskConstMeta get kSignalingKeyExchangeConstMeta;
+
+  Future<void> endpointConnect({required ConnectRequest req, dynamic hint});
+
+  FlutterRustBridgeTaskConstMeta get kEndpointConnectConstMeta;
+
+  Future<void> endpointHandshake({required HandshakeRequest req, dynamic hint});
+
+  FlutterRustBridgeTaskConstMeta get kEndpointHandshakeConstMeta;
+
+  Future<NegotiateVisitDesktopParamsResponse>
+      endpointNegotiateVisitDesktopParams(
+          {required NegotiateVisitDesktopParamsRequest req, dynamic hint});
+
+  FlutterRustBridgeTaskConstMeta
+      get kEndpointNegotiateVisitDesktopParamsConstMeta;
+
+  Future<NegotiateSelectMonitorResponse> endpointNegotiateSelectMonitor(
+      {required NegotiateSelectMonitorRequest req, dynamic hint});
+
+  FlutterRustBridgeTaskConstMeta get kEndpointNegotiateSelectMonitorConstMeta;
+
+  Future<void> endpointNegotiateFinished(
+      {required NegotiateFinishedRequest req, dynamic hint});
+
+  FlutterRustBridgeTaskConstMeta get kEndpointNegotiateFinishedConstMeta;
+
+  Future<void> endpointInput({required InputReqeust req, dynamic hint});
+
+  FlutterRustBridgeTaskConstMeta get kEndpointInputConstMeta;
+}
+
+enum AudioSampleFormat {
+  I16,
+  U16,
+  F32,
+}
+
+enum AudioSampleRate {
+  HZ8000,
+  HZ12000,
+  HZ160000,
+  HZ240000,
+  HZ480000,
 }
 
 class ConfigProperties {
@@ -73,11 +116,43 @@ class ConfigProperties {
   });
 }
 
+class ConnectRequest {
+  final String activeDeviceId;
+  final String passiveDeviceId;
+  final String addr;
+
+  ConnectRequest({
+    required this.activeDeviceId,
+    required this.passiveDeviceId,
+    required this.addr,
+  });
+}
+
 class DialRequest {
   final String uri;
 
   DialRequest({
     required this.uri,
+  });
+}
+
+class HandshakeRequest {
+  final String activeDeviceId;
+  final String passiveDeviceId;
+  final String visitCredentials;
+  final Uint8List openingKeyBytes;
+  final Uint8List openingNonceBytes;
+  final Uint8List sealingKeyBytes;
+  final Uint8List sealingNonceBytes;
+
+  HandshakeRequest({
+    required this.activeDeviceId,
+    required this.passiveDeviceId,
+    required this.visitCredentials,
+    required this.openingKeyBytes,
+    required this.openingNonceBytes,
+    required this.sealingKeyBytes,
+    required this.sealingNonceBytes,
   });
 }
 
@@ -96,6 +171,28 @@ class HeartbeatResponse {
 
   HeartbeatResponse({
     required this.timestamp,
+  });
+}
+
+@freezed
+class InputEvent with _$InputEvent {
+  const factory InputEvent.mouse(
+    MouseEvent field0,
+  ) = InputEvent_Mouse;
+  const factory InputEvent.keyboard(
+    KeyboardEvent field0,
+  ) = InputEvent_Keyboard;
+}
+
+class InputReqeust {
+  final String activeDeviceId;
+  final String passiveDeviceId;
+  final InputEvent event;
+
+  InputReqeust({
+    required this.activeDeviceId,
+    required this.passiveDeviceId,
+    required this.event,
   });
 }
 
@@ -122,6 +219,235 @@ class KeyExchangeResponse {
     required this.openingNonceBytes,
     required this.sealingKeyBytes,
     required this.sealingNonceBytes,
+  });
+}
+
+@freezed
+class KeyboardEvent with _$KeyboardEvent {
+  const factory KeyboardEvent.keyUp(
+    KeyboardKey field0,
+  ) = KeyboardEvent_KeyUp;
+  const factory KeyboardEvent.keyDown(
+    KeyboardKey field0,
+  ) = KeyboardEvent_KeyDown;
+}
+
+enum KeyboardKey {
+  A,
+  B,
+  C,
+  D,
+  E,
+  F,
+  G,
+  H,
+  I,
+  J,
+  K,
+  L,
+  M,
+  N,
+  O,
+  P,
+  Q,
+  R,
+  S,
+  T,
+  U,
+  V,
+  W,
+  X,
+  Y,
+  Z,
+  BackQuote,
+  Digit0,
+  Digit1,
+  Digit2,
+  Digit3,
+  Digit4,
+  Digit5,
+  Digit6,
+  Digit7,
+  Digit8,
+  Digit9,
+  Minus,
+  Equal,
+  Tab,
+  CapsLock,
+  LeftShift,
+  LeftControl,
+  LeftAlt,
+  LeftMeta,
+  Space,
+  RightMeta,
+  RightControl,
+  RightAlt,
+  RightShift,
+  Comma,
+  Period,
+  Slash,
+  Semicolon,
+  QuoteSingle,
+  Enter,
+  BracketLeft,
+  BracketRight,
+  BackSlash,
+  Backspace,
+  NumLock,
+  NumpadEquals,
+  NumpadDivide,
+  NumpadMultiply,
+  NumpadSubtract,
+  NumpadAdd,
+  NumpadEnter,
+  Numpad0,
+  Numpad1,
+  Numpad2,
+  Numpad3,
+  Numpad4,
+  Numpad5,
+  Numpad6,
+  Numpad7,
+  Numpad8,
+  Numpad9,
+  NumpadDecimal,
+  ArrowLeft,
+  ArrowUp,
+  ArrowRight,
+  ArrowDown,
+  Escape,
+  PrintScreen,
+  ScrollLock,
+  Pause,
+  Insert,
+  Delete,
+  Home,
+  End,
+  PageUp,
+  PageDown,
+  F1,
+  F2,
+  F3,
+  F4,
+  F5,
+  F6,
+  F7,
+  F8,
+  F9,
+  F10,
+  F11,
+  F12,
+  Fn,
+}
+
+class MonitorDescription {
+  final String id;
+  final String name;
+  final int frameRate;
+  final int width;
+  final int height;
+  final bool isPrimary;
+  final Uint8List screenShot;
+
+  MonitorDescription({
+    required this.id,
+    required this.name,
+    required this.frameRate,
+    required this.width,
+    required this.height,
+    required this.isPrimary,
+    required this.screenShot,
+  });
+}
+
+@freezed
+class MouseEvent with _$MouseEvent {
+  const factory MouseEvent.mouseUp(
+    MouseKey field0,
+    double field1,
+    double field2,
+  ) = MouseEvent_MouseUp;
+  const factory MouseEvent.mouseDown(
+    MouseKey field0,
+    double field1,
+    double field2,
+  ) = MouseEvent_MouseDown;
+  const factory MouseEvent.mouseMove(
+    MouseKey field0,
+    double field1,
+    double field2,
+  ) = MouseEvent_MouseMove;
+  const factory MouseEvent.mouseScrollWheel(
+    double field0,
+  ) = MouseEvent_MouseScrollWheel;
+}
+
+enum MouseKey {
+  None,
+  Left,
+  Right,
+  Wheel,
+  SideForward,
+  SideBack,
+}
+
+class NegotiateFinishedRequest {
+  final String activeDeviceId;
+  final String passiveDeviceId;
+  final String selectedMonitorId;
+  final int expectFrameRate;
+
+  NegotiateFinishedRequest({
+    required this.activeDeviceId,
+    required this.passiveDeviceId,
+    required this.selectedMonitorId,
+    required this.expectFrameRate,
+  });
+}
+
+class NegotiateSelectMonitorRequest {
+  final String activeDeviceId;
+  final String passiveDeviceId;
+
+  NegotiateSelectMonitorRequest({
+    required this.activeDeviceId,
+    required this.passiveDeviceId,
+  });
+}
+
+class NegotiateSelectMonitorResponse {
+  final List<MonitorDescription> monitorDescriptions;
+
+  NegotiateSelectMonitorResponse({
+    required this.monitorDescriptions,
+  });
+}
+
+class NegotiateVisitDesktopParamsRequest {
+  final String activeDeviceId;
+  final String passiveDeviceId;
+
+  NegotiateVisitDesktopParamsRequest({
+    required this.activeDeviceId,
+    required this.passiveDeviceId,
+  });
+}
+
+class NegotiateVisitDesktopParamsResponse {
+  final VideoCodec videoCodec;
+  final AudioSampleRate audioSampleRate;
+  final AudioSampleFormat audioSampleFormat;
+  final bool audioDualChannel;
+  final String osType;
+  final String osVersion;
+
+  NegotiateVisitDesktopParamsResponse({
+    required this.videoCodec,
+    required this.audioSampleRate,
+    required this.audioSampleFormat,
+    required this.audioDualChannel,
+    required this.osType,
+    required this.osVersion,
   });
 }
 
@@ -170,6 +496,13 @@ class SubscribeRequest {
   });
 }
 
+enum VideoCodec {
+  H264,
+  HEVC,
+  VP8,
+  VP9,
+}
+
 class VisitRequest {
   final String localDeviceId;
   final String remoteDeviceId;
@@ -199,18 +532,18 @@ class MirrorXCoreImpl implements MirrorXCore {
   factory MirrorXCoreImpl.wasm(FutureOr<WasmModule> module) =>
       MirrorXCoreImpl(module as ExternalLibrary);
   MirrorXCoreImpl.raw(this._platform);
-  Future<void> loggerInit({dynamic hint}) =>
+  Future<void> initLogger({dynamic hint}) =>
       _platform.executeNormal(FlutterRustBridgeTask(
-        callFfi: (port_) => _platform.inner.wire_logger_init(port_),
+        callFfi: (port_) => _platform.inner.wire_init_logger(port_),
         parseSuccessData: _wire2api_unit,
-        constMeta: kLoggerInitConstMeta,
+        constMeta: kInitLoggerConstMeta,
         argValues: [],
         hint: hint,
       ));
 
-  FlutterRustBridgeTaskConstMeta get kLoggerInitConstMeta =>
+  FlutterRustBridgeTaskConstMeta get kInitLoggerConstMeta =>
       const FlutterRustBridgeTaskConstMeta(
-        debugName: "logger_init",
+        debugName: "init_logger",
         argNames: [],
       );
 
@@ -354,13 +687,139 @@ class MirrorXCoreImpl implements MirrorXCore {
         debugName: "signaling_key_exchange",
         argNames: ["req"],
       );
+
+  Future<void> endpointConnect({required ConnectRequest req, dynamic hint}) =>
+      _platform.executeNormal(FlutterRustBridgeTask(
+        callFfi: (port_) => _platform.inner.wire_endpoint_connect(
+            port_, _platform.api2wire_box_autoadd_connect_request(req)),
+        parseSuccessData: _wire2api_unit,
+        constMeta: kEndpointConnectConstMeta,
+        argValues: [req],
+        hint: hint,
+      ));
+
+  FlutterRustBridgeTaskConstMeta get kEndpointConnectConstMeta =>
+      const FlutterRustBridgeTaskConstMeta(
+        debugName: "endpoint_connect",
+        argNames: ["req"],
+      );
+
+  Future<void> endpointHandshake(
+          {required HandshakeRequest req, dynamic hint}) =>
+      _platform.executeNormal(FlutterRustBridgeTask(
+        callFfi: (port_) => _platform.inner.wire_endpoint_handshake(
+            port_, _platform.api2wire_box_autoadd_handshake_request(req)),
+        parseSuccessData: _wire2api_unit,
+        constMeta: kEndpointHandshakeConstMeta,
+        argValues: [req],
+        hint: hint,
+      ));
+
+  FlutterRustBridgeTaskConstMeta get kEndpointHandshakeConstMeta =>
+      const FlutterRustBridgeTaskConstMeta(
+        debugName: "endpoint_handshake",
+        argNames: ["req"],
+      );
+
+  Future<NegotiateVisitDesktopParamsResponse>
+      endpointNegotiateVisitDesktopParams(
+              {required NegotiateVisitDesktopParamsRequest req,
+              dynamic hint}) =>
+          _platform.executeNormal(FlutterRustBridgeTask(
+            callFfi: (port_) => _platform.inner
+                .wire_endpoint_negotiate_visit_desktop_params(
+                    port_,
+                    _platform
+                        .api2wire_box_autoadd_negotiate_visit_desktop_params_request(
+                            req)),
+            parseSuccessData: _wire2api_negotiate_visit_desktop_params_response,
+            constMeta: kEndpointNegotiateVisitDesktopParamsConstMeta,
+            argValues: [req],
+            hint: hint,
+          ));
+
+  FlutterRustBridgeTaskConstMeta
+      get kEndpointNegotiateVisitDesktopParamsConstMeta =>
+          const FlutterRustBridgeTaskConstMeta(
+            debugName: "endpoint_negotiate_visit_desktop_params",
+            argNames: ["req"],
+          );
+
+  Future<NegotiateSelectMonitorResponse> endpointNegotiateSelectMonitor(
+          {required NegotiateSelectMonitorRequest req, dynamic hint}) =>
+      _platform.executeNormal(FlutterRustBridgeTask(
+        callFfi: (port_) => _platform.inner
+            .wire_endpoint_negotiate_select_monitor(
+                port_,
+                _platform.api2wire_box_autoadd_negotiate_select_monitor_request(
+                    req)),
+        parseSuccessData: _wire2api_negotiate_select_monitor_response,
+        constMeta: kEndpointNegotiateSelectMonitorConstMeta,
+        argValues: [req],
+        hint: hint,
+      ));
+
+  FlutterRustBridgeTaskConstMeta get kEndpointNegotiateSelectMonitorConstMeta =>
+      const FlutterRustBridgeTaskConstMeta(
+        debugName: "endpoint_negotiate_select_monitor",
+        argNames: ["req"],
+      );
+
+  Future<void> endpointNegotiateFinished(
+          {required NegotiateFinishedRequest req, dynamic hint}) =>
+      _platform.executeNormal(FlutterRustBridgeTask(
+        callFfi: (port_) => _platform.inner.wire_endpoint_negotiate_finished(
+            port_,
+            _platform.api2wire_box_autoadd_negotiate_finished_request(req)),
+        parseSuccessData: _wire2api_unit,
+        constMeta: kEndpointNegotiateFinishedConstMeta,
+        argValues: [req],
+        hint: hint,
+      ));
+
+  FlutterRustBridgeTaskConstMeta get kEndpointNegotiateFinishedConstMeta =>
+      const FlutterRustBridgeTaskConstMeta(
+        debugName: "endpoint_negotiate_finished",
+        argNames: ["req"],
+      );
+
+  Future<void> endpointInput({required InputReqeust req, dynamic hint}) =>
+      _platform.executeNormal(FlutterRustBridgeTask(
+        callFfi: (port_) => _platform.inner.wire_endpoint_input(
+            port_, _platform.api2wire_box_autoadd_input_reqeust(req)),
+        parseSuccessData: _wire2api_unit,
+        constMeta: kEndpointInputConstMeta,
+        argValues: [req],
+        hint: hint,
+      ));
+
+  FlutterRustBridgeTaskConstMeta get kEndpointInputConstMeta =>
+      const FlutterRustBridgeTaskConstMeta(
+        debugName: "endpoint_input",
+        argNames: ["req"],
+      );
 }
 
 // Section: api2wire
 
 @protected
+double api2wire_f32(double raw) {
+  return raw;
+}
+
+@protected
 int api2wire_i32(int raw) {
   return raw;
+}
+
+@protected
+int api2wire_keyboard_key(KeyboardKey raw) {
+  return api2wire_i32(raw.index);
+}
+
+@protected
+int api2wire_mouse_key(MouseKey raw) {
+  return api2wire_i32(raw.index);
 }
 
 @protected
@@ -382,6 +841,14 @@ int api2wire_u8(int raw) {
 
 String _wire2api_String(dynamic raw) {
   return raw as String;
+}
+
+AudioSampleFormat _wire2api_audio_sample_format(dynamic raw) {
+  return AudioSampleFormat.values[raw];
+}
+
+AudioSampleRate _wire2api_audio_sample_rate(dynamic raw) {
+  return AudioSampleRate.values[raw];
 }
 
 bool _wire2api_bool(dynamic raw) {
@@ -428,6 +895,50 @@ KeyExchangeResponse _wire2api_key_exchange_response(dynamic raw) {
   );
 }
 
+List<MonitorDescription> _wire2api_list_monitor_description(dynamic raw) {
+  return (raw as List<dynamic>).map(_wire2api_monitor_description).toList();
+}
+
+MonitorDescription _wire2api_monitor_description(dynamic raw) {
+  final arr = raw as List<dynamic>;
+  if (arr.length != 7)
+    throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
+  return MonitorDescription(
+    id: _wire2api_String(arr[0]),
+    name: _wire2api_String(arr[1]),
+    frameRate: _wire2api_u8(arr[2]),
+    width: _wire2api_u16(arr[3]),
+    height: _wire2api_u16(arr[4]),
+    isPrimary: _wire2api_bool(arr[5]),
+    screenShot: _wire2api_uint_8_list(arr[6]),
+  );
+}
+
+NegotiateSelectMonitorResponse _wire2api_negotiate_select_monitor_response(
+    dynamic raw) {
+  final arr = raw as List<dynamic>;
+  if (arr.length != 1)
+    throw Exception('unexpected arr length: expect 1 but see ${arr.length}');
+  return NegotiateSelectMonitorResponse(
+    monitorDescriptions: _wire2api_list_monitor_description(arr[0]),
+  );
+}
+
+NegotiateVisitDesktopParamsResponse
+    _wire2api_negotiate_visit_desktop_params_response(dynamic raw) {
+  final arr = raw as List<dynamic>;
+  if (arr.length != 6)
+    throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+  return NegotiateVisitDesktopParamsResponse(
+    videoCodec: _wire2api_video_codec(arr[0]),
+    audioSampleRate: _wire2api_audio_sample_rate(arr[1]),
+    audioSampleFormat: _wire2api_audio_sample_format(arr[2]),
+    audioDualChannel: _wire2api_bool(arr[3]),
+    osType: _wire2api_String(arr[4]),
+    osVersion: _wire2api_String(arr[5]),
+  );
+}
+
 ConfigProperties? _wire2api_opt_box_autoadd_config_properties(dynamic raw) {
   return raw == null ? null : _wire2api_box_autoadd_config_properties(raw);
 }
@@ -460,6 +971,10 @@ ResourceType _wire2api_resource_type(dynamic raw) {
   return ResourceType.values[raw];
 }
 
+int _wire2api_u16(dynamic raw) {
+  return raw as int;
+}
+
 int _wire2api_u32(dynamic raw) {
   return raw as int;
 }
@@ -474,6 +989,10 @@ Uint8List _wire2api_uint_8_list(dynamic raw) {
 
 void _wire2api_unit(dynamic raw) {
   return;
+}
+
+VideoCodec _wire2api_video_codec(dynamic raw) {
+  return VideoCodec.values[raw];
 }
 
 VisitResponse _wire2api_visit_response(dynamic raw) {
@@ -503,10 +1022,26 @@ class MirrorXCorePlatform extends FlutterRustBridgeBase<MirrorXCoreWire> {
   }
 
   @protected
+  ffi.Pointer<wire_ConnectRequest> api2wire_box_autoadd_connect_request(
+      ConnectRequest raw) {
+    final ptr = inner.new_box_autoadd_connect_request_0();
+    _api_fill_to_wire_connect_request(raw, ptr.ref);
+    return ptr;
+  }
+
+  @protected
   ffi.Pointer<wire_DialRequest> api2wire_box_autoadd_dial_request(
       DialRequest raw) {
     final ptr = inner.new_box_autoadd_dial_request_0();
     _api_fill_to_wire_dial_request(raw, ptr.ref);
+    return ptr;
+  }
+
+  @protected
+  ffi.Pointer<wire_HandshakeRequest> api2wire_box_autoadd_handshake_request(
+      HandshakeRequest raw) {
+    final ptr = inner.new_box_autoadd_handshake_request_0();
+    _api_fill_to_wire_handshake_request(raw, ptr.ref);
     return ptr;
   }
 
@@ -519,10 +1054,62 @@ class MirrorXCorePlatform extends FlutterRustBridgeBase<MirrorXCoreWire> {
   }
 
   @protected
+  ffi.Pointer<wire_InputReqeust> api2wire_box_autoadd_input_reqeust(
+      InputReqeust raw) {
+    final ptr = inner.new_box_autoadd_input_reqeust_0();
+    _api_fill_to_wire_input_reqeust(raw, ptr.ref);
+    return ptr;
+  }
+
+  @protected
   ffi.Pointer<wire_KeyExchangeRequest>
       api2wire_box_autoadd_key_exchange_request(KeyExchangeRequest raw) {
     final ptr = inner.new_box_autoadd_key_exchange_request_0();
     _api_fill_to_wire_key_exchange_request(raw, ptr.ref);
+    return ptr;
+  }
+
+  @protected
+  ffi.Pointer<wire_KeyboardEvent> api2wire_box_autoadd_keyboard_event(
+      KeyboardEvent raw) {
+    final ptr = inner.new_box_autoadd_keyboard_event_0();
+    _api_fill_to_wire_keyboard_event(raw, ptr.ref);
+    return ptr;
+  }
+
+  @protected
+  ffi.Pointer<wire_MouseEvent> api2wire_box_autoadd_mouse_event(
+      MouseEvent raw) {
+    final ptr = inner.new_box_autoadd_mouse_event_0();
+    _api_fill_to_wire_mouse_event(raw, ptr.ref);
+    return ptr;
+  }
+
+  @protected
+  ffi.Pointer<wire_NegotiateFinishedRequest>
+      api2wire_box_autoadd_negotiate_finished_request(
+          NegotiateFinishedRequest raw) {
+    final ptr = inner.new_box_autoadd_negotiate_finished_request_0();
+    _api_fill_to_wire_negotiate_finished_request(raw, ptr.ref);
+    return ptr;
+  }
+
+  @protected
+  ffi.Pointer<wire_NegotiateSelectMonitorRequest>
+      api2wire_box_autoadd_negotiate_select_monitor_request(
+          NegotiateSelectMonitorRequest raw) {
+    final ptr = inner.new_box_autoadd_negotiate_select_monitor_request_0();
+    _api_fill_to_wire_negotiate_select_monitor_request(raw, ptr.ref);
+    return ptr;
+  }
+
+  @protected
+  ffi.Pointer<wire_NegotiateVisitDesktopParamsRequest>
+      api2wire_box_autoadd_negotiate_visit_desktop_params_request(
+          NegotiateVisitDesktopParamsRequest raw) {
+    final ptr =
+        inner.new_box_autoadd_negotiate_visit_desktop_params_request_0();
+    _api_fill_to_wire_negotiate_visit_desktop_params_request(raw, ptr.ref);
     return ptr;
   }
 
@@ -551,6 +1138,13 @@ class MirrorXCorePlatform extends FlutterRustBridgeBase<MirrorXCoreWire> {
   }
 
   @protected
+  ffi.Pointer<wire_InputEvent> api2wire_box_input_event(InputEvent raw) {
+    final ptr = inner.new_box_input_event_0();
+    _api_fill_to_wire_input_event(raw, ptr.ref);
+    return ptr;
+  }
+
+  @protected
   ffi.Pointer<wire_uint_8_list> api2wire_opt_String(String? raw) {
     return raw == null ? ffi.nullptr : api2wire_String(raw);
   }
@@ -569,9 +1163,19 @@ class MirrorXCorePlatform extends FlutterRustBridgeBase<MirrorXCoreWire> {
     _api_fill_to_wire_config_properties(apiObj, wireObj.ref);
   }
 
+  void _api_fill_to_wire_box_autoadd_connect_request(
+      ConnectRequest apiObj, ffi.Pointer<wire_ConnectRequest> wireObj) {
+    _api_fill_to_wire_connect_request(apiObj, wireObj.ref);
+  }
+
   void _api_fill_to_wire_box_autoadd_dial_request(
       DialRequest apiObj, ffi.Pointer<wire_DialRequest> wireObj) {
     _api_fill_to_wire_dial_request(apiObj, wireObj.ref);
+  }
+
+  void _api_fill_to_wire_box_autoadd_handshake_request(
+      HandshakeRequest apiObj, ffi.Pointer<wire_HandshakeRequest> wireObj) {
+    _api_fill_to_wire_handshake_request(apiObj, wireObj.ref);
   }
 
   void _api_fill_to_wire_box_autoadd_heartbeat_request(
@@ -579,9 +1183,43 @@ class MirrorXCorePlatform extends FlutterRustBridgeBase<MirrorXCoreWire> {
     _api_fill_to_wire_heartbeat_request(apiObj, wireObj.ref);
   }
 
+  void _api_fill_to_wire_box_autoadd_input_reqeust(
+      InputReqeust apiObj, ffi.Pointer<wire_InputReqeust> wireObj) {
+    _api_fill_to_wire_input_reqeust(apiObj, wireObj.ref);
+  }
+
   void _api_fill_to_wire_box_autoadd_key_exchange_request(
       KeyExchangeRequest apiObj, ffi.Pointer<wire_KeyExchangeRequest> wireObj) {
     _api_fill_to_wire_key_exchange_request(apiObj, wireObj.ref);
+  }
+
+  void _api_fill_to_wire_box_autoadd_keyboard_event(
+      KeyboardEvent apiObj, ffi.Pointer<wire_KeyboardEvent> wireObj) {
+    _api_fill_to_wire_keyboard_event(apiObj, wireObj.ref);
+  }
+
+  void _api_fill_to_wire_box_autoadd_mouse_event(
+      MouseEvent apiObj, ffi.Pointer<wire_MouseEvent> wireObj) {
+    _api_fill_to_wire_mouse_event(apiObj, wireObj.ref);
+  }
+
+  void _api_fill_to_wire_box_autoadd_negotiate_finished_request(
+      NegotiateFinishedRequest apiObj,
+      ffi.Pointer<wire_NegotiateFinishedRequest> wireObj) {
+    _api_fill_to_wire_negotiate_finished_request(apiObj, wireObj.ref);
+  }
+
+  void _api_fill_to_wire_box_autoadd_negotiate_select_monitor_request(
+      NegotiateSelectMonitorRequest apiObj,
+      ffi.Pointer<wire_NegotiateSelectMonitorRequest> wireObj) {
+    _api_fill_to_wire_negotiate_select_monitor_request(apiObj, wireObj.ref);
+  }
+
+  void _api_fill_to_wire_box_autoadd_negotiate_visit_desktop_params_request(
+      NegotiateVisitDesktopParamsRequest apiObj,
+      ffi.Pointer<wire_NegotiateVisitDesktopParamsRequest> wireObj) {
+    _api_fill_to_wire_negotiate_visit_desktop_params_request(
+        apiObj, wireObj.ref);
   }
 
   void _api_fill_to_wire_box_autoadd_register_request(
@@ -599,6 +1237,11 @@ class MirrorXCorePlatform extends FlutterRustBridgeBase<MirrorXCoreWire> {
     _api_fill_to_wire_visit_request(apiObj, wireObj.ref);
   }
 
+  void _api_fill_to_wire_box_input_event(
+      InputEvent apiObj, ffi.Pointer<wire_InputEvent> wireObj) {
+    _api_fill_to_wire_input_event(apiObj, wireObj.ref);
+  }
+
   void _api_fill_to_wire_config_properties(
       ConfigProperties apiObj, wire_ConfigProperties wireObj) {
     wireObj.device_id = api2wire_String(apiObj.deviceId);
@@ -606,9 +1249,29 @@ class MirrorXCorePlatform extends FlutterRustBridgeBase<MirrorXCoreWire> {
     wireObj.device_password = api2wire_String(apiObj.devicePassword);
   }
 
+  void _api_fill_to_wire_connect_request(
+      ConnectRequest apiObj, wire_ConnectRequest wireObj) {
+    wireObj.active_device_id = api2wire_String(apiObj.activeDeviceId);
+    wireObj.passive_device_id = api2wire_String(apiObj.passiveDeviceId);
+    wireObj.addr = api2wire_String(apiObj.addr);
+  }
+
   void _api_fill_to_wire_dial_request(
       DialRequest apiObj, wire_DialRequest wireObj) {
     wireObj.uri = api2wire_String(apiObj.uri);
+  }
+
+  void _api_fill_to_wire_handshake_request(
+      HandshakeRequest apiObj, wire_HandshakeRequest wireObj) {
+    wireObj.active_device_id = api2wire_String(apiObj.activeDeviceId);
+    wireObj.passive_device_id = api2wire_String(apiObj.passiveDeviceId);
+    wireObj.visit_credentials = api2wire_String(apiObj.visitCredentials);
+    wireObj.opening_key_bytes = api2wire_uint_8_list(apiObj.openingKeyBytes);
+    wireObj.opening_nonce_bytes =
+        api2wire_uint_8_list(apiObj.openingNonceBytes);
+    wireObj.sealing_key_bytes = api2wire_uint_8_list(apiObj.sealingKeyBytes);
+    wireObj.sealing_nonce_bytes =
+        api2wire_uint_8_list(apiObj.sealingNonceBytes);
   }
 
   void _api_fill_to_wire_heartbeat_request(
@@ -617,11 +1280,110 @@ class MirrorXCorePlatform extends FlutterRustBridgeBase<MirrorXCoreWire> {
     wireObj.timestamp = api2wire_u32(apiObj.timestamp);
   }
 
+  void _api_fill_to_wire_input_event(
+      InputEvent apiObj, wire_InputEvent wireObj) {
+    if (apiObj is InputEvent_Mouse) {
+      wireObj.tag = 0;
+      wireObj.kind = inner.inflate_InputEvent_Mouse();
+      wireObj.kind.ref.Mouse.ref.field0 =
+          api2wire_box_autoadd_mouse_event(apiObj.field0);
+      return;
+    }
+    if (apiObj is InputEvent_Keyboard) {
+      wireObj.tag = 1;
+      wireObj.kind = inner.inflate_InputEvent_Keyboard();
+      wireObj.kind.ref.Keyboard.ref.field0 =
+          api2wire_box_autoadd_keyboard_event(apiObj.field0);
+      return;
+    }
+  }
+
+  void _api_fill_to_wire_input_reqeust(
+      InputReqeust apiObj, wire_InputReqeust wireObj) {
+    wireObj.active_device_id = api2wire_String(apiObj.activeDeviceId);
+    wireObj.passive_device_id = api2wire_String(apiObj.passiveDeviceId);
+    wireObj.event = api2wire_box_input_event(apiObj.event);
+  }
+
   void _api_fill_to_wire_key_exchange_request(
       KeyExchangeRequest apiObj, wire_KeyExchangeRequest wireObj) {
     wireObj.local_device_id = api2wire_String(apiObj.localDeviceId);
     wireObj.remote_device_id = api2wire_String(apiObj.remoteDeviceId);
     wireObj.password = api2wire_String(apiObj.password);
+  }
+
+  void _api_fill_to_wire_keyboard_event(
+      KeyboardEvent apiObj, wire_KeyboardEvent wireObj) {
+    if (apiObj is KeyboardEvent_KeyUp) {
+      wireObj.tag = 0;
+      wireObj.kind = inner.inflate_KeyboardEvent_KeyUp();
+      wireObj.kind.ref.KeyUp.ref.field0 = api2wire_keyboard_key(apiObj.field0);
+      return;
+    }
+    if (apiObj is KeyboardEvent_KeyDown) {
+      wireObj.tag = 1;
+      wireObj.kind = inner.inflate_KeyboardEvent_KeyDown();
+      wireObj.kind.ref.KeyDown.ref.field0 =
+          api2wire_keyboard_key(apiObj.field0);
+      return;
+    }
+  }
+
+  void _api_fill_to_wire_mouse_event(
+      MouseEvent apiObj, wire_MouseEvent wireObj) {
+    if (apiObj is MouseEvent_MouseUp) {
+      wireObj.tag = 0;
+      wireObj.kind = inner.inflate_MouseEvent_MouseUp();
+      wireObj.kind.ref.MouseUp.ref.field0 = api2wire_mouse_key(apiObj.field0);
+      wireObj.kind.ref.MouseUp.ref.field1 = api2wire_f32(apiObj.field1);
+      wireObj.kind.ref.MouseUp.ref.field2 = api2wire_f32(apiObj.field2);
+      return;
+    }
+    if (apiObj is MouseEvent_MouseDown) {
+      wireObj.tag = 1;
+      wireObj.kind = inner.inflate_MouseEvent_MouseDown();
+      wireObj.kind.ref.MouseDown.ref.field0 = api2wire_mouse_key(apiObj.field0);
+      wireObj.kind.ref.MouseDown.ref.field1 = api2wire_f32(apiObj.field1);
+      wireObj.kind.ref.MouseDown.ref.field2 = api2wire_f32(apiObj.field2);
+      return;
+    }
+    if (apiObj is MouseEvent_MouseMove) {
+      wireObj.tag = 2;
+      wireObj.kind = inner.inflate_MouseEvent_MouseMove();
+      wireObj.kind.ref.MouseMove.ref.field0 = api2wire_mouse_key(apiObj.field0);
+      wireObj.kind.ref.MouseMove.ref.field1 = api2wire_f32(apiObj.field1);
+      wireObj.kind.ref.MouseMove.ref.field2 = api2wire_f32(apiObj.field2);
+      return;
+    }
+    if (apiObj is MouseEvent_MouseScrollWheel) {
+      wireObj.tag = 3;
+      wireObj.kind = inner.inflate_MouseEvent_MouseScrollWheel();
+      wireObj.kind.ref.MouseScrollWheel.ref.field0 =
+          api2wire_f32(apiObj.field0);
+      return;
+    }
+  }
+
+  void _api_fill_to_wire_negotiate_finished_request(
+      NegotiateFinishedRequest apiObj, wire_NegotiateFinishedRequest wireObj) {
+    wireObj.active_device_id = api2wire_String(apiObj.activeDeviceId);
+    wireObj.passive_device_id = api2wire_String(apiObj.passiveDeviceId);
+    wireObj.selected_monitor_id = api2wire_String(apiObj.selectedMonitorId);
+    wireObj.expect_frame_rate = api2wire_u8(apiObj.expectFrameRate);
+  }
+
+  void _api_fill_to_wire_negotiate_select_monitor_request(
+      NegotiateSelectMonitorRequest apiObj,
+      wire_NegotiateSelectMonitorRequest wireObj) {
+    wireObj.active_device_id = api2wire_String(apiObj.activeDeviceId);
+    wireObj.passive_device_id = api2wire_String(apiObj.passiveDeviceId);
+  }
+
+  void _api_fill_to_wire_negotiate_visit_desktop_params_request(
+      NegotiateVisitDesktopParamsRequest apiObj,
+      wire_NegotiateVisitDesktopParamsRequest wireObj) {
+    wireObj.active_device_id = api2wire_String(apiObj.activeDeviceId);
+    wireObj.passive_device_id = api2wire_String(apiObj.passiveDeviceId);
   }
 
   void _api_fill_to_wire_register_request(
@@ -681,19 +1443,19 @@ class MirrorXCoreWire implements FlutterRustBridgeWireBase {
   late final _store_dart_post_cobject = _store_dart_post_cobjectPtr
       .asFunction<void Function(DartPostCObjectFnType)>();
 
-  void wire_logger_init(
+  void wire_init_logger(
     int port_,
   ) {
-    return _wire_logger_init(
+    return _wire_init_logger(
       port_,
     );
   }
 
-  late final _wire_logger_initPtr =
+  late final _wire_init_loggerPtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
-          'wire_logger_init');
-  late final _wire_logger_init =
-      _wire_logger_initPtr.asFunction<void Function(int)>();
+          'wire_init_logger');
+  late final _wire_init_logger =
+      _wire_init_loggerPtr.asFunction<void Function(int)>();
 
   void wire_config_read(
     int port_,
@@ -843,6 +1605,116 @@ class MirrorXCoreWire implements FlutterRustBridgeWireBase {
   late final _wire_signaling_key_exchange = _wire_signaling_key_exchangePtr
       .asFunction<void Function(int, ffi.Pointer<wire_KeyExchangeRequest>)>();
 
+  void wire_endpoint_connect(
+    int port_,
+    ffi.Pointer<wire_ConnectRequest> req,
+  ) {
+    return _wire_endpoint_connect(
+      port_,
+      req,
+    );
+  }
+
+  late final _wire_endpoint_connectPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Void Function(ffi.Int64,
+              ffi.Pointer<wire_ConnectRequest>)>>('wire_endpoint_connect');
+  late final _wire_endpoint_connect = _wire_endpoint_connectPtr
+      .asFunction<void Function(int, ffi.Pointer<wire_ConnectRequest>)>();
+
+  void wire_endpoint_handshake(
+    int port_,
+    ffi.Pointer<wire_HandshakeRequest> req,
+  ) {
+    return _wire_endpoint_handshake(
+      port_,
+      req,
+    );
+  }
+
+  late final _wire_endpoint_handshakePtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Void Function(ffi.Int64,
+              ffi.Pointer<wire_HandshakeRequest>)>>('wire_endpoint_handshake');
+  late final _wire_endpoint_handshake = _wire_endpoint_handshakePtr
+      .asFunction<void Function(int, ffi.Pointer<wire_HandshakeRequest>)>();
+
+  void wire_endpoint_negotiate_visit_desktop_params(
+    int port_,
+    ffi.Pointer<wire_NegotiateVisitDesktopParamsRequest> req,
+  ) {
+    return _wire_endpoint_negotiate_visit_desktop_params(
+      port_,
+      req,
+    );
+  }
+
+  late final _wire_endpoint_negotiate_visit_desktop_paramsPtr = _lookup<
+          ffi.NativeFunction<
+              ffi.Void Function(ffi.Int64,
+                  ffi.Pointer<wire_NegotiateVisitDesktopParamsRequest>)>>(
+      'wire_endpoint_negotiate_visit_desktop_params');
+  late final _wire_endpoint_negotiate_visit_desktop_params =
+      _wire_endpoint_negotiate_visit_desktop_paramsPtr.asFunction<
+          void Function(
+              int, ffi.Pointer<wire_NegotiateVisitDesktopParamsRequest>)>();
+
+  void wire_endpoint_negotiate_select_monitor(
+    int port_,
+    ffi.Pointer<wire_NegotiateSelectMonitorRequest> req,
+  ) {
+    return _wire_endpoint_negotiate_select_monitor(
+      port_,
+      req,
+    );
+  }
+
+  late final _wire_endpoint_negotiate_select_monitorPtr = _lookup<
+          ffi.NativeFunction<
+              ffi.Void Function(
+                  ffi.Int64, ffi.Pointer<wire_NegotiateSelectMonitorRequest>)>>(
+      'wire_endpoint_negotiate_select_monitor');
+  late final _wire_endpoint_negotiate_select_monitor =
+      _wire_endpoint_negotiate_select_monitorPtr.asFunction<
+          void Function(
+              int, ffi.Pointer<wire_NegotiateSelectMonitorRequest>)>();
+
+  void wire_endpoint_negotiate_finished(
+    int port_,
+    ffi.Pointer<wire_NegotiateFinishedRequest> req,
+  ) {
+    return _wire_endpoint_negotiate_finished(
+      port_,
+      req,
+    );
+  }
+
+  late final _wire_endpoint_negotiate_finishedPtr = _lookup<
+          ffi.NativeFunction<
+              ffi.Void Function(
+                  ffi.Int64, ffi.Pointer<wire_NegotiateFinishedRequest>)>>(
+      'wire_endpoint_negotiate_finished');
+  late final _wire_endpoint_negotiate_finished =
+      _wire_endpoint_negotiate_finishedPtr.asFunction<
+          void Function(int, ffi.Pointer<wire_NegotiateFinishedRequest>)>();
+
+  void wire_endpoint_input(
+    int port_,
+    ffi.Pointer<wire_InputReqeust> req,
+  ) {
+    return _wire_endpoint_input(
+      port_,
+      req,
+    );
+  }
+
+  late final _wire_endpoint_inputPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Void Function(ffi.Int64,
+              ffi.Pointer<wire_InputReqeust>)>>('wire_endpoint_input');
+  late final _wire_endpoint_input = _wire_endpoint_inputPtr
+      .asFunction<void Function(int, ffi.Pointer<wire_InputReqeust>)>();
+
   ffi.Pointer<wire_ConfigProperties> new_box_autoadd_config_properties_0() {
     return _new_box_autoadd_config_properties_0();
   }
@@ -853,6 +1725,17 @@ class MirrorXCoreWire implements FlutterRustBridgeWireBase {
   late final _new_box_autoadd_config_properties_0 =
       _new_box_autoadd_config_properties_0Ptr
           .asFunction<ffi.Pointer<wire_ConfigProperties> Function()>();
+
+  ffi.Pointer<wire_ConnectRequest> new_box_autoadd_connect_request_0() {
+    return _new_box_autoadd_connect_request_0();
+  }
+
+  late final _new_box_autoadd_connect_request_0Ptr =
+      _lookup<ffi.NativeFunction<ffi.Pointer<wire_ConnectRequest> Function()>>(
+          'new_box_autoadd_connect_request_0');
+  late final _new_box_autoadd_connect_request_0 =
+      _new_box_autoadd_connect_request_0Ptr
+          .asFunction<ffi.Pointer<wire_ConnectRequest> Function()>();
 
   ffi.Pointer<wire_DialRequest> new_box_autoadd_dial_request_0() {
     return _new_box_autoadd_dial_request_0();
@@ -865,6 +1748,17 @@ class MirrorXCoreWire implements FlutterRustBridgeWireBase {
       _new_box_autoadd_dial_request_0Ptr
           .asFunction<ffi.Pointer<wire_DialRequest> Function()>();
 
+  ffi.Pointer<wire_HandshakeRequest> new_box_autoadd_handshake_request_0() {
+    return _new_box_autoadd_handshake_request_0();
+  }
+
+  late final _new_box_autoadd_handshake_request_0Ptr = _lookup<
+          ffi.NativeFunction<ffi.Pointer<wire_HandshakeRequest> Function()>>(
+      'new_box_autoadd_handshake_request_0');
+  late final _new_box_autoadd_handshake_request_0 =
+      _new_box_autoadd_handshake_request_0Ptr
+          .asFunction<ffi.Pointer<wire_HandshakeRequest> Function()>();
+
   ffi.Pointer<wire_HeartbeatRequest> new_box_autoadd_heartbeat_request_0() {
     return _new_box_autoadd_heartbeat_request_0();
   }
@@ -875,6 +1769,17 @@ class MirrorXCoreWire implements FlutterRustBridgeWireBase {
   late final _new_box_autoadd_heartbeat_request_0 =
       _new_box_autoadd_heartbeat_request_0Ptr
           .asFunction<ffi.Pointer<wire_HeartbeatRequest> Function()>();
+
+  ffi.Pointer<wire_InputReqeust> new_box_autoadd_input_reqeust_0() {
+    return _new_box_autoadd_input_reqeust_0();
+  }
+
+  late final _new_box_autoadd_input_reqeust_0Ptr =
+      _lookup<ffi.NativeFunction<ffi.Pointer<wire_InputReqeust> Function()>>(
+          'new_box_autoadd_input_reqeust_0');
+  late final _new_box_autoadd_input_reqeust_0 =
+      _new_box_autoadd_input_reqeust_0Ptr
+          .asFunction<ffi.Pointer<wire_InputReqeust> Function()>();
 
   ffi.Pointer<wire_KeyExchangeRequest>
       new_box_autoadd_key_exchange_request_0() {
@@ -887,6 +1792,68 @@ class MirrorXCoreWire implements FlutterRustBridgeWireBase {
   late final _new_box_autoadd_key_exchange_request_0 =
       _new_box_autoadd_key_exchange_request_0Ptr
           .asFunction<ffi.Pointer<wire_KeyExchangeRequest> Function()>();
+
+  ffi.Pointer<wire_KeyboardEvent> new_box_autoadd_keyboard_event_0() {
+    return _new_box_autoadd_keyboard_event_0();
+  }
+
+  late final _new_box_autoadd_keyboard_event_0Ptr =
+      _lookup<ffi.NativeFunction<ffi.Pointer<wire_KeyboardEvent> Function()>>(
+          'new_box_autoadd_keyboard_event_0');
+  late final _new_box_autoadd_keyboard_event_0 =
+      _new_box_autoadd_keyboard_event_0Ptr
+          .asFunction<ffi.Pointer<wire_KeyboardEvent> Function()>();
+
+  ffi.Pointer<wire_MouseEvent> new_box_autoadd_mouse_event_0() {
+    return _new_box_autoadd_mouse_event_0();
+  }
+
+  late final _new_box_autoadd_mouse_event_0Ptr =
+      _lookup<ffi.NativeFunction<ffi.Pointer<wire_MouseEvent> Function()>>(
+          'new_box_autoadd_mouse_event_0');
+  late final _new_box_autoadd_mouse_event_0 = _new_box_autoadd_mouse_event_0Ptr
+      .asFunction<ffi.Pointer<wire_MouseEvent> Function()>();
+
+  ffi.Pointer<wire_NegotiateFinishedRequest>
+      new_box_autoadd_negotiate_finished_request_0() {
+    return _new_box_autoadd_negotiate_finished_request_0();
+  }
+
+  late final _new_box_autoadd_negotiate_finished_request_0Ptr = _lookup<
+      ffi.NativeFunction<
+          ffi.Pointer<wire_NegotiateFinishedRequest>
+              Function()>>('new_box_autoadd_negotiate_finished_request_0');
+  late final _new_box_autoadd_negotiate_finished_request_0 =
+      _new_box_autoadd_negotiate_finished_request_0Ptr
+          .asFunction<ffi.Pointer<wire_NegotiateFinishedRequest> Function()>();
+
+  ffi.Pointer<wire_NegotiateSelectMonitorRequest>
+      new_box_autoadd_negotiate_select_monitor_request_0() {
+    return _new_box_autoadd_negotiate_select_monitor_request_0();
+  }
+
+  late final _new_box_autoadd_negotiate_select_monitor_request_0Ptr = _lookup<
+          ffi.NativeFunction<
+              ffi.Pointer<wire_NegotiateSelectMonitorRequest> Function()>>(
+      'new_box_autoadd_negotiate_select_monitor_request_0');
+  late final _new_box_autoadd_negotiate_select_monitor_request_0 =
+      _new_box_autoadd_negotiate_select_monitor_request_0Ptr.asFunction<
+          ffi.Pointer<wire_NegotiateSelectMonitorRequest> Function()>();
+
+  ffi.Pointer<wire_NegotiateVisitDesktopParamsRequest>
+      new_box_autoadd_negotiate_visit_desktop_params_request_0() {
+    return _new_box_autoadd_negotiate_visit_desktop_params_request_0();
+  }
+
+  late final _new_box_autoadd_negotiate_visit_desktop_params_request_0Ptr =
+      _lookup<
+              ffi.NativeFunction<
+                  ffi.Pointer<wire_NegotiateVisitDesktopParamsRequest>
+                      Function()>>(
+          'new_box_autoadd_negotiate_visit_desktop_params_request_0');
+  late final _new_box_autoadd_negotiate_visit_desktop_params_request_0 =
+      _new_box_autoadd_negotiate_visit_desktop_params_request_0Ptr.asFunction<
+          ffi.Pointer<wire_NegotiateVisitDesktopParamsRequest> Function()>();
 
   ffi.Pointer<wire_RegisterRequest> new_box_autoadd_register_request_0() {
     return _new_box_autoadd_register_request_0();
@@ -921,6 +1888,16 @@ class MirrorXCoreWire implements FlutterRustBridgeWireBase {
       _new_box_autoadd_visit_request_0Ptr
           .asFunction<ffi.Pointer<wire_VisitRequest> Function()>();
 
+  ffi.Pointer<wire_InputEvent> new_box_input_event_0() {
+    return _new_box_input_event_0();
+  }
+
+  late final _new_box_input_event_0Ptr =
+      _lookup<ffi.NativeFunction<ffi.Pointer<wire_InputEvent> Function()>>(
+          'new_box_input_event_0');
+  late final _new_box_input_event_0 = _new_box_input_event_0Ptr
+      .asFunction<ffi.Pointer<wire_InputEvent> Function()>();
+
   ffi.Pointer<wire_uint_8_list> new_uint_8_list_0(
     int len,
   ) {
@@ -935,6 +1912,87 @@ class MirrorXCoreWire implements FlutterRustBridgeWireBase {
               ffi.Int32)>>('new_uint_8_list_0');
   late final _new_uint_8_list_0 = _new_uint_8_list_0Ptr
       .asFunction<ffi.Pointer<wire_uint_8_list> Function(int)>();
+
+  ffi.Pointer<InputEventKind> inflate_InputEvent_Mouse() {
+    return _inflate_InputEvent_Mouse();
+  }
+
+  late final _inflate_InputEvent_MousePtr =
+      _lookup<ffi.NativeFunction<ffi.Pointer<InputEventKind> Function()>>(
+          'inflate_InputEvent_Mouse');
+  late final _inflate_InputEvent_Mouse = _inflate_InputEvent_MousePtr
+      .asFunction<ffi.Pointer<InputEventKind> Function()>();
+
+  ffi.Pointer<InputEventKind> inflate_InputEvent_Keyboard() {
+    return _inflate_InputEvent_Keyboard();
+  }
+
+  late final _inflate_InputEvent_KeyboardPtr =
+      _lookup<ffi.NativeFunction<ffi.Pointer<InputEventKind> Function()>>(
+          'inflate_InputEvent_Keyboard');
+  late final _inflate_InputEvent_Keyboard = _inflate_InputEvent_KeyboardPtr
+      .asFunction<ffi.Pointer<InputEventKind> Function()>();
+
+  ffi.Pointer<KeyboardEventKind> inflate_KeyboardEvent_KeyUp() {
+    return _inflate_KeyboardEvent_KeyUp();
+  }
+
+  late final _inflate_KeyboardEvent_KeyUpPtr =
+      _lookup<ffi.NativeFunction<ffi.Pointer<KeyboardEventKind> Function()>>(
+          'inflate_KeyboardEvent_KeyUp');
+  late final _inflate_KeyboardEvent_KeyUp = _inflate_KeyboardEvent_KeyUpPtr
+      .asFunction<ffi.Pointer<KeyboardEventKind> Function()>();
+
+  ffi.Pointer<KeyboardEventKind> inflate_KeyboardEvent_KeyDown() {
+    return _inflate_KeyboardEvent_KeyDown();
+  }
+
+  late final _inflate_KeyboardEvent_KeyDownPtr =
+      _lookup<ffi.NativeFunction<ffi.Pointer<KeyboardEventKind> Function()>>(
+          'inflate_KeyboardEvent_KeyDown');
+  late final _inflate_KeyboardEvent_KeyDown = _inflate_KeyboardEvent_KeyDownPtr
+      .asFunction<ffi.Pointer<KeyboardEventKind> Function()>();
+
+  ffi.Pointer<MouseEventKind> inflate_MouseEvent_MouseUp() {
+    return _inflate_MouseEvent_MouseUp();
+  }
+
+  late final _inflate_MouseEvent_MouseUpPtr =
+      _lookup<ffi.NativeFunction<ffi.Pointer<MouseEventKind> Function()>>(
+          'inflate_MouseEvent_MouseUp');
+  late final _inflate_MouseEvent_MouseUp = _inflate_MouseEvent_MouseUpPtr
+      .asFunction<ffi.Pointer<MouseEventKind> Function()>();
+
+  ffi.Pointer<MouseEventKind> inflate_MouseEvent_MouseDown() {
+    return _inflate_MouseEvent_MouseDown();
+  }
+
+  late final _inflate_MouseEvent_MouseDownPtr =
+      _lookup<ffi.NativeFunction<ffi.Pointer<MouseEventKind> Function()>>(
+          'inflate_MouseEvent_MouseDown');
+  late final _inflate_MouseEvent_MouseDown = _inflate_MouseEvent_MouseDownPtr
+      .asFunction<ffi.Pointer<MouseEventKind> Function()>();
+
+  ffi.Pointer<MouseEventKind> inflate_MouseEvent_MouseMove() {
+    return _inflate_MouseEvent_MouseMove();
+  }
+
+  late final _inflate_MouseEvent_MouseMovePtr =
+      _lookup<ffi.NativeFunction<ffi.Pointer<MouseEventKind> Function()>>(
+          'inflate_MouseEvent_MouseMove');
+  late final _inflate_MouseEvent_MouseMove = _inflate_MouseEvent_MouseMovePtr
+      .asFunction<ffi.Pointer<MouseEventKind> Function()>();
+
+  ffi.Pointer<MouseEventKind> inflate_MouseEvent_MouseScrollWheel() {
+    return _inflate_MouseEvent_MouseScrollWheel();
+  }
+
+  late final _inflate_MouseEvent_MouseScrollWheelPtr =
+      _lookup<ffi.NativeFunction<ffi.Pointer<MouseEventKind> Function()>>(
+          'inflate_MouseEvent_MouseScrollWheel');
+  late final _inflate_MouseEvent_MouseScrollWheel =
+      _inflate_MouseEvent_MouseScrollWheelPtr
+          .asFunction<ffi.Pointer<MouseEventKind> Function()>();
 
   void free_WireSyncReturnStruct(
     WireSyncReturnStruct val,
@@ -1006,6 +2064,160 @@ class wire_KeyExchangeRequest extends ffi.Struct {
   external ffi.Pointer<wire_uint_8_list> remote_device_id;
 
   external ffi.Pointer<wire_uint_8_list> password;
+}
+
+class wire_ConnectRequest extends ffi.Struct {
+  external ffi.Pointer<wire_uint_8_list> active_device_id;
+
+  external ffi.Pointer<wire_uint_8_list> passive_device_id;
+
+  external ffi.Pointer<wire_uint_8_list> addr;
+}
+
+class wire_HandshakeRequest extends ffi.Struct {
+  external ffi.Pointer<wire_uint_8_list> active_device_id;
+
+  external ffi.Pointer<wire_uint_8_list> passive_device_id;
+
+  external ffi.Pointer<wire_uint_8_list> visit_credentials;
+
+  external ffi.Pointer<wire_uint_8_list> opening_key_bytes;
+
+  external ffi.Pointer<wire_uint_8_list> opening_nonce_bytes;
+
+  external ffi.Pointer<wire_uint_8_list> sealing_key_bytes;
+
+  external ffi.Pointer<wire_uint_8_list> sealing_nonce_bytes;
+}
+
+class wire_NegotiateVisitDesktopParamsRequest extends ffi.Struct {
+  external ffi.Pointer<wire_uint_8_list> active_device_id;
+
+  external ffi.Pointer<wire_uint_8_list> passive_device_id;
+}
+
+class wire_NegotiateSelectMonitorRequest extends ffi.Struct {
+  external ffi.Pointer<wire_uint_8_list> active_device_id;
+
+  external ffi.Pointer<wire_uint_8_list> passive_device_id;
+}
+
+class wire_NegotiateFinishedRequest extends ffi.Struct {
+  external ffi.Pointer<wire_uint_8_list> active_device_id;
+
+  external ffi.Pointer<wire_uint_8_list> passive_device_id;
+
+  external ffi.Pointer<wire_uint_8_list> selected_monitor_id;
+
+  @ffi.Uint8()
+  external int expect_frame_rate;
+}
+
+class wire_MouseEvent_MouseUp extends ffi.Struct {
+  @ffi.Int32()
+  external int field0;
+
+  @ffi.Float()
+  external double field1;
+
+  @ffi.Float()
+  external double field2;
+}
+
+class wire_MouseEvent_MouseDown extends ffi.Struct {
+  @ffi.Int32()
+  external int field0;
+
+  @ffi.Float()
+  external double field1;
+
+  @ffi.Float()
+  external double field2;
+}
+
+class wire_MouseEvent_MouseMove extends ffi.Struct {
+  @ffi.Int32()
+  external int field0;
+
+  @ffi.Float()
+  external double field1;
+
+  @ffi.Float()
+  external double field2;
+}
+
+class wire_MouseEvent_MouseScrollWheel extends ffi.Struct {
+  @ffi.Float()
+  external double field0;
+}
+
+class MouseEventKind extends ffi.Union {
+  external ffi.Pointer<wire_MouseEvent_MouseUp> MouseUp;
+
+  external ffi.Pointer<wire_MouseEvent_MouseDown> MouseDown;
+
+  external ffi.Pointer<wire_MouseEvent_MouseMove> MouseMove;
+
+  external ffi.Pointer<wire_MouseEvent_MouseScrollWheel> MouseScrollWheel;
+}
+
+class wire_MouseEvent extends ffi.Struct {
+  @ffi.Int32()
+  external int tag;
+
+  external ffi.Pointer<MouseEventKind> kind;
+}
+
+class wire_InputEvent_Mouse extends ffi.Struct {
+  external ffi.Pointer<wire_MouseEvent> field0;
+}
+
+class wire_KeyboardEvent_KeyUp extends ffi.Struct {
+  @ffi.Int32()
+  external int field0;
+}
+
+class wire_KeyboardEvent_KeyDown extends ffi.Struct {
+  @ffi.Int32()
+  external int field0;
+}
+
+class KeyboardEventKind extends ffi.Union {
+  external ffi.Pointer<wire_KeyboardEvent_KeyUp> KeyUp;
+
+  external ffi.Pointer<wire_KeyboardEvent_KeyDown> KeyDown;
+}
+
+class wire_KeyboardEvent extends ffi.Struct {
+  @ffi.Int32()
+  external int tag;
+
+  external ffi.Pointer<KeyboardEventKind> kind;
+}
+
+class wire_InputEvent_Keyboard extends ffi.Struct {
+  external ffi.Pointer<wire_KeyboardEvent> field0;
+}
+
+class InputEventKind extends ffi.Union {
+  external ffi.Pointer<wire_InputEvent_Mouse> Mouse;
+
+  external ffi.Pointer<wire_InputEvent_Keyboard> Keyboard;
+}
+
+class wire_InputEvent extends ffi.Struct {
+  @ffi.Int32()
+  external int tag;
+
+  external ffi.Pointer<InputEventKind> kind;
+}
+
+class wire_InputReqeust extends ffi.Struct {
+  external ffi.Pointer<wire_uint_8_list> active_device_id;
+
+  external ffi.Pointer<wire_uint_8_list> passive_device_id;
+
+  external ffi.Pointer<wire_InputEvent> event;
 }
 
 typedef DartPostCObjectFnType = ffi.Pointer<

@@ -371,7 +371,7 @@ extern "C" fn encode_output_callback(
 
             if let Err(err) = (*endpoint_message_tx).try_send(
                 crate::api::endpoint::message::EndPointMessage::VideoFrame(
-                    crate::api::endpoint::message::VideoFrame {
+                    crate::api::endpoint::message::EndPointVideoFrame {
                         sps: sps.take(),
                         pps: pps.take(),
                         buffer: nalu_body_bytes,

@@ -1,50 +1,122 @@
 use crate::{
-    api::endpoint::{message::EndPointMessage, stream_call, RESERVE_ENDPOINTS},
+    api::endpoint::{
+        message::{
+            EndPointMessage, EndPointNegotiateSelectMonitorRequest,
+            EndPointNegotiateSelectMonitorResponse, MonitorDescription,
+        },
+        ENDPOINTS, RECV_MESSAGE_TIMEOUT, SEND_MESSAGE_TIMEOUT,
+    },
     core_error,
     error::{CoreError, CoreResult},
 };
-use tokio::sync::mpsc::Sender;
+use dashmap::DashMap;
+use once_cell::sync::Lazy;
+use tokio::sync::{mpsc, oneshot};
+
+static RESPONSE_CHANNELS: Lazy<
+    DashMap<(String, String), oneshot::Sender<EndPointNegotiateSelectMonitorResponse>>,
+> = Lazy::new(|| DashMap::new());
 
 pub struct NegotiateSelectMonitorRequest {
     pub active_device_id: String,
     pub passive_device_id: String,
 }
 
-pub struct NegotiateSelectMonitorResponse {}
+pub struct NegotiateSelectMonitorResponse {
+    pub monitor_descriptions: Vec<MonitorDescription>,
+}
 
 pub async fn negotiate_select_monitor(
     req: NegotiateSelectMonitorRequest,
 ) -> CoreResult<NegotiateSelectMonitorResponse> {
-    let mut entry = RESERVE_ENDPOINTS
-        .get_mut(&(
+    let message_tx = ENDPOINTS
+        .get(&(
             req.active_device_id.to_owned(),
             req.passive_device_id.to_owned(),
         ))
-        .ok_or(core_error!("reserve endpoint bundle not exists"))?;
+        .ok_or(core_error!("endpoint not exists"))?;
 
-    let (stream, _, _) = entry.value_mut();
+    let negotiate_req =
+        EndPointMessage::NegotiateSelectMonitorRequest(EndPointNegotiateSelectMonitorRequest {});
 
-    let req = crate::api::endpoint::message::NegotiateSelectMonitorRequest {};
+    let (resp_tx, resp_rx) = tokio::sync::oneshot::channel();
+    RESPONSE_CHANNELS.insert(
+        (
+            req.active_device_id.to_owned(),
+            req.passive_device_id.to_owned(),
+        ),
+        resp_tx,
+    );
 
-    let resp: crate::api::endpoint::message::NegotiateSelectMonitorResponse =
-        stream_call(stream, req).await?;
+    if let Err(err) = message_tx
+        .send_timeout(negotiate_req, SEND_MESSAGE_TIMEOUT)
+        .await
+    {
+        RESPONSE_CHANNELS.remove(&(req.active_device_id, req.passive_device_id));
+        return Err(core_error!(
+            "negotiate_select_monitor: message send failed ({})",
+            err
+        ));
+    }
 
-    // todo: handle monitor descriptions
+    let negotiate_resp = tokio::time::timeout(RECV_MESSAGE_TIMEOUT, resp_rx).await??;
 
-    Ok(NegotiateSelectMonitorResponse {})
+    Ok(NegotiateSelectMonitorResponse {
+        monitor_descriptions: negotiate_resp.monitor_descriptions,
+    })
 }
 
 pub async fn handle_negotiate_select_monitor_request(
     active_device_id: String,
     passive_device_id: String,
-    req: crate::api::endpoint::message::NegotiateSelectMonitorRequest,
-    message_tx: Sender<EndPointMessage>,
+    _: EndPointNegotiateSelectMonitorRequest,
+    message_tx: mpsc::Sender<EndPointMessage>,
 ) {
+    let resp = match crate::component::desktop::monitor::get_active_monitors() {
+        Ok(monitors) => {
+            let mut displays = Vec::new();
+
+            for monitor in monitors {
+                displays.push(MonitorDescription {
+                    id: monitor.id,
+                    name: monitor.name,
+                    frame_rate: monitor.refresh_rate,
+                    width: monitor.width,
+                    height: monitor.height,
+                    is_primary: monitor.is_primary,
+                    screen_shot: monitor.screen_shot,
+                });
+            }
+
+            EndPointMessage::NegotiateSelectMonitorResponse(
+                EndPointNegotiateSelectMonitorResponse {
+                    monitor_descriptions: displays,
+                },
+            )
+        }
+        Err(err) => {
+            tracing::error!(?err, "get active monitors failed");
+            EndPointMessage::Error
+        }
+    };
+
+    if let Err(err) = message_tx.send_timeout(resp, SEND_MESSAGE_TIMEOUT).await {
+        tracing::error!(
+            ?active_device_id,
+            ?passive_device_id,
+            handler = "handle_negotiate_visit_desktop_params_request",
+            ?err,
+            "message send timeout"
+        )
+    }
 }
 
 pub async fn handle_negotiate_select_monitor_response(
     active_device_id: String,
     passive_device_id: String,
-    resp: crate::api::endpoint::message::NegotiateSelectMonitorResponse,
+    resp: crate::api::endpoint::message::EndPointNegotiateSelectMonitorResponse,
 ) {
+    if let Some((_, tx)) = RESPONSE_CHANNELS.remove(&(active_device_id, passive_device_id)) {
+        let _ = tx.send(resp);
+    }
 }

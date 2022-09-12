@@ -18,6 +18,21 @@ use flutter_rust_bridge::*;
 // Section: imports
 
 use crate::api::config::ConfigProperties;
+use crate::api::endpoint::handlers::connect::ConnectRequest;
+use crate::api::endpoint::handlers::handshake::HandshakeRequest;
+use crate::api::endpoint::handlers::input::InputReqeust;
+use crate::api::endpoint::handlers::negotiate_finished::NegotiateFinishedRequest;
+use crate::api::endpoint::handlers::negotiate_select_monitor::NegotiateSelectMonitorRequest;
+use crate::api::endpoint::handlers::negotiate_select_monitor::NegotiateSelectMonitorResponse;
+use crate::api::endpoint::handlers::negotiate_visit_desktop_params::NegotiateVisitDesktopParamsRequest;
+use crate::api::endpoint::handlers::negotiate_visit_desktop_params::NegotiateVisitDesktopParamsResponse;
+use crate::api::endpoint::message::AudioSampleFormat;
+use crate::api::endpoint::message::AudioSampleRate;
+use crate::api::endpoint::message::InputEvent;
+use crate::api::endpoint::message::KeyboardEvent;
+use crate::api::endpoint::message::MonitorDescription;
+use crate::api::endpoint::message::MouseEvent;
+use crate::api::endpoint::message::VideoCodec;
 use crate::api::signaling::dial::DialRequest;
 use crate::api::signaling::heartbeat::HeartbeatRequest;
 use crate::api::signaling::heartbeat::HeartbeatResponse;
@@ -30,17 +45,19 @@ use crate::api::signaling::subscribe::SubscribeRequest;
 use crate::api::signaling::visit::ResourceType;
 use crate::api::signaling::visit::VisitRequest;
 use crate::api::signaling::visit::VisitResponse;
+use crate::component::input::key::KeyboardKey;
+use crate::component::input::key::MouseKey;
 
 // Section: wire functions
 
-fn wire_logger_init_impl(port_: MessagePort) {
+fn wire_init_logger_impl(port_: MessagePort) {
     FLUTTER_RUST_BRIDGE_HANDLER.wrap(
         WrapInfo {
-            debug_name: "logger_init",
+            debug_name: "init_logger",
             port: Some(port_),
             mode: FfiCallMode::Normal,
         },
-        move || move |task_callback| logger_init(),
+        move || move |task_callback| init_logger(),
     )
 }
 fn wire_config_read_impl(
@@ -171,6 +188,96 @@ fn wire_signaling_key_exchange_impl(
         },
     )
 }
+fn wire_endpoint_connect_impl(port_: MessagePort, req: impl Wire2Api<ConnectRequest> + UnwindSafe) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap(
+        WrapInfo {
+            debug_name: "endpoint_connect",
+            port: Some(port_),
+            mode: FfiCallMode::Normal,
+        },
+        move || {
+            let api_req = req.wire2api();
+            move |task_callback| endpoint_connect(api_req)
+        },
+    )
+}
+fn wire_endpoint_handshake_impl(
+    port_: MessagePort,
+    req: impl Wire2Api<HandshakeRequest> + UnwindSafe,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap(
+        WrapInfo {
+            debug_name: "endpoint_handshake",
+            port: Some(port_),
+            mode: FfiCallMode::Normal,
+        },
+        move || {
+            let api_req = req.wire2api();
+            move |task_callback| endpoint_handshake(api_req)
+        },
+    )
+}
+fn wire_endpoint_negotiate_visit_desktop_params_impl(
+    port_: MessagePort,
+    req: impl Wire2Api<NegotiateVisitDesktopParamsRequest> + UnwindSafe,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap(
+        WrapInfo {
+            debug_name: "endpoint_negotiate_visit_desktop_params",
+            port: Some(port_),
+            mode: FfiCallMode::Normal,
+        },
+        move || {
+            let api_req = req.wire2api();
+            move |task_callback| endpoint_negotiate_visit_desktop_params(api_req)
+        },
+    )
+}
+fn wire_endpoint_negotiate_select_monitor_impl(
+    port_: MessagePort,
+    req: impl Wire2Api<NegotiateSelectMonitorRequest> + UnwindSafe,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap(
+        WrapInfo {
+            debug_name: "endpoint_negotiate_select_monitor",
+            port: Some(port_),
+            mode: FfiCallMode::Normal,
+        },
+        move || {
+            let api_req = req.wire2api();
+            move |task_callback| endpoint_negotiate_select_monitor(api_req)
+        },
+    )
+}
+fn wire_endpoint_negotiate_finished_impl(
+    port_: MessagePort,
+    req: impl Wire2Api<NegotiateFinishedRequest> + UnwindSafe,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap(
+        WrapInfo {
+            debug_name: "endpoint_negotiate_finished",
+            port: Some(port_),
+            mode: FfiCallMode::Normal,
+        },
+        move || {
+            let api_req = req.wire2api();
+            move |task_callback| endpoint_negotiate_finished(api_req)
+        },
+    )
+}
+fn wire_endpoint_input_impl(port_: MessagePort, req: impl Wire2Api<InputReqeust> + UnwindSafe) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap(
+        WrapInfo {
+            debug_name: "endpoint_input",
+            port: Some(port_),
+            mode: FfiCallMode::Normal,
+        },
+        move || {
+            let api_req = req.wire2api();
+            move |task_callback| endpoint_input(api_req)
+        },
+    )
+}
 // Section: wrapper structs
 
 // Section: static checks
@@ -192,9 +299,142 @@ where
     }
 }
 
+impl Wire2Api<f32> for f32 {
+    fn wire2api(self) -> f32 {
+        self
+    }
+}
+
 impl Wire2Api<i32> for i32 {
     fn wire2api(self) -> i32 {
         self
+    }
+}
+
+impl Wire2Api<KeyboardKey> for i32 {
+    fn wire2api(self) -> KeyboardKey {
+        match self {
+            0 => KeyboardKey::A,
+            1 => KeyboardKey::B,
+            2 => KeyboardKey::C,
+            3 => KeyboardKey::D,
+            4 => KeyboardKey::E,
+            5 => KeyboardKey::F,
+            6 => KeyboardKey::G,
+            7 => KeyboardKey::H,
+            8 => KeyboardKey::I,
+            9 => KeyboardKey::J,
+            10 => KeyboardKey::K,
+            11 => KeyboardKey::L,
+            12 => KeyboardKey::M,
+            13 => KeyboardKey::N,
+            14 => KeyboardKey::O,
+            15 => KeyboardKey::P,
+            16 => KeyboardKey::Q,
+            17 => KeyboardKey::R,
+            18 => KeyboardKey::S,
+            19 => KeyboardKey::T,
+            20 => KeyboardKey::U,
+            21 => KeyboardKey::V,
+            22 => KeyboardKey::W,
+            23 => KeyboardKey::X,
+            24 => KeyboardKey::Y,
+            25 => KeyboardKey::Z,
+            26 => KeyboardKey::BackQuote,
+            27 => KeyboardKey::Digit0,
+            28 => KeyboardKey::Digit1,
+            29 => KeyboardKey::Digit2,
+            30 => KeyboardKey::Digit3,
+            31 => KeyboardKey::Digit4,
+            32 => KeyboardKey::Digit5,
+            33 => KeyboardKey::Digit6,
+            34 => KeyboardKey::Digit7,
+            35 => KeyboardKey::Digit8,
+            36 => KeyboardKey::Digit9,
+            37 => KeyboardKey::Minus,
+            38 => KeyboardKey::Equal,
+            39 => KeyboardKey::Tab,
+            40 => KeyboardKey::CapsLock,
+            41 => KeyboardKey::LeftShift,
+            42 => KeyboardKey::LeftControl,
+            43 => KeyboardKey::LeftAlt,
+            44 => KeyboardKey::LeftMeta,
+            45 => KeyboardKey::Space,
+            46 => KeyboardKey::RightMeta,
+            47 => KeyboardKey::RightControl,
+            48 => KeyboardKey::RightAlt,
+            49 => KeyboardKey::RightShift,
+            50 => KeyboardKey::Comma,
+            51 => KeyboardKey::Period,
+            52 => KeyboardKey::Slash,
+            53 => KeyboardKey::Semicolon,
+            54 => KeyboardKey::QuoteSingle,
+            55 => KeyboardKey::Enter,
+            56 => KeyboardKey::BracketLeft,
+            57 => KeyboardKey::BracketRight,
+            58 => KeyboardKey::BackSlash,
+            59 => KeyboardKey::Backspace,
+            60 => KeyboardKey::NumLock,
+            61 => KeyboardKey::NumpadEquals,
+            62 => KeyboardKey::NumpadDivide,
+            63 => KeyboardKey::NumpadMultiply,
+            64 => KeyboardKey::NumpadSubtract,
+            65 => KeyboardKey::NumpadAdd,
+            66 => KeyboardKey::NumpadEnter,
+            67 => KeyboardKey::Numpad0,
+            68 => KeyboardKey::Numpad1,
+            69 => KeyboardKey::Numpad2,
+            70 => KeyboardKey::Numpad3,
+            71 => KeyboardKey::Numpad4,
+            72 => KeyboardKey::Numpad5,
+            73 => KeyboardKey::Numpad6,
+            74 => KeyboardKey::Numpad7,
+            75 => KeyboardKey::Numpad8,
+            76 => KeyboardKey::Numpad9,
+            77 => KeyboardKey::NumpadDecimal,
+            78 => KeyboardKey::ArrowLeft,
+            79 => KeyboardKey::ArrowUp,
+            80 => KeyboardKey::ArrowRight,
+            81 => KeyboardKey::ArrowDown,
+            82 => KeyboardKey::Escape,
+            83 => KeyboardKey::PrintScreen,
+            84 => KeyboardKey::ScrollLock,
+            85 => KeyboardKey::Pause,
+            86 => KeyboardKey::Insert,
+            87 => KeyboardKey::Delete,
+            88 => KeyboardKey::Home,
+            89 => KeyboardKey::End,
+            90 => KeyboardKey::PageUp,
+            91 => KeyboardKey::PageDown,
+            92 => KeyboardKey::F1,
+            93 => KeyboardKey::F2,
+            94 => KeyboardKey::F3,
+            95 => KeyboardKey::F4,
+            96 => KeyboardKey::F5,
+            97 => KeyboardKey::F6,
+            98 => KeyboardKey::F7,
+            99 => KeyboardKey::F8,
+            100 => KeyboardKey::F9,
+            101 => KeyboardKey::F10,
+            102 => KeyboardKey::F11,
+            103 => KeyboardKey::F12,
+            104 => KeyboardKey::Fn,
+            _ => unreachable!("Invalid variant for KeyboardKey: {}", self),
+        }
+    }
+}
+
+impl Wire2Api<MouseKey> for i32 {
+    fn wire2api(self) -> MouseKey {
+        match self {
+            0 => MouseKey::None,
+            1 => MouseKey::Left,
+            2 => MouseKey::Right,
+            3 => MouseKey::Wheel,
+            4 => MouseKey::SideForward,
+            5 => MouseKey::SideBack,
+            _ => unreachable!("Invalid variant for MouseKey: {}", self),
+        }
     }
 }
 
@@ -220,6 +460,29 @@ impl Wire2Api<u8> for u8 {
 }
 
 // Section: impl IntoDart
+
+impl support::IntoDart for AudioSampleFormat {
+    fn into_dart(self) -> support::DartAbi {
+        match self {
+            Self::I16 => 0,
+            Self::U16 => 1,
+            Self::F32 => 2,
+        }
+        .into_dart()
+    }
+}
+impl support::IntoDart for AudioSampleRate {
+    fn into_dart(self) -> support::DartAbi {
+        match self {
+            Self::HZ8000 => 0,
+            Self::HZ12000 => 1,
+            Self::HZ160000 => 2,
+            Self::HZ240000 => 3,
+            Self::HZ480000 => 4,
+        }
+        .into_dart()
+    }
+}
 
 impl support::IntoDart for ConfigProperties {
     fn into_dart(self) -> support::DartAbi {
@@ -252,6 +515,44 @@ impl support::IntoDart for KeyExchangeResponse {
     }
 }
 impl support::IntoDartExceptPrimitive for KeyExchangeResponse {}
+
+impl support::IntoDart for MonitorDescription {
+    fn into_dart(self) -> support::DartAbi {
+        vec![
+            self.id.into_dart(),
+            self.name.into_dart(),
+            self.frame_rate.into_dart(),
+            self.width.into_dart(),
+            self.height.into_dart(),
+            self.is_primary.into_dart(),
+            self.screen_shot.into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl support::IntoDartExceptPrimitive for MonitorDescription {}
+
+impl support::IntoDart for NegotiateSelectMonitorResponse {
+    fn into_dart(self) -> support::DartAbi {
+        vec![self.monitor_descriptions.into_dart()].into_dart()
+    }
+}
+impl support::IntoDartExceptPrimitive for NegotiateSelectMonitorResponse {}
+
+impl support::IntoDart for NegotiateVisitDesktopParamsResponse {
+    fn into_dart(self) -> support::DartAbi {
+        vec![
+            self.video_codec.into_dart(),
+            self.audio_sample_rate.into_dart(),
+            self.audio_sample_format.into_dart(),
+            self.audio_dual_channel.into_dart(),
+            self.os_type.into_dart(),
+            self.os_version.into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl support::IntoDartExceptPrimitive for NegotiateVisitDesktopParamsResponse {}
 
 impl support::IntoDart for PublishMessage {
     fn into_dart(self) -> support::DartAbi {
@@ -289,6 +590,17 @@ impl support::IntoDart for ResourceType {
     }
 }
 
+impl support::IntoDart for VideoCodec {
+    fn into_dart(self) -> support::DartAbi {
+        match self {
+            Self::H264 => 0,
+            Self::HEVC => 1,
+            Self::VP8 => 2,
+            Self::VP9 => 3,
+        }
+        .into_dart()
+    }
+}
 impl support::IntoDart for VisitResponse {
     fn into_dart(self) -> support::DartAbi {
         vec![self.allow.into_dart()].into_dart()

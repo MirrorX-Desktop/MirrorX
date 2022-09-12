@@ -1,6 +1,22 @@
+use crate::{
+    api::{
+        config::ConfigProperties,
+        endpoint::handlers::{
+            connect::*, handshake::*, input::*, negotiate_finished::*, negotiate_select_monitor::*,
+            negotiate_visit_desktop_params::*,
+        },
+        signaling::{
+            dial::{dial, DialRequest},
+            heartbeat::{heartbeat, HeartbeatRequest, HeartbeatResponse},
+            key_exchange::{key_exchange, KeyExchangeRequest, KeyExchangeResponse},
+            register::{register, RegisterRequest, RegisterResponse},
+            subscribe::{subscribe, PublishMessage, SubscribeRequest},
+            visit::{visit, VisitRequest, VisitResponse},
+        },
+    },
+    utility::runtime::TOKIO_RUNTIME,
+};
 use flutter_rust_bridge::StreamSink;
-
-use crate::utility::runtime::TOKIO_RUNTIME;
 
 macro_rules! async_block_on {
     ($future:expr) => {{
@@ -16,126 +32,88 @@ macro_rules! async_block_on {
     }};
 }
 
-pub fn logger_init() -> anyhow::Result<()> {
+/*
+    Init API
+*/
+
+pub fn init_logger() -> anyhow::Result<()> {
     let _ = tracing_subscriber::fmt::try_init();
     Ok(())
 }
 
-pub fn config_read(
-    path: String,
-    key: String,
-) -> anyhow::Result<Option<crate::api::config::ConfigProperties>> {
+/*
+    Config API
+*/
+
+pub fn config_read(path: String, key: String) -> anyhow::Result<Option<ConfigProperties>> {
     let model = crate::api::config::read(&path, &key)?;
     Ok(model)
 }
 
-pub fn config_save(
-    path: String,
-    key: String,
-    properties: crate::api::config::ConfigProperties,
-) -> anyhow::Result<()> {
+pub fn config_save(path: String, key: String, properties: ConfigProperties) -> anyhow::Result<()> {
     crate::api::config::save(&path, &key, &properties)?;
     Ok(())
 }
 
-pub fn signaling_dial(req: crate::api::signaling::dial::DialRequest) -> anyhow::Result<()> {
-    async_block_on! {
-        crate::api::signaling::dial::dial(req)
-    }
+/*
+    Signaling API
+*/
+
+pub fn signaling_dial(req: DialRequest) -> anyhow::Result<()> {
+    async_block_on!(dial(req))
 }
 
-pub fn signaling_register(
-    req: crate::api::signaling::register::RegisterRequest,
-) -> anyhow::Result<crate::api::signaling::register::RegisterResponse> {
-    async_block_on! {
-        crate::api::signaling::register::register(req)
-    }
+pub fn signaling_register(req: RegisterRequest) -> anyhow::Result<RegisterResponse> {
+    async_block_on!(register(req))
 }
 
 pub fn signaling_subscribe(
-    req: crate::api::signaling::subscribe::SubscribeRequest,
-    stream: StreamSink<crate::api::signaling::subscribe::PublishMessage>,
+    req: SubscribeRequest,
+    stream: StreamSink<PublishMessage>,
 ) -> anyhow::Result<()> {
-    async_block_on! {
-        crate::api::signaling::subscribe::subscribe(req, stream)
-    }
+    async_block_on!(subscribe(req, stream))
 }
 
-pub fn signaling_heartbeat(
-    req: crate::api::signaling::heartbeat::HeartbeatRequest,
-) -> anyhow::Result<crate::api::signaling::heartbeat::HeartbeatResponse> {
-    async_block_on! {
-        crate::api::signaling::heartbeat::heartbeat(req)
-    }
+pub fn signaling_heartbeat(req: HeartbeatRequest) -> anyhow::Result<HeartbeatResponse> {
+    async_block_on!(heartbeat(req))
 }
 
-pub fn signaling_visit(
-    req: crate::api::signaling::visit::VisitRequest,
-) -> anyhow::Result<crate::api::signaling::visit::VisitResponse> {
-    async_block_on! {
-        crate::api::signaling::visit::visit(req)
-    }
+pub fn signaling_visit(req: VisitRequest) -> anyhow::Result<VisitResponse> {
+    async_block_on!(visit(req))
 }
 
-pub fn signaling_key_exchange(
-    req: crate::api::signaling::key_exchange::KeyExchangeRequest,
-) -> anyhow::Result<crate::api::signaling::key_exchange::KeyExchangeResponse> {
-    async_block_on! {
-        crate::api::signaling::key_exchange::key_exchange(req)
-    }
+pub fn signaling_key_exchange(req: KeyExchangeRequest) -> anyhow::Result<KeyExchangeResponse> {
+    async_block_on!(key_exchange(req))
 }
 
-// pub fn endpoint_get_display_info(
-//     remote_device_id: String,
-// ) -> anyhow::Result<GetDisplayInfoResponse> {
-//     async_block_on! {
-//         api::endpoint::get_display_info(
-//             remote_device_id
-//         )
-//     }
-// }
+/*
+    EndPoint API
+*/
 
-// pub fn endpoint_start_media_transmission(
-//     remote_device_id: String,
-//     expect_fps: u8,
-//     expect_display_id: String,
-//     texture_id: i64,
-//     video_texture_ptr: i64,
-//     update_frame_callback_ptr: i64,
-// ) -> anyhow::Result<StartMediaTransmissionResponse> {
-//     async_block_on! {
-//         api::endpoint::start_media_transmission(
-//             remote_device_id,
-//             expect_fps,
-//             expect_display_id,
-//             texture_id,
-//             video_texture_ptr,
-//             update_frame_callback_ptr,
-//         )
-//     }
-// }
+pub fn endpoint_connect(req: ConnectRequest) -> anyhow::Result<()> {
+    async_block_on!(connect(req))
+}
 
-// pub fn endpoint_input(remote_device_id: String, event: InputEvent) -> anyhow::Result<()> {
-//     async_block_on! {
-//         api::endpoint::input(remote_device_id, event)
-//     }
-// }
+pub fn endpoint_handshake(req: HandshakeRequest) -> anyhow::Result<()> {
+    async_block_on!(handshake(req))
+}
 
-// pub fn endpoint_manually_close(remote_device_id: String) -> anyhow::Result<()> {
-//     api::endpoint::manually_close(remote_device_id).map_err(|err| anyhow::anyhow!(err))
-// }
+pub fn endpoint_negotiate_visit_desktop_params(
+    req: NegotiateVisitDesktopParamsRequest,
+) -> anyhow::Result<NegotiateVisitDesktopParamsResponse> {
+    async_block_on!(negotiate_visit_desktop_params(req))
+}
 
-// pub fn endpoint_close_notify(
-//     remote_device_id: String,
-//     sink: flutter_rust_bridge::StreamSink<()>,
-// ) -> anyhow::Result<()> {
-//     let mut rx = api::endpoint::register_close_notificaton(remote_device_id)
-//         .map_err(|err| anyhow::anyhow!(err))?;
+pub fn endpoint_negotiate_select_monitor(
+    req: NegotiateSelectMonitorRequest,
+) -> anyhow::Result<NegotiateSelectMonitorResponse> {
+    async_block_on!(negotiate_select_monitor(req))
+}
 
-//     TOKIO_RUNTIME.block_on(async move {
-//         let _ = rx.recv().await;
-//     });
+pub fn endpoint_negotiate_finished(req: NegotiateFinishedRequest) -> anyhow::Result<()> {
+    async_block_on!(negotiate_finished(req))
+}
 
-//     sink.add(());
-//     Ok(())
-// }
+pub fn endpoint_input(req: InputReqeust) -> anyhow::Result<()> {
+    async_block_on!(input(req))
+}

@@ -34,7 +34,7 @@ impl Decoder {
 
     pub fn decode(
         &mut self,
-        mut video_frame: crate::api::endpoint::message::VideoFrame,
+        mut video_frame: crate::api::endpoint::message::EndPointVideoFrame,
         decoded_frame_tx: *mut crossbeam::channel::Sender<DecodedFrame>,
     ) -> CoreResult<()> {
         unsafe {

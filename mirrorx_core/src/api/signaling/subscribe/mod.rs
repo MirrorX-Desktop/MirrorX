@@ -22,7 +22,7 @@ pub struct SubscribeRequest {
 
 pub async fn subscribe(
     req: SubscribeRequest,
-    stream: StreamSink<crate::api::signaling::subscribe::PublishMessage>,
+    stream: StreamSink<PublishMessage>,
 ) -> CoreResult<()> {
     let mut server_stream = SignalingClientManager::get_client()
         .await?

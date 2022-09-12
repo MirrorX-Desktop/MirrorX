@@ -13,20 +13,17 @@ pub struct EndPointHandshakeResponse {}
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub enum EndPointMessage {
-    Error(Error),
-    NegotiateVisitDesktopParamsRequest(NegotiateVisitDesktopParamsRequest),
-    NegotiateVisitDesktopParamsResponse(NegotiateVisitDesktopParamsResponse),
-    NegotiateSelectMonitorRequest(NegotiateSelectMonitorRequest),
-    NegotiateSelectMonitorResponse(NegotiateSelectMonitorResponse),
-    NegotiateFinishedRequest(NegotiateFinishedRequest),
-    NegotiateFinishedResponse(NegotiateFinishedResponse),
-    VideoFrame(VideoFrame),
-    AudioFrame(AudioFrame),
-    Input(Input),
+    Error,
+    NegotiateVisitDesktopParamsRequest(EndPointNegotiateVisitDesktopParamsRequest),
+    NegotiateVisitDesktopParamsResponse(EndPointNegotiateVisitDesktopParamsResponse),
+    NegotiateSelectMonitorRequest(EndPointNegotiateSelectMonitorRequest),
+    NegotiateSelectMonitorResponse(EndPointNegotiateSelectMonitorResponse),
+    NegotiateFinishedRequest(EndPointNegotiateFinishedRequest),
+    NegotiateFinishedResponse(EndPointNegotiateFinishedResponse),
+    VideoFrame(EndPointVideoFrame),
+    AudioFrame(EndPointAudioFrame),
+    Input(EndPointInput),
 }
-
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-pub enum Error {}
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub enum VideoCodec {
@@ -53,7 +50,7 @@ pub enum AudioSampleFormat {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-pub struct NegotiateVisitDesktopParamsRequest {
+pub struct EndPointNegotiateVisitDesktopParamsRequest {
     pub video_codecs: Vec<VideoCodec>,
     pub audio_max_sample_rate: AudioSampleRate,
     pub audio_sample_formats: Vec<AudioSampleFormat>,
@@ -61,7 +58,7 @@ pub struct NegotiateVisitDesktopParamsRequest {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-pub struct NegotiateVisitDesktopParamsResponse {
+pub struct EndPointNegotiateVisitDesktopParamsResponse {
     pub video_codec: VideoCodec,
     pub audio_sample_rate: AudioSampleRate,
     pub audio_sample_format: AudioSampleFormat,
@@ -71,7 +68,7 @@ pub struct NegotiateVisitDesktopParamsResponse {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-pub struct NegotiateSelectMonitorRequest {}
+pub struct EndPointNegotiateSelectMonitorRequest {}
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct MonitorDescription {
@@ -86,21 +83,21 @@ pub struct MonitorDescription {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-pub struct NegotiateSelectMonitorResponse {
+pub struct EndPointNegotiateSelectMonitorResponse {
     pub monitor_descriptions: Vec<MonitorDescription>,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-pub struct NegotiateFinishedRequest {
+pub struct EndPointNegotiateFinishedRequest {
     pub selected_monitor_id: String,
     pub expected_frame_rate: u8,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-pub struct NegotiateFinishedResponse {}
+pub struct EndPointNegotiateFinishedResponse {}
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-pub struct VideoFrame {
+pub struct EndPointVideoFrame {
     #[serde(with = "serde_bytes")]
     pub sps: Option<Vec<u8>>,
 
@@ -112,7 +109,7 @@ pub struct VideoFrame {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-pub struct AudioFrame {
+pub struct EndPointAudioFrame {
     #[serde(with = "serde_bytes")]
     pub buffer: Vec<u8>,
     pub frame_size_per_channel: u16,
@@ -140,6 +137,6 @@ pub enum InputEvent {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-pub struct Input {
+pub struct EndPointInput {
     pub event: InputEvent,
 }

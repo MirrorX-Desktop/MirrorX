@@ -1,97 +1,51 @@
-mod connect;
-mod handlers;
-mod handshake;
-
+pub mod handlers;
 pub mod message;
 
-use self::{handlers::*, message::EndPointMessage};
+use self::message::EndPointMessage;
 use crate::{
-    core_error,
-    error::{CoreError, CoreResult},
+    api::endpoint::handlers::{
+        audio_frame::handle_audio_frame,
+        error::handle_error,
+        input::handle_input,
+        negotiate_finished::{
+            handle_negotiate_finished_request, handle_negotiate_finished_response,
+        },
+        negotiate_select_monitor::{
+            handle_negotiate_select_monitor_request, handle_negotiate_select_monitor_response,
+        },
+        negotiate_visit_desktop_params::{
+            handle_negotiate_visit_desktop_params_request,
+            handle_negotiate_visit_desktop_params_response,
+        },
+        video_frame::handle_video_frame,
+    },
+    error::CoreResult,
     utility::{nonce_value::NonceValue, runtime::TOKIO_RUNTIME, serializer::BINCODE_SERIALIZER},
 };
 use bincode::Options;
-use bytes::{Buf, Bytes, BytesMut};
+use bytes::{Bytes, BytesMut};
 use dashmap::DashMap;
 use futures::{
     stream::{SplitSink, SplitStream},
     SinkExt, StreamExt,
 };
+use moka::future::Cache;
 use once_cell::sync::Lazy;
 use ring::aead::{OpeningKey, SealingKey};
 use std::time::Duration;
 use tokio::net::TcpStream;
 use tokio_util::codec::{Framed, LengthDelimitedCodec};
 
-const CALL_TIMEOUT: Duration = Duration::from_secs(60);
+const SEND_MESSAGE_TIMEOUT: Duration = Duration::from_secs(10);
+const RECV_MESSAGE_TIMEOUT: Duration = Duration::from_secs(30);
 
-pub static RESERVE_ENDPOINTS: Lazy<
-    DashMap<
-        (String, String),
-        (
-            Framed<TcpStream, LengthDelimitedCodec>,
-            OpeningKey<NonceValue>,
-            SealingKey<NonceValue>,
-        ),
-    >,
+pub static RESERVE_STREAMS: Lazy<
+    DashMap<(String, String), Framed<TcpStream, LengthDelimitedCodec>>,
 > = Lazy::new(|| DashMap::new());
 
-pub static ENDPOINTS: Lazy<DashMap<(String, String), async_broadcast::Sender<()>>> =
-    Lazy::new(|| DashMap::new());
+pub static ENDPOINTS: Lazy<Cache<(String, String), tokio::sync::mpsc::Sender<EndPointMessage>>> =
+    Lazy::new(|| Cache::builder().initial_capacity(1).build());
 
-pub fn serve(
-    active_device_id: String,
-    passive_device_id: String,
-    stream: Framed<TcpStream, LengthDelimitedCodec>,
-    opening_key: OpeningKey<NonceValue>,
-    sealing_key: SealingKey<NonceValue>,
-) -> CoreResult<()> {
-    let (exit_tx, exit_rx) = async_broadcast::broadcast(16);
-    let (send_message_tx, send_message_rx) = tokio::sync::mpsc::channel(1);
-    let (sink, stream) = stream.split();
-
-    serve_reader(
-        active_device_id.to_owned(),
-        passive_device_id.to_owned(),
-        exit_tx.clone(),
-        exit_tx.new_receiver(),
-        stream,
-        opening_key,
-        send_message_tx,
-    );
-
-    serve_writer(
-        active_device_id,
-        passive_device_id,
-        exit_tx.clone(),
-        exit_tx.new_receiver(),
-        sink,
-        sealing_key,
-        send_message_rx,
-    );
-
-    Ok(())
-}
-
-async fn stream_call<Request, Reply>(
-    stream: &mut Framed<TcpStream, LengthDelimitedCodec>,
-    req: Request,
-) -> CoreResult<Reply>
-where
-    Request: serde::Serialize,
-    Reply: serde::de::DeserializeOwned,
-{
-    let req_buffer = Bytes::from(BINCODE_SERIALIZER.serialize(&req)?);
-
-    stream.send(req_buffer).await?;
-    let resp_buffer = tokio::time::timeout(CALL_TIMEOUT, stream.next())
-        .await?
-        .ok_or(core_error!("stream was closed"))?
-        .map_err(|err| core_error!("stream read failed ({})", err))?;
-
-    let resp: Reply = BINCODE_SERIALIZER.deserialize_from(resp_buffer.reader())?;
-    Ok(resp)
-}
 // pub async fn start_video_capture(
 //     &self,
 //     display_id: &str,
@@ -215,10 +169,10 @@ where
 //     Ok(())
 // }
 
-fn serve_reader(
+pub fn serve_reader(
     active_device_id: String,
     passive_device_id: String,
-    mut exit_tx: async_broadcast::Sender<()>,
+    exit_tx: async_broadcast::Sender<()>,
     mut exit_rx: async_broadcast::Receiver<()>,
     mut stream: SplitStream<Framed<TcpStream, LengthDelimitedCodec>>,
     mut opening_key: OpeningKey<NonceValue>,
@@ -268,14 +222,19 @@ fn serve_reader(
         }
 
         let _ = exit_tx.broadcast(()).await;
+
+        ENDPOINTS
+            .invalidate(&(active_device_id.to_owned(), passive_device_id.to_owned()))
+            .await;
+
         tracing::info!(?active_device_id, ?passive_device_id, "read process exit");
     });
 }
 
-fn serve_writer(
+pub fn serve_writer(
     active_device_id: String,
     passive_device_id: String,
-    mut exit_tx: async_broadcast::Sender<()>,
+    exit_tx: async_broadcast::Sender<()>,
     mut exit_rx: async_broadcast::Receiver<()>,
     mut sink: SplitSink<Framed<TcpStream, LengthDelimitedCodec>, Bytes>,
     mut sealing_key: SealingKey<NonceValue>,
@@ -320,6 +279,11 @@ fn serve_writer(
         }
 
         let _ = exit_tx.broadcast(()).await;
+
+        ENDPOINTS
+            .invalidate(&(active_device_id.to_owned(), passive_device_id.to_owned()))
+            .await;
+
         tracing::info!(?active_device_id, ?passive_device_id, "write process exit");
     });
 }
@@ -357,8 +321,9 @@ async fn handle_message(
     message_tx: tokio::sync::mpsc::Sender<EndPointMessage>,
 ) {
     macro_rules! match_and_handle_message {
-        ($message:expr, $(reply $req_message_type:path => $req_handler:ident,)* $(noreply $other_message_type:path => $other_handler:ident,)*) => {
+        ($message:expr, $(error $err_message_type:path => $err_handler:ident,)? $(reply $req_message_type:path => $req_handler:ident,)* $(noreply $other_message_type:path => $other_handler:ident,)*) => {
             match $message{
+                $($err_message_type => $err_handler(active_device_id,passive_device_id).await,)?
                 $($req_message_type(req) => $req_handler(active_device_id,passive_device_id,req,message_tx).await,)+
                 $($other_message_type(req) => $other_handler(active_device_id,passive_device_id,req).await,)+
             }
@@ -366,10 +331,10 @@ async fn handle_message(
     }
 
     match_and_handle_message!(message,
+        error EndPointMessage::Error => handle_error,
         reply EndPointMessage::NegotiateVisitDesktopParamsRequest => handle_negotiate_visit_desktop_params_request,
         reply EndPointMessage::NegotiateSelectMonitorRequest => handle_negotiate_select_monitor_request,
         reply EndPointMessage::NegotiateFinishedRequest => handle_negotiate_finished_request,
-        noreply EndPointMessage::Error => handle_error,
         noreply EndPointMessage::NegotiateVisitDesktopParamsResponse => handle_negotiate_visit_desktop_params_response,
         noreply EndPointMessage::NegotiateSelectMonitorResponse => handle_negotiate_select_monitor_response,
         noreply EndPointMessage::NegotiateFinishedResponse => handle_negotiate_finished_response,

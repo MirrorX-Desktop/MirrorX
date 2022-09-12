@@ -27,6 +27,9 @@ pub enum CoreError {
     #[error("operation timeout")]
     Timeout(#[from] tokio::time::error::Elapsed),
 
+    #[error("tokio oneshot channel receive error ({0:?})")]
+    OneshotReceiveError(#[from] tokio::sync::oneshot::error::RecvError),
+
     #[error("bincode serialization or deserialization failed ({0:?})")]
     BincodeError(#[from] bincode::Error),
 
