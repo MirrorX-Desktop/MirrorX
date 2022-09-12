@@ -19,13 +19,13 @@ abstract class MirrorXCore {
   FlutterRustBridgeTaskConstMeta get kInitLoggerConstMeta;
 
   Future<ConfigProperties?> configRead(
-      {required String path, required String key, dynamic hint});
+      {required String path, required String domain, dynamic hint});
 
   FlutterRustBridgeTaskConstMeta get kConfigReadConstMeta;
 
   Future<void> configSave(
       {required String path,
-      required String key,
+      required String domain,
       required ConfigProperties properties,
       dynamic hint});
 
@@ -548,43 +548,43 @@ class MirrorXCoreImpl implements MirrorXCore {
       );
 
   Future<ConfigProperties?> configRead(
-          {required String path, required String key, dynamic hint}) =>
+          {required String path, required String domain, dynamic hint}) =>
       _platform.executeNormal(FlutterRustBridgeTask(
         callFfi: (port_) => _platform.inner.wire_config_read(port_,
-            _platform.api2wire_String(path), _platform.api2wire_String(key)),
+            _platform.api2wire_String(path), _platform.api2wire_String(domain)),
         parseSuccessData: _wire2api_opt_box_autoadd_config_properties,
         constMeta: kConfigReadConstMeta,
-        argValues: [path, key],
+        argValues: [path, domain],
         hint: hint,
       ));
 
   FlutterRustBridgeTaskConstMeta get kConfigReadConstMeta =>
       const FlutterRustBridgeTaskConstMeta(
         debugName: "config_read",
-        argNames: ["path", "key"],
+        argNames: ["path", "domain"],
       );
 
   Future<void> configSave(
           {required String path,
-          required String key,
+          required String domain,
           required ConfigProperties properties,
           dynamic hint}) =>
       _platform.executeNormal(FlutterRustBridgeTask(
         callFfi: (port_) => _platform.inner.wire_config_save(
             port_,
             _platform.api2wire_String(path),
-            _platform.api2wire_String(key),
+            _platform.api2wire_String(domain),
             _platform.api2wire_box_autoadd_config_properties(properties)),
         parseSuccessData: _wire2api_unit,
         constMeta: kConfigSaveConstMeta,
-        argValues: [path, key, properties],
+        argValues: [path, domain, properties],
         hint: hint,
       ));
 
   FlutterRustBridgeTaskConstMeta get kConfigSaveConstMeta =>
       const FlutterRustBridgeTaskConstMeta(
         debugName: "config_save",
-        argNames: ["path", "key", "properties"],
+        argNames: ["path", "domain", "properties"],
       );
 
   Future<void> signalingDial({required DialRequest req, dynamic hint}) =>
@@ -1460,12 +1460,12 @@ class MirrorXCoreWire implements FlutterRustBridgeWireBase {
   void wire_config_read(
     int port_,
     ffi.Pointer<wire_uint_8_list> path,
-    ffi.Pointer<wire_uint_8_list> key,
+    ffi.Pointer<wire_uint_8_list> domain,
   ) {
     return _wire_config_read(
       port_,
       path,
-      key,
+      domain,
     );
   }
 
@@ -1480,13 +1480,13 @@ class MirrorXCoreWire implements FlutterRustBridgeWireBase {
   void wire_config_save(
     int port_,
     ffi.Pointer<wire_uint_8_list> path,
-    ffi.Pointer<wire_uint_8_list> key,
+    ffi.Pointer<wire_uint_8_list> domain,
     ffi.Pointer<wire_ConfigProperties> properties,
   ) {
     return _wire_config_save(
       port_,
       path,
-      key,
+      domain,
       properties,
     );
   }

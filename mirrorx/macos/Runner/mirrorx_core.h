@@ -168,11 +168,13 @@ void store_dart_post_cobject(DartPostCObjectFnType ptr);
 
 void wire_init_logger(int64_t port_);
 
-void wire_config_read(int64_t port_, struct wire_uint_8_list *path, struct wire_uint_8_list *key);
+void wire_config_read(int64_t port_,
+                      struct wire_uint_8_list *path,
+                      struct wire_uint_8_list *domain);
 
 void wire_config_save(int64_t port_,
                       struct wire_uint_8_list *path,
-                      struct wire_uint_8_list *key,
+                      struct wire_uint_8_list *domain,
                       struct wire_ConfigProperties *properties);
 
 void wire_signaling_dial(int64_t port_, struct wire_DialRequest *req);

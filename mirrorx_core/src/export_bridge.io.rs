@@ -10,19 +10,19 @@ pub extern "C" fn wire_init_logger(port_: i64) {
 pub extern "C" fn wire_config_read(
     port_: i64,
     path: *mut wire_uint_8_list,
-    key: *mut wire_uint_8_list,
+    domain: *mut wire_uint_8_list,
 ) {
-    wire_config_read_impl(port_, path, key)
+    wire_config_read_impl(port_, path, domain)
 }
 
 #[no_mangle]
 pub extern "C" fn wire_config_save(
     port_: i64,
     path: *mut wire_uint_8_list,
-    key: *mut wire_uint_8_list,
+    domain: *mut wire_uint_8_list,
     properties: *mut wire_ConfigProperties,
 ) {
-    wire_config_save_impl(port_, path, key, properties)
+    wire_config_save_impl(port_, path, domain, properties)
 }
 
 #[no_mangle]

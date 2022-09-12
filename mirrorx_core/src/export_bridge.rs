@@ -63,7 +63,7 @@ fn wire_init_logger_impl(port_: MessagePort) {
 fn wire_config_read_impl(
     port_: MessagePort,
     path: impl Wire2Api<String> + UnwindSafe,
-    key: impl Wire2Api<String> + UnwindSafe,
+    domain: impl Wire2Api<String> + UnwindSafe,
 ) {
     FLUTTER_RUST_BRIDGE_HANDLER.wrap(
         WrapInfo {
@@ -73,15 +73,15 @@ fn wire_config_read_impl(
         },
         move || {
             let api_path = path.wire2api();
-            let api_key = key.wire2api();
-            move |task_callback| config_read(api_path, api_key)
+            let api_domain = domain.wire2api();
+            move |task_callback| config_read(api_path, api_domain)
         },
     )
 }
 fn wire_config_save_impl(
     port_: MessagePort,
     path: impl Wire2Api<String> + UnwindSafe,
-    key: impl Wire2Api<String> + UnwindSafe,
+    domain: impl Wire2Api<String> + UnwindSafe,
     properties: impl Wire2Api<ConfigProperties> + UnwindSafe,
 ) {
     FLUTTER_RUST_BRIDGE_HANDLER.wrap(
@@ -92,9 +92,9 @@ fn wire_config_save_impl(
         },
         move || {
             let api_path = path.wire2api();
-            let api_key = key.wire2api();
+            let api_domain = domain.wire2api();
             let api_properties = properties.wire2api();
-            move |task_callback| config_save(api_path, api_key, api_properties)
+            move |task_callback| config_save(api_path, api_domain, api_properties)
         },
     )
 }

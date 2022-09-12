@@ -45,13 +45,17 @@ pub fn init_logger() -> anyhow::Result<()> {
     Config API
 */
 
-pub fn config_read(path: String, key: String) -> anyhow::Result<Option<ConfigProperties>> {
-    let model = crate::api::config::read(&path, &key)?;
+pub fn config_read(path: String, domain: String) -> anyhow::Result<Option<ConfigProperties>> {
+    let model = crate::api::config::read(&path, &domain)?;
     Ok(model)
 }
 
-pub fn config_save(path: String, key: String, properties: ConfigProperties) -> anyhow::Result<()> {
-    crate::api::config::save(&path, &key, &properties)?;
+pub fn config_save(
+    path: String,
+    domain: String,
+    properties: ConfigProperties,
+) -> anyhow::Result<()> {
+    crate::api::config::save(&path, &domain, &properties)?;
     Ok(())
 }
 
