@@ -15,7 +15,7 @@ pub struct DialRequest {
 }
 
 pub async fn dial(req: DialRequest) -> CoreResult<()> {
-    let uri = Uri::try_from(req.uri).map_err(|err| core_error!("invalid uri format"))?;
+    let uri = Uri::try_from(req.uri).map_err(|_| core_error!("invalid uri format"))?;
 
     let channel = Channel::builder(uri)
         .tcp_nodelay(true)

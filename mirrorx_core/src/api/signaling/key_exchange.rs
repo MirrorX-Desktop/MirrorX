@@ -40,12 +40,16 @@ pub async fn key_exchange(req: KeyExchangeRequest) -> CoreResult<KeyExchangeResp
     let mut active_exchange_nonce = [0u8; ring::aead::NONCE_LEN];
     OsRng.fill_bytes(&mut active_exchange_nonce);
 
+    let mut visit_credentials_buffer = [0u8; 16];
+    OsRng.fill_bytes(&mut visit_credentials_buffer);
+
     // generate and sealing active device key exchange secret
     let active_device_secret = KeyExchangeActiveDeviceSecret {
         exchange_reply_public_key_n: reply_public_key.n().to_bytes_le(),
         exchange_reply_public_key_e: reply_public_key.e().to_bytes_le(),
         active_exchange_public_key: active_exchange_public_key.as_ref().to_owned(),
         active_exchange_nonce: active_exchange_nonce.to_vec(),
+        visit_credentials: hex::encode_upper(visit_credentials_buffer),
     };
 
     // generate secret sealing key with salt

@@ -45,7 +45,7 @@ tonic = { version = "0.8.0", features = ["gzip"] }
 prost = "0.11.0"
 serde_json = "1.0.85"
 either = "1.8.0"
-signaling_proto = { git = "https://github.com/MirrorX-Desktop/signaling.git", commit = "ceb6a00af234c9286bb5c0ccf1ca4b0de37ee8ec" }
+signaling_proto = { git = "https://github.com/MirrorX-Desktop/signaling.git" }
 moka = { version = "0.9.4", features = ["future"] }
 
 [target.x86_64-apple-darwin.dependencies]

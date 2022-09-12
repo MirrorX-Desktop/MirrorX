@@ -10,7 +10,7 @@ use crate::{
 use bincode::Options;
 use bytes::{Buf, Bytes};
 use futures::{SinkExt, StreamExt};
-use ring::aead::BoundKey;
+use ring::aead::{BoundKey, OpeningKey, SealingKey, UnboundKey};
 use std::time::Duration;
 use tokio::net::TcpStream;
 use tokio_util::codec::{Framed, LengthDelimitedCodec};
@@ -27,28 +27,7 @@ pub struct HandshakeRequest {
 
 // pub struct HandshakeResponse {}
 
-pub async fn handshake(req: HandshakeRequest) -> CoreResult<()> {
-    let entry = RESERVE_STREAMS
-        .remove(&(
-            req.active_device_id.to_owned(),
-            req.passive_device_id.to_owned(),
-        ))
-        .ok_or(core_error!(
-            "no stream exists in RESERVE_STREAMS with key ({},{})",
-            &req.active_device_id,
-            &req.passive_device_id
-        ))?;
-
-    let mut stream = entry.1;
-
-    let handshake_req = EndPointHandshakeRequest {
-        active_device_id: req.active_device_id.to_owned(),
-        passive_device_id: req.passive_device_id.to_owned(),
-        visit_credentials: req.visit_credentials,
-    };
-
-    let handshake_resp: EndPointHandshakeResponse = stream_call(&mut stream, handshake_req).await?;
-
+pub async fn active_device_handshake(req: HandshakeRequest) -> CoreResult<()> {
     let mut opening_nonce = [0u8; ring::aead::NONCE_LEN];
     for i in 0..ring::aead::NONCE_LEN {
         opening_nonce[i] = req.opening_nonce_bytes[i];
@@ -59,25 +38,71 @@ pub async fn handshake(req: HandshakeRequest) -> CoreResult<()> {
         sealing_nonce[i] = req.sealing_nonce_bytes[i];
     }
 
-    let unbound_sealing_key =
-        ring::aead::UnboundKey::new(&ring::aead::AES_256_GCM, &req.sealing_key_bytes)?;
+    let unbound_sealing_key = UnboundKey::new(&ring::aead::AES_256_GCM, &req.sealing_key_bytes)?;
+    let sealing_key = SealingKey::new(unbound_sealing_key, NonceValue::new(sealing_nonce));
 
-    let sealing_key =
-        ring::aead::SealingKey::new(unbound_sealing_key, NonceValue::new(sealing_nonce));
+    let unbound_opening_key = UnboundKey::new(&ring::aead::AES_256_GCM, &req.opening_key_bytes)?;
+    let opening_key = OpeningKey::new(unbound_opening_key, NonceValue::new(opening_nonce));
 
-    let unbound_opening_key =
-        ring::aead::UnboundKey::new(&ring::aead::AES_256_GCM, &req.opening_key_bytes)?;
+    inner_handshake(
+        req.active_device_id,
+        req.passive_device_id,
+        req.visit_credentials,
+        opening_key,
+        sealing_key,
+    )
+    .await
+}
 
-    let opening_key =
-        ring::aead::OpeningKey::new(unbound_opening_key, NonceValue::new(opening_nonce));
+pub async fn passive_device_handshake(
+    active_device_id: String,
+    passive_device_id: String,
+    visit_credentials: String,
+    opening_key: OpeningKey<NonceValue>,
+    sealing_key: SealingKey<NonceValue>,
+) -> CoreResult<()> {
+    inner_handshake(
+        active_device_id,
+        passive_device_id,
+        visit_credentials,
+        opening_key,
+        sealing_key,
+    )
+    .await
+}
+
+async fn inner_handshake(
+    active_device_id: String,
+    passive_device_id: String,
+    visit_credentials: String,
+    opening_key: OpeningKey<NonceValue>,
+    sealing_key: SealingKey<NonceValue>,
+) -> CoreResult<()> {
+    let entry = RESERVE_STREAMS
+        .remove(&(active_device_id.to_owned(), passive_device_id.to_owned()))
+        .ok_or(core_error!(
+            "no stream exists in RESERVE_STREAMS with key ({},{})",
+            &active_device_id,
+            &passive_device_id
+        ))?;
+
+    let mut stream = entry.1;
+
+    let handshake_req = EndPointHandshakeRequest {
+        active_device_id: active_device_id.to_owned(),
+        passive_device_id: passive_device_id.to_owned(),
+        visit_credentials: visit_credentials,
+    };
+
+    let handshake_resp: EndPointHandshakeResponse = stream_call(&mut stream, handshake_req).await?;
 
     let (exit_tx, exit_rx) = async_broadcast::broadcast(16);
     let (send_message_tx, send_message_rx) = tokio::sync::mpsc::channel(1);
     let (sink, stream) = stream.split();
 
     super::super::serve_reader(
-        req.active_device_id.to_owned(),
-        req.passive_device_id.to_owned(),
+        active_device_id.to_owned(),
+        passive_device_id.to_owned(),
         exit_tx.clone(),
         exit_tx.new_receiver(),
         stream,
@@ -86,8 +111,8 @@ pub async fn handshake(req: HandshakeRequest) -> CoreResult<()> {
     );
 
     super::super::serve_writer(
-        req.active_device_id,
-        req.passive_device_id,
+        active_device_id,
+        passive_device_id,
         exit_tx.clone(),
         exit_tx.new_receiver(),
         sink,

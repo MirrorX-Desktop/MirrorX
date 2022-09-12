@@ -95,7 +95,7 @@ pub fn endpoint_connect(req: ConnectRequest) -> anyhow::Result<()> {
 }
 
 pub fn endpoint_handshake(req: HandshakeRequest) -> anyhow::Result<()> {
-    async_block_on!(handshake(req))
+    async_block_on!(active_device_handshake(req))
 }
 
 pub fn endpoint_negotiate_visit_desktop_params(

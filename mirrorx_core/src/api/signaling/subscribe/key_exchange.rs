@@ -1,7 +1,7 @@
 use crate::{
-    api::signaling::SignalingClientManager,
+    api::{endpoint::handlers::connect::ConnectRequest, signaling::SignalingClientManager},
     error::{CoreError, CoreResult},
-    utility::nonce_value::NonceValue,
+    utility::{nonce_value::NonceValue, runtime::TOKIO_RUNTIME},
 };
 use either::Either;
 use hmac::Hmac;
@@ -18,14 +18,36 @@ use signaling_proto::{
 
 pub async fn handle(config_path: &str, req: &KeyExchangeRequest) {
     let reply = match handle_key_agreement(config_path, req).await {
-        Ok((secret_buffer, sealing_key, opening_key)) => {
-            // todo: create endpoint
-            Either::Left(secret_buffer)
+        Ok((
+            secret_buffer,
+            active_device_id,
+            passive_device_id,
+            domain,
+            visit_credentials,
+            sealing_key,
+            opening_key,
+        )) => {
+            if let Err(err) = build_endpoint(
+                active_device_id,
+                passive_device_id,
+                domain,
+                visit_credentials,
+                opening_key,
+                sealing_key,
+            )
+            .await
+            {
+                tracing::error!(?err, "build endpoint failed");
+                Either::Right(KeyExchangeReplyError::Internal)
+            } else {
+                Either::Left(secret_buffer)
+            }
         }
         Err(err) => {
             if let CoreError::KeyExchangeReplyError(err) = err {
                 Either::Right(err)
             } else {
+                tracing::error!(?err, "handle key agreement failed");
                 Either::Right(KeyExchangeReplyError::Internal)
             }
         }
@@ -47,10 +69,18 @@ pub async fn handle(config_path: &str, req: &KeyExchangeRequest) {
 async fn handle_key_agreement(
     config_path: &str,
     req: &KeyExchangeRequest,
-) -> CoreResult<(Vec<u8>, SealingKey<NonceValue>, OpeningKey<NonceValue>)> {
+) -> CoreResult<(
+    Vec<u8>,
+    String,
+    String,
+    String,
+    String,
+    SealingKey<NonceValue>,
+    OpeningKey<NonceValue>,
+)> {
     let all_config_properties = crate::api::config::read_all(config_path)?;
 
-    let (_, config_properties) = match all_config_properties.iter().find(|&entry| {
+    let (config_domain, config_properties) = match all_config_properties.iter().find(|&entry| {
         let (_, value) = entry;
         value.device_id == req.passive_device_id
     }) {
@@ -205,7 +235,48 @@ async fn handle_key_agreement(
         &passive_device_secret_buffer,
     )?;
 
-    Ok((secret_buffer, sealing_key, opening_key))
+    Ok((
+        secret_buffer,
+        req.active_device_id.to_owned(),
+        req.passive_device_id.to_owned(),
+        config_domain.to_string(),
+        active_device_secret.visit_credentials,
+        sealing_key,
+        opening_key,
+    ))
+}
+
+async fn build_endpoint(
+    active_device_id: String,
+    passive_device_id: String,
+    domain: String,
+    visit_credentials: String,
+    opening_key: OpeningKey<NonceValue>,
+    sealing_key: SealingKey<NonceValue>,
+) -> CoreResult<()> {
+    crate::api::endpoint::handlers::connect::connect(ConnectRequest {
+        active_device_id: active_device_id.to_owned(),
+        passive_device_id: passive_device_id.to_owned(),
+        addr: domain,
+    })
+    .await?;
+
+    // run in new future otherwise it will dead lock for waiting active device handshake
+    TOKIO_RUNTIME.spawn(async move {
+        if let Err(err) = crate::api::endpoint::handlers::handshake::passive_device_handshake(
+            active_device_id,
+            passive_device_id,
+            visit_credentials,
+            opening_key,
+            sealing_key,
+        )
+        .await
+        {
+            tracing::error!(?err, "passive device handshake failed");
+        }
+    });
+
+    Ok(())
 }
 
 fn build_reply(
