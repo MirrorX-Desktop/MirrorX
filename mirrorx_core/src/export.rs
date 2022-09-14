@@ -1,5 +1,3 @@
-use std::{collections::HashMap, iter::FromIterator};
-
 use crate::{
     api::{
         config::ConfigProperties,

@@ -49,7 +49,7 @@ async fn test_capture_and_encode() -> anyhow::Result<()> {
         loop {
             match packet_rx.recv().await {
                 Some(packet) => {
-                    tracing::info!("recevie packet");
+                    tracing::info!("receive packet");
                 }
                 None => {
                     tracing::info!("break loop");
