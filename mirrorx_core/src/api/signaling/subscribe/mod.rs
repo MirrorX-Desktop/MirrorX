@@ -8,14 +8,14 @@ use scopeguard::defer;
 pub enum PublishMessage {
     StreamClosed,
     VisitRequest {
-        active_device_id: String,
-        passive_device_id: String,
+        active_device_id: i64,
+        passive_device_id: i64,
         resource_type: crate::api::signaling::visit::ResourceType,
     },
 }
 
 pub struct SubscribeRequest {
-    pub local_device_id: String,
+    pub local_device_id: i64,
     pub device_finger_print: String,
     pub config_path: String,
 }
@@ -26,8 +26,8 @@ pub async fn subscribe(
 ) -> CoreResult<()> {
     let mut server_stream = SignalingClientManager::get_client()
         .await?
-        .subscribe(signaling_proto::SubscribeRequest {
-            device_id: req.local_device_id.to_owned(),
+        .subscribe(signaling_proto::message::SubscribeRequest {
+            device_id: req.local_device_id,
             device_finger_print: req.device_finger_print,
         })
         .await?
@@ -56,28 +56,33 @@ pub async fn subscribe(
                 }
             };
 
-            if let Some(inner_message) = publish_message.inner {
+            if let Some(inner_message) = publish_message.inner_publish_message {
                 match inner_message {
-                    signaling_proto::publish_message::Inner::VisitRequest(visit_request) => {
-                        let resource_type = if visit_request.resource_type == 0 {
-                            crate::api::signaling::visit::ResourceType::Desktop
-                        } else if visit_request.resource_type ==1 {
-                            crate::api::signaling::visit::ResourceType::Files
-                        } else {
-                            return;
+                    signaling_proto::message::publish_message::InnerPublishMessage::VisitRequest(visit_request) => {
+                      let resource_type =  match signaling_proto::message::ResourceType::from_i32(visit_request.resource_type){
+                            Some(typ) => match typ{
+                                signaling_proto::message::ResourceType::Desktop => crate::api::signaling::visit::ResourceType::Desktop,
+                                signaling_proto::message::ResourceType::Files => crate::api::signaling::visit::ResourceType::Files,
+                            },
+                            None => {
+                                tracing::warn!(resource_type= visit_request.resource_type, "remote device require unknown resource type, ignore this request");
+                                continue;
+                            },
                         };
+                        
+                       
 
                         let publish_message = PublishMessage::VisitRequest{
                             active_device_id: visit_request.active_device_id,
                             passive_device_id: visit_request.passive_device_id,
-                            resource_type
+                            resource_type,
                         };
 
                         if !stream.add(publish_message){
                             tracing::error!(device_id=?req.local_device_id, message_type=stringify!(PublishMessage::VisitRequest), "add message to stream failed");
                         }
                     }
-                    signaling_proto::publish_message::Inner::KeyExchangeRequest( key_exchange_request) => {
+                    signaling_proto::message::publish_message::InnerPublishMessage::KeyExchangeRequest( key_exchange_request) => {
                         let config_path = req.config_path.clone();
                         TOKIO_RUNTIME.spawn(async move{
                             key_exchange::handle(&config_path, &key_exchange_request).await

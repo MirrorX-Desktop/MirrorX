@@ -39,11 +39,10 @@ use tokio_util::codec::{Framed, LengthDelimitedCodec};
 const SEND_MESSAGE_TIMEOUT: Duration = Duration::from_secs(10);
 const RECV_MESSAGE_TIMEOUT: Duration = Duration::from_secs(30);
 
-pub static RESERVE_STREAMS: Lazy<
-    DashMap<(String, String), Framed<TcpStream, LengthDelimitedCodec>>,
-> = Lazy::new(|| DashMap::new());
+pub static RESERVE_STREAMS: Lazy<DashMap<(i64, i64), Framed<TcpStream, LengthDelimitedCodec>>> =
+    Lazy::new(|| DashMap::new());
 
-pub static ENDPOINTS: Lazy<Cache<(String, String), tokio::sync::mpsc::Sender<EndPointMessage>>> =
+pub static ENDPOINTS: Lazy<Cache<(i64, i64), tokio::sync::mpsc::Sender<EndPointMessage>>> =
     Lazy::new(|| Cache::builder().initial_capacity(1).build());
 
 // pub async fn start_video_capture(
@@ -170,8 +169,8 @@ pub static ENDPOINTS: Lazy<Cache<(String, String), tokio::sync::mpsc::Sender<End
 // }
 
 pub fn serve_reader(
-    active_device_id: String,
-    passive_device_id: String,
+    active_device_id: i64,
+    passive_device_id: i64,
     exit_tx: async_broadcast::Sender<()>,
     mut exit_rx: async_broadcast::Receiver<()>,
     mut stream: SplitStream<Framed<TcpStream, LengthDelimitedCodec>>,
@@ -200,8 +199,8 @@ pub fn serve_reader(
                     };
 
                     if let Err(err) = open_packet(
-                        active_device_id.to_owned(),
-                        passive_device_id.to_owned(),
+                        active_device_id,
+                        passive_device_id,
                         &mut opening_key,
                         &mut packet_bytes,
                         message_tx.clone(),
@@ -232,8 +231,8 @@ pub fn serve_reader(
 }
 
 pub fn serve_writer(
-    active_device_id: String,
-    passive_device_id: String,
+    active_device_id: i64,
+    passive_device_id: i64,
     exit_tx: async_broadcast::Sender<()>,
     mut exit_rx: async_broadcast::Receiver<()>,
     mut sink: SplitSink<Framed<TcpStream, LengthDelimitedCodec>, Bytes>,
@@ -289,8 +288,8 @@ pub fn serve_writer(
 }
 
 fn open_packet(
-    active_device_id: String,
-    passive_device_id: String,
+    active_device_id: i64,
+    passive_device_id: i64,
     opening_key: &mut OpeningKey<NonceValue>,
     buffer: &mut BytesMut,
     message_tx: tokio::sync::mpsc::Sender<EndPointMessage>,
@@ -315,17 +314,17 @@ fn seal_packet(
 }
 
 async fn handle_message(
-    active_device_id: String,
-    passive_device_id: String,
+    active_device_id: i64,
+    passive_device_id: i64,
     message: EndPointMessage,
     message_tx: tokio::sync::mpsc::Sender<EndPointMessage>,
 ) {
     macro_rules! match_and_handle_message {
         ($message:expr, $(error $err_message_type:path => $err_handler:ident,)? $(reply $req_message_type:path => $req_handler:ident,)* $(noreply $other_message_type:path => $other_handler:ident,)*) => {
             match $message{
-                $($err_message_type => $err_handler(active_device_id,passive_device_id).await,)?
-                $($req_message_type(req) => $req_handler(active_device_id,passive_device_id,req,message_tx).await,)+
-                $($other_message_type(req) => $other_handler(active_device_id,passive_device_id,req).await,)+
+                $($err_message_type => $err_handler(active_device_id, passive_device_id).await,)?
+                $($req_message_type(req) => $req_handler(active_device_id, passive_device_id, req, message_tx).await,)+
+                $($other_message_type(req) => $other_handler(active_device_id, passive_device_id, req).await,)+
             }
         };
     }

@@ -10,11 +10,14 @@ use rand::RngCore;
 use ring::aead::BoundKey;
 use rsa::{rand_core::OsRng, PublicKeyParts};
 use sha2::Sha256;
-use signaling_proto::{KeyExchangeActiveDeviceSecret, KeyExchangePassiveDeviceSecret};
+use signaling_proto::message::{
+    key_exchange_result::InnerKeyExchangeResult, KeyExchangeActiveDeviceSecret,
+    KeyExchangePassiveDeviceSecret, KeyExchangeReplyError,
+};
 
 pub struct KeyExchangeRequest {
-    pub local_device_id: String,
-    pub remote_device_id: String,
+    pub local_device_id: i64,
+    pub remote_device_id: i64,
     pub password: String,
 }
 
@@ -78,13 +81,13 @@ pub async fn key_exchange(req: KeyExchangeRequest) -> CoreResult<KeyExchangeResp
     );
 
     active_device_secret_sealing_key.seal_in_place_append_tag(
-        ring::aead::Aad::from(req.local_device_id.as_bytes()),
+        ring::aead::Aad::from(req.local_device_id.to_le_bytes()),
         &mut active_device_secret_buffer,
     )?;
 
     let resp = SignalingClientManager::get_client()
         .await?
-        .key_exchange(signaling_proto::KeyExchangeRequest {
+        .key_exchange(signaling_proto::message::KeyExchangeRequest {
             active_device_id: req.local_device_id.to_owned(),
             passive_device_id: req.remote_device_id.to_owned(),
             password_salt: active_device_secret_salt.to_vec(),
@@ -94,17 +97,31 @@ pub async fn key_exchange(req: KeyExchangeRequest) -> CoreResult<KeyExchangeResp
         .await?;
 
     // acquire key exchange
-    let key_exchange_response = resp.get_ref();
+    let key_exchange_response = resp.into_inner();
     if key_exchange_response.active_device_id != req.local_device_id
         || key_exchange_response.passive_device_id != req.remote_device_id
     {
         return Err(core_error!("mismatched key exchange response"));
     }
 
-    let passive_device_secret_buffer = reply_private_key.decrypt(
-        rsa::PaddingScheme::PKCS1v15Encrypt,
-        &key_exchange_response.secret,
-    )?;
+    let inner_key_exchange_result = key_exchange_response
+        .key_exchange_result
+        .ok_or_else(|| core_error!("remote key exchange response params invalid"))?
+        .inner_key_exchange_result
+        .ok_or_else(|| core_error!("remote key exchange response params invalid"))?;
+
+    let key_exchange_secret = match inner_key_exchange_result {
+        InnerKeyExchangeResult::Secret(secret) => secret,
+        InnerKeyExchangeResult::Error(err) => {
+            return Err(CoreError::KeyExchangeReplyError(
+                KeyExchangeReplyError::from_i32(err)
+                    .ok_or_else(|| core_error!("remote key exchange response unknown error"))?,
+            ));
+        }
+    };
+
+    let passive_device_secret_buffer =
+        reply_private_key.decrypt(rsa::PaddingScheme::PKCS1v15Encrypt, &key_exchange_secret)?;
 
     let passive_device_secret =
         KeyExchangePassiveDeviceSecret::decode(passive_device_secret_buffer.as_ref())?;

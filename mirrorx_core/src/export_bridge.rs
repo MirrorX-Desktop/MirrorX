@@ -20,7 +20,7 @@ use flutter_rust_bridge::*;
 use crate::api::config::ConfigProperties;
 use crate::api::endpoint::handlers::connect::ConnectRequest;
 use crate::api::endpoint::handlers::handshake::HandshakeRequest;
-use crate::api::endpoint::handlers::input::InputReqeust;
+use crate::api::endpoint::handlers::input::InputRequest;
 use crate::api::endpoint::handlers::negotiate_finished::NegotiateFinishedRequest;
 use crate::api::endpoint::handlers::negotiate_select_monitor::NegotiateSelectMonitorRequest;
 use crate::api::endpoint::handlers::negotiate_select_monitor::NegotiateSelectMonitorResponse;
@@ -278,7 +278,7 @@ fn wire_endpoint_negotiate_finished_impl(
         },
     )
 }
-fn wire_endpoint_input_impl(port_: MessagePort, req: impl Wire2Api<InputReqeust> + UnwindSafe) {
+fn wire_endpoint_input_impl(port_: MessagePort, req: impl Wire2Api<InputRequest> + UnwindSafe) {
     FLUTTER_RUST_BRIDGE_HANDLER.wrap(
         WrapInfo {
             debug_name: "endpoint_input",
@@ -312,6 +312,12 @@ where
     }
 }
 
+impl Wire2Api<i64> for *mut i64 {
+    fn wire2api(self) -> i64 {
+        unsafe { *support::box_from_leak_ptr(self) }
+    }
+}
+
 impl Wire2Api<f32> for f32 {
     fn wire2api(self) -> f32 {
         self
@@ -320,6 +326,11 @@ impl Wire2Api<f32> for f32 {
 
 impl Wire2Api<i32> for i32 {
     fn wire2api(self) -> i32 {
+        self
+    }
+}
+impl Wire2Api<i64> for i64 {
+    fn wire2api(self) -> i64 {
         self
     }
 }

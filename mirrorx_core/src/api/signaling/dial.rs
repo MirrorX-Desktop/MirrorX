@@ -3,7 +3,7 @@ use crate::{
     core_error,
     error::{CoreError, CoreResult},
 };
-use signaling_proto::signaling_client::SignalingClient;
+use signaling_proto::service::signaling_client::SignalingClient;
 use std::{convert::TryFrom, time::Duration};
 use tonic::{
     codegen::CompressionEncoding,

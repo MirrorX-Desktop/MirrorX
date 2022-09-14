@@ -14,12 +14,12 @@ use once_cell::sync::Lazy;
 use tokio::sync::{mpsc, oneshot};
 
 static RESPONSE_CHANNELS: Lazy<
-    DashMap<(String, String), oneshot::Sender<EndPointNegotiateSelectMonitorResponse>>,
+    DashMap<(i64, i64), oneshot::Sender<EndPointNegotiateSelectMonitorResponse>>,
 > = Lazy::new(|| DashMap::new());
 
 pub struct NegotiateSelectMonitorRequest {
-    pub active_device_id: String,
-    pub passive_device_id: String,
+    pub active_device_id: i64,
+    pub passive_device_id: i64,
 }
 
 pub struct NegotiateSelectMonitorResponse {
@@ -30,10 +30,7 @@ pub async fn negotiate_select_monitor(
     req: NegotiateSelectMonitorRequest,
 ) -> CoreResult<NegotiateSelectMonitorResponse> {
     let message_tx = ENDPOINTS
-        .get(&(
-            req.active_device_id.to_owned(),
-            req.passive_device_id.to_owned(),
-        ))
+        .get(&(req.active_device_id, req.passive_device_id))
         .ok_or(core_error!("endpoint not exists"))?;
 
     let negotiate_req =
@@ -67,8 +64,8 @@ pub async fn negotiate_select_monitor(
 }
 
 pub async fn handle_negotiate_select_monitor_request(
-    active_device_id: String,
-    passive_device_id: String,
+    active_device_id: i64,
+    passive_device_id: i64,
     _: EndPointNegotiateSelectMonitorRequest,
     message_tx: mpsc::Sender<EndPointMessage>,
 ) {
@@ -112,8 +109,8 @@ pub async fn handle_negotiate_select_monitor_request(
 }
 
 pub async fn handle_negotiate_select_monitor_response(
-    active_device_id: String,
-    passive_device_id: String,
+    active_device_id: i64,
+    passive_device_id: i64,
     resp: crate::api::endpoint::message::EndPointNegotiateSelectMonitorResponse,
 ) {
     if let Some((_, tx)) = RESPONSE_CHANNELS.remove(&(active_device_id, passive_device_id)) {

@@ -7,20 +7,17 @@ use crate::{
     error::{CoreError, CoreResult},
 };
 
-pub struct InputReqeust {
-    pub active_device_id: String,
-    pub passive_device_id: String,
+pub struct InputRequest {
+    pub active_device_id: i64,
+    pub passive_device_id: i64,
     pub event: Box<InputEvent>,
 }
 
 // pub struct InputResponse {}
 
-pub async fn input(req: InputReqeust) -> CoreResult<()> {
+pub async fn input(req: InputRequest) -> CoreResult<()> {
     let message_tx = ENDPOINTS
-        .get(&(
-            req.active_device_id.to_owned(),
-            req.passive_device_id.to_owned(),
-        ))
+        .get(&(req.active_device_id, req.passive_device_id))
         .ok_or(core_error!("endpoint not exists"))?;
 
     let req = EndPointMessage::Input(EndPointInput { event: *req.event });
@@ -35,11 +32,7 @@ pub async fn input(req: InputReqeust) -> CoreResult<()> {
     Ok(())
 }
 
-pub async fn handle_input(
-    active_device_id: String,
-    passive_device_id: String,
-    input: EndPointInput,
-) {
+pub async fn handle_input(active_device_id: i64, passive_device_id: i64, input: EndPointInput) {
     // match input.event {
     //     InputEvent::Mouse(event) => {
     //         if let Some(monitor) = endpoint.monitor() {
@@ -47,7 +40,7 @@ pub async fn handle_input(
     //                 MouseUp(key, x, y) => processor::input::mouse_up(monitor, key, x, y),
     //                 MouseDown(key, x, y) => processor::input::mouse_down(monitor, key, x, y),
     //                 MouseMove(key, x, y) => processor::input::mouse_move(monitor, key, x, y),
-    //                 MouseScrollWheel(delta) => processor::input::mouse_scroll_whell(monitor, delta),
+    //                 MouseScrollWheel(delta) => processor::input::mouse_scroll_wheel(monitor, delta),
     //             }
     //         } else {
     //             Err(core_error!("no associate monitor with current session"))

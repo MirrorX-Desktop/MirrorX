@@ -3,8 +3,8 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct EndPointHandshakeRequest {
-    pub active_device_id: String,
-    pub passive_device_id: String,
+    pub active_device_id: i64,
+    pub passive_device_id: i64,
     pub visit_credentials: String,
 }
 

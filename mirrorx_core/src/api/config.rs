@@ -6,7 +6,7 @@ use std::collections::HashMap;
 #[derive(Serialize, Deserialize)]
 pub struct ConfigProperties {
     pub domain: String,
-    pub device_id: String,
+    pub device_id: i64,
     pub device_finger_print: String,
     pub device_password: String,
 }

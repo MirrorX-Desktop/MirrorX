@@ -55,5 +55,5 @@ pub enum CoreError {
     SerdeJsonError(#[from] serde_json::Error),
 
     #[error("key exchange reply error ({0:?})")]
-    KeyExchangeReplyError(signaling_proto::KeyExchangeReplyError),
+    KeyExchangeReplyError(signaling_proto::message::KeyExchangeReplyError),
 }

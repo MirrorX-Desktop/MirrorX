@@ -13,7 +13,7 @@ typedef struct wire_uint_8_list {
 
 typedef struct wire_ConfigProperties {
   struct wire_uint_8_list *domain;
-  struct wire_uint_8_list *device_id;
+  int64_t device_id;
   struct wire_uint_8_list *device_finger_print;
   struct wire_uint_8_list *device_password;
 } wire_ConfigProperties;
@@ -23,42 +23,42 @@ typedef struct wire_DialRequest {
 } wire_DialRequest;
 
 typedef struct wire_RegisterRequest {
-  struct wire_uint_8_list *local_device_id;
+  int64_t *local_device_id;
   struct wire_uint_8_list *device_finger_print;
 } wire_RegisterRequest;
 
 typedef struct wire_SubscribeRequest {
-  struct wire_uint_8_list *local_device_id;
+  int64_t local_device_id;
   struct wire_uint_8_list *device_finger_print;
   struct wire_uint_8_list *config_path;
 } wire_SubscribeRequest;
 
 typedef struct wire_HeartbeatRequest {
-  struct wire_uint_8_list *local_device_id;
+  int64_t device_id;
   uint32_t timestamp;
 } wire_HeartbeatRequest;
 
 typedef struct wire_VisitRequest {
-  struct wire_uint_8_list *local_device_id;
-  struct wire_uint_8_list *remote_device_id;
+  int64_t local_device_id;
+  int64_t remote_device_id;
   int32_t resource_type;
 } wire_VisitRequest;
 
 typedef struct wire_KeyExchangeRequest {
-  struct wire_uint_8_list *local_device_id;
-  struct wire_uint_8_list *remote_device_id;
+  int64_t local_device_id;
+  int64_t remote_device_id;
   struct wire_uint_8_list *password;
 } wire_KeyExchangeRequest;
 
 typedef struct wire_ConnectRequest {
-  struct wire_uint_8_list *active_device_id;
-  struct wire_uint_8_list *passive_device_id;
+  int64_t active_device_id;
+  int64_t passive_device_id;
   struct wire_uint_8_list *addr;
 } wire_ConnectRequest;
 
 typedef struct wire_HandshakeRequest {
-  struct wire_uint_8_list *active_device_id;
-  struct wire_uint_8_list *passive_device_id;
+  int64_t active_device_id;
+  int64_t passive_device_id;
   struct wire_uint_8_list *visit_credentials;
   struct wire_uint_8_list *opening_key_bytes;
   struct wire_uint_8_list *opening_nonce_bytes;
@@ -67,18 +67,18 @@ typedef struct wire_HandshakeRequest {
 } wire_HandshakeRequest;
 
 typedef struct wire_NegotiateVisitDesktopParamsRequest {
-  struct wire_uint_8_list *active_device_id;
-  struct wire_uint_8_list *passive_device_id;
+  int64_t active_device_id;
+  int64_t passive_device_id;
 } wire_NegotiateVisitDesktopParamsRequest;
 
 typedef struct wire_NegotiateSelectMonitorRequest {
-  struct wire_uint_8_list *active_device_id;
-  struct wire_uint_8_list *passive_device_id;
+  int64_t active_device_id;
+  int64_t passive_device_id;
 } wire_NegotiateSelectMonitorRequest;
 
 typedef struct wire_NegotiateFinishedRequest {
-  struct wire_uint_8_list *active_device_id;
-  struct wire_uint_8_list *passive_device_id;
+  int64_t active_device_id;
+  int64_t passive_device_id;
   struct wire_uint_8_list *selected_monitor_id;
   uint8_t expect_frame_rate;
 } wire_NegotiateFinishedRequest;
@@ -153,11 +153,11 @@ typedef struct wire_InputEvent {
   union InputEventKind *kind;
 } wire_InputEvent;
 
-typedef struct wire_InputReqeust {
-  struct wire_uint_8_list *active_device_id;
-  struct wire_uint_8_list *passive_device_id;
+typedef struct wire_InputRequest {
+  int64_t active_device_id;
+  int64_t passive_device_id;
   struct wire_InputEvent *event;
-} wire_InputReqeust;
+} wire_InputRequest;
 
 typedef struct WireSyncReturnStruct {
   uint8_t *ptr;
@@ -204,7 +204,7 @@ void wire_endpoint_negotiate_select_monitor(int64_t port_,
 
 void wire_endpoint_negotiate_finished(int64_t port_, struct wire_NegotiateFinishedRequest *req);
 
-void wire_endpoint_input(int64_t port_, struct wire_InputReqeust *req);
+void wire_endpoint_input(int64_t port_, struct wire_InputRequest *req);
 
 struct wire_ConfigProperties *new_box_autoadd_config_properties_0(void);
 
@@ -216,7 +216,9 @@ struct wire_HandshakeRequest *new_box_autoadd_handshake_request_0(void);
 
 struct wire_HeartbeatRequest *new_box_autoadd_heartbeat_request_0(void);
 
-struct wire_InputReqeust *new_box_autoadd_input_reqeust_0(void);
+int64_t *new_box_autoadd_i64_0(int64_t value);
+
+struct wire_InputRequest *new_box_autoadd_input_request_0(void);
 
 struct wire_KeyExchangeRequest *new_box_autoadd_key_exchange_request_0(void);
 
@@ -281,7 +283,8 @@ static int64_t dummy_method_to_enforce_bundling(void) {
     dummy_var ^= ((int64_t) (void*) new_box_autoadd_dial_request_0);
     dummy_var ^= ((int64_t) (void*) new_box_autoadd_handshake_request_0);
     dummy_var ^= ((int64_t) (void*) new_box_autoadd_heartbeat_request_0);
-    dummy_var ^= ((int64_t) (void*) new_box_autoadd_input_reqeust_0);
+    dummy_var ^= ((int64_t) (void*) new_box_autoadd_i64_0);
+    dummy_var ^= ((int64_t) (void*) new_box_autoadd_input_request_0);
     dummy_var ^= ((int64_t) (void*) new_box_autoadd_key_exchange_request_0);
     dummy_var ^= ((int64_t) (void*) new_box_autoadd_keyboard_event_0);
     dummy_var ^= ((int64_t) (void*) new_box_autoadd_mouse_event_0);

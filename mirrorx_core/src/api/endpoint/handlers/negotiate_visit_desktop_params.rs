@@ -15,12 +15,12 @@ use once_cell::sync::Lazy;
 use tokio::sync::{mpsc, oneshot};
 
 static RESPONSE_CHANNELS: Lazy<
-    DashMap<(String, String), oneshot::Sender<EndPointNegotiateVisitDesktopParamsResponse>>,
+    DashMap<(i64, i64), oneshot::Sender<EndPointNegotiateVisitDesktopParamsResponse>>,
 > = Lazy::new(|| DashMap::new());
 
 pub struct NegotiateVisitDesktopParamsRequest {
-    pub active_device_id: String,
-    pub passive_device_id: String,
+    pub active_device_id: i64,
+    pub passive_device_id: i64,
 }
 
 pub struct NegotiateVisitDesktopParamsResponse {
@@ -85,8 +85,8 @@ pub async fn negotiate_visit_desktop_params(
 }
 
 pub async fn handle_negotiate_visit_desktop_params_request(
-    active_device_id: String,
-    passive_device_id: String,
+    active_device_id: i64,
+    passive_device_id: i64,
     req: EndPointNegotiateVisitDesktopParamsRequest,
     message_tx: mpsc::Sender<EndPointMessage>,
 ) {
@@ -115,8 +115,8 @@ pub async fn handle_negotiate_visit_desktop_params_request(
 }
 
 pub async fn handle_negotiate_visit_desktop_params_response(
-    active_device_id: String,
-    passive_device_id: String,
+    active_device_id: i64,
+    passive_device_id: i64,
     resp: EndPointNegotiateVisitDesktopParamsResponse,
 ) {
     if let Some((_, tx)) = RESPONSE_CHANNELS.remove(&(active_device_id, passive_device_id)) {

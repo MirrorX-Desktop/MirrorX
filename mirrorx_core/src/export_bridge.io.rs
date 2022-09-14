@@ -95,7 +95,7 @@ pub extern "C" fn wire_endpoint_negotiate_finished(
 }
 
 #[no_mangle]
-pub extern "C" fn wire_endpoint_input(port_: i64, req: *mut wire_InputReqeust) {
+pub extern "C" fn wire_endpoint_input(port_: i64, req: *mut wire_InputRequest) {
     wire_endpoint_input_impl(port_, req)
 }
 
@@ -127,8 +127,13 @@ pub extern "C" fn new_box_autoadd_heartbeat_request_0() -> *mut wire_HeartbeatRe
 }
 
 #[no_mangle]
-pub extern "C" fn new_box_autoadd_input_reqeust_0() -> *mut wire_InputReqeust {
-    support::new_leak_box_ptr(wire_InputReqeust::new_with_null_ptr())
+pub extern "C" fn new_box_autoadd_i64_0(value: i64) -> *mut i64 {
+    support::new_leak_box_ptr(value)
+}
+
+#[no_mangle]
+pub extern "C" fn new_box_autoadd_input_request_0() -> *mut wire_InputRequest {
+    support::new_leak_box_ptr(wire_InputRequest::new_with_null_ptr())
 }
 
 #[no_mangle]
@@ -231,10 +236,11 @@ impl Wire2Api<HeartbeatRequest> for *mut wire_HeartbeatRequest {
         Wire2Api::<HeartbeatRequest>::wire2api(*wrap).into()
     }
 }
-impl Wire2Api<InputReqeust> for *mut wire_InputReqeust {
-    fn wire2api(self) -> InputReqeust {
+
+impl Wire2Api<InputRequest> for *mut wire_InputRequest {
+    fn wire2api(self) -> InputRequest {
         let wrap = unsafe { support::box_from_leak_ptr(self) };
-        Wire2Api::<InputReqeust>::wire2api(*wrap).into()
+        Wire2Api::<InputRequest>::wire2api(*wrap).into()
     }
 }
 impl Wire2Api<KeyExchangeRequest> for *mut wire_KeyExchangeRequest {
@@ -340,7 +346,7 @@ impl Wire2Api<HandshakeRequest> for wire_HandshakeRequest {
 impl Wire2Api<HeartbeatRequest> for wire_HeartbeatRequest {
     fn wire2api(self) -> HeartbeatRequest {
         HeartbeatRequest {
-            local_device_id: self.local_device_id.wire2api(),
+            device_id: self.device_id.wire2api(),
             timestamp: self.timestamp.wire2api(),
         }
     }
@@ -363,9 +369,9 @@ impl Wire2Api<InputEvent> for wire_InputEvent {
         }
     }
 }
-impl Wire2Api<InputReqeust> for wire_InputReqeust {
-    fn wire2api(self) -> InputReqeust {
-        InputReqeust {
+impl Wire2Api<InputRequest> for wire_InputRequest {
+    fn wire2api(self) -> InputRequest {
+        InputRequest {
             active_device_id: self.active_device_id.wire2api(),
             passive_device_id: self.passive_device_id.wire2api(),
             event: self.event.wire2api(),
@@ -508,7 +514,7 @@ impl Wire2Api<VisitRequest> for wire_VisitRequest {
 #[derive(Clone)]
 pub struct wire_ConfigProperties {
     domain: *mut wire_uint_8_list,
-    device_id: *mut wire_uint_8_list,
+    device_id: i64,
     device_finger_print: *mut wire_uint_8_list,
     device_password: *mut wire_uint_8_list,
 }
@@ -516,8 +522,8 @@ pub struct wire_ConfigProperties {
 #[repr(C)]
 #[derive(Clone)]
 pub struct wire_ConnectRequest {
-    active_device_id: *mut wire_uint_8_list,
-    passive_device_id: *mut wire_uint_8_list,
+    active_device_id: i64,
+    passive_device_id: i64,
     addr: *mut wire_uint_8_list,
 }
 
@@ -530,8 +536,8 @@ pub struct wire_DialRequest {
 #[repr(C)]
 #[derive(Clone)]
 pub struct wire_HandshakeRequest {
-    active_device_id: *mut wire_uint_8_list,
-    passive_device_id: *mut wire_uint_8_list,
+    active_device_id: i64,
+    passive_device_id: i64,
     visit_credentials: *mut wire_uint_8_list,
     opening_key_bytes: *mut wire_uint_8_list,
     opening_nonce_bytes: *mut wire_uint_8_list,
@@ -542,31 +548,31 @@ pub struct wire_HandshakeRequest {
 #[repr(C)]
 #[derive(Clone)]
 pub struct wire_HeartbeatRequest {
-    local_device_id: *mut wire_uint_8_list,
+    device_id: i64,
     timestamp: u32,
 }
 
 #[repr(C)]
 #[derive(Clone)]
-pub struct wire_InputReqeust {
-    active_device_id: *mut wire_uint_8_list,
-    passive_device_id: *mut wire_uint_8_list,
+pub struct wire_InputRequest {
+    active_device_id: i64,
+    passive_device_id: i64,
     event: *mut wire_InputEvent,
 }
 
 #[repr(C)]
 #[derive(Clone)]
 pub struct wire_KeyExchangeRequest {
-    local_device_id: *mut wire_uint_8_list,
-    remote_device_id: *mut wire_uint_8_list,
+    local_device_id: i64,
+    remote_device_id: i64,
     password: *mut wire_uint_8_list,
 }
 
 #[repr(C)]
 #[derive(Clone)]
 pub struct wire_NegotiateFinishedRequest {
-    active_device_id: *mut wire_uint_8_list,
-    passive_device_id: *mut wire_uint_8_list,
+    active_device_id: i64,
+    passive_device_id: i64,
     selected_monitor_id: *mut wire_uint_8_list,
     expect_frame_rate: u8,
 }
@@ -574,28 +580,28 @@ pub struct wire_NegotiateFinishedRequest {
 #[repr(C)]
 #[derive(Clone)]
 pub struct wire_NegotiateSelectMonitorRequest {
-    active_device_id: *mut wire_uint_8_list,
-    passive_device_id: *mut wire_uint_8_list,
+    active_device_id: i64,
+    passive_device_id: i64,
 }
 
 #[repr(C)]
 #[derive(Clone)]
 pub struct wire_NegotiateVisitDesktopParamsRequest {
-    active_device_id: *mut wire_uint_8_list,
-    passive_device_id: *mut wire_uint_8_list,
+    active_device_id: i64,
+    passive_device_id: i64,
 }
 
 #[repr(C)]
 #[derive(Clone)]
 pub struct wire_RegisterRequest {
-    local_device_id: *mut wire_uint_8_list,
+    local_device_id: *mut i64,
     device_finger_print: *mut wire_uint_8_list,
 }
 
 #[repr(C)]
 #[derive(Clone)]
 pub struct wire_SubscribeRequest {
-    local_device_id: *mut wire_uint_8_list,
+    local_device_id: i64,
     device_finger_print: *mut wire_uint_8_list,
     config_path: *mut wire_uint_8_list,
 }
@@ -610,8 +616,8 @@ pub struct wire_uint_8_list {
 #[repr(C)]
 #[derive(Clone)]
 pub struct wire_VisitRequest {
-    local_device_id: *mut wire_uint_8_list,
-    remote_device_id: *mut wire_uint_8_list,
+    local_device_id: i64,
+    remote_device_id: i64,
     resource_type: i32,
 }
 
@@ -726,7 +732,7 @@ impl NewWithNullPtr for wire_ConfigProperties {
     fn new_with_null_ptr() -> Self {
         Self {
             domain: core::ptr::null_mut(),
-            device_id: core::ptr::null_mut(),
+            device_id: Default::default(),
             device_finger_print: core::ptr::null_mut(),
             device_password: core::ptr::null_mut(),
         }
@@ -736,8 +742,8 @@ impl NewWithNullPtr for wire_ConfigProperties {
 impl NewWithNullPtr for wire_ConnectRequest {
     fn new_with_null_ptr() -> Self {
         Self {
-            active_device_id: core::ptr::null_mut(),
-            passive_device_id: core::ptr::null_mut(),
+            active_device_id: Default::default(),
+            passive_device_id: Default::default(),
             addr: core::ptr::null_mut(),
         }
     }
@@ -754,8 +760,8 @@ impl NewWithNullPtr for wire_DialRequest {
 impl NewWithNullPtr for wire_HandshakeRequest {
     fn new_with_null_ptr() -> Self {
         Self {
-            active_device_id: core::ptr::null_mut(),
-            passive_device_id: core::ptr::null_mut(),
+            active_device_id: Default::default(),
+            passive_device_id: Default::default(),
             visit_credentials: core::ptr::null_mut(),
             opening_key_bytes: core::ptr::null_mut(),
             opening_nonce_bytes: core::ptr::null_mut(),
@@ -768,7 +774,7 @@ impl NewWithNullPtr for wire_HandshakeRequest {
 impl NewWithNullPtr for wire_HeartbeatRequest {
     fn new_with_null_ptr() -> Self {
         Self {
-            local_device_id: core::ptr::null_mut(),
+            device_id: Default::default(),
             timestamp: Default::default(),
         }
     }
@@ -801,11 +807,11 @@ pub extern "C" fn inflate_InputEvent_Keyboard() -> *mut InputEventKind {
     })
 }
 
-impl NewWithNullPtr for wire_InputReqeust {
+impl NewWithNullPtr for wire_InputRequest {
     fn new_with_null_ptr() -> Self {
         Self {
-            active_device_id: core::ptr::null_mut(),
-            passive_device_id: core::ptr::null_mut(),
+            active_device_id: Default::default(),
+            passive_device_id: Default::default(),
             event: core::ptr::null_mut(),
         }
     }
@@ -814,8 +820,8 @@ impl NewWithNullPtr for wire_InputReqeust {
 impl NewWithNullPtr for wire_KeyExchangeRequest {
     fn new_with_null_ptr() -> Self {
         Self {
-            local_device_id: core::ptr::null_mut(),
-            remote_device_id: core::ptr::null_mut(),
+            local_device_id: Default::default(),
+            remote_device_id: Default::default(),
             password: core::ptr::null_mut(),
         }
     }
@@ -902,8 +908,8 @@ pub extern "C" fn inflate_MouseEvent_MouseScrollWheel() -> *mut MouseEventKind {
 impl NewWithNullPtr for wire_NegotiateFinishedRequest {
     fn new_with_null_ptr() -> Self {
         Self {
-            active_device_id: core::ptr::null_mut(),
-            passive_device_id: core::ptr::null_mut(),
+            active_device_id: Default::default(),
+            passive_device_id: Default::default(),
             selected_monitor_id: core::ptr::null_mut(),
             expect_frame_rate: Default::default(),
         }
@@ -913,8 +919,8 @@ impl NewWithNullPtr for wire_NegotiateFinishedRequest {
 impl NewWithNullPtr for wire_NegotiateSelectMonitorRequest {
     fn new_with_null_ptr() -> Self {
         Self {
-            active_device_id: core::ptr::null_mut(),
-            passive_device_id: core::ptr::null_mut(),
+            active_device_id: Default::default(),
+            passive_device_id: Default::default(),
         }
     }
 }
@@ -922,8 +928,8 @@ impl NewWithNullPtr for wire_NegotiateSelectMonitorRequest {
 impl NewWithNullPtr for wire_NegotiateVisitDesktopParamsRequest {
     fn new_with_null_ptr() -> Self {
         Self {
-            active_device_id: core::ptr::null_mut(),
-            passive_device_id: core::ptr::null_mut(),
+            active_device_id: Default::default(),
+            passive_device_id: Default::default(),
         }
     }
 }
@@ -940,7 +946,7 @@ impl NewWithNullPtr for wire_RegisterRequest {
 impl NewWithNullPtr for wire_SubscribeRequest {
     fn new_with_null_ptr() -> Self {
         Self {
-            local_device_id: core::ptr::null_mut(),
+            local_device_id: Default::default(),
             device_finger_print: core::ptr::null_mut(),
             config_path: core::ptr::null_mut(),
         }
@@ -950,8 +956,8 @@ impl NewWithNullPtr for wire_SubscribeRequest {
 impl NewWithNullPtr for wire_VisitRequest {
     fn new_with_null_ptr() -> Self {
         Self {
-            local_device_id: core::ptr::null_mut(),
-            remote_device_id: core::ptr::null_mut(),
+            local_device_id: Default::default(),
+            remote_device_id: Default::default(),
             resource_type: Default::default(),
         }
     }

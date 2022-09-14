@@ -10,10 +10,10 @@ use rand::RngCore;
 use ring::aead::{BoundKey, OpeningKey, SealingKey};
 use rsa::{rand_core::OsRng, BigUint, PublicKey};
 use sha2::Sha256;
-use signaling_proto::{
-    key_exchange_reply_request::KeyExchangeReply, KeyExchangeActiveDeviceSecret,
+use signaling_proto::message::{
+    key_exchange_result::InnerKeyExchangeResult, KeyExchangeActiveDeviceSecret,
     KeyExchangePassiveDeviceSecret, KeyExchangeReplyError, KeyExchangeReplyRequest,
-    KeyExchangeRequest,
+    KeyExchangeRequest, KeyExchangeResult,
 };
 
 pub async fn handle(config_path: &str, req: &KeyExchangeRequest) {
@@ -71,8 +71,8 @@ async fn handle_key_agreement(
     req: &KeyExchangeRequest,
 ) -> CoreResult<(
     Vec<u8>,
-    String,
-    String,
+    i64,
+    i64,
     String,
     String,
     SealingKey<NonceValue>,
@@ -237,8 +237,8 @@ async fn handle_key_agreement(
 
     Ok((
         secret_buffer,
-        req.active_device_id.to_owned(),
-        req.passive_device_id.to_owned(),
+        req.active_device_id,
+        req.passive_device_id,
         config_domain.to_string(),
         active_device_secret.visit_credentials,
         sealing_key,
@@ -247,16 +247,16 @@ async fn handle_key_agreement(
 }
 
 async fn build_endpoint(
-    active_device_id: String,
-    passive_device_id: String,
+    active_device_id: i64,
+    passive_device_id: i64,
     domain: String,
     visit_credentials: String,
     opening_key: OpeningKey<NonceValue>,
     sealing_key: SealingKey<NonceValue>,
 ) -> CoreResult<()> {
     crate::api::endpoint::handlers::connect::connect(ConnectRequest {
-        active_device_id: active_device_id.to_owned(),
-        passive_device_id: passive_device_id.to_owned(),
+        active_device_id,
+        passive_device_id,
         addr: domain,
     })
     .await?;
@@ -283,14 +283,16 @@ fn build_reply(
     req: &KeyExchangeRequest,
     reply: Either<Vec<u8>, KeyExchangeReplyError>,
 ) -> KeyExchangeReplyRequest {
-    let reply = reply.either(
-        |secret_buffer| (KeyExchangeReply::Secret(secret_buffer)),
-        |error| (KeyExchangeReply::Error(error.into())),
+    let inner_key_exchange_result = reply.either(
+        |secret_buffer| (InnerKeyExchangeResult::Secret(secret_buffer)),
+        |error| (InnerKeyExchangeResult::Error(error.into())),
     );
 
     KeyExchangeReplyRequest {
-        active_device_id: req.active_device_id.to_owned(),
-        passive_device_id: req.passive_device_id.to_owned(),
-        key_exchange_reply: Some(reply),
+        active_device_id: req.active_device_id,
+        passive_device_id: req.passive_device_id,
+        key_exchange_result: Some(KeyExchangeResult {
+            inner_key_exchange_result: Some(inner_key_exchange_result),
+        }),
     }
 }

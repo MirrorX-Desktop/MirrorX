@@ -16,8 +16,8 @@ use tokio::net::TcpStream;
 use tokio_util::codec::{Framed, LengthDelimitedCodec};
 
 pub struct HandshakeRequest {
-    pub active_device_id: String,
-    pub passive_device_id: String,
+    pub active_device_id: i64,
+    pub passive_device_id: i64,
     pub visit_credentials: String,
     pub opening_key_bytes: Vec<u8>,
     pub opening_nonce_bytes: Vec<u8>,
@@ -55,8 +55,8 @@ pub async fn active_device_handshake(req: HandshakeRequest) -> CoreResult<()> {
 }
 
 pub async fn passive_device_handshake(
-    active_device_id: String,
-    passive_device_id: String,
+    active_device_id: i64,
+    passive_device_id: i64,
     visit_credentials: String,
     opening_key: OpeningKey<NonceValue>,
     sealing_key: SealingKey<NonceValue>,
@@ -72,14 +72,14 @@ pub async fn passive_device_handshake(
 }
 
 async fn inner_handshake(
-    active_device_id: String,
-    passive_device_id: String,
+    active_device_id: i64,
+    passive_device_id: i64,
     visit_credentials: String,
     opening_key: OpeningKey<NonceValue>,
     sealing_key: SealingKey<NonceValue>,
 ) -> CoreResult<()> {
     let entry = RESERVE_STREAMS
-        .remove(&(active_device_id.to_owned(), passive_device_id.to_owned()))
+        .remove(&(active_device_id, passive_device_id))
         .ok_or(core_error!(
             "no stream exists in RESERVE_STREAMS with key ({},{})",
             &active_device_id,
@@ -89,9 +89,9 @@ async fn inner_handshake(
     let mut stream = entry.1;
 
     let handshake_req = EndPointHandshakeRequest {
-        active_device_id: active_device_id.to_owned(),
-        passive_device_id: passive_device_id.to_owned(),
-        visit_credentials: visit_credentials,
+        active_device_id,
+        passive_device_id,
+        visit_credentials,
     };
 
     let handshake_resp: EndPointHandshakeResponse = stream_call(&mut stream, handshake_req).await?;
@@ -101,8 +101,8 @@ async fn inner_handshake(
     let (sink, stream) = stream.split();
 
     super::super::serve_reader(
-        active_device_id.to_owned(),
-        passive_device_id.to_owned(),
+        active_device_id,
+        passive_device_id,
         exit_tx.clone(),
         exit_tx.new_receiver(),
         stream,

@@ -4,8 +4,8 @@ use tokio::net::TcpStream;
 use tokio_util::codec::LengthDelimitedCodec;
 
 pub struct ConnectRequest {
-    pub active_device_id: String,
-    pub passive_device_id: String,
+    pub active_device_id: i64,
+    pub passive_device_id: i64,
     pub addr: String,
 }
 
@@ -22,13 +22,7 @@ pub async fn connect(req: ConnectRequest) -> CoreResult<()> {
         .max_frame_length(32 * 1024 * 1024)
         .new_framed(stream);
 
-    RESERVE_STREAMS.insert(
-        (
-            req.active_device_id.to_owned(),
-            req.passive_device_id.to_owned(),
-        ),
-        stream,
-    );
+    RESERVE_STREAMS.insert((req.active_device_id, req.passive_device_id), stream);
 
     TOKIO_RUNTIME.spawn(async move {
         tokio::time::sleep(Duration::from_secs(60 * 2)).await;

@@ -13,12 +13,12 @@ use once_cell::sync::Lazy;
 use tokio::sync::{mpsc, oneshot};
 
 static RESPONSE_CHANNELS: Lazy<
-    DashMap<(String, String), oneshot::Sender<EndPointNegotiateFinishedResponse>>,
+    DashMap<(i64, i64), oneshot::Sender<EndPointNegotiateFinishedResponse>>,
 > = Lazy::new(|| DashMap::new());
 
 pub struct NegotiateFinishedRequest {
-    pub active_device_id: String,
-    pub passive_device_id: String,
+    pub active_device_id: i64,
+    pub passive_device_id: i64,
     pub selected_monitor_id: String,
     pub expect_frame_rate: u8,
 }
@@ -27,10 +27,7 @@ pub struct NegotiateFinishedRequest {
 
 pub async fn negotiate_finished(req: NegotiateFinishedRequest) -> CoreResult<()> {
     let message_tx = ENDPOINTS
-        .get(&(
-            req.active_device_id.to_owned(),
-            req.passive_device_id.to_owned(),
-        ))
+        .get(&(req.active_device_id, req.passive_device_id))
         .ok_or(core_error!("endpoint not exists"))?;
 
     let negotiate_req =
@@ -65,8 +62,8 @@ pub async fn negotiate_finished(req: NegotiateFinishedRequest) -> CoreResult<()>
 }
 
 pub async fn handle_negotiate_finished_request(
-    active_device_id: String,
-    passive_device_id: String,
+    active_device_id: i64,
+    passive_device_id: i64,
     req: EndPointNegotiateFinishedRequest,
     message_tx: mpsc::Sender<EndPointMessage>,
 ) {
@@ -74,8 +71,8 @@ pub async fn handle_negotiate_finished_request(
 }
 
 pub async fn handle_negotiate_finished_response(
-    active_device_id: String,
-    passive_device_id: String,
+    active_device_id: i64,
+    passive_device_id: i64,
     resp: EndPointNegotiateFinishedResponse,
 ) {
     if let Some((_, tx)) = RESPONSE_CHANNELS.remove(&(active_device_id, passive_device_id)) {

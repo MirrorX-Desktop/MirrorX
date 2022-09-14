@@ -11,7 +11,7 @@ use crate::{
     error::{CoreError, CoreResult},
 };
 use once_cell::sync::Lazy;
-use signaling_proto::signaling_client::SignalingClient;
+use signaling_proto::service::signaling_client::SignalingClient;
 use tokio::sync::RwLock;
 use tonic::transport::Channel;
 

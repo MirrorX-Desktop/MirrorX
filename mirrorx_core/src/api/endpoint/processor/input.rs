@@ -19,7 +19,7 @@ pub fn mouse_move(monitor: &Monitor, key: MouseKey, x: f32, y: f32) -> Result<()
     component::input::mouse_move(monitor, key, x, y)
 }
 
-pub fn mouse_scroll_whell(monitor: &Monitor, delta: f32) -> Result<(), CoreError> {
+pub fn mouse_scroll_wheel(monitor: &Monitor, delta: f32) -> Result<(), CoreError> {
     component::input::mouse_scroll_wheel(monitor, delta)
 }
 

@@ -1,1 +1,3 @@
-pub async fn handle_error(active_device_id: String, passive_device_id: String) {}
+pub async fn handle_error(active_device_id: i64, passive_device_id: i64) {
+    todo!()
+}

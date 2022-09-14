@@ -90,7 +90,7 @@ abstract class MirrorXCore {
 
   FlutterRustBridgeTaskConstMeta get kEndpointNegotiateFinishedConstMeta;
 
-  Future<void> endpointInput({required InputReqeust req, dynamic hint});
+  Future<void> endpointInput({required InputRequest req, dynamic hint});
 
   FlutterRustBridgeTaskConstMeta get kEndpointInputConstMeta;
 }
@@ -111,7 +111,7 @@ enum AudioSampleRate {
 
 class ConfigProperties {
   final String domain;
-  final String deviceId;
+  final int deviceId;
   final String deviceFingerPrint;
   final String devicePassword;
 
@@ -124,8 +124,8 @@ class ConfigProperties {
 }
 
 class ConnectRequest {
-  final String activeDeviceId;
-  final String passiveDeviceId;
+  final int activeDeviceId;
+  final int passiveDeviceId;
   final String addr;
 
   ConnectRequest({
@@ -144,8 +144,8 @@ class DialRequest {
 }
 
 class HandshakeRequest {
-  final String activeDeviceId;
-  final String passiveDeviceId;
+  final int activeDeviceId;
+  final int passiveDeviceId;
   final String visitCredentials;
   final Uint8List openingKeyBytes;
   final Uint8List openingNonceBytes;
@@ -164,11 +164,11 @@ class HandshakeRequest {
 }
 
 class HeartbeatRequest {
-  final String localDeviceId;
+  final int deviceId;
   final int timestamp;
 
   HeartbeatRequest({
-    required this.localDeviceId,
+    required this.deviceId,
     required this.timestamp,
   });
 }
@@ -191,12 +191,12 @@ class InputEvent with _$InputEvent {
   ) = InputEvent_Keyboard;
 }
 
-class InputReqeust {
-  final String activeDeviceId;
-  final String passiveDeviceId;
+class InputRequest {
+  final int activeDeviceId;
+  final int passiveDeviceId;
   final InputEvent event;
 
-  InputReqeust({
+  InputRequest({
     required this.activeDeviceId,
     required this.passiveDeviceId,
     required this.event,
@@ -204,8 +204,8 @@ class InputReqeust {
 }
 
 class KeyExchangeRequest {
-  final String localDeviceId;
-  final String remoteDeviceId;
+  final int localDeviceId;
+  final int remoteDeviceId;
   final String password;
 
   KeyExchangeRequest({
@@ -399,8 +399,8 @@ enum MouseKey {
 }
 
 class NegotiateFinishedRequest {
-  final String activeDeviceId;
-  final String passiveDeviceId;
+  final int activeDeviceId;
+  final int passiveDeviceId;
   final String selectedMonitorId;
   final int expectFrameRate;
 
@@ -413,8 +413,8 @@ class NegotiateFinishedRequest {
 }
 
 class NegotiateSelectMonitorRequest {
-  final String activeDeviceId;
-  final String passiveDeviceId;
+  final int activeDeviceId;
+  final int passiveDeviceId;
 
   NegotiateSelectMonitorRequest({
     required this.activeDeviceId,
@@ -431,8 +431,8 @@ class NegotiateSelectMonitorResponse {
 }
 
 class NegotiateVisitDesktopParamsRequest {
-  final String activeDeviceId;
-  final String passiveDeviceId;
+  final int activeDeviceId;
+  final int passiveDeviceId;
 
   NegotiateVisitDesktopParamsRequest({
     required this.activeDeviceId,
@@ -462,14 +462,14 @@ class NegotiateVisitDesktopParamsResponse {
 class PublishMessage with _$PublishMessage {
   const factory PublishMessage.streamClosed() = PublishMessage_StreamClosed;
   const factory PublishMessage.visitRequest({
-    required String activeDeviceId,
-    required String passiveDeviceId,
+    required int activeDeviceId,
+    required int passiveDeviceId,
     required ResourceType resourceType,
   }) = PublishMessage_VisitRequest;
 }
 
 class RegisterRequest {
-  final String? localDeviceId;
+  final int? localDeviceId;
   final String deviceFingerPrint;
 
   RegisterRequest({
@@ -479,7 +479,7 @@ class RegisterRequest {
 }
 
 class RegisterResponse {
-  final String deviceId;
+  final int deviceId;
 
   RegisterResponse({
     required this.deviceId,
@@ -492,7 +492,7 @@ enum ResourceType {
 }
 
 class SubscribeRequest {
-  final String localDeviceId;
+  final int localDeviceId;
   final String deviceFingerPrint;
   final String configPath;
 
@@ -511,8 +511,8 @@ enum VideoCodec {
 }
 
 class VisitRequest {
-  final String localDeviceId;
-  final String remoteDeviceId;
+  final int localDeviceId;
+  final int remoteDeviceId;
   final ResourceType resourceType;
 
   VisitRequest({
@@ -807,10 +807,10 @@ class MirrorXCoreImpl implements MirrorXCore {
         argNames: ["req"],
       );
 
-  Future<void> endpointInput({required InputReqeust req, dynamic hint}) =>
+  Future<void> endpointInput({required InputRequest req, dynamic hint}) =>
       _platform.executeNormal(FlutterRustBridgeTask(
         callFfi: (port_) => _platform.inner.wire_endpoint_input(
-            port_, _platform.api2wire_box_autoadd_input_reqeust(req)),
+            port_, _platform.api2wire_box_autoadd_input_request(req)),
         parseSuccessData: _wire2api_unit,
         constMeta: kEndpointInputConstMeta,
         argValues: [req],
@@ -889,7 +889,7 @@ ConfigProperties _wire2api_config_properties(dynamic raw) {
     throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
   return ConfigProperties(
     domain: _wire2api_String(arr[0]),
-    deviceId: _wire2api_String(arr[1]),
+    deviceId: _wire2api_i64(arr[1]),
     deviceFingerPrint: _wire2api_String(arr[2]),
     devicePassword: _wire2api_String(arr[3]),
   );
@@ -906,6 +906,10 @@ HeartbeatResponse _wire2api_heartbeat_response(dynamic raw) {
 
 int _wire2api_i32(dynamic raw) {
   return raw as int;
+}
+
+int _wire2api_i64(dynamic raw) {
+  return castInt(raw);
 }
 
 KeyExchangeResponse _wire2api_key_exchange_response(dynamic raw) {
@@ -978,8 +982,8 @@ PublishMessage _wire2api_publish_message(dynamic raw) {
       return PublishMessage_StreamClosed();
     case 1:
       return PublishMessage_VisitRequest(
-        activeDeviceId: _wire2api_String(raw[1]),
-        passiveDeviceId: _wire2api_String(raw[2]),
+        activeDeviceId: _wire2api_i64(raw[1]),
+        passiveDeviceId: _wire2api_i64(raw[2]),
         resourceType: _wire2api_resource_type(raw[3]),
       );
     default:
@@ -992,7 +996,7 @@ RegisterResponse _wire2api_register_response(dynamic raw) {
   if (arr.length != 1)
     throw Exception('unexpected arr length: expect 1 but see ${arr.length}');
   return RegisterResponse(
-    deviceId: _wire2api_String(arr[0]),
+    deviceId: _wire2api_i64(arr[0]),
   );
 }
 
@@ -1083,10 +1087,15 @@ class MirrorXCorePlatform extends FlutterRustBridgeBase<MirrorXCoreWire> {
   }
 
   @protected
-  ffi.Pointer<wire_InputReqeust> api2wire_box_autoadd_input_reqeust(
-      InputReqeust raw) {
-    final ptr = inner.new_box_autoadd_input_reqeust_0();
-    _api_fill_to_wire_input_reqeust(raw, ptr.ref);
+  ffi.Pointer<ffi.Int64> api2wire_box_autoadd_i64(int raw) {
+    return inner.new_box_autoadd_i64_0(api2wire_i64(raw));
+  }
+
+  @protected
+  ffi.Pointer<wire_InputRequest> api2wire_box_autoadd_input_request(
+      InputRequest raw) {
+    final ptr = inner.new_box_autoadd_input_request_0();
+    _api_fill_to_wire_input_request(raw, ptr.ref);
     return ptr;
   }
 
@@ -1174,8 +1183,13 @@ class MirrorXCorePlatform extends FlutterRustBridgeBase<MirrorXCoreWire> {
   }
 
   @protected
-  ffi.Pointer<wire_uint_8_list> api2wire_opt_String(String? raw) {
-    return raw == null ? ffi.nullptr : api2wire_String(raw);
+  int api2wire_i64(int raw) {
+    return raw;
+  }
+
+  @protected
+  ffi.Pointer<ffi.Int64> api2wire_opt_box_autoadd_i64(int? raw) {
+    return raw == null ? ffi.nullptr : api2wire_box_autoadd_i64(raw);
   }
 
   @protected
@@ -1212,9 +1226,9 @@ class MirrorXCorePlatform extends FlutterRustBridgeBase<MirrorXCoreWire> {
     _api_fill_to_wire_heartbeat_request(apiObj, wireObj.ref);
   }
 
-  void _api_fill_to_wire_box_autoadd_input_reqeust(
-      InputReqeust apiObj, ffi.Pointer<wire_InputReqeust> wireObj) {
-    _api_fill_to_wire_input_reqeust(apiObj, wireObj.ref);
+  void _api_fill_to_wire_box_autoadd_input_request(
+      InputRequest apiObj, ffi.Pointer<wire_InputRequest> wireObj) {
+    _api_fill_to_wire_input_request(apiObj, wireObj.ref);
   }
 
   void _api_fill_to_wire_box_autoadd_key_exchange_request(
@@ -1274,15 +1288,15 @@ class MirrorXCorePlatform extends FlutterRustBridgeBase<MirrorXCoreWire> {
   void _api_fill_to_wire_config_properties(
       ConfigProperties apiObj, wire_ConfigProperties wireObj) {
     wireObj.domain = api2wire_String(apiObj.domain);
-    wireObj.device_id = api2wire_String(apiObj.deviceId);
+    wireObj.device_id = api2wire_i64(apiObj.deviceId);
     wireObj.device_finger_print = api2wire_String(apiObj.deviceFingerPrint);
     wireObj.device_password = api2wire_String(apiObj.devicePassword);
   }
 
   void _api_fill_to_wire_connect_request(
       ConnectRequest apiObj, wire_ConnectRequest wireObj) {
-    wireObj.active_device_id = api2wire_String(apiObj.activeDeviceId);
-    wireObj.passive_device_id = api2wire_String(apiObj.passiveDeviceId);
+    wireObj.active_device_id = api2wire_i64(apiObj.activeDeviceId);
+    wireObj.passive_device_id = api2wire_i64(apiObj.passiveDeviceId);
     wireObj.addr = api2wire_String(apiObj.addr);
   }
 
@@ -1293,8 +1307,8 @@ class MirrorXCorePlatform extends FlutterRustBridgeBase<MirrorXCoreWire> {
 
   void _api_fill_to_wire_handshake_request(
       HandshakeRequest apiObj, wire_HandshakeRequest wireObj) {
-    wireObj.active_device_id = api2wire_String(apiObj.activeDeviceId);
-    wireObj.passive_device_id = api2wire_String(apiObj.passiveDeviceId);
+    wireObj.active_device_id = api2wire_i64(apiObj.activeDeviceId);
+    wireObj.passive_device_id = api2wire_i64(apiObj.passiveDeviceId);
     wireObj.visit_credentials = api2wire_String(apiObj.visitCredentials);
     wireObj.opening_key_bytes = api2wire_uint_8_list(apiObj.openingKeyBytes);
     wireObj.opening_nonce_bytes =
@@ -1306,7 +1320,7 @@ class MirrorXCorePlatform extends FlutterRustBridgeBase<MirrorXCoreWire> {
 
   void _api_fill_to_wire_heartbeat_request(
       HeartbeatRequest apiObj, wire_HeartbeatRequest wireObj) {
-    wireObj.local_device_id = api2wire_String(apiObj.localDeviceId);
+    wireObj.device_id = api2wire_i64(apiObj.deviceId);
     wireObj.timestamp = api2wire_u32(apiObj.timestamp);
   }
 
@@ -1328,17 +1342,17 @@ class MirrorXCorePlatform extends FlutterRustBridgeBase<MirrorXCoreWire> {
     }
   }
 
-  void _api_fill_to_wire_input_reqeust(
-      InputReqeust apiObj, wire_InputReqeust wireObj) {
-    wireObj.active_device_id = api2wire_String(apiObj.activeDeviceId);
-    wireObj.passive_device_id = api2wire_String(apiObj.passiveDeviceId);
+  void _api_fill_to_wire_input_request(
+      InputRequest apiObj, wire_InputRequest wireObj) {
+    wireObj.active_device_id = api2wire_i64(apiObj.activeDeviceId);
+    wireObj.passive_device_id = api2wire_i64(apiObj.passiveDeviceId);
     wireObj.event = api2wire_box_input_event(apiObj.event);
   }
 
   void _api_fill_to_wire_key_exchange_request(
       KeyExchangeRequest apiObj, wire_KeyExchangeRequest wireObj) {
-    wireObj.local_device_id = api2wire_String(apiObj.localDeviceId);
-    wireObj.remote_device_id = api2wire_String(apiObj.remoteDeviceId);
+    wireObj.local_device_id = api2wire_i64(apiObj.localDeviceId);
+    wireObj.remote_device_id = api2wire_i64(apiObj.remoteDeviceId);
     wireObj.password = api2wire_String(apiObj.password);
   }
 
@@ -1396,8 +1410,8 @@ class MirrorXCorePlatform extends FlutterRustBridgeBase<MirrorXCoreWire> {
 
   void _api_fill_to_wire_negotiate_finished_request(
       NegotiateFinishedRequest apiObj, wire_NegotiateFinishedRequest wireObj) {
-    wireObj.active_device_id = api2wire_String(apiObj.activeDeviceId);
-    wireObj.passive_device_id = api2wire_String(apiObj.passiveDeviceId);
+    wireObj.active_device_id = api2wire_i64(apiObj.activeDeviceId);
+    wireObj.passive_device_id = api2wire_i64(apiObj.passiveDeviceId);
     wireObj.selected_monitor_id = api2wire_String(apiObj.selectedMonitorId);
     wireObj.expect_frame_rate = api2wire_u8(apiObj.expectFrameRate);
   }
@@ -1405,34 +1419,35 @@ class MirrorXCorePlatform extends FlutterRustBridgeBase<MirrorXCoreWire> {
   void _api_fill_to_wire_negotiate_select_monitor_request(
       NegotiateSelectMonitorRequest apiObj,
       wire_NegotiateSelectMonitorRequest wireObj) {
-    wireObj.active_device_id = api2wire_String(apiObj.activeDeviceId);
-    wireObj.passive_device_id = api2wire_String(apiObj.passiveDeviceId);
+    wireObj.active_device_id = api2wire_i64(apiObj.activeDeviceId);
+    wireObj.passive_device_id = api2wire_i64(apiObj.passiveDeviceId);
   }
 
   void _api_fill_to_wire_negotiate_visit_desktop_params_request(
       NegotiateVisitDesktopParamsRequest apiObj,
       wire_NegotiateVisitDesktopParamsRequest wireObj) {
-    wireObj.active_device_id = api2wire_String(apiObj.activeDeviceId);
-    wireObj.passive_device_id = api2wire_String(apiObj.passiveDeviceId);
+    wireObj.active_device_id = api2wire_i64(apiObj.activeDeviceId);
+    wireObj.passive_device_id = api2wire_i64(apiObj.passiveDeviceId);
   }
 
   void _api_fill_to_wire_register_request(
       RegisterRequest apiObj, wire_RegisterRequest wireObj) {
-    wireObj.local_device_id = api2wire_opt_String(apiObj.localDeviceId);
+    wireObj.local_device_id =
+        api2wire_opt_box_autoadd_i64(apiObj.localDeviceId);
     wireObj.device_finger_print = api2wire_String(apiObj.deviceFingerPrint);
   }
 
   void _api_fill_to_wire_subscribe_request(
       SubscribeRequest apiObj, wire_SubscribeRequest wireObj) {
-    wireObj.local_device_id = api2wire_String(apiObj.localDeviceId);
+    wireObj.local_device_id = api2wire_i64(apiObj.localDeviceId);
     wireObj.device_finger_print = api2wire_String(apiObj.deviceFingerPrint);
     wireObj.config_path = api2wire_String(apiObj.configPath);
   }
 
   void _api_fill_to_wire_visit_request(
       VisitRequest apiObj, wire_VisitRequest wireObj) {
-    wireObj.local_device_id = api2wire_String(apiObj.localDeviceId);
-    wireObj.remote_device_id = api2wire_String(apiObj.remoteDeviceId);
+    wireObj.local_device_id = api2wire_i64(apiObj.localDeviceId);
+    wireObj.remote_device_id = api2wire_i64(apiObj.remoteDeviceId);
     wireObj.resource_type = api2wire_resource_type(apiObj.resourceType);
   }
 }
@@ -1747,7 +1762,7 @@ class MirrorXCoreWire implements FlutterRustBridgeWireBase {
 
   void wire_endpoint_input(
     int port_,
-    ffi.Pointer<wire_InputReqeust> req,
+    ffi.Pointer<wire_InputRequest> req,
   ) {
     return _wire_endpoint_input(
       port_,
@@ -1758,9 +1773,9 @@ class MirrorXCoreWire implements FlutterRustBridgeWireBase {
   late final _wire_endpoint_inputPtr = _lookup<
       ffi.NativeFunction<
           ffi.Void Function(ffi.Int64,
-              ffi.Pointer<wire_InputReqeust>)>>('wire_endpoint_input');
+              ffi.Pointer<wire_InputRequest>)>>('wire_endpoint_input');
   late final _wire_endpoint_input = _wire_endpoint_inputPtr
-      .asFunction<void Function(int, ffi.Pointer<wire_InputReqeust>)>();
+      .asFunction<void Function(int, ffi.Pointer<wire_InputRequest>)>();
 
   ffi.Pointer<wire_ConfigProperties> new_box_autoadd_config_properties_0() {
     return _new_box_autoadd_config_properties_0();
@@ -1817,16 +1832,30 @@ class MirrorXCoreWire implements FlutterRustBridgeWireBase {
       _new_box_autoadd_heartbeat_request_0Ptr
           .asFunction<ffi.Pointer<wire_HeartbeatRequest> Function()>();
 
-  ffi.Pointer<wire_InputReqeust> new_box_autoadd_input_reqeust_0() {
-    return _new_box_autoadd_input_reqeust_0();
+  ffi.Pointer<ffi.Int64> new_box_autoadd_i64_0(
+    int value,
+  ) {
+    return _new_box_autoadd_i64_0(
+      value,
+    );
   }
 
-  late final _new_box_autoadd_input_reqeust_0Ptr =
-      _lookup<ffi.NativeFunction<ffi.Pointer<wire_InputReqeust> Function()>>(
-          'new_box_autoadd_input_reqeust_0');
-  late final _new_box_autoadd_input_reqeust_0 =
-      _new_box_autoadd_input_reqeust_0Ptr
-          .asFunction<ffi.Pointer<wire_InputReqeust> Function()>();
+  late final _new_box_autoadd_i64_0Ptr =
+      _lookup<ffi.NativeFunction<ffi.Pointer<ffi.Int64> Function(ffi.Int64)>>(
+          'new_box_autoadd_i64_0');
+  late final _new_box_autoadd_i64_0 = _new_box_autoadd_i64_0Ptr
+      .asFunction<ffi.Pointer<ffi.Int64> Function(int)>();
+
+  ffi.Pointer<wire_InputRequest> new_box_autoadd_input_request_0() {
+    return _new_box_autoadd_input_request_0();
+  }
+
+  late final _new_box_autoadd_input_request_0Ptr =
+      _lookup<ffi.NativeFunction<ffi.Pointer<wire_InputRequest> Function()>>(
+          'new_box_autoadd_input_request_0');
+  late final _new_box_autoadd_input_request_0 =
+      _new_box_autoadd_input_request_0Ptr
+          .asFunction<ffi.Pointer<wire_InputRequest> Function()>();
 
   ffi.Pointer<wire_KeyExchangeRequest>
       new_box_autoadd_key_exchange_request_0() {
@@ -2066,7 +2095,8 @@ class wire_uint_8_list extends ffi.Struct {
 class wire_ConfigProperties extends ffi.Struct {
   external ffi.Pointer<wire_uint_8_list> domain;
 
-  external ffi.Pointer<wire_uint_8_list> device_id;
+  @ffi.Int64()
+  external int device_id;
 
   external ffi.Pointer<wire_uint_8_list> device_finger_print;
 
@@ -2078,13 +2108,14 @@ class wire_DialRequest extends ffi.Struct {
 }
 
 class wire_RegisterRequest extends ffi.Struct {
-  external ffi.Pointer<wire_uint_8_list> local_device_id;
+  external ffi.Pointer<ffi.Int64> local_device_id;
 
   external ffi.Pointer<wire_uint_8_list> device_finger_print;
 }
 
 class wire_SubscribeRequest extends ffi.Struct {
-  external ffi.Pointer<wire_uint_8_list> local_device_id;
+  @ffi.Int64()
+  external int local_device_id;
 
   external ffi.Pointer<wire_uint_8_list> device_finger_print;
 
@@ -2092,41 +2123,50 @@ class wire_SubscribeRequest extends ffi.Struct {
 }
 
 class wire_HeartbeatRequest extends ffi.Struct {
-  external ffi.Pointer<wire_uint_8_list> local_device_id;
+  @ffi.Int64()
+  external int device_id;
 
   @ffi.Uint32()
   external int timestamp;
 }
 
 class wire_VisitRequest extends ffi.Struct {
-  external ffi.Pointer<wire_uint_8_list> local_device_id;
+  @ffi.Int64()
+  external int local_device_id;
 
-  external ffi.Pointer<wire_uint_8_list> remote_device_id;
+  @ffi.Int64()
+  external int remote_device_id;
 
   @ffi.Int32()
   external int resource_type;
 }
 
 class wire_KeyExchangeRequest extends ffi.Struct {
-  external ffi.Pointer<wire_uint_8_list> local_device_id;
+  @ffi.Int64()
+  external int local_device_id;
 
-  external ffi.Pointer<wire_uint_8_list> remote_device_id;
+  @ffi.Int64()
+  external int remote_device_id;
 
   external ffi.Pointer<wire_uint_8_list> password;
 }
 
 class wire_ConnectRequest extends ffi.Struct {
-  external ffi.Pointer<wire_uint_8_list> active_device_id;
+  @ffi.Int64()
+  external int active_device_id;
 
-  external ffi.Pointer<wire_uint_8_list> passive_device_id;
+  @ffi.Int64()
+  external int passive_device_id;
 
   external ffi.Pointer<wire_uint_8_list> addr;
 }
 
 class wire_HandshakeRequest extends ffi.Struct {
-  external ffi.Pointer<wire_uint_8_list> active_device_id;
+  @ffi.Int64()
+  external int active_device_id;
 
-  external ffi.Pointer<wire_uint_8_list> passive_device_id;
+  @ffi.Int64()
+  external int passive_device_id;
 
   external ffi.Pointer<wire_uint_8_list> visit_credentials;
 
@@ -2140,21 +2180,27 @@ class wire_HandshakeRequest extends ffi.Struct {
 }
 
 class wire_NegotiateVisitDesktopParamsRequest extends ffi.Struct {
-  external ffi.Pointer<wire_uint_8_list> active_device_id;
+  @ffi.Int64()
+  external int active_device_id;
 
-  external ffi.Pointer<wire_uint_8_list> passive_device_id;
+  @ffi.Int64()
+  external int passive_device_id;
 }
 
 class wire_NegotiateSelectMonitorRequest extends ffi.Struct {
-  external ffi.Pointer<wire_uint_8_list> active_device_id;
+  @ffi.Int64()
+  external int active_device_id;
 
-  external ffi.Pointer<wire_uint_8_list> passive_device_id;
+  @ffi.Int64()
+  external int passive_device_id;
 }
 
 class wire_NegotiateFinishedRequest extends ffi.Struct {
-  external ffi.Pointer<wire_uint_8_list> active_device_id;
+  @ffi.Int64()
+  external int active_device_id;
 
-  external ffi.Pointer<wire_uint_8_list> passive_device_id;
+  @ffi.Int64()
+  external int passive_device_id;
 
   external ffi.Pointer<wire_uint_8_list> selected_monitor_id;
 
@@ -2261,10 +2307,12 @@ class wire_InputEvent extends ffi.Struct {
   external ffi.Pointer<InputEventKind> kind;
 }
 
-class wire_InputReqeust extends ffi.Struct {
-  external ffi.Pointer<wire_uint_8_list> active_device_id;
+class wire_InputRequest extends ffi.Struct {
+  @ffi.Int64()
+  external int active_device_id;
 
-  external ffi.Pointer<wire_uint_8_list> passive_device_id;
+  @ffi.Int64()
+  external int passive_device_id;
 
   external ffi.Pointer<wire_InputEvent> event;
 }

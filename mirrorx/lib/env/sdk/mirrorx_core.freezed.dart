@@ -1473,24 +1473,24 @@ mixin _$PublishMessage {
   @optionalTypeArgs
   TResult when<TResult extends Object?>({
     required TResult Function() streamClosed,
-    required TResult Function(String activeDeviceId, String passiveDeviceId,
-            ResourceType resourceType)
+    required TResult Function(
+            int activeDeviceId, int passiveDeviceId, ResourceType resourceType)
         visitRequest,
   }) =>
       throw _privateConstructorUsedError;
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>({
     TResult Function()? streamClosed,
-    TResult Function(String activeDeviceId, String passiveDeviceId,
-            ResourceType resourceType)?
+    TResult Function(
+            int activeDeviceId, int passiveDeviceId, ResourceType resourceType)?
         visitRequest,
   }) =>
       throw _privateConstructorUsedError;
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>({
     TResult Function()? streamClosed,
-    TResult Function(String activeDeviceId, String passiveDeviceId,
-            ResourceType resourceType)?
+    TResult Function(
+            int activeDeviceId, int passiveDeviceId, ResourceType resourceType)?
         visitRequest,
     required TResult orElse(),
   }) =>
@@ -1579,8 +1579,8 @@ class _$PublishMessage_StreamClosed implements PublishMessage_StreamClosed {
   @optionalTypeArgs
   TResult when<TResult extends Object?>({
     required TResult Function() streamClosed,
-    required TResult Function(String activeDeviceId, String passiveDeviceId,
-            ResourceType resourceType)
+    required TResult Function(
+            int activeDeviceId, int passiveDeviceId, ResourceType resourceType)
         visitRequest,
   }) {
     return streamClosed();
@@ -1590,8 +1590,8 @@ class _$PublishMessage_StreamClosed implements PublishMessage_StreamClosed {
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>({
     TResult Function()? streamClosed,
-    TResult Function(String activeDeviceId, String passiveDeviceId,
-            ResourceType resourceType)?
+    TResult Function(
+            int activeDeviceId, int passiveDeviceId, ResourceType resourceType)?
         visitRequest,
   }) {
     return streamClosed?.call();
@@ -1601,8 +1601,8 @@ class _$PublishMessage_StreamClosed implements PublishMessage_StreamClosed {
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>({
     TResult Function()? streamClosed,
-    TResult Function(String activeDeviceId, String passiveDeviceId,
-            ResourceType resourceType)?
+    TResult Function(
+            int activeDeviceId, int passiveDeviceId, ResourceType resourceType)?
         visitRequest,
     required TResult orElse(),
   }) {
@@ -1655,9 +1655,7 @@ abstract class _$$PublishMessage_VisitRequestCopyWith<$Res> {
           $Res Function(_$PublishMessage_VisitRequest) then) =
       __$$PublishMessage_VisitRequestCopyWithImpl<$Res>;
   $Res call(
-      {String activeDeviceId,
-      String passiveDeviceId,
-      ResourceType resourceType});
+      {int activeDeviceId, int passiveDeviceId, ResourceType resourceType});
 }
 
 /// @nodoc
@@ -1683,11 +1681,11 @@ class __$$PublishMessage_VisitRequestCopyWithImpl<$Res>
       activeDeviceId: activeDeviceId == freezed
           ? _value.activeDeviceId
           : activeDeviceId // ignore: cast_nullable_to_non_nullable
-              as String,
+              as int,
       passiveDeviceId: passiveDeviceId == freezed
           ? _value.passiveDeviceId
           : passiveDeviceId // ignore: cast_nullable_to_non_nullable
-              as String,
+              as int,
       resourceType: resourceType == freezed
           ? _value.resourceType
           : resourceType // ignore: cast_nullable_to_non_nullable
@@ -1705,9 +1703,9 @@ class _$PublishMessage_VisitRequest implements PublishMessage_VisitRequest {
       required this.resourceType});
 
   @override
-  final String activeDeviceId;
+  final int activeDeviceId;
   @override
-  final String passiveDeviceId;
+  final int passiveDeviceId;
   @override
   final ResourceType resourceType;
 
@@ -1746,8 +1744,8 @@ class _$PublishMessage_VisitRequest implements PublishMessage_VisitRequest {
   @optionalTypeArgs
   TResult when<TResult extends Object?>({
     required TResult Function() streamClosed,
-    required TResult Function(String activeDeviceId, String passiveDeviceId,
-            ResourceType resourceType)
+    required TResult Function(
+            int activeDeviceId, int passiveDeviceId, ResourceType resourceType)
         visitRequest,
   }) {
     return visitRequest(activeDeviceId, passiveDeviceId, resourceType);
@@ -1757,8 +1755,8 @@ class _$PublishMessage_VisitRequest implements PublishMessage_VisitRequest {
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>({
     TResult Function()? streamClosed,
-    TResult Function(String activeDeviceId, String passiveDeviceId,
-            ResourceType resourceType)?
+    TResult Function(
+            int activeDeviceId, int passiveDeviceId, ResourceType resourceType)?
         visitRequest,
   }) {
     return visitRequest?.call(activeDeviceId, passiveDeviceId, resourceType);
@@ -1768,8 +1766,8 @@ class _$PublishMessage_VisitRequest implements PublishMessage_VisitRequest {
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>({
     TResult Function()? streamClosed,
-    TResult Function(String activeDeviceId, String passiveDeviceId,
-            ResourceType resourceType)?
+    TResult Function(
+            int activeDeviceId, int passiveDeviceId, ResourceType resourceType)?
         visitRequest,
     required TResult orElse(),
   }) {
@@ -1813,13 +1811,13 @@ class _$PublishMessage_VisitRequest implements PublishMessage_VisitRequest {
 
 abstract class PublishMessage_VisitRequest implements PublishMessage {
   const factory PublishMessage_VisitRequest(
-          {required final String activeDeviceId,
-          required final String passiveDeviceId,
+          {required final int activeDeviceId,
+          required final int passiveDeviceId,
           required final ResourceType resourceType}) =
       _$PublishMessage_VisitRequest;
 
-  String get activeDeviceId;
-  String get passiveDeviceId;
+  int get activeDeviceId;
+  int get passiveDeviceId;
   ResourceType get resourceType;
   @JsonKey(ignore: true)
   _$$PublishMessage_VisitRequestCopyWith<_$PublishMessage_VisitRequest>
