@@ -1,12 +1,13 @@
 use crate::{
     api::{
-        config::ConfigProperties,
+        config::DomainConfig,
         endpoint::handlers::{
             connect::*, handshake::*, input::*, negotiate_finished::*, negotiate_select_monitor::*,
             negotiate_visit_desktop_params::*,
         },
         signaling::{
             dial::{dial, DialRequest},
+            disconnect::disconnect,
             heartbeat::{heartbeat, HeartbeatRequest, HeartbeatResponse},
             key_exchange::{key_exchange, KeyExchangeRequest, KeyExchangeResponse},
             register::{register, RegisterRequest, RegisterResponse},
@@ -45,27 +46,22 @@ pub fn init_logger() -> anyhow::Result<()> {
     Config API
 */
 
-pub fn config_read(path: String, domain: String) -> anyhow::Result<Option<ConfigProperties>> {
-    let properties = crate::api::config::read(&path, &domain)?;
-    Ok(properties)
+pub fn read_primary_domain(path: String) -> anyhow::Result<Option<String>> {
+    Ok(crate::api::config::read_primary_domain(&path)?)
 }
 
-pub fn config_save(
-    path: String,
-    domain: String,
-    properties: ConfigProperties,
-) -> anyhow::Result<()> {
-    crate::api::config::save(&path, &domain, &properties)?;
-    Ok(())
+pub fn save_primary_domain(path: String, value: String) -> anyhow::Result<()> {
+    Ok(crate::api::config::save_primary_domain(&path, &value)?)
 }
 
-pub fn config_read_all(path: String) -> anyhow::Result<Vec<ConfigProperties>> {
-    let all_properties = crate::api::config::read_all(&path)?
-        .into_iter()
-        .map(|entry| entry.1)
-        .collect();
+pub fn read_domain_config(path: String, domain: String) -> anyhow::Result<Option<DomainConfig>> {
+    Ok(crate::api::config::read_domain_config(&path, &domain)?)
+}
 
-    Ok(all_properties)
+pub fn save_domain_config(path: String, domain: String, value: DomainConfig) -> anyhow::Result<()> {
+    Ok(crate::api::config::save_domain_config(
+        &path, &domain, &value,
+    )?)
 }
 
 /*
@@ -74,6 +70,10 @@ pub fn config_read_all(path: String) -> anyhow::Result<Vec<ConfigProperties>> {
 
 pub fn signaling_dial(req: DialRequest) -> anyhow::Result<()> {
     async_block_on!(dial(req))
+}
+
+pub fn signaling_disconnect() -> anyhow::Result<()> {
+    async_block_on!(disconnect())
 }
 
 pub fn signaling_register(req: RegisterRequest) -> anyhow::Result<RegisterResponse> {

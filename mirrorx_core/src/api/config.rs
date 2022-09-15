@@ -1,14 +1,29 @@
 use crate::error::CoreResult;
 use rusqlite::{params, Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 
 #[derive(Serialize, Deserialize)]
-pub struct ConfigProperties {
-    pub domain: String,
+pub struct DomainConfig {
+    pub uri: String,
     pub device_id: i64,
     pub device_finger_print: String,
     pub device_password: String,
+}
+
+pub fn read_primary_domain(path: &str) -> CoreResult<Option<String>> {
+    read(path, "primary_domain")
+}
+
+pub fn save_primary_domain(path: &str, value: &str) -> CoreResult<()> {
+    save(path, "primary_domain", value)
+}
+
+pub fn read_domain_config(path: &str, domain: &str) -> CoreResult<Option<DomainConfig>> {
+    read(path, domain)?.map_or(Ok(None), |v| Ok(Some(serde_json::from_str(&v)?)))
+}
+
+pub fn save_domain_config(path: &str, domain: &str, value: &DomainConfig) -> CoreResult<()> {
+    save(path, domain, &serde_json::to_string(value)?)
 }
 
 fn ensure_db_exist(conn: &Connection) -> CoreResult<()> {
@@ -24,7 +39,7 @@ fn ensure_db_exist(conn: &Connection) -> CoreResult<()> {
     Ok(())
 }
 
-pub fn read(path: &str, key: &str) -> CoreResult<Option<ConfigProperties>> {
+fn read(path: &str, key: &str) -> CoreResult<Option<String>> {
     let conn = Connection::open(path)?;
     ensure_db_exist(&conn)?;
 
@@ -41,35 +56,33 @@ pub fn read(path: &str, key: &str) -> CoreResult<Option<ConfigProperties>> {
     }
 }
 
-pub fn read_all(path: &str) -> CoreResult<HashMap<String, ConfigProperties>> {
-    let conn = Connection::open(path)?;
-    ensure_db_exist(&conn)?;
+// pub fn read_all(path: &str) -> CoreResult<HashMap<String, String>> {
+//     let conn = Connection::open(path)?;
+//     ensure_db_exist(&conn)?;
 
-    let mut stmt = conn.prepare("SELECT * FROM kv;")?;
-    let entry_iter = stmt.query_map([], |row| {
-        let key = row.get::<_, String>(0)?;
-        let value = row.get::<_, String>(1)?;
-        Ok((key, value))
-    })?;
+//     let mut stmt = conn.prepare("SELECT * FROM kv;")?;
+//     let entry_iter = stmt.query_map([], |row| {
+//         let key = row.get::<_, String>(0)?;
+//         let value = row.get::<_, String>(1)?;
+//         Ok((key, value))
+//     })?;
 
-    let mut all_config_properties = HashMap::new();
-    for entry in entry_iter {
-        let (key, value) = entry?;
-        let config_properties = serde_json::from_str(&value)?;
-        all_config_properties.insert(key, config_properties);
-    }
+//     let mut all_config_properties = HashMap::new();
+//     for entry in entry_iter {
+//         let (key, value) = entry?;
+//         let config_properties = serde_json::from_str(&value)?;
+//         all_config_properties.insert(key, config_properties);
+//     }
 
-    Ok(all_config_properties)
-}
+//     Ok(all_config_properties)
+// }
 
-pub fn save(path: &str, key: &str, value: &ConfigProperties) -> CoreResult<()> {
-    let model_json_string = serde_json::to_string(value)?;
-
+fn save(path: &str, key: &str, value: &str) -> CoreResult<()> {
     let conn = Connection::open(path)?;
     ensure_db_exist(&conn)?;
 
     let mut stmt = conn.prepare("INSERT OR REPLACE INTO kv (key, value) VALUES (?1,?2);")?;
-    stmt.execute(params![key, model_json_string]).map(|_| ())?;
+    stmt.execute(params![key, value]).map(|_| ())?;
 
     Ok(())
 }

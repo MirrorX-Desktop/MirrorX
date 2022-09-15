@@ -11,6 +11,7 @@
     "dialogContentConnectionDisconnected": "远程设备的连接已断开",
     "dialogContentManuallyClose": "你真的想关闭连接吗？",
     "connectPageTitle": "连接",
+    "connectPageDomainTitle": "已连接域",
     "connectPageDeviceIDTitle": "设备ID",
     "connectPageDeviceIDButtonCopyTooltip": "拷贝设备ID",
     "connectPageDeviceIDButtonCopySnackbarContent": "设备ID已经复制到剪贴板",

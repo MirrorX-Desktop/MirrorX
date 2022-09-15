@@ -379,8 +379,8 @@ class _NavigationMenuItemState extends State<NavigationMenuItem>
             desktopManagerCubit.removeDesktop(remoteDeviceId);
             pageManagerCubit.switchPage("Connect");
 
-            MirrorXCoreSDK.instance
-                .endpointManuallyClose(remoteDeviceId: remoteDeviceId);
+            // MirrorXCoreSDK.instance
+            //     .endpointManuallyClose(remoteDeviceId: remoteDeviceId);
 
             navigatorState.pop();
           },

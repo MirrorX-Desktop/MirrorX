@@ -11,6 +11,7 @@
     "dialogContentConnectionDisconnected": "The remote device connection is disconnected",
     "dialogContentManuallyClose": "Do you really want to disconnect the connection?",
     "connectPageTitle": "Connect",
+    "connectPageDomainTitle": "Connect Domain",
     "connectPageDeviceIDTitle": "Device ID",
     "connectPageDeviceIDButtonCopyTooltip": "Copy Device ID",
     "connectPageDeviceIDButtonCopySnackbarContent": "Device ID copied to clipboard",

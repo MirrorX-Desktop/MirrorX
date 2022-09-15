@@ -148,26 +148,26 @@ class _RemoteConnectFieldState extends State<RemoteConnectField> {
     final remoteDeviceId = _textControllers.map((e) => e.text).join();
     log(remoteDeviceId);
     try {
-      final success = await MirrorXCoreSDK.instance
-          .signalingConnect(remoteDeviceId: remoteDeviceId);
+      // final success = await MirrorXCoreSDK.instance
+      //     .signalingConnect(remoteDeviceId: remoteDeviceId);
 
-      if (!success) {
-        _updateHandshakeState(false);
-        if (mounted) {
-          popupDialog(
-            context,
-            contentBuilder: (_) =>
-                Text(AppLocalizations.of(context)!.dialogConnectRemoteOffline),
-            actionBuilder: (navigatorState) => [
-              TextButton(
-                onPressed: navigatorState.pop,
-                child: Text(AppLocalizations.of(context)!.dialogOK),
-              )
-            ],
-          );
-        }
-        return;
-      }
+      // if (!success) {
+      //   _updateHandshakeState(false);
+      //   if (mounted) {
+      //     popupDialog(
+      //       context,
+      //       contentBuilder: (_) =>
+      //           Text(AppLocalizations.of(context)!.dialogConnectRemoteOffline),
+      //       actionBuilder: (navigatorState) => [
+      //         TextButton(
+      //           onPressed: navigatorState.pop,
+      //           child: Text(AppLocalizations.of(context)!.dialogOK),
+      //         )
+      //       ],
+      //     );
+      //   }
+      //   return;
+      // }
     } catch (e) {
       _updateHandshakeState(false);
       popupDialog(

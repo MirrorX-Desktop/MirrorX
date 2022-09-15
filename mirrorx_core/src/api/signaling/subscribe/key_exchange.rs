@@ -17,7 +17,7 @@ use signaling_proto::message::{
 };
 
 pub async fn handle(config_path: &str, req: &KeyExchangeRequest) {
-    let reply = match handle_key_agreement(config_path, req).await {
+    let reply = match key_agreement(config_path, req).await {
         Ok((
             secret_buffer,
             active_device_id,
@@ -66,7 +66,7 @@ pub async fn handle(config_path: &str, req: &KeyExchangeRequest) {
     }
 }
 
-async fn handle_key_agreement(
+async fn key_agreement(
     config_path: &str,
     req: &KeyExchangeRequest,
 ) -> CoreResult<(
@@ -78,19 +78,9 @@ async fn handle_key_agreement(
     SealingKey<NonceValue>,
     OpeningKey<NonceValue>,
 )> {
-    let all_config_properties = crate::api::config::read_all(config_path)?;
-
-    let (config_domain, config_properties) = match all_config_properties.iter().find(|&entry| {
-        let (_, value) = entry;
-        value.device_id == req.passive_device_id
-    }) {
-        Some(entry) => entry,
-        None => {
-            return Err(CoreError::KeyExchangeReplyError(
-                KeyExchangeReplyError::InvalidArgs,
-            ));
-        }
-    };
+    let domain_config = crate::api::config::read_domain_config(config_path, &req.domain)?.ok_or(
+        CoreError::KeyExchangeReplyError(KeyExchangeReplyError::InvalidArgs),
+    )?;
 
     if req.secret_nonce.len() != ring::aead::NONCE_LEN {
         return Err(CoreError::KeyExchangeReplyError(
@@ -101,7 +91,7 @@ async fn handle_key_agreement(
     // generate secret opening key with salt
     let mut active_device_secret_opening_key = [0u8; 32];
     pbkdf2::pbkdf2::<Hmac<Sha256>>(
-        config_properties.device_password.as_bytes(),
+        domain_config.device_password.as_bytes(),
         &req.password_salt,
         10000,
         &mut active_device_secret_opening_key,
@@ -111,9 +101,8 @@ async fn handle_key_agreement(
         ring::aead::UnboundKey::new(&ring::aead::AES_256_GCM, &active_device_secret_opening_key)?;
 
     let mut active_device_secret_opening_nonce = [0u8; ring::aead::NONCE_LEN];
-    for i in 0..ring::aead::NONCE_LEN {
-        active_device_secret_opening_nonce[i] = req.secret_nonce[i];
-    }
+    active_device_secret_opening_nonce[..ring::aead::NONCE_LEN]
+        .copy_from_slice(&req.secret_nonce[..ring::aead::NONCE_LEN]);
 
     let mut active_device_secret_opening_key = ring::aead::OpeningKey::new(
         unbound_key,
@@ -122,19 +111,12 @@ async fn handle_key_agreement(
 
     let mut active_device_secret_buffer = req.secret.to_owned();
 
-    let active_device_secret_buffer = match active_device_secret_opening_key
+    let active_device_secret_buffer = active_device_secret_opening_key
         .open_in_place(ring::aead::Aad::empty(), &mut active_device_secret_buffer)
-    {
-        Ok(buffer) => buffer,
-        Err(_) => {
-            return Err(CoreError::KeyExchangeReplyError(
-                KeyExchangeReplyError::InvalidPassword,
-            ));
-        }
-    };
+        .map_err(|_| CoreError::KeyExchangeReplyError(KeyExchangeReplyError::InvalidPassword))?;
 
     let active_device_secret =
-        KeyExchangeActiveDeviceSecret::decode(active_device_secret_buffer.as_ref())?;
+        KeyExchangeActiveDeviceSecret::decode(&*active_device_secret_buffer)?;
 
     if active_device_secret.active_exchange_nonce.len() != ring::aead::NONCE_LEN {
         return Err(CoreError::KeyExchangeReplyError(
@@ -159,9 +141,8 @@ async fn handle_key_agreement(
     // key agreement
 
     let mut active_exchange_nonce = [0u8; ring::aead::NONCE_LEN];
-    for i in 0..ring::aead::NONCE_LEN {
-        active_exchange_nonce[i] = active_device_secret.active_exchange_nonce[i];
-    }
+    active_exchange_nonce[..ring::aead::NONCE_LEN]
+        .copy_from_slice(&active_device_secret.active_exchange_nonce[..ring::aead::NONCE_LEN]);
 
     let active_exchange_public_key = ring::agreement::UnparsedPublicKey::new(
         &ring::agreement::X25519,
@@ -239,7 +220,7 @@ async fn handle_key_agreement(
         secret_buffer,
         req.active_device_id,
         req.passive_device_id,
-        config_domain.to_string(),
+        req.domain.to_owned(),
         active_device_secret.visit_credentials,
         sealing_key,
         opening_key,
@@ -283,12 +264,12 @@ fn build_reply(
     req: &KeyExchangeRequest,
     reply: Either<Vec<u8>, KeyExchangeReplyError>,
 ) -> KeyExchangeReplyRequest {
-    let inner_key_exchange_result = reply.either(
-        |secret_buffer| (InnerKeyExchangeResult::Secret(secret_buffer)),
-        |error| (InnerKeyExchangeResult::Error(error.into())),
-    );
+    let inner_key_exchange_result = reply.either(InnerKeyExchangeResult::Secret, |error| {
+        InnerKeyExchangeResult::Error(error.into())
+    });
 
     KeyExchangeReplyRequest {
+        domain: req.domain.to_owned(),
         active_device_id: req.active_device_id,
         passive_device_id: req.passive_device_id,
         key_exchange_result: Some(KeyExchangeResult {

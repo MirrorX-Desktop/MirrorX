@@ -25,7 +25,7 @@ EXTERNAL SOURCES:
 
 SPEC CHECKSUMS:
   device_info_plus_macos: 1ad388a1ef433505c4038e7dd9605aadd1e2e9c7
-  FlutterMacOS: 57701585bf7de1b3fc2bb61f6378d73bbdea8424
+  FlutterMacOS: ae6af50a8ea7d6103d888583d46bd8328a7e9811
   path_provider_macos: 3c0c3b4b0d4a76d2bf989a913c2de869c5641a19
   texture_render: 5e37658c4ebe80b97616d91830f7a5d213830ffd
 

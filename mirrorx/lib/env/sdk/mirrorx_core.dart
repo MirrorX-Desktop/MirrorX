@@ -18,27 +18,35 @@ abstract class MirrorXCore {
 
   FlutterRustBridgeTaskConstMeta get kInitLoggerConstMeta;
 
-  Future<ConfigProperties?> configRead(
+  Future<String?> readPrimaryDomain({required String path, dynamic hint});
+
+  FlutterRustBridgeTaskConstMeta get kReadPrimaryDomainConstMeta;
+
+  Future<void> savePrimaryDomain(
+      {required String path, required String value, dynamic hint});
+
+  FlutterRustBridgeTaskConstMeta get kSavePrimaryDomainConstMeta;
+
+  Future<DomainConfig?> readDomainConfig(
       {required String path, required String domain, dynamic hint});
 
-  FlutterRustBridgeTaskConstMeta get kConfigReadConstMeta;
+  FlutterRustBridgeTaskConstMeta get kReadDomainConfigConstMeta;
 
-  Future<void> configSave(
+  Future<void> saveDomainConfig(
       {required String path,
       required String domain,
-      required ConfigProperties properties,
+      required DomainConfig value,
       dynamic hint});
 
-  FlutterRustBridgeTaskConstMeta get kConfigSaveConstMeta;
-
-  Future<List<ConfigProperties>> configReadAll(
-      {required String path, dynamic hint});
-
-  FlutterRustBridgeTaskConstMeta get kConfigReadAllConstMeta;
+  FlutterRustBridgeTaskConstMeta get kSaveDomainConfigConstMeta;
 
   Future<void> signalingDial({required DialRequest req, dynamic hint});
 
   FlutterRustBridgeTaskConstMeta get kSignalingDialConstMeta;
+
+  Future<void> signalingDisconnect({dynamic hint});
+
+  FlutterRustBridgeTaskConstMeta get kSignalingDisconnectConstMeta;
 
   Future<RegisterResponse> signalingRegister(
       {required RegisterRequest req, dynamic hint});
@@ -109,20 +117,6 @@ enum AudioSampleRate {
   HZ480000,
 }
 
-class ConfigProperties {
-  final String domain;
-  final int deviceId;
-  final String deviceFingerPrint;
-  final String devicePassword;
-
-  ConfigProperties({
-    required this.domain,
-    required this.deviceId,
-    required this.deviceFingerPrint,
-    required this.devicePassword,
-  });
-}
-
 class ConnectRequest {
   final int activeDeviceId;
   final int passiveDeviceId;
@@ -140,6 +134,20 @@ class DialRequest {
 
   DialRequest({
     required this.uri,
+  });
+}
+
+class DomainConfig {
+  final String uri;
+  final int deviceId;
+  final String deviceFingerPrint;
+  final String devicePassword;
+
+  DomainConfig({
+    required this.uri,
+    required this.deviceId,
+    required this.deviceFingerPrint,
+    required this.devicePassword,
   });
 }
 
@@ -204,11 +212,13 @@ class InputRequest {
 }
 
 class KeyExchangeRequest {
+  final String domain;
   final int localDeviceId;
   final int remoteDeviceId;
   final String password;
 
   KeyExchangeRequest({
+    required this.domain,
     required this.localDeviceId,
     required this.remoteDeviceId,
     required this.password,
@@ -469,20 +479,24 @@ class PublishMessage with _$PublishMessage {
 }
 
 class RegisterRequest {
-  final int? localDeviceId;
-  final String deviceFingerPrint;
+  final int? deviceId;
+  final String? deviceFingerPrint;
 
   RegisterRequest({
-    this.localDeviceId,
-    required this.deviceFingerPrint,
+    this.deviceId,
+    this.deviceFingerPrint,
   });
 }
 
 class RegisterResponse {
+  final String domain;
   final int deviceId;
+  final String deviceFingerPrint;
 
   RegisterResponse({
+    required this.domain,
     required this.deviceId,
+    required this.deviceFingerPrint,
   });
 }
 
@@ -511,11 +525,13 @@ enum VideoCodec {
 }
 
 class VisitRequest {
+  final String domain;
   final int localDeviceId;
   final int remoteDeviceId;
   final ResourceType resourceType;
 
   VisitRequest({
+    required this.domain,
     required this.localDeviceId,
     required this.remoteDeviceId,
     required this.resourceType,
@@ -554,61 +570,77 @@ class MirrorXCoreImpl implements MirrorXCore {
         argNames: [],
       );
 
-  Future<ConfigProperties?> configRead(
-          {required String path, required String domain, dynamic hint}) =>
-      _platform.executeNormal(FlutterRustBridgeTask(
-        callFfi: (port_) => _platform.inner.wire_config_read(port_,
-            _platform.api2wire_String(path), _platform.api2wire_String(domain)),
-        parseSuccessData: _wire2api_opt_box_autoadd_config_properties,
-        constMeta: kConfigReadConstMeta,
-        argValues: [path, domain],
-        hint: hint,
-      ));
-
-  FlutterRustBridgeTaskConstMeta get kConfigReadConstMeta =>
-      const FlutterRustBridgeTaskConstMeta(
-        debugName: "config_read",
-        argNames: ["path", "domain"],
-      );
-
-  Future<void> configSave(
-          {required String path,
-          required String domain,
-          required ConfigProperties properties,
-          dynamic hint}) =>
-      _platform.executeNormal(FlutterRustBridgeTask(
-        callFfi: (port_) => _platform.inner.wire_config_save(
-            port_,
-            _platform.api2wire_String(path),
-            _platform.api2wire_String(domain),
-            _platform.api2wire_box_autoadd_config_properties(properties)),
-        parseSuccessData: _wire2api_unit,
-        constMeta: kConfigSaveConstMeta,
-        argValues: [path, domain, properties],
-        hint: hint,
-      ));
-
-  FlutterRustBridgeTaskConstMeta get kConfigSaveConstMeta =>
-      const FlutterRustBridgeTaskConstMeta(
-        debugName: "config_save",
-        argNames: ["path", "domain", "properties"],
-      );
-
-  Future<List<ConfigProperties>> configReadAll(
-          {required String path, dynamic hint}) =>
+  Future<String?> readPrimaryDomain({required String path, dynamic hint}) =>
       _platform.executeNormal(FlutterRustBridgeTask(
         callFfi: (port_) => _platform.inner
-            .wire_config_read_all(port_, _platform.api2wire_String(path)),
-        parseSuccessData: _wire2api_list_config_properties,
-        constMeta: kConfigReadAllConstMeta,
+            .wire_read_primary_domain(port_, _platform.api2wire_String(path)),
+        parseSuccessData: _wire2api_opt_String,
+        constMeta: kReadPrimaryDomainConstMeta,
         argValues: [path],
         hint: hint,
       ));
 
-  FlutterRustBridgeTaskConstMeta get kConfigReadAllConstMeta =>
+  FlutterRustBridgeTaskConstMeta get kReadPrimaryDomainConstMeta =>
       const FlutterRustBridgeTaskConstMeta(
-        debugName: "config_read_all",
+        debugName: "read_primary_domain",
         argNames: ["path"],
+      );
+
+  Future<void> savePrimaryDomain(
+          {required String path, required String value, dynamic hint}) =>
+      _platform.executeNormal(FlutterRustBridgeTask(
+        callFfi: (port_) => _platform.inner.wire_save_primary_domain(port_,
+            _platform.api2wire_String(path), _platform.api2wire_String(value)),
+        parseSuccessData: _wire2api_unit,
+        constMeta: kSavePrimaryDomainConstMeta,
+        argValues: [path, value],
+        hint: hint,
+      ));
+
+  FlutterRustBridgeTaskConstMeta get kSavePrimaryDomainConstMeta =>
+      const FlutterRustBridgeTaskConstMeta(
+        debugName: "save_primary_domain",
+        argNames: ["path", "value"],
+      );
+
+  Future<DomainConfig?> readDomainConfig(
+          {required String path, required String domain, dynamic hint}) =>
+      _platform.executeNormal(FlutterRustBridgeTask(
+        callFfi: (port_) => _platform.inner.wire_read_domain_config(port_,
+            _platform.api2wire_String(path), _platform.api2wire_String(domain)),
+        parseSuccessData: _wire2api_opt_box_autoadd_domain_config,
+        constMeta: kReadDomainConfigConstMeta,
+        argValues: [path, domain],
+        hint: hint,
+      ));
+
+  FlutterRustBridgeTaskConstMeta get kReadDomainConfigConstMeta =>
+      const FlutterRustBridgeTaskConstMeta(
+        debugName: "read_domain_config",
+        argNames: ["path", "domain"],
+      );
+
+  Future<void> saveDomainConfig(
+          {required String path,
+          required String domain,
+          required DomainConfig value,
+          dynamic hint}) =>
+      _platform.executeNormal(FlutterRustBridgeTask(
+        callFfi: (port_) => _platform.inner.wire_save_domain_config(
+            port_,
+            _platform.api2wire_String(path),
+            _platform.api2wire_String(domain),
+            _platform.api2wire_box_autoadd_domain_config(value)),
+        parseSuccessData: _wire2api_unit,
+        constMeta: kSaveDomainConfigConstMeta,
+        argValues: [path, domain, value],
+        hint: hint,
+      ));
+
+  FlutterRustBridgeTaskConstMeta get kSaveDomainConfigConstMeta =>
+      const FlutterRustBridgeTaskConstMeta(
+        debugName: "save_domain_config",
+        argNames: ["path", "domain", "value"],
       );
 
   Future<void> signalingDial({required DialRequest req, dynamic hint}) =>
@@ -625,6 +657,21 @@ class MirrorXCoreImpl implements MirrorXCore {
       const FlutterRustBridgeTaskConstMeta(
         debugName: "signaling_dial",
         argNames: ["req"],
+      );
+
+  Future<void> signalingDisconnect({dynamic hint}) =>
+      _platform.executeNormal(FlutterRustBridgeTask(
+        callFfi: (port_) => _platform.inner.wire_signaling_disconnect(port_),
+        parseSuccessData: _wire2api_unit,
+        constMeta: kSignalingDisconnectConstMeta,
+        argValues: [],
+        hint: hint,
+      ));
+
+  FlutterRustBridgeTaskConstMeta get kSignalingDisconnectConstMeta =>
+      const FlutterRustBridgeTaskConstMeta(
+        debugName: "signaling_disconnect",
+        argNames: [],
       );
 
   Future<RegisterResponse> signalingRegister(
@@ -879,16 +926,16 @@ bool _wire2api_bool(dynamic raw) {
   return raw as bool;
 }
 
-ConfigProperties _wire2api_box_autoadd_config_properties(dynamic raw) {
-  return _wire2api_config_properties(raw);
+DomainConfig _wire2api_box_autoadd_domain_config(dynamic raw) {
+  return _wire2api_domain_config(raw);
 }
 
-ConfigProperties _wire2api_config_properties(dynamic raw) {
+DomainConfig _wire2api_domain_config(dynamic raw) {
   final arr = raw as List<dynamic>;
   if (arr.length != 4)
     throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
-  return ConfigProperties(
-    domain: _wire2api_String(arr[0]),
+  return DomainConfig(
+    uri: _wire2api_String(arr[0]),
     deviceId: _wire2api_i64(arr[1]),
     deviceFingerPrint: _wire2api_String(arr[2]),
     devicePassword: _wire2api_String(arr[3]),
@@ -922,10 +969,6 @@ KeyExchangeResponse _wire2api_key_exchange_response(dynamic raw) {
     sealingKeyBytes: _wire2api_uint_8_list(arr[2]),
     sealingNonceBytes: _wire2api_uint_8_list(arr[3]),
   );
-}
-
-List<ConfigProperties> _wire2api_list_config_properties(dynamic raw) {
-  return (raw as List<dynamic>).map(_wire2api_config_properties).toList();
 }
 
 List<MonitorDescription> _wire2api_list_monitor_description(dynamic raw) {
@@ -972,8 +1015,12 @@ NegotiateVisitDesktopParamsResponse
   );
 }
 
-ConfigProperties? _wire2api_opt_box_autoadd_config_properties(dynamic raw) {
-  return raw == null ? null : _wire2api_box_autoadd_config_properties(raw);
+String? _wire2api_opt_String(dynamic raw) {
+  return raw == null ? null : _wire2api_String(raw);
+}
+
+DomainConfig? _wire2api_opt_box_autoadd_domain_config(dynamic raw) {
+  return raw == null ? null : _wire2api_box_autoadd_domain_config(raw);
 }
 
 PublishMessage _wire2api_publish_message(dynamic raw) {
@@ -993,10 +1040,12 @@ PublishMessage _wire2api_publish_message(dynamic raw) {
 
 RegisterResponse _wire2api_register_response(dynamic raw) {
   final arr = raw as List<dynamic>;
-  if (arr.length != 1)
-    throw Exception('unexpected arr length: expect 1 but see ${arr.length}');
+  if (arr.length != 3)
+    throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
   return RegisterResponse(
-    deviceId: _wire2api_i64(arr[0]),
+    domain: _wire2api_String(arr[0]),
+    deviceId: _wire2api_i64(arr[1]),
+    deviceFingerPrint: _wire2api_String(arr[2]),
   );
 }
 
@@ -1047,14 +1096,6 @@ class MirrorXCorePlatform extends FlutterRustBridgeBase<MirrorXCoreWire> {
   }
 
   @protected
-  ffi.Pointer<wire_ConfigProperties> api2wire_box_autoadd_config_properties(
-      ConfigProperties raw) {
-    final ptr = inner.new_box_autoadd_config_properties_0();
-    _api_fill_to_wire_config_properties(raw, ptr.ref);
-    return ptr;
-  }
-
-  @protected
   ffi.Pointer<wire_ConnectRequest> api2wire_box_autoadd_connect_request(
       ConnectRequest raw) {
     final ptr = inner.new_box_autoadd_connect_request_0();
@@ -1067,6 +1108,14 @@ class MirrorXCorePlatform extends FlutterRustBridgeBase<MirrorXCoreWire> {
       DialRequest raw) {
     final ptr = inner.new_box_autoadd_dial_request_0();
     _api_fill_to_wire_dial_request(raw, ptr.ref);
+    return ptr;
+  }
+
+  @protected
+  ffi.Pointer<wire_DomainConfig> api2wire_box_autoadd_domain_config(
+      DomainConfig raw) {
+    final ptr = inner.new_box_autoadd_domain_config_0();
+    _api_fill_to_wire_domain_config(raw, ptr.ref);
     return ptr;
   }
 
@@ -1188,6 +1237,11 @@ class MirrorXCorePlatform extends FlutterRustBridgeBase<MirrorXCoreWire> {
   }
 
   @protected
+  ffi.Pointer<wire_uint_8_list> api2wire_opt_String(String? raw) {
+    return raw == null ? ffi.nullptr : api2wire_String(raw);
+  }
+
+  @protected
   ffi.Pointer<ffi.Int64> api2wire_opt_box_autoadd_i64(int? raw) {
     return raw == null ? ffi.nullptr : api2wire_box_autoadd_i64(raw);
   }
@@ -1201,11 +1255,6 @@ class MirrorXCorePlatform extends FlutterRustBridgeBase<MirrorXCoreWire> {
 
 // Section: api_fill_to_wire
 
-  void _api_fill_to_wire_box_autoadd_config_properties(
-      ConfigProperties apiObj, ffi.Pointer<wire_ConfigProperties> wireObj) {
-    _api_fill_to_wire_config_properties(apiObj, wireObj.ref);
-  }
-
   void _api_fill_to_wire_box_autoadd_connect_request(
       ConnectRequest apiObj, ffi.Pointer<wire_ConnectRequest> wireObj) {
     _api_fill_to_wire_connect_request(apiObj, wireObj.ref);
@@ -1214,6 +1263,11 @@ class MirrorXCorePlatform extends FlutterRustBridgeBase<MirrorXCoreWire> {
   void _api_fill_to_wire_box_autoadd_dial_request(
       DialRequest apiObj, ffi.Pointer<wire_DialRequest> wireObj) {
     _api_fill_to_wire_dial_request(apiObj, wireObj.ref);
+  }
+
+  void _api_fill_to_wire_box_autoadd_domain_config(
+      DomainConfig apiObj, ffi.Pointer<wire_DomainConfig> wireObj) {
+    _api_fill_to_wire_domain_config(apiObj, wireObj.ref);
   }
 
   void _api_fill_to_wire_box_autoadd_handshake_request(
@@ -1285,14 +1339,6 @@ class MirrorXCorePlatform extends FlutterRustBridgeBase<MirrorXCoreWire> {
     _api_fill_to_wire_input_event(apiObj, wireObj.ref);
   }
 
-  void _api_fill_to_wire_config_properties(
-      ConfigProperties apiObj, wire_ConfigProperties wireObj) {
-    wireObj.domain = api2wire_String(apiObj.domain);
-    wireObj.device_id = api2wire_i64(apiObj.deviceId);
-    wireObj.device_finger_print = api2wire_String(apiObj.deviceFingerPrint);
-    wireObj.device_password = api2wire_String(apiObj.devicePassword);
-  }
-
   void _api_fill_to_wire_connect_request(
       ConnectRequest apiObj, wire_ConnectRequest wireObj) {
     wireObj.active_device_id = api2wire_i64(apiObj.activeDeviceId);
@@ -1303,6 +1349,14 @@ class MirrorXCorePlatform extends FlutterRustBridgeBase<MirrorXCoreWire> {
   void _api_fill_to_wire_dial_request(
       DialRequest apiObj, wire_DialRequest wireObj) {
     wireObj.uri = api2wire_String(apiObj.uri);
+  }
+
+  void _api_fill_to_wire_domain_config(
+      DomainConfig apiObj, wire_DomainConfig wireObj) {
+    wireObj.uri = api2wire_String(apiObj.uri);
+    wireObj.device_id = api2wire_i64(apiObj.deviceId);
+    wireObj.device_finger_print = api2wire_String(apiObj.deviceFingerPrint);
+    wireObj.device_password = api2wire_String(apiObj.devicePassword);
   }
 
   void _api_fill_to_wire_handshake_request(
@@ -1351,6 +1405,7 @@ class MirrorXCorePlatform extends FlutterRustBridgeBase<MirrorXCoreWire> {
 
   void _api_fill_to_wire_key_exchange_request(
       KeyExchangeRequest apiObj, wire_KeyExchangeRequest wireObj) {
+    wireObj.domain = api2wire_String(apiObj.domain);
     wireObj.local_device_id = api2wire_i64(apiObj.localDeviceId);
     wireObj.remote_device_id = api2wire_i64(apiObj.remoteDeviceId);
     wireObj.password = api2wire_String(apiObj.password);
@@ -1432,9 +1487,8 @@ class MirrorXCorePlatform extends FlutterRustBridgeBase<MirrorXCoreWire> {
 
   void _api_fill_to_wire_register_request(
       RegisterRequest apiObj, wire_RegisterRequest wireObj) {
-    wireObj.local_device_id =
-        api2wire_opt_box_autoadd_i64(apiObj.localDeviceId);
-    wireObj.device_finger_print = api2wire_String(apiObj.deviceFingerPrint);
+    wireObj.device_id = api2wire_opt_box_autoadd_i64(apiObj.deviceId);
+    wireObj.device_finger_print = api2wire_opt_String(apiObj.deviceFingerPrint);
   }
 
   void _api_fill_to_wire_subscribe_request(
@@ -1446,6 +1500,7 @@ class MirrorXCorePlatform extends FlutterRustBridgeBase<MirrorXCoreWire> {
 
   void _api_fill_to_wire_visit_request(
       VisitRequest apiObj, wire_VisitRequest wireObj) {
+    wireObj.domain = api2wire_String(apiObj.domain);
     wireObj.local_device_id = api2wire_i64(apiObj.localDeviceId);
     wireObj.remote_device_id = api2wire_i64(apiObj.remoteDeviceId);
     wireObj.resource_type = api2wire_resource_type(apiObj.resourceType);
@@ -1502,67 +1557,88 @@ class MirrorXCoreWire implements FlutterRustBridgeWireBase {
   late final _wire_init_logger =
       _wire_init_loggerPtr.asFunction<void Function(int)>();
 
-  void wire_config_read(
+  void wire_read_primary_domain(
+    int port_,
+    ffi.Pointer<wire_uint_8_list> path,
+  ) {
+    return _wire_read_primary_domain(
+      port_,
+      path,
+    );
+  }
+
+  late final _wire_read_primary_domainPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Void Function(ffi.Int64,
+              ffi.Pointer<wire_uint_8_list>)>>('wire_read_primary_domain');
+  late final _wire_read_primary_domain = _wire_read_primary_domainPtr
+      .asFunction<void Function(int, ffi.Pointer<wire_uint_8_list>)>();
+
+  void wire_save_primary_domain(
+    int port_,
+    ffi.Pointer<wire_uint_8_list> path,
+    ffi.Pointer<wire_uint_8_list> value,
+  ) {
+    return _wire_save_primary_domain(
+      port_,
+      path,
+      value,
+    );
+  }
+
+  late final _wire_save_primary_domainPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Void Function(ffi.Int64, ffi.Pointer<wire_uint_8_list>,
+              ffi.Pointer<wire_uint_8_list>)>>('wire_save_primary_domain');
+  late final _wire_save_primary_domain =
+      _wire_save_primary_domainPtr.asFunction<
+          void Function(int, ffi.Pointer<wire_uint_8_list>,
+              ffi.Pointer<wire_uint_8_list>)>();
+
+  void wire_read_domain_config(
     int port_,
     ffi.Pointer<wire_uint_8_list> path,
     ffi.Pointer<wire_uint_8_list> domain,
   ) {
-    return _wire_config_read(
+    return _wire_read_domain_config(
       port_,
       path,
       domain,
     );
   }
 
-  late final _wire_config_readPtr = _lookup<
+  late final _wire_read_domain_configPtr = _lookup<
       ffi.NativeFunction<
           ffi.Void Function(ffi.Int64, ffi.Pointer<wire_uint_8_list>,
-              ffi.Pointer<wire_uint_8_list>)>>('wire_config_read');
-  late final _wire_config_read = _wire_config_readPtr.asFunction<
+              ffi.Pointer<wire_uint_8_list>)>>('wire_read_domain_config');
+  late final _wire_read_domain_config = _wire_read_domain_configPtr.asFunction<
       void Function(
           int, ffi.Pointer<wire_uint_8_list>, ffi.Pointer<wire_uint_8_list>)>();
 
-  void wire_config_save(
+  void wire_save_domain_config(
     int port_,
     ffi.Pointer<wire_uint_8_list> path,
     ffi.Pointer<wire_uint_8_list> domain,
-    ffi.Pointer<wire_ConfigProperties> properties,
+    ffi.Pointer<wire_DomainConfig> value,
   ) {
-    return _wire_config_save(
+    return _wire_save_domain_config(
       port_,
       path,
       domain,
-      properties,
+      value,
     );
   }
 
-  late final _wire_config_savePtr = _lookup<
+  late final _wire_save_domain_configPtr = _lookup<
       ffi.NativeFunction<
           ffi.Void Function(
               ffi.Int64,
               ffi.Pointer<wire_uint_8_list>,
               ffi.Pointer<wire_uint_8_list>,
-              ffi.Pointer<wire_ConfigProperties>)>>('wire_config_save');
-  late final _wire_config_save = _wire_config_savePtr.asFunction<
+              ffi.Pointer<wire_DomainConfig>)>>('wire_save_domain_config');
+  late final _wire_save_domain_config = _wire_save_domain_configPtr.asFunction<
       void Function(int, ffi.Pointer<wire_uint_8_list>,
-          ffi.Pointer<wire_uint_8_list>, ffi.Pointer<wire_ConfigProperties>)>();
-
-  void wire_config_read_all(
-    int port_,
-    ffi.Pointer<wire_uint_8_list> path,
-  ) {
-    return _wire_config_read_all(
-      port_,
-      path,
-    );
-  }
-
-  late final _wire_config_read_allPtr = _lookup<
-      ffi.NativeFunction<
-          ffi.Void Function(ffi.Int64,
-              ffi.Pointer<wire_uint_8_list>)>>('wire_config_read_all');
-  late final _wire_config_read_all = _wire_config_read_allPtr
-      .asFunction<void Function(int, ffi.Pointer<wire_uint_8_list>)>();
+          ffi.Pointer<wire_uint_8_list>, ffi.Pointer<wire_DomainConfig>)>();
 
   void wire_signaling_dial(
     int port_,
@@ -1580,6 +1656,20 @@ class MirrorXCoreWire implements FlutterRustBridgeWireBase {
               ffi.Pointer<wire_DialRequest>)>>('wire_signaling_dial');
   late final _wire_signaling_dial = _wire_signaling_dialPtr
       .asFunction<void Function(int, ffi.Pointer<wire_DialRequest>)>();
+
+  void wire_signaling_disconnect(
+    int port_,
+  ) {
+    return _wire_signaling_disconnect(
+      port_,
+    );
+  }
+
+  late final _wire_signaling_disconnectPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
+          'wire_signaling_disconnect');
+  late final _wire_signaling_disconnect =
+      _wire_signaling_disconnectPtr.asFunction<void Function(int)>();
 
   void wire_signaling_register(
     int port_,
@@ -1777,17 +1867,6 @@ class MirrorXCoreWire implements FlutterRustBridgeWireBase {
   late final _wire_endpoint_input = _wire_endpoint_inputPtr
       .asFunction<void Function(int, ffi.Pointer<wire_InputRequest>)>();
 
-  ffi.Pointer<wire_ConfigProperties> new_box_autoadd_config_properties_0() {
-    return _new_box_autoadd_config_properties_0();
-  }
-
-  late final _new_box_autoadd_config_properties_0Ptr = _lookup<
-          ffi.NativeFunction<ffi.Pointer<wire_ConfigProperties> Function()>>(
-      'new_box_autoadd_config_properties_0');
-  late final _new_box_autoadd_config_properties_0 =
-      _new_box_autoadd_config_properties_0Ptr
-          .asFunction<ffi.Pointer<wire_ConfigProperties> Function()>();
-
   ffi.Pointer<wire_ConnectRequest> new_box_autoadd_connect_request_0() {
     return _new_box_autoadd_connect_request_0();
   }
@@ -1809,6 +1888,17 @@ class MirrorXCoreWire implements FlutterRustBridgeWireBase {
   late final _new_box_autoadd_dial_request_0 =
       _new_box_autoadd_dial_request_0Ptr
           .asFunction<ffi.Pointer<wire_DialRequest> Function()>();
+
+  ffi.Pointer<wire_DomainConfig> new_box_autoadd_domain_config_0() {
+    return _new_box_autoadd_domain_config_0();
+  }
+
+  late final _new_box_autoadd_domain_config_0Ptr =
+      _lookup<ffi.NativeFunction<ffi.Pointer<wire_DomainConfig> Function()>>(
+          'new_box_autoadd_domain_config_0');
+  late final _new_box_autoadd_domain_config_0 =
+      _new_box_autoadd_domain_config_0Ptr
+          .asFunction<ffi.Pointer<wire_DomainConfig> Function()>();
 
   ffi.Pointer<wire_HandshakeRequest> new_box_autoadd_handshake_request_0() {
     return _new_box_autoadd_handshake_request_0();
@@ -2092,8 +2182,8 @@ class wire_uint_8_list extends ffi.Struct {
   external int len;
 }
 
-class wire_ConfigProperties extends ffi.Struct {
-  external ffi.Pointer<wire_uint_8_list> domain;
+class wire_DomainConfig extends ffi.Struct {
+  external ffi.Pointer<wire_uint_8_list> uri;
 
   @ffi.Int64()
   external int device_id;
@@ -2108,7 +2198,7 @@ class wire_DialRequest extends ffi.Struct {
 }
 
 class wire_RegisterRequest extends ffi.Struct {
-  external ffi.Pointer<ffi.Int64> local_device_id;
+  external ffi.Pointer<ffi.Int64> device_id;
 
   external ffi.Pointer<wire_uint_8_list> device_finger_print;
 }
@@ -2131,6 +2221,8 @@ class wire_HeartbeatRequest extends ffi.Struct {
 }
 
 class wire_VisitRequest extends ffi.Struct {
+  external ffi.Pointer<wire_uint_8_list> domain;
+
   @ffi.Int64()
   external int local_device_id;
 
@@ -2142,6 +2234,8 @@ class wire_VisitRequest extends ffi.Struct {
 }
 
 class wire_KeyExchangeRequest extends ffi.Struct {
+  external ffi.Pointer<wire_uint_8_list> domain;
+
   @ffi.Int64()
   external int local_device_id;
 

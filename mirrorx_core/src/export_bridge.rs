@@ -17,7 +17,7 @@ use flutter_rust_bridge::*;
 
 // Section: imports
 
-use crate::api::config::ConfigProperties;
+use crate::api::config::DomainConfig;
 use crate::api::endpoint::handlers::connect::ConnectRequest;
 use crate::api::endpoint::handlers::handshake::HandshakeRequest;
 use crate::api::endpoint::handlers::input::InputRequest;
@@ -60,54 +60,72 @@ fn wire_init_logger_impl(port_: MessagePort) {
         move || move |task_callback| init_logger(),
     )
 }
-fn wire_config_read_impl(
+fn wire_read_primary_domain_impl(port_: MessagePort, path: impl Wire2Api<String> + UnwindSafe) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap(
+        WrapInfo {
+            debug_name: "read_primary_domain",
+            port: Some(port_),
+            mode: FfiCallMode::Normal,
+        },
+        move || {
+            let api_path = path.wire2api();
+            move |task_callback| read_primary_domain(api_path)
+        },
+    )
+}
+fn wire_save_primary_domain_impl(
+    port_: MessagePort,
+    path: impl Wire2Api<String> + UnwindSafe,
+    value: impl Wire2Api<String> + UnwindSafe,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap(
+        WrapInfo {
+            debug_name: "save_primary_domain",
+            port: Some(port_),
+            mode: FfiCallMode::Normal,
+        },
+        move || {
+            let api_path = path.wire2api();
+            let api_value = value.wire2api();
+            move |task_callback| save_primary_domain(api_path, api_value)
+        },
+    )
+}
+fn wire_read_domain_config_impl(
     port_: MessagePort,
     path: impl Wire2Api<String> + UnwindSafe,
     domain: impl Wire2Api<String> + UnwindSafe,
 ) {
     FLUTTER_RUST_BRIDGE_HANDLER.wrap(
         WrapInfo {
-            debug_name: "config_read",
+            debug_name: "read_domain_config",
             port: Some(port_),
             mode: FfiCallMode::Normal,
         },
         move || {
             let api_path = path.wire2api();
             let api_domain = domain.wire2api();
-            move |task_callback| config_read(api_path, api_domain)
+            move |task_callback| read_domain_config(api_path, api_domain)
         },
     )
 }
-fn wire_config_save_impl(
+fn wire_save_domain_config_impl(
     port_: MessagePort,
     path: impl Wire2Api<String> + UnwindSafe,
     domain: impl Wire2Api<String> + UnwindSafe,
-    properties: impl Wire2Api<ConfigProperties> + UnwindSafe,
+    value: impl Wire2Api<DomainConfig> + UnwindSafe,
 ) {
     FLUTTER_RUST_BRIDGE_HANDLER.wrap(
         WrapInfo {
-            debug_name: "config_save",
+            debug_name: "save_domain_config",
             port: Some(port_),
             mode: FfiCallMode::Normal,
         },
         move || {
             let api_path = path.wire2api();
             let api_domain = domain.wire2api();
-            let api_properties = properties.wire2api();
-            move |task_callback| config_save(api_path, api_domain, api_properties)
-        },
-    )
-}
-fn wire_config_read_all_impl(port_: MessagePort, path: impl Wire2Api<String> + UnwindSafe) {
-    FLUTTER_RUST_BRIDGE_HANDLER.wrap(
-        WrapInfo {
-            debug_name: "config_read_all",
-            port: Some(port_),
-            mode: FfiCallMode::Normal,
-        },
-        move || {
-            let api_path = path.wire2api();
-            move |task_callback| config_read_all(api_path)
+            let api_value = value.wire2api();
+            move |task_callback| save_domain_config(api_path, api_domain, api_value)
         },
     )
 }
@@ -122,6 +140,16 @@ fn wire_signaling_dial_impl(port_: MessagePort, req: impl Wire2Api<DialRequest> 
             let api_req = req.wire2api();
             move |task_callback| signaling_dial(api_req)
         },
+    )
+}
+fn wire_signaling_disconnect_impl(port_: MessagePort) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap(
+        WrapInfo {
+            debug_name: "signaling_disconnect",
+            port: Some(port_),
+            mode: FfiCallMode::Normal,
+        },
+        move || move |task_callback| signaling_disconnect(),
     )
 }
 fn wire_signaling_register_impl(
@@ -508,10 +536,10 @@ impl support::IntoDart for AudioSampleRate {
     }
 }
 
-impl support::IntoDart for ConfigProperties {
+impl support::IntoDart for DomainConfig {
     fn into_dart(self) -> support::DartAbi {
         vec![
-            self.domain.into_dart(),
+            self.uri.into_dart(),
             self.device_id.into_dart(),
             self.device_finger_print.into_dart(),
             self.device_password.into_dart(),
@@ -519,7 +547,7 @@ impl support::IntoDart for ConfigProperties {
         .into_dart()
     }
 }
-impl support::IntoDartExceptPrimitive for ConfigProperties {}
+impl support::IntoDartExceptPrimitive for DomainConfig {}
 
 impl support::IntoDart for HeartbeatResponse {
     fn into_dart(self) -> support::DartAbi {
@@ -600,7 +628,12 @@ impl support::IntoDart for PublishMessage {
 impl support::IntoDartExceptPrimitive for PublishMessage {}
 impl support::IntoDart for RegisterResponse {
     fn into_dart(self) -> support::DartAbi {
-        vec![self.device_id.into_dart()].into_dart()
+        vec![
+            self.domain.into_dart(),
+            self.device_id.into_dart(),
+            self.device_finger_print.into_dart(),
+        ]
+        .into_dart()
     }
 }
 impl support::IntoDartExceptPrimitive for RegisterResponse {}

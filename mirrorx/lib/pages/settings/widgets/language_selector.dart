@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
-import 'package:mirrorx/state/profile/profile_state_cubit.dart';
 
 const languages = {
   "en": "English",
@@ -33,7 +32,7 @@ class LanguageSelector extends StatelessWidget {
                     ))
                 .toList(),
             onChanged: (Locale? value) =>
-                context.read<ProfileStateCubit>().changeLocale(value),
+                {/*context.read<ProfileStateCubit>().changeLocale(value)*/},
           ),
         ),
       ],

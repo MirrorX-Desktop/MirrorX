@@ -16,6 +16,10 @@ pub struct DialRequest {
 
 pub async fn dial(req: DialRequest) -> CoreResult<()> {
     let uri = Uri::try_from(req.uri).map_err(|_| core_error!("invalid uri format"))?;
+    let domain = uri
+        .host()
+        .ok_or_else(|| core_error!("invalid uri format"))?
+        .to_string();
 
     let channel = Channel::builder(uri)
         .tcp_nodelay(true)
@@ -34,4 +38,13 @@ pub async fn dial(req: DialRequest) -> CoreResult<()> {
     SignalingClientManager::set_client(Some(client)).await;
 
     Ok(())
+}
+
+#[tokio::test]
+async fn test_dial() {
+    dial(DialRequest {
+        uri: String::from("mirrorx.cloud"),
+    })
+    .await
+    .unwrap();
 }

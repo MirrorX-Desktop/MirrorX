@@ -135,16 +135,16 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
         mouseKey = MouseKey.Wheel;
     }
 
-    MirrorXCoreSDK.instance.endpointInput(
-      remoteDeviceId: widget.model.remoteDeviceId,
-      event: InputEvent.mouse(
-        MouseEvent.mouseDown(
-          mouseKey,
-          event.localPosition.dx,
-          event.localPosition.dy,
-        ),
-      ),
-    );
+    // MirrorXCoreSDK.instance.endpointInput(
+    //   remoteDeviceId: widget.model.remoteDeviceId,
+    //   event: InputEvent.mouse(
+    //     MouseEvent.mouseDown(
+    //       mouseKey,
+    //       event.localPosition.dx,
+    //       event.localPosition.dy,
+    //     ),
+    //   ),
+    // );
 
     _downButtons[event.pointer] = event.buttons;
   }
@@ -170,16 +170,16 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
         mouseKey = MouseKey.Wheel;
     }
 
-    MirrorXCoreSDK.instance.endpointInput(
-      remoteDeviceId: widget.model.remoteDeviceId,
-      event: InputEvent.mouse(
-        MouseEvent.mouseUp(
-          mouseKey,
-          event.localPosition.dx,
-          event.localPosition.dy,
-        ),
-      ),
-    );
+    // MirrorXCoreSDK.instance.endpointInput(
+    //   remoteDeviceId: widget.model.remoteDeviceId,
+    //   event: InputEvent.mouse(
+    //     MouseEvent.mouseUp(
+    //       mouseKey,
+    //       event.localPosition.dx,
+    //       event.localPosition.dy,
+    //     ),
+    //   ),
+    // );
   }
 
   void _handlePointerMove(PointerMoveEvent event) {
@@ -201,41 +201,41 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
         return;
     }
 
-    MirrorXCoreSDK.instance.endpointInput(
-      remoteDeviceId: widget.model.remoteDeviceId,
-      event: InputEvent.mouse(
-        MouseEvent.mouseMove(
-          mouseKey,
-          event.localPosition.dx,
-          event.localPosition.dy,
-        ),
-      ),
-    );
+    // MirrorXCoreSDK.instance.endpointInput(
+    //   remoteDeviceId: widget.model.remoteDeviceId,
+    //   event: InputEvent.mouse(
+    //     MouseEvent.mouseMove(
+    //       mouseKey,
+    //       event.localPosition.dx,
+    //       event.localPosition.dy,
+    //     ),
+    //   ),
+    // );
   }
 
   void _handlePointerHover(PointerHoverEvent event) {
     log("pointer hover ${event.buttons} ${event.localPosition}");
 
-    MirrorXCoreSDK.instance.endpointInput(
-      remoteDeviceId: widget.model.remoteDeviceId,
-      event: InputEvent.mouse(
-        MouseEvent.mouseMove(
-          MouseKey.None,
-          event.localPosition.dx,
-          event.localPosition.dy,
-        ),
-      ),
-    );
+    // MirrorXCoreSDK.instance.endpointInput(
+    //   remoteDeviceId: widget.model.remoteDeviceId,
+    //   event: InputEvent.mouse(
+    //     MouseEvent.mouseMove(
+    //       MouseKey.None,
+    //       event.localPosition.dx,
+    //       event.localPosition.dy,
+    //     ),
+    //   ),
+    // );
   }
 
   void _handlePointerSignal(PointerSignalEvent event) {
     if (event is PointerScrollEvent) {
-      MirrorXCoreSDK.instance.endpointInput(
-        remoteDeviceId: widget.model.remoteDeviceId,
-        event: InputEvent.mouse(
-          MouseEvent.mouseScrollWheel(event.scrollDelta.dy),
-        ),
-      );
+      // MirrorXCoreSDK.instance.endpointInput(
+      //   remoteDeviceId: widget.model.remoteDeviceId,
+      //   event: InputEvent.mouse(
+      //     MouseEvent.mouseScrollWheel(event.scrollDelta.dy),
+      //   ),
+      // );
     }
   }
 
@@ -263,10 +263,10 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
 
     log("press $keyboardEvent");
 
-    MirrorXCoreSDK.instance.endpointInput(
-      remoteDeviceId: widget.model.remoteDeviceId,
-      event: InputEvent.keyboard(keyboardEvent),
-    );
+    // MirrorXCoreSDK.instance.endpointInput(
+    //   remoteDeviceId: widget.model.remoteDeviceId,
+    //   event: InputEvent.keyboard(keyboardEvent),
+    // );
 
     return true;
   }

@@ -11,19 +11,19 @@ typedef struct wire_uint_8_list {
   int32_t len;
 } wire_uint_8_list;
 
-typedef struct wire_ConfigProperties {
-  struct wire_uint_8_list *domain;
+typedef struct wire_DomainConfig {
+  struct wire_uint_8_list *uri;
   int64_t device_id;
   struct wire_uint_8_list *device_finger_print;
   struct wire_uint_8_list *device_password;
-} wire_ConfigProperties;
+} wire_DomainConfig;
 
 typedef struct wire_DialRequest {
   struct wire_uint_8_list *uri;
 } wire_DialRequest;
 
 typedef struct wire_RegisterRequest {
-  int64_t *local_device_id;
+  int64_t *device_id;
   struct wire_uint_8_list *device_finger_print;
 } wire_RegisterRequest;
 
@@ -39,12 +39,14 @@ typedef struct wire_HeartbeatRequest {
 } wire_HeartbeatRequest;
 
 typedef struct wire_VisitRequest {
+  struct wire_uint_8_list *domain;
   int64_t local_device_id;
   int64_t remote_device_id;
   int32_t resource_type;
 } wire_VisitRequest;
 
 typedef struct wire_KeyExchangeRequest {
+  struct wire_uint_8_list *domain;
   int64_t local_device_id;
   int64_t remote_device_id;
   struct wire_uint_8_list *password;
@@ -169,18 +171,24 @@ void store_dart_post_cobject(DartPostCObjectFnType ptr);
 
 void wire_init_logger(int64_t port_);
 
-void wire_config_read(int64_t port_,
-                      struct wire_uint_8_list *path,
-                      struct wire_uint_8_list *domain);
+void wire_read_primary_domain(int64_t port_, struct wire_uint_8_list *path);
 
-void wire_config_save(int64_t port_,
-                      struct wire_uint_8_list *path,
-                      struct wire_uint_8_list *domain,
-                      struct wire_ConfigProperties *properties);
+void wire_save_primary_domain(int64_t port_,
+                              struct wire_uint_8_list *path,
+                              struct wire_uint_8_list *value);
 
-void wire_config_read_all(int64_t port_, struct wire_uint_8_list *path);
+void wire_read_domain_config(int64_t port_,
+                             struct wire_uint_8_list *path,
+                             struct wire_uint_8_list *domain);
+
+void wire_save_domain_config(int64_t port_,
+                             struct wire_uint_8_list *path,
+                             struct wire_uint_8_list *domain,
+                             struct wire_DomainConfig *value);
 
 void wire_signaling_dial(int64_t port_, struct wire_DialRequest *req);
+
+void wire_signaling_disconnect(int64_t port_);
 
 void wire_signaling_register(int64_t port_, struct wire_RegisterRequest *req);
 
@@ -206,11 +214,11 @@ void wire_endpoint_negotiate_finished(int64_t port_, struct wire_NegotiateFinish
 
 void wire_endpoint_input(int64_t port_, struct wire_InputRequest *req);
 
-struct wire_ConfigProperties *new_box_autoadd_config_properties_0(void);
-
 struct wire_ConnectRequest *new_box_autoadd_connect_request_0(void);
 
 struct wire_DialRequest *new_box_autoadd_dial_request_0(void);
+
+struct wire_DomainConfig *new_box_autoadd_domain_config_0(void);
 
 struct wire_HandshakeRequest *new_box_autoadd_handshake_request_0(void);
 
@@ -263,10 +271,12 @@ void free_WireSyncReturnStruct(struct WireSyncReturnStruct val);
 static int64_t dummy_method_to_enforce_bundling(void) {
     int64_t dummy_var = 0;
     dummy_var ^= ((int64_t) (void*) wire_init_logger);
-    dummy_var ^= ((int64_t) (void*) wire_config_read);
-    dummy_var ^= ((int64_t) (void*) wire_config_save);
-    dummy_var ^= ((int64_t) (void*) wire_config_read_all);
+    dummy_var ^= ((int64_t) (void*) wire_read_primary_domain);
+    dummy_var ^= ((int64_t) (void*) wire_save_primary_domain);
+    dummy_var ^= ((int64_t) (void*) wire_read_domain_config);
+    dummy_var ^= ((int64_t) (void*) wire_save_domain_config);
     dummy_var ^= ((int64_t) (void*) wire_signaling_dial);
+    dummy_var ^= ((int64_t) (void*) wire_signaling_disconnect);
     dummy_var ^= ((int64_t) (void*) wire_signaling_register);
     dummy_var ^= ((int64_t) (void*) wire_signaling_subscribe);
     dummy_var ^= ((int64_t) (void*) wire_signaling_heartbeat);
@@ -278,9 +288,9 @@ static int64_t dummy_method_to_enforce_bundling(void) {
     dummy_var ^= ((int64_t) (void*) wire_endpoint_negotiate_select_monitor);
     dummy_var ^= ((int64_t) (void*) wire_endpoint_negotiate_finished);
     dummy_var ^= ((int64_t) (void*) wire_endpoint_input);
-    dummy_var ^= ((int64_t) (void*) new_box_autoadd_config_properties_0);
     dummy_var ^= ((int64_t) (void*) new_box_autoadd_connect_request_0);
     dummy_var ^= ((int64_t) (void*) new_box_autoadd_dial_request_0);
+    dummy_var ^= ((int64_t) (void*) new_box_autoadd_domain_config_0);
     dummy_var ^= ((int64_t) (void*) new_box_autoadd_handshake_request_0);
     dummy_var ^= ((int64_t) (void*) new_box_autoadd_heartbeat_request_0);
     dummy_var ^= ((int64_t) (void*) new_box_autoadd_i64_0);

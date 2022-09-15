@@ -7,32 +7,46 @@ pub extern "C" fn wire_init_logger(port_: i64) {
 }
 
 #[no_mangle]
-pub extern "C" fn wire_config_read(
+pub extern "C" fn wire_read_primary_domain(port_: i64, path: *mut wire_uint_8_list) {
+    wire_read_primary_domain_impl(port_, path)
+}
+
+#[no_mangle]
+pub extern "C" fn wire_save_primary_domain(
+    port_: i64,
+    path: *mut wire_uint_8_list,
+    value: *mut wire_uint_8_list,
+) {
+    wire_save_primary_domain_impl(port_, path, value)
+}
+
+#[no_mangle]
+pub extern "C" fn wire_read_domain_config(
     port_: i64,
     path: *mut wire_uint_8_list,
     domain: *mut wire_uint_8_list,
 ) {
-    wire_config_read_impl(port_, path, domain)
+    wire_read_domain_config_impl(port_, path, domain)
 }
 
 #[no_mangle]
-pub extern "C" fn wire_config_save(
+pub extern "C" fn wire_save_domain_config(
     port_: i64,
     path: *mut wire_uint_8_list,
     domain: *mut wire_uint_8_list,
-    properties: *mut wire_ConfigProperties,
+    value: *mut wire_DomainConfig,
 ) {
-    wire_config_save_impl(port_, path, domain, properties)
-}
-
-#[no_mangle]
-pub extern "C" fn wire_config_read_all(port_: i64, path: *mut wire_uint_8_list) {
-    wire_config_read_all_impl(port_, path)
+    wire_save_domain_config_impl(port_, path, domain, value)
 }
 
 #[no_mangle]
 pub extern "C" fn wire_signaling_dial(port_: i64, req: *mut wire_DialRequest) {
     wire_signaling_dial_impl(port_, req)
+}
+
+#[no_mangle]
+pub extern "C" fn wire_signaling_disconnect(port_: i64) {
+    wire_signaling_disconnect_impl(port_)
 }
 
 #[no_mangle]
@@ -102,11 +116,6 @@ pub extern "C" fn wire_endpoint_input(port_: i64, req: *mut wire_InputRequest) {
 // Section: allocate functions
 
 #[no_mangle]
-pub extern "C" fn new_box_autoadd_config_properties_0() -> *mut wire_ConfigProperties {
-    support::new_leak_box_ptr(wire_ConfigProperties::new_with_null_ptr())
-}
-
-#[no_mangle]
 pub extern "C" fn new_box_autoadd_connect_request_0() -> *mut wire_ConnectRequest {
     support::new_leak_box_ptr(wire_ConnectRequest::new_with_null_ptr())
 }
@@ -114,6 +123,11 @@ pub extern "C" fn new_box_autoadd_connect_request_0() -> *mut wire_ConnectReques
 #[no_mangle]
 pub extern "C" fn new_box_autoadd_dial_request_0() -> *mut wire_DialRequest {
     support::new_leak_box_ptr(wire_DialRequest::new_with_null_ptr())
+}
+
+#[no_mangle]
+pub extern "C" fn new_box_autoadd_domain_config_0() -> *mut wire_DomainConfig {
+    support::new_leak_box_ptr(wire_DomainConfig::new_with_null_ptr())
 }
 
 #[no_mangle]
@@ -206,12 +220,6 @@ impl Wire2Api<String> for *mut wire_uint_8_list {
         String::from_utf8_lossy(&vec).into_owned()
     }
 }
-impl Wire2Api<ConfigProperties> for *mut wire_ConfigProperties {
-    fn wire2api(self) -> ConfigProperties {
-        let wrap = unsafe { support::box_from_leak_ptr(self) };
-        Wire2Api::<ConfigProperties>::wire2api(*wrap).into()
-    }
-}
 impl Wire2Api<ConnectRequest> for *mut wire_ConnectRequest {
     fn wire2api(self) -> ConnectRequest {
         let wrap = unsafe { support::box_from_leak_ptr(self) };
@@ -222,6 +230,12 @@ impl Wire2Api<DialRequest> for *mut wire_DialRequest {
     fn wire2api(self) -> DialRequest {
         let wrap = unsafe { support::box_from_leak_ptr(self) };
         Wire2Api::<DialRequest>::wire2api(*wrap).into()
+    }
+}
+impl Wire2Api<DomainConfig> for *mut wire_DomainConfig {
+    fn wire2api(self) -> DomainConfig {
+        let wrap = unsafe { support::box_from_leak_ptr(self) };
+        Wire2Api::<DomainConfig>::wire2api(*wrap).into()
     }
 }
 impl Wire2Api<HandshakeRequest> for *mut wire_HandshakeRequest {
@@ -303,16 +317,6 @@ impl Wire2Api<Box<InputEvent>> for *mut wire_InputEvent {
         Wire2Api::<InputEvent>::wire2api(*wrap).into()
     }
 }
-impl Wire2Api<ConfigProperties> for wire_ConfigProperties {
-    fn wire2api(self) -> ConfigProperties {
-        ConfigProperties {
-            domain: self.domain.wire2api(),
-            device_id: self.device_id.wire2api(),
-            device_finger_print: self.device_finger_print.wire2api(),
-            device_password: self.device_password.wire2api(),
-        }
-    }
-}
 impl Wire2Api<ConnectRequest> for wire_ConnectRequest {
     fn wire2api(self) -> ConnectRequest {
         ConnectRequest {
@@ -326,6 +330,16 @@ impl Wire2Api<DialRequest> for wire_DialRequest {
     fn wire2api(self) -> DialRequest {
         DialRequest {
             uri: self.uri.wire2api(),
+        }
+    }
+}
+impl Wire2Api<DomainConfig> for wire_DomainConfig {
+    fn wire2api(self) -> DomainConfig {
+        DomainConfig {
+            uri: self.uri.wire2api(),
+            device_id: self.device_id.wire2api(),
+            device_finger_print: self.device_finger_print.wire2api(),
+            device_password: self.device_password.wire2api(),
         }
     }
 }
@@ -381,6 +395,7 @@ impl Wire2Api<InputRequest> for wire_InputRequest {
 impl Wire2Api<KeyExchangeRequest> for wire_KeyExchangeRequest {
     fn wire2api(self) -> KeyExchangeRequest {
         KeyExchangeRequest {
+            domain: self.domain.wire2api(),
             local_device_id: self.local_device_id.wire2api(),
             remote_device_id: self.remote_device_id.wire2api(),
             password: self.password.wire2api(),
@@ -475,7 +490,7 @@ impl Wire2Api<NegotiateVisitDesktopParamsRequest> for wire_NegotiateVisitDesktop
 impl Wire2Api<RegisterRequest> for wire_RegisterRequest {
     fn wire2api(self) -> RegisterRequest {
         RegisterRequest {
-            local_device_id: self.local_device_id.wire2api(),
+            device_id: self.device_id.wire2api(),
             device_finger_print: self.device_finger_print.wire2api(),
         }
     }
@@ -502,6 +517,7 @@ impl Wire2Api<Vec<u8>> for *mut wire_uint_8_list {
 impl Wire2Api<VisitRequest> for wire_VisitRequest {
     fn wire2api(self) -> VisitRequest {
         VisitRequest {
+            domain: self.domain.wire2api(),
             local_device_id: self.local_device_id.wire2api(),
             remote_device_id: self.remote_device_id.wire2api(),
             resource_type: self.resource_type.wire2api(),
@@ -509,15 +525,6 @@ impl Wire2Api<VisitRequest> for wire_VisitRequest {
     }
 }
 // Section: wire structs
-
-#[repr(C)]
-#[derive(Clone)]
-pub struct wire_ConfigProperties {
-    domain: *mut wire_uint_8_list,
-    device_id: i64,
-    device_finger_print: *mut wire_uint_8_list,
-    device_password: *mut wire_uint_8_list,
-}
 
 #[repr(C)]
 #[derive(Clone)]
@@ -531,6 +538,15 @@ pub struct wire_ConnectRequest {
 #[derive(Clone)]
 pub struct wire_DialRequest {
     uri: *mut wire_uint_8_list,
+}
+
+#[repr(C)]
+#[derive(Clone)]
+pub struct wire_DomainConfig {
+    uri: *mut wire_uint_8_list,
+    device_id: i64,
+    device_finger_print: *mut wire_uint_8_list,
+    device_password: *mut wire_uint_8_list,
 }
 
 #[repr(C)]
@@ -563,6 +579,7 @@ pub struct wire_InputRequest {
 #[repr(C)]
 #[derive(Clone)]
 pub struct wire_KeyExchangeRequest {
+    domain: *mut wire_uint_8_list,
     local_device_id: i64,
     remote_device_id: i64,
     password: *mut wire_uint_8_list,
@@ -594,7 +611,7 @@ pub struct wire_NegotiateVisitDesktopParamsRequest {
 #[repr(C)]
 #[derive(Clone)]
 pub struct wire_RegisterRequest {
-    local_device_id: *mut i64,
+    device_id: *mut i64,
     device_finger_print: *mut wire_uint_8_list,
 }
 
@@ -616,6 +633,7 @@ pub struct wire_uint_8_list {
 #[repr(C)]
 #[derive(Clone)]
 pub struct wire_VisitRequest {
+    domain: *mut wire_uint_8_list,
     local_device_id: i64,
     remote_device_id: i64,
     resource_type: i32,
@@ -728,17 +746,6 @@ impl<T> NewWithNullPtr for *mut T {
     }
 }
 
-impl NewWithNullPtr for wire_ConfigProperties {
-    fn new_with_null_ptr() -> Self {
-        Self {
-            domain: core::ptr::null_mut(),
-            device_id: Default::default(),
-            device_finger_print: core::ptr::null_mut(),
-            device_password: core::ptr::null_mut(),
-        }
-    }
-}
-
 impl NewWithNullPtr for wire_ConnectRequest {
     fn new_with_null_ptr() -> Self {
         Self {
@@ -753,6 +760,17 @@ impl NewWithNullPtr for wire_DialRequest {
     fn new_with_null_ptr() -> Self {
         Self {
             uri: core::ptr::null_mut(),
+        }
+    }
+}
+
+impl NewWithNullPtr for wire_DomainConfig {
+    fn new_with_null_ptr() -> Self {
+        Self {
+            uri: core::ptr::null_mut(),
+            device_id: Default::default(),
+            device_finger_print: core::ptr::null_mut(),
+            device_password: core::ptr::null_mut(),
         }
     }
 }
@@ -820,6 +838,7 @@ impl NewWithNullPtr for wire_InputRequest {
 impl NewWithNullPtr for wire_KeyExchangeRequest {
     fn new_with_null_ptr() -> Self {
         Self {
+            domain: core::ptr::null_mut(),
             local_device_id: Default::default(),
             remote_device_id: Default::default(),
             password: core::ptr::null_mut(),
@@ -937,7 +956,7 @@ impl NewWithNullPtr for wire_NegotiateVisitDesktopParamsRequest {
 impl NewWithNullPtr for wire_RegisterRequest {
     fn new_with_null_ptr() -> Self {
         Self {
-            local_device_id: core::ptr::null_mut(),
+            device_id: core::ptr::null_mut(),
             device_finger_print: core::ptr::null_mut(),
         }
     }
@@ -956,6 +975,7 @@ impl NewWithNullPtr for wire_SubscribeRequest {
 impl NewWithNullPtr for wire_VisitRequest {
     fn new_with_null_ptr() -> Self {
         Self {
+            domain: core::ptr::null_mut(),
             local_device_id: Default::default(),
             remote_device_id: Default::default(),
             resource_type: Default::default(),

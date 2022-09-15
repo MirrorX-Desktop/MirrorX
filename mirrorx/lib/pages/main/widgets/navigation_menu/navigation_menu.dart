@@ -2,10 +2,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:mirrorx/env/sdk/mirrorx_core.dart';
-import 'package:mirrorx/env/sdk/mirrorx_core.dart';
 import 'package:mirrorx/state/desktop_manager/desktop_manager_cubit.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 import 'navigation_menu_item.dart';
 
@@ -78,7 +75,8 @@ class NavigationMenu extends StatelessWidget {
                         child: NavigationMenuItem(
                           pageTag: model.remoteDeviceId,
                           iconBuilder: (color) =>
-                              FaIcon(_getOSIcon(model.osType), color: color),
+                              FaIcon(FontAwesomeIcons.windows),
+                          // FaIcon(_getOSIcon(model.osType), color: color),
                           title: model.remoteDeviceId,
                           system: false,
                           desktopClosed: state.closedDesktops
@@ -109,33 +107,33 @@ class NavigationMenu extends StatelessWidget {
     );
   }
 
-  IconData _getOSIcon(OperatingSystemType osType) {
-    if (osType is OperatingSystemType_Windows) {
-      return FontAwesomeIcons.windows;
-    } else if (osType is OperatingSystemType_macOS) {
-      return FontAwesomeIcons.apple;
-    } else if (osType is OperatingSystemType_iOS) {
-      return FontAwesomeIcons.apple;
-    } else if (osType is OperatingSystemType_Android) {
-      return FontAwesomeIcons.android;
-    } else if (osType is OperatingSystemType_Linux) {
-      switch (osType.field0) {
-        case LinuxType.CentOS:
-          return FontAwesomeIcons.centos;
-        case LinuxType.Fedora:
-          return FontAwesomeIcons.fedora;
-        case LinuxType.Redhat:
-          return FontAwesomeIcons.redhat;
-        case LinuxType.openSUSE:
-          return FontAwesomeIcons.suse;
-        case LinuxType.Ubuntu:
-          return FontAwesomeIcons.ubuntu;
-        case LinuxType.Other:
-        default:
-          return FontAwesomeIcons.linux;
-      }
-    } else {
-      return FontAwesomeIcons.display;
-    }
-  }
+  // IconData _getOSIcon(OperatingSystemType osType) {
+  //   if (osType is OperatingSystemType_Windows) {
+  //     return FontAwesomeIcons.windows;
+  //   } else if (osType is OperatingSystemType_macOS) {
+  //     return FontAwesomeIcons.apple;
+  //   } else if (osType is OperatingSystemType_iOS) {
+  //     return FontAwesomeIcons.apple;
+  //   } else if (osType is OperatingSystemType_Android) {
+  //     return FontAwesomeIcons.android;
+  //   } else if (osType is OperatingSystemType_Linux) {
+  //     switch (osType.field0) {
+  //       case LinuxType.CentOS:
+  //         return FontAwesomeIcons.centos;
+  //       case LinuxType.Fedora:
+  //         return FontAwesomeIcons.fedora;
+  //       case LinuxType.Redhat:
+  //         return FontAwesomeIcons.redhat;
+  //       case LinuxType.openSUSE:
+  //         return FontAwesomeIcons.suse;
+  //       case LinuxType.Ubuntu:
+  //         return FontAwesomeIcons.ubuntu;
+  //       case LinuxType.Other:
+  //       default:
+  //         return FontAwesomeIcons.linux;
+  //     }
+  //   } else {
+  //     return FontAwesomeIcons.display;
+  //   }
+  // }
 }

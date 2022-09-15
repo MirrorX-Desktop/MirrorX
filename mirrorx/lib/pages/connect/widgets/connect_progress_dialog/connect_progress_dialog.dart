@@ -33,7 +33,7 @@ class _ConnectProgressStateDialogState
     extends State<ConnectProgressStateDialog> {
   late TextEditingController _textController;
   late ConnectStep _connectStep;
-  DisplayInfo? _selectedDisplayInfo;
+  // DisplayInfo? _selectedDisplayInfo;
 
   @override
   void initState() {
@@ -50,14 +50,15 @@ class _ConnectProgressStateDialogState
 
   @override
   Widget build(BuildContext context) {
-    switch (_connectStep) {
-      case ConnectStep.inputPassword:
-        return _buildInputPasswordPanel();
-      case ConnectStep.keyExchange:
-        return _buildKeyExchangePanel();
-      case ConnectStep.prepareMedia:
-        return _buildPrepareMediaPanel();
-    }
+    // switch (_connectStep) {
+    //   case ConnectStep.inputPassword:
+    //     return _buildInputPasswordPanel();
+    //   case ConnectStep.keyExchange:
+    //   // return _buildKeyExchangePanel();
+    //   case ConnectStep.prepareMedia:
+    //     // return _buildPrepareMediaPanel();
+    // }
+    return Container();
   }
 
   Widget _buildInputPasswordPanel() {
@@ -95,193 +96,193 @@ class _ConnectProgressStateDialogState
     );
   }
 
-  Widget _buildKeyExchangePanel() {
-    return FutureBuilder(
-      future: MirrorXCoreSDK.instance.signalingConnectionKeyExchange(
-        remoteDeviceId: widget.remoteDeviceId,
-        password: _textController.text,
-      ),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done) {
-          return _buildProgressAndTip(AppLocalizations.of(context)!
-              .connectPageConnectProgressTipKeyExchange);
-        }
+  // Widget _buildKeyExchangePanel() {
+  //   return FutureBuilder(
+  //     future: MirrorXCoreSDK.instance.signalingConnectionKeyExchange(
+  //       remoteDeviceId: widget.remoteDeviceId,
+  //       password: _textController.text,
+  //     ),
+  //     builder: (context, snapshot) {
+  //       if (snapshot.connectionState != ConnectionState.done) {
+  //         return _buildProgressAndTip(AppLocalizations.of(context)!
+  //             .connectPageConnectProgressTipKeyExchange);
+  //       }
 
-        if (snapshot.hasError) {
-          return _buildAlertDialog(
-            Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(AppLocalizations.of(context)!
-                    .connectPageConnectProgressTipKeyExchangeFailed),
-                Text(snapshot.error.toString())
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-                child: Text(AppLocalizations.of(context)!.dialogOK),
-              )
-            ],
-          );
-        }
+  //       if (snapshot.hasError) {
+  //         return _buildAlertDialog(
+  //           Column(
+  //             mainAxisAlignment: MainAxisAlignment.center,
+  //             children: [
+  //               Text(AppLocalizations.of(context)!
+  //                   .connectPageConnectProgressTipKeyExchangeFailed),
+  //               Text(snapshot.error.toString())
+  //             ],
+  //           ),
+  //           actions: [
+  //             TextButton(
+  //               onPressed: () {
+  //                 Navigator.of(context).pop();
+  //               },
+  //               child: Text(AppLocalizations.of(context)!.dialogOK),
+  //             )
+  //           ],
+  //         );
+  //       }
 
-        return _buildSelectMonitorsPanel();
-      },
-    );
-  }
+  //       return _buildSelectMonitorsPanel();
+  //     },
+  //   );
+  // }
 
-  Widget _buildSelectMonitorsPanel() {
-    return FutureBuilder(
-      future: MirrorXCoreSDK.instance
-          .endpointGetDisplayInfo(remoteDeviceId: widget.remoteDeviceId),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done) {
-          return _buildProgressAndTip(AppLocalizations.of(context)!
-              .connectPageConnectProgressTipListMonitors);
-        }
+  // Widget _buildSelectMonitorsPanel() {
+  //   return FutureBuilder(
+  //     future: MirrorXCoreSDK.instance
+  //         .endpointGetDisplayInfo(remoteDeviceId: widget.remoteDeviceId),
+  //     builder: (context, snapshot) {
+  //       if (snapshot.connectionState != ConnectionState.done) {
+  //         return _buildProgressAndTip(AppLocalizations.of(context)!
+  //             .connectPageConnectProgressTipListMonitors);
+  //       }
 
-        if (snapshot.hasError) {
-          return _buildAlertDialog(
-            Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(AppLocalizations.of(context)!
-                    .connectPageConnectProgressTipListMonitorsFailed),
-                Text(snapshot.error.toString())
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-                child: Text(AppLocalizations.of(context)!.dialogOK),
-              )
-            ],
-          );
-        }
+  //       if (snapshot.hasError) {
+  //         return _buildAlertDialog(
+  //           Column(
+  //             mainAxisAlignment: MainAxisAlignment.center,
+  //             children: [
+  //               Text(AppLocalizations.of(context)!
+  //                   .connectPageConnectProgressTipListMonitorsFailed),
+  //               Text(snapshot.error.toString())
+  //             ],
+  //           ),
+  //           actions: [
+  //             TextButton(
+  //               onPressed: () {
+  //                 Navigator.of(context).pop();
+  //               },
+  //               child: Text(AppLocalizations.of(context)!.dialogOK),
+  //             )
+  //           ],
+  //         );
+  //       }
 
-        final resp = snapshot.data as GetDisplayInfoResponse;
+  //       final resp = snapshot.data as GetDisplayInfoResponse;
 
-        return _buildMonitorsPanel(resp);
-      },
-    );
-  }
+  //       return _buildMonitorsPanel(resp);
+  //     },
+  //   );
+  // }
 
-  Widget _buildMonitorsPanel(GetDisplayInfoResponse resp) {
-    return _buildAlertDialog(
-      Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(AppLocalizations.of(context)!.dialogContentSelectMonitor),
-          ScreenShotSwiper(
-            displays: resp.displays,
-            selectCallback: (displayInfo) {
-              setState(() {
-                _selectedDisplayInfo = displayInfo;
-                _connectStep = ConnectStep.prepareMedia;
-              });
-            },
-          ),
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () {
-            Navigator.of(context).pop();
-          },
-          child: Text(AppLocalizations.of(context)!.dialogCancel),
-        )
-      ],
-    );
-  }
+  // Widget _buildMonitorsPanel(GetDisplayInfoResponse resp) {
+  //   return _buildAlertDialog(
+  //     Column(
+  //       mainAxisSize: MainAxisSize.min,
+  //       children: [
+  //         Text(AppLocalizations.of(context)!.dialogContentSelectMonitor),
+  //         ScreenShotSwiper(
+  //           displays: resp.displays,
+  //           selectCallback: (displayInfo) {
+  //             setState(() {
+  //               _selectedDisplayInfo = displayInfo;
+  //               _connectStep = ConnectStep.prepareMedia;
+  //             });
+  //           },
+  //         ),
+  //       ],
+  //     ),
+  //     actions: [
+  //       TextButton(
+  //         onPressed: () {
+  //           Navigator.of(context).pop();
+  //         },
+  //         child: Text(AppLocalizations.of(context)!.dialogCancel),
+  //       )
+  //     ],
+  //   );
+  // }
 
-  Widget _buildPrepareMediaPanel() {
-    return FutureBuilder(
-      future: prepareMediaTransmission(context.read<DesktopManagerCubit>()),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done) {
-          return _buildProgressAndTip(AppLocalizations.of(context)!
-              .connectPageConnectProgressTipPrepareMedia);
-        }
+  // Widget _buildPrepareMediaPanel() {
+  //   return FutureBuilder(
+  //     future: prepareMediaTransmission(context.read<DesktopManagerCubit>()),
+  //     builder: (context, snapshot) {
+  //       if (snapshot.connectionState != ConnectionState.done) {
+  //         return _buildProgressAndTip(AppLocalizations.of(context)!
+  //             .connectPageConnectProgressTipPrepareMedia);
+  //       }
 
-        if (snapshot.hasError) {
-          return _buildAlertDialog(
-            Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(AppLocalizations.of(context)!
-                    .connectPageConnectProgressTipPrepareMediaFailed),
-                Text(snapshot.error.toString())
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-                child: Text(AppLocalizations.of(context)!.dialogOK),
-              )
-            ],
-          );
-        }
+  //       if (snapshot.hasError) {
+  //         return _buildAlertDialog(
+  //           Column(
+  //             mainAxisAlignment: MainAxisAlignment.center,
+  //             children: [
+  //               Text(AppLocalizations.of(context)!
+  //                   .connectPageConnectProgressTipPrepareMediaFailed),
+  //               Text(snapshot.error.toString())
+  //             ],
+  //           ),
+  //           actions: [
+  //             TextButton(
+  //               onPressed: () {
+  //                 Navigator.of(context).pop();
+  //               },
+  //               child: Text(AppLocalizations.of(context)!.dialogOK),
+  //             )
+  //           ],
+  //         );
+  //       }
 
-        context
-            .read<DesktopManagerCubit>()
-            .addDesktop(snapshot.data as DesktopModel);
+  //       context
+  //           .read<DesktopManagerCubit>()
+  //           .addDesktop(snapshot.data as DesktopModel);
 
-        context.read<PageManagerCubit>().switchPage(widget.remoteDeviceId);
+  //       context.read<PageManagerCubit>().switchPage(widget.remoteDeviceId);
 
-        Navigator.of(context).pop();
+  //       Navigator.of(context).pop();
 
-        return const SizedBox.shrink();
-      },
-    );
-  }
+  //       return const SizedBox.shrink();
+  //     },
+  //   );
+  // }
 
-  Future<DesktopModel> prepareMediaTransmission(
-      DesktopManagerCubit cubit) async {
-    final registerTextureResponse =
-        await TextureRender.instance.registerTexture();
+  // Future<DesktopModel> prepareMediaTransmission(
+  //     DesktopManagerCubit cubit) async {
+  //   final registerTextureResponse =
+  //       await TextureRender.instance.registerTexture();
 
-    final startMediaTransmissionResponse =
-        await MirrorXCoreSDK.instance.endpointStartMediaTransmission(
-      remoteDeviceId: widget.remoteDeviceId,
-      expectFps: _selectedDisplayInfo!.refreshRate,
-      expectDisplayId: _selectedDisplayInfo!.id,
-      textureId: registerTextureResponse.textureID,
-      videoTexturePtr: registerTextureResponse.videoTexturePointer,
-      updateFrameCallbackPtr:
-          registerTextureResponse.updateFrameCallbackPointer,
-    );
+  //   final startMediaTransmissionResponse =
+  //       await MirrorXCoreSDK.instance.endpointStartMediaTransmission(
+  //     remoteDeviceId: widget.remoteDeviceId,
+  //     expectFps: _selectedDisplayInfo!.refreshRate,
+  //     expectDisplayId: _selectedDisplayInfo!.id,
+  //     textureId: registerTextureResponse.textureID,
+  //     videoTexturePtr: registerTextureResponse.videoTexturePointer,
+  //     updateFrameCallbackPtr:
+  //         registerTextureResponse.updateFrameCallbackPointer,
+  //   );
 
-    final closeNotifyStream = MirrorXCoreSDK.instance
-        .endpointCloseNotify(remoteDeviceId: widget.remoteDeviceId);
+  //   final closeNotifyStream = MirrorXCoreSDK.instance
+  //       .endpointCloseNotify(remoteDeviceId: widget.remoteDeviceId);
 
-    final subscription = closeNotifyStream.listen(
-      (event) {
-        cubit.markDeskopClosed(widget.remoteDeviceId);
-      },
-      onDone: () {
-        cubit.markDeskopClosed(widget.remoteDeviceId);
-      },
-    );
+  //   final subscription = closeNotifyStream.listen(
+  //     (event) {
+  //       cubit.markDeskopClosed(widget.remoteDeviceId);
+  //     },
+  //     onDone: () {
+  //       cubit.markDeskopClosed(widget.remoteDeviceId);
+  //     },
+  //   );
 
-    return DesktopModel(
-      remoteDeviceId: widget.remoteDeviceId,
-      osType: startMediaTransmissionResponse.osType,
-      monitorWidth: startMediaTransmissionResponse.screenWidth,
-      monitorHeight: startMediaTransmissionResponse.screenHeight,
-      textureID: registerTextureResponse.textureID,
-      videoTexturePointer: registerTextureResponse.videoTexturePointer,
-      updateFrameCallbackPointer:
-          registerTextureResponse.updateFrameCallbackPointer,
-      subscription: subscription,
-    );
-  }
+  //   return DesktopModel(
+  //     remoteDeviceId: widget.remoteDeviceId,
+  //     osType: startMediaTransmissionResponse.osType,
+  //     monitorWidth: startMediaTransmissionResponse.screenWidth,
+  //     monitorHeight: startMediaTransmissionResponse.screenHeight,
+  //     textureID: registerTextureResponse.textureID,
+  //     videoTexturePointer: registerTextureResponse.videoTexturePointer,
+  //     updateFrameCallbackPointer:
+  //         registerTextureResponse.updateFrameCallbackPointer,
+  //     subscription: subscription,
+  //   );
+  // }
 
   Widget _buildAlertDialog(Widget content, {List<Widget>? actions}) {
     return AlertDialog(

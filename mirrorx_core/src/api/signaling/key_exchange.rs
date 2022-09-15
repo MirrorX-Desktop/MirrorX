@@ -16,6 +16,7 @@ use signaling_proto::message::{
 };
 
 pub struct KeyExchangeRequest {
+    pub domain: String,
     pub local_device_id: i64,
     pub remote_device_id: i64,
     pub password: String,
@@ -88,6 +89,7 @@ pub async fn key_exchange(req: KeyExchangeRequest) -> CoreResult<KeyExchangeResp
     let resp = SignalingClientManager::get_client()
         .await?
         .key_exchange(signaling_proto::message::KeyExchangeRequest {
+            domain: req.domain,
             active_device_id: req.local_device_id.to_owned(),
             passive_device_id: req.remote_device_id.to_owned(),
             password_salt: active_device_secret_salt.to_vec(),

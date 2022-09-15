@@ -11,7 +11,6 @@ import 'package:mirrorx/pages/intranet/intranet_page.dart';
 import 'package:mirrorx/pages/settings/settings_page.dart';
 import 'package:mirrorx/state/desktop_manager/desktop_manager_cubit.dart';
 import 'package:mirrorx/state/page_manager/page_manager_cubit.dart';
-import 'package:mirrorx/state/profile/profile_state_cubit.dart';
 
 import 'widgets/navigation_menu/navigation_menu.dart';
 

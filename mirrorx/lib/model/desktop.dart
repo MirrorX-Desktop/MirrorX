@@ -4,7 +4,7 @@ import 'package:mirrorx/env/sdk/mirrorx_core.dart';
 
 class DesktopModel {
   final String remoteDeviceId;
-  final OperatingSystemType osType;
+  // final OperatingSystemType osType;
   final int monitorWidth;
   final int monitorHeight;
   final int textureID;
@@ -14,7 +14,7 @@ class DesktopModel {
 
   DesktopModel({
     required this.remoteDeviceId,
-    required this.osType,
+    // required this.osType,
     required this.monitorWidth,
     required this.monitorHeight,
     required this.textureID,
