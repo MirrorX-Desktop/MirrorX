@@ -6,7 +6,6 @@ use crate::{
         ffmpeg::{avcodec::*, avutil::*},
         libyuv::*,
     },
-    service::endpoint::message::VideoFrame,
 };
 use crossbeam::channel::Sender;
 use std::ffi::{CStr, CString};
@@ -130,7 +129,11 @@ impl VideoDecoder {
         }
     }
 
-    pub fn decode(&self, mut frame: VideoFrame, tx: &Sender<DecodedFrame>) -> CoreResult<()> {
+    pub fn decode(
+        &self,
+        mut frame: crate::api::endpoint::message::EndPointVideoFrame,
+        tx: &Sender<DecodedFrame>,
+    ) -> CoreResult<()> {
         unsafe {
             if !self.parser_ctx.is_null() {
                 let ret = av_parser_parse2(

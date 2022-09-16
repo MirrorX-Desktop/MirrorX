@@ -1,12 +1,10 @@
 use super::ffmpeg_encoder_config::{FFMPEGEncoderType, Libx264Config};
 use crate::{
+    api::endpoint::message::{EndPointMessage, EndPointVideoFrame},
     component::{capture_frame::CaptureFrame, NALU_HEADER_LENGTH},
     core_error,
     error::{CoreError, CoreResult},
     ffi::ffmpeg::{avcodec::*, avutil::*},
-    service::endpoint::message::{
-        EndPointMessage, EndPointMessagePacket, EndPointMessagePacketType, VideoFrame,
-    },
 };
 use tokio::sync::mpsc::Sender;
 
@@ -82,11 +80,7 @@ impl Encoder {
         }
     }
 
-    pub fn encode(
-        &mut self,
-        frame: CaptureFrame,
-        tx: &Sender<EndPointMessagePacket>,
-    ) -> CoreResult<()> {
+    pub fn encode(&mut self, frame: CaptureFrame, tx: &Sender<EndPointMessage>) -> CoreResult<()> {
         unsafe {
             let mut ret: i32;
 
@@ -233,15 +227,11 @@ impl Encoder {
                     }
                 }
 
-                let packet = EndPointMessagePacket {
-                    typ: EndPointMessagePacketType::Push,
-                    call_id: None,
-                    message: EndPointMessage::VideoFrame(VideoFrame {
-                        sps: sps.take(),
-                        pps: pps.take(),
-                        buffer,
-                    }),
-                };
+                let packet = EndPointMessage::VideoFrame(EndPointVideoFrame {
+                    sps: sps.take(),
+                    pps: pps.take(),
+                    buffer,
+                });
 
                 if let Err(err) = tx.try_send(packet) {
                     match err {
