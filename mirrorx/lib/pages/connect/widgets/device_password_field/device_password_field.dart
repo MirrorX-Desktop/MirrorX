@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:mirrorx/state/signaling_manager/signaling_manager_cubit.dart';
 
 class DevicePasswordField extends StatefulWidget {
   const DevicePasswordField({Key? key}) : super(key: key);
@@ -38,18 +40,26 @@ class _DevicePasswordFieldState extends State<DevicePasswordField> {
                   AppLocalizations.of(context)!.connectPagePasswordTitle,
                   style: const TextStyle(fontSize: 27),
                 ),
-                // _buildTopButton(),
+                Expanded(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      SizedBox(
+                        width: 50,
+                        child: _buildEditButton(),
+                      ),
+                      SizedBox(
+                        width: 50,
+                        child: _buildVisibilityOrGenPasswordButton(),
+                      )
+                    ],
+                  ),
+                )
               ],
             ),
             Expanded(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  // Expanded(child: _buildDevicePasswordField()),
-                  // _buildBottomButton(),
-                ],
-              ),
+              child: _buildDevicePasswordField(),
             ),
           ],
         ),
@@ -57,152 +67,172 @@ class _DevicePasswordFieldState extends State<DevicePasswordField> {
     );
   }
 
-  // Widget _buildDevicePasswordField() {
-  //   return BlocBuilder<ProfileStateCubit, ProfileState>(
-  //     builder: (context, state) {
-  //       if (state.devicePassword == null) {
-  //         return FutureBuilder(
-  //             future: context.read<ProfileStateCubit>().getDevicePassword(),
-  //             builder: (context, snapshot) {
-  //               switch (snapshot.connectionState) {
-  //                 case ConnectionState.none:
-  //                 case ConnectionState.waiting:
-  //                 case ConnectionState.active:
-  //                   return const Center(child: CircularProgressIndicator());
-  //                 case ConnectionState.done:
-  //                   if (snapshot.hasError) {
-  //                     log("Error: ${snapshot.error}");
-  //                     return const Center(
-  //                         child: Icon(Icons.report, color: Colors.red));
-  //                   } else {
-  //                     return const Text(
-  //                       "＊＊＊＊＊＊",
-  //                       style: TextStyle(fontSize: 45),
-  //                     );
-  //                   }
-  //               }
-  //             });
-  //       }
+  Widget _buildDevicePasswordField() {
+    return BlocBuilder<SignalingManagerCubit, SignalingManagerState>(
+      builder: (context, state) {
+        if (state.domainConfig?.devicePassword == null) {
+          return IconButton(
+            onPressed: () {
+              context.read<SignalingManagerCubit>().updateDevicePassword(null);
+            },
+            icon: const FaIcon(
+              FontAwesomeIcons.arrowsRotate,
+              size: 24,
+            ),
+          );
+        }
 
-  //       if (_isEditing) {
-  //         _controller.text = state.devicePassword!;
-  //         return TextFormField(
-  //           controller: _controller,
-  //           cursorColor: Colors.yellow,
-  //           inputFormatters: [
-  //             FilteringTextInputFormatter.allow(
-  //                 RegExp(r'[a-zA-Z0-9@#$%^*?!=+<>(){}]')),
-  //           ],
-  //           decoration: const InputDecoration(
-  //             isDense: true,
-  //             focusedBorder: UnderlineInputBorder(
-  //               borderSide: BorderSide(width: 2, color: Colors.yellow),
-  //             ),
-  //           ),
-  //           style: const TextStyle(fontSize: 18),
-  //           keyboardType: TextInputType.visiblePassword,
-  //           textInputAction: TextInputAction.next,
-  //           textAlign: TextAlign.center,
-  //           textAlignVertical: TextAlignVertical.center,
-  //           enableSuggestions: false,
-  //           maxLength: 24,
-  //           maxLines: 1,
-  //           autocorrect: false,
-  //           autovalidateMode: AutovalidateMode.always,
-  //           validator: (text) {
-  //             if (text == null || text.isEmpty || text.length < 8) {
-  //               return AppLocalizations.of(context)!
-  //                   .connectPagePasswordValidationErrorLength;
-  //             }
+        if (_isEditing) {
+          _controller.text = state.domainConfig!.devicePassword;
+          return TextFormField(
+            controller: _controller,
+            cursorColor: Colors.yellow,
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(
+                  RegExp(r'[a-zA-Z0-9@#$%^*?!=+<>(){}]')),
+            ],
+            decoration: const InputDecoration(
+              isDense: true,
+              focusedBorder: UnderlineInputBorder(
+                borderSide: BorderSide(width: 2, color: Colors.yellow),
+              ),
+            ),
+            style: const TextStyle(fontSize: 18),
+            keyboardType: TextInputType.visiblePassword,
+            textInputAction: TextInputAction.next,
+            textAlign: TextAlign.center,
+            textAlignVertical: TextAlignVertical.center,
+            enableSuggestions: false,
+            maxLength: 24,
+            maxLines: 1,
+            autocorrect: false,
+            autovalidateMode: AutovalidateMode.always,
+            validator: (text) {
+              if (text == null || text.isEmpty || text.length < 8) {
+                return AppLocalizations.of(context)!
+                    .connectPagePasswordValidationErrorLength;
+              }
 
-  //             if (!RegExp(r'[A-Z]').hasMatch(text)) {
-  //               return AppLocalizations.of(context)!
-  //                   .connectPagePasswordValidationErrorUpper;
-  //             }
+              if (!RegExp(r'[A-Z]').hasMatch(text)) {
+                return AppLocalizations.of(context)!
+                    .connectPagePasswordValidationErrorUpper;
+              }
 
-  //             if (!RegExp(r'[@#$%^*?!=+<>(){}]').hasMatch(text)) {
-  //               return AppLocalizations.of(context)!
-  //                   .connectPagePasswordValidationErrorSpecial(
-  //                 r'@#$%^*?!=+<>(){}',
-  //               );
-  //             }
+              if (!RegExp(r'[@#$%^*?!=+<>(){}]').hasMatch(text)) {
+                return AppLocalizations.of(context)!
+                    .connectPagePasswordValidationErrorSpecial(
+                  r'@#$%^*?!=+<>(){}',
+                );
+              }
 
-  //             return null;
-  //           },
-  //         );
-  //       } else {
-  //         if (_isVisible) {
-  //           return FittedBox(
-  //             fit: BoxFit.fitWidth,
-  //             child: SelectableText(
-  //               state.devicePassword!,
-  //               maxLines: 1,
-  //               minLines: 1,
-  //               scrollPhysics: const NeverScrollableScrollPhysics(),
-  //             ),
-  //           );
-  //         } else {
-  //           return const Text(
-  //             "＊＊＊＊＊＊",
-  //             style: TextStyle(fontSize: 45),
-  //           );
-  //         }
-  //       }
-  //     },
-  //   );
-  // }
+              return null;
+            },
+          );
+        } else {
+          if (_isVisible) {
+            return FittedBox(
+              fit: BoxFit.fitWidth,
+              child: SelectableText(
+                state.domainConfig!.devicePassword,
+                maxLines: 1,
+                minLines: 1,
+                scrollPhysics: const NeverScrollableScrollPhysics(),
+              ),
+            );
+          } else {
+            return Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: const [
+                FaIcon(
+                  FontAwesomeIcons.starOfLife,
+                  size: 24,
+                ),
+                FaIcon(
+                  FontAwesomeIcons.starOfLife,
+                  size: 24,
+                ),
+                FaIcon(
+                  FontAwesomeIcons.starOfLife,
+                  size: 24,
+                ),
+                FaIcon(
+                  FontAwesomeIcons.starOfLife,
+                  size: 24,
+                ),
+                FaIcon(
+                  FontAwesomeIcons.starOfLife,
+                  size: 24,
+                ),
+                FaIcon(
+                  FontAwesomeIcons.starOfLife,
+                  size: 24,
+                ),
+                FaIcon(
+                  FontAwesomeIcons.starOfLife,
+                  size: 24,
+                ),
+              ],
+            );
+          }
+        }
+      },
+    );
+  }
 
-  // Widget _buildTopButton() {
-  //   return IconButton(
-  //     onPressed: () {
-  //       setState(() {
-  //         if (_isEditing) {
-  //           context
-  //               .read<ProfileStateCubit>()
-  //               .updateDevicePassword(_controller.text);
-  //           _isVisible = false;
-  //         }
-  //         _isEditing = !_isEditing;
-  //       });
-  //     },
-  //     icon: Icon(_isEditing ? Icons.check : Icons.edit),
-  //     splashRadius: 20,
-  //     hoverColor: Colors.yellow,
-  //     tooltip: _isEditing
-  //         ? AppLocalizations.of(context)!.connectPagePasswordButtonCommitTooltip
-  //         : AppLocalizations.of(context)!.connectPagePasswordButtonEditTooltip,
-  //   );
-  // }
+  Widget _buildEditButton() {
+    return IconButton(
+      onPressed: () {
+        setState(() {
+          if (_isEditing) {
+            context
+                .read<SignalingManagerCubit>()
+                .updateDevicePassword(_controller.text);
+            _isVisible = false;
+          }
+          _isEditing = !_isEditing;
+        });
+      },
+      icon: FaIcon(
+        _isEditing ? FontAwesomeIcons.check : FontAwesomeIcons.penToSquare,
+        size: 24,
+      ),
+      tooltip: _isEditing
+          ? AppLocalizations.of(context)!.connectPagePasswordButtonCommitTooltip
+          : AppLocalizations.of(context)!.connectPagePasswordButtonEditTooltip,
+    );
+  }
 
-  // Widget _buildBottomButton() {
-  //   return IconButton(
-  //     onPressed: () {
-  //       setState(() {
-  //         if (!_isEditing) {
-  //           _isVisible = !_isVisible;
-  //         } else {
-  //           context.read<ProfileStateCubit>().updateDevicePassword(null);
-  //           _isVisible = false;
-  //         }
-  //       });
-  //     },
-  //     splashRadius: 20,
-  //     hoverColor: Colors.yellow,
-  //     icon: Icon(_isEditing
-  //         ? Icons.lock_reset
-  //         : _isVisible
-  //             ? Icons.visibility_off
-  //             : Icons.visibility),
-  //     tooltip: _isEditing
-  //         ? AppLocalizations.of(context)!
-  //             .connectPagePasswordButtonRandomGenerateTooltip
-  //         : _isVisible
-  //             ? AppLocalizations.of(context)!
-  //                 .connectPagePasswordVisibilityToggleHideTooltip
-  //             : AppLocalizations.of(context)!
-  //                 .connectPagePasswordVisibilityToggleShowTooltip,
-  //   );
-  // }
+  Widget _buildVisibilityOrGenPasswordButton() {
+    final icon = _isEditing
+        ? FontAwesomeIcons.arrowsRotate
+        : _isVisible
+            ? FontAwesomeIcons.eyeSlash
+            : FontAwesomeIcons.eye;
+
+    final tooltip = _isEditing
+        ? AppLocalizations.of(context)!
+            .connectPagePasswordButtonRandomGenerateTooltip
+        : _isVisible
+            ? AppLocalizations.of(context)!
+                .connectPagePasswordVisibilityToggleHideTooltip
+            : AppLocalizations.of(context)!
+                .connectPagePasswordVisibilityToggleShowTooltip;
+
+    return IconButton(
+      onPressed: () {
+        setState(() {
+          if (!_isEditing) {
+            _isVisible = !_isVisible;
+          } else {
+            context.read<SignalingManagerCubit>().updateDevicePassword(null);
+            _isVisible = false;
+          }
+        });
+      },
+      icon: FaIcon(icon, size: 24),
+      tooltip: tooltip,
+    );
+  }
 
   @override
   void dispose() {

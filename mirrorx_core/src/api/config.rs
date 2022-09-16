@@ -51,7 +51,7 @@ fn read(path: &str, key: &str) -> CoreResult<Option<String>> {
         )
         .optional()?
     {
-        Some(res) => Ok(serde_json::from_str(&res)?),
+        Some(res) => Ok(Some(res)),
         None => Ok(None),
     }
 }

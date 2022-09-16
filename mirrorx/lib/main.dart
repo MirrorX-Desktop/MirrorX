@@ -4,11 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter/material.dart';
 import 'dart:ui' as ui;
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
-import 'package:mirrorx/env/sdk/mirrorx_core.dart';
-import 'package:mirrorx/env/sdk/mirrorx_core_sdk.dart';
-import 'package:mirrorx/env/utility/error_notifier.dart';
 import 'package:mirrorx/pages/main/main_page.dart';
-import 'package:mirrorx/state/config_manager/cubit/config_manager_cubit.dart';
 import 'package:mirrorx/state/desktop_manager/desktop_manager_cubit.dart';
 import 'package:mirrorx/state/page_manager/page_manager_cubit.dart';
 import 'package:mirrorx/state/signaling_manager/signaling_manager_cubit.dart';
@@ -18,6 +14,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final supportDirectory = await getApplicationSupportDirectory();
   final configPath = "${supportDirectory.path}/mirrorx.db";
+  log("config path: $configPath");
   runApp(App(configPath: configPath));
 }
 

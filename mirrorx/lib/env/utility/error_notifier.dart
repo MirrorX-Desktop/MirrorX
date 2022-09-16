@@ -9,6 +9,7 @@ class ErrorNotifier {
   void notifyError({Object? error, StackTrace? stackTrace}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
+        behavior: SnackBarBehavior.floating,
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -17,7 +18,7 @@ class ErrorNotifier {
             Visibility(
               visible: stackTrace != null,
               child: Text(
-                stackTrace.toString().split("\n")[0], // only print first line
+                stackTrace.toString(), // only print first line
               ),
             )
           ],

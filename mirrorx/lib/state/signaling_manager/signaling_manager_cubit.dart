@@ -95,4 +95,25 @@ class SignalingManagerCubit extends Cubit<SignalingManagerState> {
       connectionState: SignalingConnectionState.disconnected,
     ));
   }
+
+  void updateDevicePassword(String? newPassword) async {
+    try {
+      if (state.domain != null && state.domainConfig != null) {
+        final newDomainConfigPassword = newPassword ?? generatePassword();
+        final newDomainConfig = DomainConfig(
+          uri: state.domainConfig!.uri,
+          deviceId: state.domainConfig!.deviceId,
+          deviceFingerPrint: state.domainConfig!.deviceFingerPrint,
+          devicePassword: newDomainConfigPassword,
+        );
+
+        await MirrorXCoreSDK.instance.saveDomainConfig(
+            path: _configPath, domain: state.domain!, value: newDomainConfig);
+
+        emit(state.copyWith(domainConfig: newDomainConfig));
+      }
+    } catch (err, stackTrace) {
+      _errorNotifier.notifyError(error: err, stackTrace: stackTrace);
+    }
+  }
 }

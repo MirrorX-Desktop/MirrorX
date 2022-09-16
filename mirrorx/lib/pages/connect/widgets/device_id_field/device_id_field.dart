@@ -30,26 +30,30 @@ class DeviceIdField extends StatelessWidget {
                   AppLocalizations.of(context)!.connectPageDeviceIDTitle,
                   style: const TextStyle(fontSize: 27),
                 ),
-                BlocBuilder<SignalingManagerCubit, SignalingManagerState>(
-                  builder: (context, state) => IconButton(
-                    onPressed: () {
-                      Clipboard.setData(ClipboardData(
-                        text: state.domainConfig?.deviceId.toString() ?? "",
-                      )).then(
-                        (_) =>
-                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                          content: Text(AppLocalizations.of(context)!
-                              .connectPageDeviceIDButtonCopySnackbarContent),
-                          behavior: SnackBarBehavior.floating,
-                        )),
-                      );
-                    },
-                    icon: const FaIcon(
-                      FontAwesomeIcons.copy,
-                      size: 24,
+                SizedBox(
+                  width: 50,
+                  child:
+                      BlocBuilder<SignalingManagerCubit, SignalingManagerState>(
+                    builder: (context, state) => IconButton(
+                      onPressed: () {
+                        Clipboard.setData(ClipboardData(
+                          text: state.domainConfig?.deviceId.toString() ?? "",
+                        )).then(
+                          (_) => ScaffoldMessenger.of(context)
+                              .showSnackBar(SnackBar(
+                            content: Text(AppLocalizations.of(context)!
+                                .connectPageDeviceIDButtonCopySnackbarContent),
+                            behavior: SnackBarBehavior.floating,
+                          )),
+                        );
+                      },
+                      icon: const FaIcon(
+                        FontAwesomeIcons.copy,
+                        size: 24,
+                      ),
+                      tooltip: AppLocalizations.of(context)!
+                          .connectPageDeviceIDButtonCopyTooltip,
                     ),
-                    tooltip: AppLocalizations.of(context)!
-                        .connectPageDeviceIDButtonCopyTooltip,
                   ),
                 ),
               ],

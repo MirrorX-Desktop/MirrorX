@@ -37,11 +37,14 @@ class DomainSelectField extends StatelessWidget {
                       AppLocalizations.of(context)!.connectPageDomainTitle,
                       style: const TextStyle(fontSize: 27),
                     ),
-                    IconButton(
-                      onPressed: () {},
-                      icon: const FaIcon(
-                        FontAwesomeIcons.objectGroup,
-                        size: 24,
+                    SizedBox(
+                      width: 50,
+                      child: IconButton(
+                        onPressed: () {},
+                        icon: const FaIcon(
+                          FontAwesomeIcons.objectGroup,
+                          size: 24,
+                        ),
                       ),
                     ),
                   ],
