@@ -1,12 +1,13 @@
 import 'dart:developer';
 
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
-import 'package:mirrorx/env/sdk/mirrorx_core_sdk.dart';
-import 'package:mirrorx/env/utility/dialog.dart';
-import 'package:mirrorx/pages/connect/widgets/connect_progress_dialog/connect_progress_dialog.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:mirrorx/env/utility/error_notifier.dart';
 import 'package:mirrorx/pages/connect/widgets/remote_connect_field/digit_input.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:mirrorx/state/signaling_manager/signaling_manager_cubit.dart';
 
 class RemoteConnectField extends StatefulWidget {
   const RemoteConnectField({Key? key}) : super(key: key);
@@ -17,14 +18,15 @@ class RemoteConnectField extends StatefulWidget {
 
 class _RemoteConnectFieldState extends State<RemoteConnectField> {
   final List<TextEditingController> _textControllers = [];
+  late SnackBarNotifier _notifier;
   late FocusScopeNode _focusScopeNode;
   bool _connectButtonDisabled = true;
-  bool _connectHandshake = false;
+  bool _isVisitRequesting = false;
 
   @override
   void initState() {
     super.initState();
-
+    _notifier = SnackBarNotifier(context);
     _focusScopeNode = FocusScopeNode(
       onKeyEvent: ((node, event) {
         if (event.logicalKey == LogicalKeyboardKey.delete ||
@@ -83,17 +85,31 @@ class _RemoteConnectFieldState extends State<RemoteConnectField> {
                   AppLocalizations.of(context)!.connectPageConnectRemoteTitle,
                   style: const TextStyle(fontSize: 27),
                 ),
-                _connectHandshake
-                    ? const CircularProgressIndicator()
-                    : IconButton(
-                        onPressed: _connectButtonDisabled ? null : _connect,
-                        icon: const Icon(Icons.login),
-                        splashRadius: 20,
-                        hoverColor: Colors.yellow,
-                        disabledColor: Colors.grey,
-                        tooltip: AppLocalizations.of(context)!
-                            .connectPageConnectRemoteButtonConnectTooltip,
-                      ),
+                SizedBox(
+                  width: 50,
+                  child: Center(
+                    child: _isVisitRequesting
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(),
+                          )
+                        : IconButton(
+                            onPressed: _connectButtonDisabled
+                                ? null
+                                : () => _connect(
+                                      context.read<SignalingManagerCubit>(),
+                                    ),
+                            icon: const FaIcon(
+                              FontAwesomeIcons.arrowRightToBracket,
+                              size: 24,
+                            ),
+                            disabledColor: Colors.grey,
+                            tooltip: AppLocalizations.of(context)!
+                                .connectPageConnectRemoteButtonConnectTooltip,
+                          ),
+                  ),
+                ),
               ],
             ),
             Expanded(
@@ -142,79 +158,97 @@ class _RemoteConnectFieldState extends State<RemoteConnectField> {
     );
   }
 
-  void _connect() async {
-    _updateHandshakeState(true);
-
-    final remoteDeviceId = _textControllers.map((e) => e.text).join();
-    log(remoteDeviceId);
+  void _connect(SignalingManagerCubit cubit) async {
     try {
-      // final success = await MirrorXCoreSDK.instance
-      //     .signalingConnect(remoteDeviceId: remoteDeviceId);
+      _updateVisitRequestingState(true);
 
-      // if (!success) {
-      //   _updateHandshakeState(false);
-      //   if (mounted) {
-      //     popupDialog(
-      //       context,
-      //       contentBuilder: (_) =>
-      //           Text(AppLocalizations.of(context)!.dialogConnectRemoteOffline),
-      //       actionBuilder: (navigatorState) => [
-      //         TextButton(
-      //           onPressed: navigatorState.pop,
-      //           child: Text(AppLocalizations.of(context)!.dialogOK),
-      //         )
-      //       ],
-      //     );
-      //   }
-      //   return;
-      // }
-    } catch (e) {
-      _updateHandshakeState(false);
-      popupDialog(
-        context,
-        contentBuilder: (_) => Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(AppLocalizations.of(context)!.dialogConnectRemoteError),
-            Text(e.toString()),
-          ],
-        ),
-        actionBuilder: (navigatorState) => [
-          TextButton(
-            onPressed: navigatorState.pop,
-            child: Text(AppLocalizations.of(context)!.dialogOK),
-          )
-        ],
-      );
-      return;
+      final remoteDeviceId = _textControllers.map((e) => e.text).join();
+
+      final resp = await cubit.visit(int.parse(remoteDeviceId));
+
+      if (!resp.allow) {
+        _notifier.notifyError("remote device rejects your visit request");
+      } else {
+        _notifier.notifyError("remote device allow your visit request");
+      }
+    } catch (err) {
+      if (err.toString().contains("not found")) {
+        _notifier.notifyError("remote device is offline");
+        return;
+      }
+
+      _notifier.notifyError("an error occurs when request visit", error: err);
+    } finally {
+      _updateVisitRequestingState(false);
     }
 
-    _updateHandshakeState(false);
+    // try {
+    //   final success = await context.read<SignalingManagerCubit>().visit (remoteDeviceId: remoteDeviceId);
 
-    showGeneralDialog(
-      context: context,
-      pageBuilder: (context, animationValue1, animationValue2) {
-        return StatefulBuilder(builder: (context, setter) {
-          return ConnectProgressStateDialog(remoteDeviceId: remoteDeviceId);
-        });
-      },
-      barrierDismissible: false,
-      transitionBuilder: (context, animationValue1, animationValue2, child) {
-        return Transform.scale(
-          scale: animationValue1.value,
-          child: Opacity(
-            opacity: animationValue1.value,
-            child: child,
-          ),
-        );
-      },
-      transitionDuration: kThemeAnimationDuration * 2,
-    );
+    //   if (!success) {
+    //     _updateHandshakeState(false);
+    //     if (mounted) {
+    //       popupDialog(
+    //         context,
+    //         contentBuilder: (_) =>
+    //             Text(AppLocalizations.of(context)!.dialogConnectRemoteOffline),
+    //         actionBuilder: (navigatorState) => [
+    //           TextButton(
+    //             onPressed: navigatorState.pop,
+    //             child: Text(AppLocalizations.of(context)!.dialogOK),
+    //           )
+    //         ],
+    //       );
+    //     }
+    //     return;
+    //   }
+    // } catch (e) {
+    //   _updateHandshakeState(false);
+    //   popupDialog(
+    //     context,
+    //     contentBuilder: (_) => Column(
+    //       mainAxisAlignment: MainAxisAlignment.center,
+    //       children: [
+    //         Text(AppLocalizations.of(context)!.dialogConnectRemoteError),
+    //         Text(e.toString()),
+    //       ],
+    //     ),
+    //     actionBuilder: (navigatorState) => [
+    //       TextButton(
+    //         onPressed: navigatorState.pop,
+    //         child: Text(AppLocalizations.of(context)!.dialogOK),
+    //       )
+    //     ],
+    //   );
+    //   return;
+    // }
+
+    // _updateHandshakeState(false);
+
+    // showGeneralDialog(
+    //   context: context,
+    //   pageBuilder: (context, animationValue1, animationValue2) {
+    //     return StatefulBuilder(builder: (context, setter) {
+    //       return ConnectProgressStateDialog(remoteDeviceId: remoteDeviceId);
+    //     });
+    //   },
+    //   barrierDismissible: false,
+    //   transitionBuilder: (context, animationValue1, animationValue2, child) {
+    //     return Transform.scale(
+    //       scale: animationValue1.value,
+    //       child: Opacity(
+    //         opacity: animationValue1.value,
+    //         child: child,
+    //       ),
+    //     );
+    //   },
+    //   transitionDuration: kThemeAnimationDuration * 2,
+    // );
   }
 
-  void _updateHandshakeState(bool isHandshaking) {
+  void _updateVisitRequestingState(bool isVisitRequesting) {
     setState(() {
-      _connectHandshake = isHandshaking;
+      _isVisitRequesting = isVisitRequesting;
     });
   }
 

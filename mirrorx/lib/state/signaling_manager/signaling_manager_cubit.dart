@@ -1,27 +1,23 @@
-import 'dart:developer';
-
 import 'package:equatable/equatable.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mirrorx/env/sdk/mirrorx_core.dart';
 import 'package:mirrorx/env/sdk/mirrorx_core_sdk.dart';
 import 'package:mirrorx/env/utility/error_notifier.dart';
 import 'package:mirrorx/env/utility/rng.dart';
-import 'package:mirrorx/state/config_manager/cubit/config_manager_cubit.dart';
 
 part 'signaling_manager_state.dart';
 
 class SignalingManagerCubit extends Cubit<SignalingManagerState> {
   SignalingManagerCubit(BuildContext context, this._configPath)
-      : _errorNotifier = ErrorNotifier(context),
+      : _errorNotifier = SnackBarNotifier(context),
         super(const SignalingManagerState()) {
     // initial first connect
     Future.microtask(connect);
   }
 
   final String _configPath;
-  final ErrorNotifier _errorNotifier;
+  final SnackBarNotifier _errorNotifier;
   Stream<PublishMessage>? _subscribeStream;
 
   Future connect({String? domain}) async {
@@ -85,7 +81,11 @@ class SignalingManagerCubit extends Cubit<SignalingManagerState> {
       emit(state.copyWith(
         connectionState: SignalingConnectionState.disconnected,
       ));
-      _errorNotifier.notifyError(error: err, stackTrace: stackTrace);
+      _errorNotifier.notifyError(
+        "Connect to Signaling Server failed",
+        error: err,
+        stackTrace: stackTrace,
+      );
     }
   }
 
@@ -94,6 +94,56 @@ class SignalingManagerCubit extends Cubit<SignalingManagerState> {
     emit(state.copyWith(
       connectionState: SignalingConnectionState.disconnected,
     ));
+  }
+
+  Future<VisitResponse> visit(int remoteDeviceId) async {
+    final domain = state.domain;
+    final domainConfig = state.domainConfig;
+
+    if (domain == null) {
+      return Future.error("domain is empty");
+    }
+
+    if (domainConfig == null) {
+      return Future.error("domain config is empty");
+    }
+
+    return await MirrorXCoreSDK.instance.signalingVisit(
+      req: VisitRequest(
+        domain: domain,
+        localDeviceId: domainConfig.deviceId,
+        remoteDeviceId: remoteDeviceId,
+        resourceType: ResourceType.Desktop,
+      ),
+    );
+  }
+
+  Future<KeyExchangeResponse> keyExchange(
+      String password, int remoteDeviceId) async {
+    final domain = state.domain;
+    final domainConfig = state.domainConfig;
+
+    if (domain == null) {
+      return Future.error("domain is empty");
+    }
+
+    if (domainConfig == null) {
+      return Future.error("domain config is empty");
+    }
+
+    try {
+      return await MirrorXCoreSDK.instance.signalingKeyExchange(
+        req: KeyExchangeRequest(
+          domain: domain,
+          localDeviceId: domainConfig.deviceId,
+          remoteDeviceId: remoteDeviceId,
+          password: password,
+        ),
+      );
+    } catch (err, stackTrace) {
+      // _errorNotifier.notifyError(error: err, stackTrace: stackTrace);
+      return Future.error(err, stackTrace);
+    }
   }
 
   void updateDevicePassword(String? newPassword) async {
@@ -113,7 +163,11 @@ class SignalingManagerCubit extends Cubit<SignalingManagerState> {
         emit(state.copyWith(domainConfig: newDomainConfig));
       }
     } catch (err, stackTrace) {
-      _errorNotifier.notifyError(error: err, stackTrace: stackTrace);
+      _errorNotifier.notifyError(
+        "Update password failed",
+        error: err,
+        stackTrace: stackTrace,
+      );
     }
   }
 }

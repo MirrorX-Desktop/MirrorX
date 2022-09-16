@@ -6,6 +6,17 @@ enum SignalingConnectionState {
   disconnected,
 }
 
+// enum SignalingVisitState{
+//   none,
+//   visitRequesting,
+//   visitReject,
+//   passwordInput,
+//   keyExchangeRequesting,
+//   keyExchangeReject,
+//   selectingMonitor,
+
+// }
+
 class SignalingManagerState extends Equatable {
   const SignalingManagerState({
     this.connectionState,
