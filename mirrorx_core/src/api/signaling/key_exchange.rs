@@ -76,6 +76,8 @@ pub async fn key_exchange(req: KeyExchangeRequest) -> CoreResult<KeyExchangeResp
     let mut active_device_secret_sealing_nonce = [0u8; ring::aead::NONCE_LEN];
     OsRng.fill_bytes(&mut active_device_secret_sealing_nonce);
 
+    let active_device_secret_before_sealing_nonce = active_device_secret_sealing_nonce.to_vec();
+
     let mut active_device_secret_sealing_key = ring::aead::SealingKey::new(
         active_device_secret_sealing_unbound_key,
         NonceValue::new(active_device_secret_sealing_nonce),
@@ -94,7 +96,7 @@ pub async fn key_exchange(req: KeyExchangeRequest) -> CoreResult<KeyExchangeResp
             passive_device_id: req.remote_device_id.to_owned(),
             password_salt: active_device_secret_salt.to_vec(),
             secret: active_device_secret_buffer,
-            secret_nonce: active_device_secret_sealing_nonce.to_vec(),
+            secret_nonce: active_device_secret_before_sealing_nonce.to_vec(),
         })
         .await?;
 

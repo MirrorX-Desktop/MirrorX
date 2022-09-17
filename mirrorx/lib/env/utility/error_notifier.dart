@@ -7,7 +7,7 @@ class SnackBarNotifier {
   SnackBarNotifier(this.context);
 
   void notifyError(
-    String Function(BuildContext) messageBuilder, {
+    String Function(BuildContext context) messageBuilder, {
     Object? error,
     StackTrace? stackTrace,
   }) {

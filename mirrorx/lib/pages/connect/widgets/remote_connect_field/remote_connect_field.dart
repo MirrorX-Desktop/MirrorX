@@ -19,7 +19,8 @@ class RemoteConnectField extends StatefulWidget {
 
 class _RemoteConnectFieldState extends State<RemoteConnectField> {
   final List<TextEditingController> _textControllers = [];
-  late SnackBarNotifier _notifier;
+  late SnackBarNotifier _snackBarNotifier;
+  late DialogNotifier _dialogNotifier;
   late FocusScopeNode _focusScopeNode;
   bool _connectButtonDisabled = true;
   bool _isVisitRequesting = false;
@@ -27,7 +28,10 @@ class _RemoteConnectFieldState extends State<RemoteConnectField> {
   @override
   void initState() {
     super.initState();
-    _notifier = SnackBarNotifier(context);
+
+    _snackBarNotifier = SnackBarNotifier(context);
+    _dialogNotifier = DialogNotifier(context);
+
     _focusScopeNode = FocusScopeNode(
       onKeyEvent: ((node, event) {
         if (event.logicalKey == LogicalKeyboardKey.delete ||
@@ -160,30 +164,119 @@ class _RemoteConnectFieldState extends State<RemoteConnectField> {
   }
 
   void _connect(SignalingManagerCubit cubit) async {
+    _updateVisitRequestingState(true);
+
+    final GlobalKey<FormState> formKey = GlobalKey<FormState>();
+    final passwordTextEditingController = TextEditingController();
+
     try {
-      _updateVisitRequestingState(true);
+      final remoteDeviceId =
+          int.parse(_textControllers.map((e) => e.text).join());
 
-      final remoteDeviceId = _textControllers.map((e) => e.text).join();
+      final visitResponse = await cubit.visit(remoteDeviceId);
 
-      final resp = await cubit.visit(int.parse(remoteDeviceId));
-
-      if (!resp.allow) {
-        _notifier.notifyError(
+      if (!visitResponse.allow) {
+        _snackBarNotifier.notifyError(
             (context) => "remote device rejects your visit request");
-      } else {
-        _notifier
-            .notifyError((context) => "remote device allow your visit request");
-      }
-    } catch (err) {
-      log("$err");
-      if (err.toString().contains("not found")) {
-        _notifier.notifyError((context) => "remote device is offline");
         return;
       }
 
-      _notifier.notifyError((context) => "an error occurs when request visit",
+      String? inputPassword = await _dialogNotifier.popupDialog(
+        contentBuilder: (context) {
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text("Please input remote device password"),
+              Form(
+                key: formKey,
+                autovalidateMode: AutovalidateMode.always,
+                child: TextFormField(
+                  controller: passwordTextEditingController,
+                  cursorColor: Colors.yellow,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(
+                        RegExp(r'[a-zA-Z0-9@#$%^*?!=+<>(){}]')),
+                  ],
+                  decoration: const InputDecoration(
+                    isDense: true,
+                    focusedBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(width: 2, color: Colors.yellow),
+                    ),
+                  ),
+                  style: const TextStyle(fontSize: 14),
+                  keyboardType: TextInputType.visiblePassword,
+                  textInputAction: TextInputAction.next,
+                  textAlign: TextAlign.center,
+                  textAlignVertical: TextAlignVertical.center,
+                  enableSuggestions: false,
+                  maxLength: 24,
+                  maxLines: 1,
+                  autocorrect: false,
+                  validator: (text) {
+                    if (text == null || text.isEmpty || text.length < 8) {
+                      return AppLocalizations.of(context)!
+                          .connectPagePasswordValidationErrorLength;
+                    }
+
+                    if (!RegExp(r'[A-Z]').hasMatch(text)) {
+                      return AppLocalizations.of(context)!
+                          .connectPagePasswordValidationErrorUpper;
+                    }
+
+                    if (!RegExp(r'[@#$%^*?!=+<>(){}]').hasMatch(text)) {
+                      return AppLocalizations.of(context)!
+                          .connectPagePasswordValidationErrorSpecial(
+                        r'@#$%^*?!=+<>(){}',
+                      );
+                    }
+
+                    return null;
+                  },
+                ),
+              ),
+            ],
+          );
+        },
+        actionBuilder: (context, navState) => [
+          TextButton(
+            onPressed: () {
+              if (formKey.currentState?.validate() ?? false) {
+                navState.pop(passwordTextEditingController.text);
+              }
+            },
+            child: Text(AppLocalizations.of(context)!.dialogOK),
+          ),
+          TextButton(
+            onPressed: () {
+              navState.pop(null);
+            },
+            child: Text(AppLocalizations.of(context)!.dialogCancel),
+          ),
+        ],
+      );
+
+      if (inputPassword == null) {
+        return;
+      }
+
+      log(inputPassword);
+      final keyExchangeResponse =
+          await cubit.keyExchange(inputPassword, remoteDeviceId);
+
+      _snackBarNotifier.notifyError((context) => "key exchange ok");
+      // todo switch to desktop page
+    } catch (err) {
+      log("$err");
+      if (err.toString().contains("not found")) {
+        _snackBarNotifier.notifyError((context) => "remote device is offline");
+        return;
+      }
+
+      _snackBarNotifier.notifyError(
+          (context) => "an error occurs when request visit",
           error: err);
     } finally {
+      passwordTextEditingController.dispose();
       _updateVisitRequestingState(false);
     }
 

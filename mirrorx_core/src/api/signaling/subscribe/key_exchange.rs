@@ -112,7 +112,10 @@ async fn key_agreement(
     let mut active_device_secret_buffer = req.secret.to_owned();
 
     let active_device_secret_buffer = active_device_secret_opening_key
-        .open_in_place(ring::aead::Aad::empty(), &mut active_device_secret_buffer)
+        .open_in_place(
+            ring::aead::Aad::from(req.active_device_id.to_le_bytes()),
+            &mut active_device_secret_buffer,
+        )
         .map_err(|_| CoreError::KeyExchangeReplyError(KeyExchangeReplyError::InvalidPassword))?;
 
     let active_device_secret =
