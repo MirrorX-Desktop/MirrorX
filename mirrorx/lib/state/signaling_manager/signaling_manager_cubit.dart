@@ -33,7 +33,7 @@ class SignalingManagerCubit extends Cubit<SignalingManagerState> {
               .readDomainConfig(path: _configPath, domain: connectDomain)
           : null;
 
-      String uri = domainConfig?.uri ?? "http://localhost:28000";
+      String uri = domainConfig?.uri ?? "http://192.168.0.101:28000";
 
       await MirrorXCoreSDK.instance.signalingDial(req: DialRequest(uri: uri));
 
