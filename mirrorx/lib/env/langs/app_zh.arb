@@ -4,6 +4,8 @@
     "dialogCancel": "取消",
     "dialogYes": "是",
     "dialogNo": "否",
+    "dialogAllow": "允许",
+    "dialogDisallow": "不允许",
     "dialogConnectRemoteError": "连接远程设备时发生了一个错误",
     "dialogConnectRemoteOffline": "远程设备不在线",
     "dialogContentInputDevicePassword": "请输入远程设备密码",
@@ -33,6 +35,17 @@
     },
     "connectPageConnectRemoteTitle": "连接远程设备",
     "connectPageConnectRemoteButtonConnectTooltip": "连接到远程设备",
+    "connectPageConnectVisitRequestDialogContent": "{active_device_id} 想要访问您的 {resource_type}",
+    "@connectPageConnectVisitRequestDialogContent": {
+        "placeholders": {
+            "active_device_id": {
+                "type": "int"
+            },
+            "resource_type": {
+                "type": "String"
+            }
+        }
+    },
     "connectPageConnectProgressTipKeyExchange": "端到端密钥交换中 ...",
     "connectPageConnectProgressTipKeyExchangeFailed": "端到端密钥交换失败",
     "connectPageConnectProgressTipListMonitors": "获取屏幕中 ...",

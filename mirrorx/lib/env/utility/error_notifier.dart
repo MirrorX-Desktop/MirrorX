@@ -6,7 +6,11 @@ class SnackBarNotifier {
 
   SnackBarNotifier(this.context);
 
-  void notifyError(String message, {Object? error, StackTrace? stackTrace}) {
+  void notifyError(
+    String Function(BuildContext) messageBuilder, {
+    Object? error,
+    StackTrace? stackTrace,
+  }) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         behavior: SnackBarBehavior.floating,
@@ -14,7 +18,7 @@ class SnackBarNotifier {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(message),
+            Text(messageBuilder(context)),
             Visibility(visible: error != null, child: Text(error.toString())),
             Visibility(
               visible: stackTrace != null,
@@ -33,6 +37,39 @@ class SnackBarNotifier {
           },
         ),
       ),
+    );
+  }
+}
+
+class DialogNotifier {
+  final BuildContext context;
+
+  DialogNotifier(this.context);
+
+  Future<T?> popupDialog<T>({
+    required Widget Function(BuildContext) contentBuilder,
+    required List<Widget>? Function(BuildContext, NavigatorState) actionBuilder,
+  }) async {
+    return showGeneralDialog<T?>(
+      context: context,
+      pageBuilder: (context, animationValue1, animationValue2) {
+        return AlertDialog(
+          title: const Text("MirrorX", textAlign: TextAlign.center),
+          content: contentBuilder(context),
+          actions: actionBuilder(context, Navigator.of(context)),
+        );
+      },
+      barrierDismissible: false,
+      transitionBuilder: (context, animationValue1, animationValue2, child) {
+        return Transform.scale(
+          scale: animationValue1.value,
+          child: Opacity(
+            opacity: animationValue1.value,
+            child: child,
+          ),
+        );
+      },
+      transitionDuration: kThemeAnimationDuration * 2,
     );
   }
 }

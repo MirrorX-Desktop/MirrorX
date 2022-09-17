@@ -5,6 +5,7 @@ pub mod key_exchange;
 pub mod register;
 pub mod subscribe;
 pub mod visit;
+pub mod visit_reply;
 
 use crate::{
     core_error,

@@ -13,6 +13,7 @@ use crate::{
             register::{register, RegisterRequest, RegisterResponse},
             subscribe::{subscribe, PublishMessage, SubscribeRequest},
             visit::{visit, VisitRequest, VisitResponse},
+            visit_reply::{visit_reply, VisitReplyRequest},
         },
     },
     utility::runtime::TOKIO_RUNTIME,
@@ -93,6 +94,10 @@ pub fn signaling_heartbeat(req: HeartbeatRequest) -> anyhow::Result<HeartbeatRes
 
 pub fn signaling_visit(req: VisitRequest) -> anyhow::Result<VisitResponse> {
     async_block_on!(visit(req))
+}
+
+pub fn signaling_visit_reply(req: VisitReplyRequest) -> anyhow::Result<()> {
+    async_block_on!(visit_reply(req))
 }
 
 pub fn signaling_key_exchange(req: KeyExchangeRequest) -> anyhow::Result<KeyExchangeResponse> {

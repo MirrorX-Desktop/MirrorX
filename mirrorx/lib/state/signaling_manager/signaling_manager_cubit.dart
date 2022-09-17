@@ -5,19 +5,22 @@ import 'package:mirrorx/env/sdk/mirrorx_core.dart';
 import 'package:mirrorx/env/sdk/mirrorx_core_sdk.dart';
 import 'package:mirrorx/env/utility/error_notifier.dart';
 import 'package:mirrorx/env/utility/rng.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 part 'signaling_manager_state.dart';
 
 class SignalingManagerCubit extends Cubit<SignalingManagerState> {
   SignalingManagerCubit(BuildContext context, this._configPath)
-      : _errorNotifier = SnackBarNotifier(context),
+      : _snackBarNotifier = SnackBarNotifier(context),
+        _dialogNotifier = DialogNotifier(context),
         super(const SignalingManagerState()) {
     // initial first connect
     Future.microtask(connect);
   }
 
   final String _configPath;
-  final SnackBarNotifier _errorNotifier;
+  final SnackBarNotifier _snackBarNotifier;
+  final DialogNotifier _dialogNotifier;
   Stream<PublishMessage>? _subscribeStream;
 
   Future connect({String? domain}) async {
@@ -91,8 +94,8 @@ class SignalingManagerCubit extends Cubit<SignalingManagerState> {
       emit(state.copyWith(
         connectionState: SignalingConnectionState.disconnected,
       ));
-      _errorNotifier.notifyError(
-        "Connect to Signaling Server failed",
+      _snackBarNotifier.notifyError(
+        (context) => "Connect to Signaling Server failed",
         error: err,
         stackTrace: stackTrace,
       );
@@ -173,17 +176,73 @@ class SignalingManagerCubit extends Cubit<SignalingManagerState> {
         emit(state.copyWith(domainConfig: newDomainConfig));
       }
     } catch (err, stackTrace) {
-      _errorNotifier.notifyError(
-        "Update password failed",
+      _snackBarNotifier.notifyError(
+        (context) => "Update password failed",
         error: err,
         stackTrace: stackTrace,
       );
     }
   }
 
-  void onSubscribeStreamData(PublishMessage message) {}
+  void onSubscribeStreamData(PublishMessage message) {
+    message.when(
+      streamClosed: handlePublishMessageStreamClosed,
+      visitRequest: handlePublishMessageVisitRequest,
+    );
+  }
 
   void onSubscribeStreamError(Object object, StackTrace stackTrace) {}
 
   void onSubscribeStreamDone() {}
+
+  void handlePublishMessageStreamClosed() {
+    _snackBarNotifier.notifyError((context) => "subscribe stream has closed");
+  }
+
+  void handlePublishMessageVisitRequest(
+    int activeDeviceId,
+    int passiveDeviceId,
+    ResourceType resourceType,
+  ) async {
+    final allow = await _dialogNotifier.popupDialog(
+      contentBuilder: (context) {
+        return Text(
+            "$activeDeviceId want to visit your ${resourceType == ResourceType.Desktop ? "Desktop" : "Files"}");
+      },
+      actionBuilder: (context, navState) {
+        return [
+          TextButton(
+            onPressed: () {
+              navState.pop(true);
+            },
+            child: Text(AppLocalizations.of(context)!.dialogAllow),
+          ),
+          TextButton(
+            onPressed: () {
+              navState.pop(false);
+            },
+            child: Text(AppLocalizations.of(context)!.dialogDisallow),
+          ),
+        ];
+      },
+    );
+
+    try {
+      await MirrorXCoreSDK.instance.signalingVisitReply(
+        req: VisitReplyRequest(
+          domain: state.domain ?? "",
+          activeDeviceId: activeDeviceId,
+          passiveDeviceId: passiveDeviceId,
+          allow: allow,
+        ),
+      );
+    } catch (err, stackTrace) {
+      _snackBarNotifier.notifyError(
+        (context) =>
+            "reply visit request for active device '$activeDeviceId' failed",
+        error: err,
+        stackTrace: stackTrace,
+      );
+    }
+  }
 }

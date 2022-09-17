@@ -59,7 +59,7 @@ pub async fn subscribe(
             if let Some(inner_message) = publish_message.inner_publish_message {
                 match inner_message {
                     signaling_proto::message::publish_message::InnerPublishMessage::VisitRequest(visit_request) => {
-                      let resource_type =  match signaling_proto::message::ResourceType::from_i32(visit_request.resource_type){
+                        let resource_type =  match signaling_proto::message::ResourceType::from_i32(visit_request.resource_type){
                             Some(typ) => match typ{
                                 signaling_proto::message::ResourceType::Desktop => crate::api::signaling::visit::ResourceType::Desktop,
                                 signaling_proto::message::ResourceType::Files => crate::api::signaling::visit::ResourceType::Files,
@@ -69,9 +69,7 @@ pub async fn subscribe(
                                 continue;
                             },
                         };
-                        
-                       
-
+ 
                         let publish_message = PublishMessage::VisitRequest{
                             active_device_id: visit_request.active_device_id,
                             passive_device_id: visit_request.passive_device_id,

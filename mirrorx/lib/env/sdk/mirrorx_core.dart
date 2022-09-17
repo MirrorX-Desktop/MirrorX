@@ -68,6 +68,11 @@ abstract class MirrorXCore {
 
   FlutterRustBridgeTaskConstMeta get kSignalingVisitConstMeta;
 
+  Future<void> signalingVisitReply(
+      {required VisitReplyRequest req, dynamic hint});
+
+  FlutterRustBridgeTaskConstMeta get kSignalingVisitReplyConstMeta;
+
   Future<KeyExchangeResponse> signalingKeyExchange(
       {required KeyExchangeRequest req, dynamic hint});
 
@@ -524,6 +529,20 @@ enum VideoCodec {
   VP9,
 }
 
+class VisitReplyRequest {
+  final String domain;
+  final int activeDeviceId;
+  final int passiveDeviceId;
+  final bool allow;
+
+  VisitReplyRequest({
+    required this.domain,
+    required this.activeDeviceId,
+    required this.passiveDeviceId,
+    required this.allow,
+  });
+}
+
 class VisitRequest {
   final String domain;
   final int localDeviceId;
@@ -742,6 +761,23 @@ class MirrorXCoreImpl implements MirrorXCore {
         argNames: ["req"],
       );
 
+  Future<void> signalingVisitReply(
+          {required VisitReplyRequest req, dynamic hint}) =>
+      _platform.executeNormal(FlutterRustBridgeTask(
+        callFfi: (port_) => _platform.inner.wire_signaling_visit_reply(
+            port_, _platform.api2wire_box_autoadd_visit_reply_request(req)),
+        parseSuccessData: _wire2api_unit,
+        constMeta: kSignalingVisitReplyConstMeta,
+        argValues: [req],
+        hint: hint,
+      ));
+
+  FlutterRustBridgeTaskConstMeta get kSignalingVisitReplyConstMeta =>
+      const FlutterRustBridgeTaskConstMeta(
+        debugName: "signaling_visit_reply",
+        argNames: ["req"],
+      );
+
   Future<KeyExchangeResponse> signalingKeyExchange(
           {required KeyExchangeRequest req, dynamic hint}) =>
       _platform.executeNormal(FlutterRustBridgeTask(
@@ -872,6 +908,11 @@ class MirrorXCoreImpl implements MirrorXCore {
 }
 
 // Section: api2wire
+
+@protected
+bool api2wire_bool(bool raw) {
+  return raw;
+}
 
 @protected
 double api2wire_f32(double raw) {
@@ -1217,6 +1258,14 @@ class MirrorXCorePlatform extends FlutterRustBridgeBase<MirrorXCoreWire> {
   }
 
   @protected
+  ffi.Pointer<wire_VisitReplyRequest> api2wire_box_autoadd_visit_reply_request(
+      VisitReplyRequest raw) {
+    final ptr = inner.new_box_autoadd_visit_reply_request_0();
+    _api_fill_to_wire_visit_reply_request(raw, ptr.ref);
+    return ptr;
+  }
+
+  @protected
   ffi.Pointer<wire_VisitRequest> api2wire_box_autoadd_visit_request(
       VisitRequest raw) {
     final ptr = inner.new_box_autoadd_visit_request_0();
@@ -1327,6 +1376,11 @@ class MirrorXCorePlatform extends FlutterRustBridgeBase<MirrorXCoreWire> {
   void _api_fill_to_wire_box_autoadd_subscribe_request(
       SubscribeRequest apiObj, ffi.Pointer<wire_SubscribeRequest> wireObj) {
     _api_fill_to_wire_subscribe_request(apiObj, wireObj.ref);
+  }
+
+  void _api_fill_to_wire_box_autoadd_visit_reply_request(
+      VisitReplyRequest apiObj, ffi.Pointer<wire_VisitReplyRequest> wireObj) {
+    _api_fill_to_wire_visit_reply_request(apiObj, wireObj.ref);
   }
 
   void _api_fill_to_wire_box_autoadd_visit_request(
@@ -1496,6 +1550,14 @@ class MirrorXCorePlatform extends FlutterRustBridgeBase<MirrorXCoreWire> {
     wireObj.local_device_id = api2wire_i64(apiObj.localDeviceId);
     wireObj.device_finger_print = api2wire_String(apiObj.deviceFingerPrint);
     wireObj.config_path = api2wire_String(apiObj.configPath);
+  }
+
+  void _api_fill_to_wire_visit_reply_request(
+      VisitReplyRequest apiObj, wire_VisitReplyRequest wireObj) {
+    wireObj.domain = api2wire_String(apiObj.domain);
+    wireObj.active_device_id = api2wire_i64(apiObj.activeDeviceId);
+    wireObj.passive_device_id = api2wire_i64(apiObj.passiveDeviceId);
+    wireObj.allow = api2wire_bool(apiObj.allow);
   }
 
   void _api_fill_to_wire_visit_request(
@@ -1738,6 +1800,24 @@ class MirrorXCoreWire implements FlutterRustBridgeWireBase {
               ffi.Pointer<wire_VisitRequest>)>>('wire_signaling_visit');
   late final _wire_signaling_visit = _wire_signaling_visitPtr
       .asFunction<void Function(int, ffi.Pointer<wire_VisitRequest>)>();
+
+  void wire_signaling_visit_reply(
+    int port_,
+    ffi.Pointer<wire_VisitReplyRequest> req,
+  ) {
+    return _wire_signaling_visit_reply(
+      port_,
+      req,
+    );
+  }
+
+  late final _wire_signaling_visit_replyPtr = _lookup<
+          ffi.NativeFunction<
+              ffi.Void Function(
+                  ffi.Int64, ffi.Pointer<wire_VisitReplyRequest>)>>(
+      'wire_signaling_visit_reply');
+  late final _wire_signaling_visit_reply = _wire_signaling_visit_replyPtr
+      .asFunction<void Function(int, ffi.Pointer<wire_VisitReplyRequest>)>();
 
   void wire_signaling_key_exchange(
     int port_,
@@ -2043,6 +2123,17 @@ class MirrorXCoreWire implements FlutterRustBridgeWireBase {
       _new_box_autoadd_subscribe_request_0Ptr
           .asFunction<ffi.Pointer<wire_SubscribeRequest> Function()>();
 
+  ffi.Pointer<wire_VisitReplyRequest> new_box_autoadd_visit_reply_request_0() {
+    return _new_box_autoadd_visit_reply_request_0();
+  }
+
+  late final _new_box_autoadd_visit_reply_request_0Ptr = _lookup<
+          ffi.NativeFunction<ffi.Pointer<wire_VisitReplyRequest> Function()>>(
+      'new_box_autoadd_visit_reply_request_0');
+  late final _new_box_autoadd_visit_reply_request_0 =
+      _new_box_autoadd_visit_reply_request_0Ptr
+          .asFunction<ffi.Pointer<wire_VisitReplyRequest> Function()>();
+
   ffi.Pointer<wire_VisitRequest> new_box_autoadd_visit_request_0() {
     return _new_box_autoadd_visit_request_0();
   }
@@ -2231,6 +2322,19 @@ class wire_VisitRequest extends ffi.Struct {
 
   @ffi.Int32()
   external int resource_type;
+}
+
+class wire_VisitReplyRequest extends ffi.Struct {
+  external ffi.Pointer<wire_uint_8_list> domain;
+
+  @ffi.Int64()
+  external int active_device_id;
+
+  @ffi.Int64()
+  external int passive_device_id;
+
+  @ffi.Bool()
+  external bool allow;
 }
 
 class wire_KeyExchangeRequest extends ffi.Struct {

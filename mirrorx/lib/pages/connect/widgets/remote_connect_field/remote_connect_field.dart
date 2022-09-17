@@ -168,18 +168,21 @@ class _RemoteConnectFieldState extends State<RemoteConnectField> {
       final resp = await cubit.visit(int.parse(remoteDeviceId));
 
       if (!resp.allow) {
-        _notifier.notifyError("remote device rejects your visit request");
+        _notifier.notifyError(
+            (context) => "remote device rejects your visit request");
       } else {
-        _notifier.notifyError("remote device allow your visit request");
+        _notifier
+            .notifyError((context) => "remote device allow your visit request");
       }
     } catch (err) {
       log("$err");
       if (err.toString().contains("not found")) {
-        _notifier.notifyError("remote device is offline");
+        _notifier.notifyError((context) => "remote device is offline");
         return;
       }
 
-      _notifier.notifyError("an error occurs when request visit", error: err);
+      _notifier.notifyError((context) => "an error occurs when request visit",
+          error: err);
     } finally {
       _updateVisitRequestingState(false);
     }

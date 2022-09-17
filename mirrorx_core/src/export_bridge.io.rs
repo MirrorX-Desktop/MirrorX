@@ -70,6 +70,11 @@ pub extern "C" fn wire_signaling_visit(port_: i64, req: *mut wire_VisitRequest) 
 }
 
 #[no_mangle]
+pub extern "C" fn wire_signaling_visit_reply(port_: i64, req: *mut wire_VisitReplyRequest) {
+    wire_signaling_visit_reply_impl(port_, req)
+}
+
+#[no_mangle]
 pub extern "C" fn wire_signaling_key_exchange(port_: i64, req: *mut wire_KeyExchangeRequest) {
     wire_signaling_key_exchange_impl(port_, req)
 }
@@ -194,6 +199,11 @@ pub extern "C" fn new_box_autoadd_subscribe_request_0() -> *mut wire_SubscribeRe
 }
 
 #[no_mangle]
+pub extern "C" fn new_box_autoadd_visit_reply_request_0() -> *mut wire_VisitReplyRequest {
+    support::new_leak_box_ptr(wire_VisitReplyRequest::new_with_null_ptr())
+}
+
+#[no_mangle]
 pub extern "C" fn new_box_autoadd_visit_request_0() -> *mut wire_VisitRequest {
     support::new_leak_box_ptr(wire_VisitRequest::new_with_null_ptr())
 }
@@ -220,6 +230,7 @@ impl Wire2Api<String> for *mut wire_uint_8_list {
         String::from_utf8_lossy(&vec).into_owned()
     }
 }
+
 impl Wire2Api<ConnectRequest> for *mut wire_ConnectRequest {
     fn wire2api(self) -> ConnectRequest {
         let wrap = unsafe { support::box_from_leak_ptr(self) };
@@ -303,6 +314,12 @@ impl Wire2Api<SubscribeRequest> for *mut wire_SubscribeRequest {
     fn wire2api(self) -> SubscribeRequest {
         let wrap = unsafe { support::box_from_leak_ptr(self) };
         Wire2Api::<SubscribeRequest>::wire2api(*wrap).into()
+    }
+}
+impl Wire2Api<VisitReplyRequest> for *mut wire_VisitReplyRequest {
+    fn wire2api(self) -> VisitReplyRequest {
+        let wrap = unsafe { support::box_from_leak_ptr(self) };
+        Wire2Api::<VisitReplyRequest>::wire2api(*wrap).into()
     }
 }
 impl Wire2Api<VisitRequest> for *mut wire_VisitRequest {
@@ -514,6 +531,16 @@ impl Wire2Api<Vec<u8>> for *mut wire_uint_8_list {
         }
     }
 }
+impl Wire2Api<VisitReplyRequest> for wire_VisitReplyRequest {
+    fn wire2api(self) -> VisitReplyRequest {
+        VisitReplyRequest {
+            domain: self.domain.wire2api(),
+            active_device_id: self.active_device_id.wire2api(),
+            passive_device_id: self.passive_device_id.wire2api(),
+            allow: self.allow.wire2api(),
+        }
+    }
+}
 impl Wire2Api<VisitRequest> for wire_VisitRequest {
     fn wire2api(self) -> VisitRequest {
         VisitRequest {
@@ -628,6 +655,15 @@ pub struct wire_SubscribeRequest {
 pub struct wire_uint_8_list {
     ptr: *mut u8,
     len: i32,
+}
+
+#[repr(C)]
+#[derive(Clone)]
+pub struct wire_VisitReplyRequest {
+    domain: *mut wire_uint_8_list,
+    active_device_id: i64,
+    passive_device_id: i64,
+    allow: bool,
 }
 
 #[repr(C)]
@@ -968,6 +1004,17 @@ impl NewWithNullPtr for wire_SubscribeRequest {
             local_device_id: Default::default(),
             device_finger_print: core::ptr::null_mut(),
             config_path: core::ptr::null_mut(),
+        }
+    }
+}
+
+impl NewWithNullPtr for wire_VisitReplyRequest {
+    fn new_with_null_ptr() -> Self {
+        Self {
+            domain: core::ptr::null_mut(),
+            active_device_id: Default::default(),
+            passive_device_id: Default::default(),
+            allow: Default::default(),
         }
     }
 }

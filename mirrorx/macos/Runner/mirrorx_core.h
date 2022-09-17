@@ -45,6 +45,13 @@ typedef struct wire_VisitRequest {
   int32_t resource_type;
 } wire_VisitRequest;
 
+typedef struct wire_VisitReplyRequest {
+  struct wire_uint_8_list *domain;
+  int64_t active_device_id;
+  int64_t passive_device_id;
+  bool allow;
+} wire_VisitReplyRequest;
+
 typedef struct wire_KeyExchangeRequest {
   struct wire_uint_8_list *domain;
   int64_t local_device_id;
@@ -198,6 +205,8 @@ void wire_signaling_heartbeat(int64_t port_, struct wire_HeartbeatRequest *req);
 
 void wire_signaling_visit(int64_t port_, struct wire_VisitRequest *req);
 
+void wire_signaling_visit_reply(int64_t port_, struct wire_VisitReplyRequest *req);
+
 void wire_signaling_key_exchange(int64_t port_, struct wire_KeyExchangeRequest *req);
 
 void wire_endpoint_connect(int64_t port_, struct wire_ConnectRequest *req);
@@ -244,6 +253,8 @@ struct wire_RegisterRequest *new_box_autoadd_register_request_0(void);
 
 struct wire_SubscribeRequest *new_box_autoadd_subscribe_request_0(void);
 
+struct wire_VisitReplyRequest *new_box_autoadd_visit_reply_request_0(void);
+
 struct wire_VisitRequest *new_box_autoadd_visit_request_0(void);
 
 struct wire_InputEvent *new_box_input_event_0(void);
@@ -281,6 +292,7 @@ static int64_t dummy_method_to_enforce_bundling(void) {
     dummy_var ^= ((int64_t) (void*) wire_signaling_subscribe);
     dummy_var ^= ((int64_t) (void*) wire_signaling_heartbeat);
     dummy_var ^= ((int64_t) (void*) wire_signaling_visit);
+    dummy_var ^= ((int64_t) (void*) wire_signaling_visit_reply);
     dummy_var ^= ((int64_t) (void*) wire_signaling_key_exchange);
     dummy_var ^= ((int64_t) (void*) wire_endpoint_connect);
     dummy_var ^= ((int64_t) (void*) wire_endpoint_handshake);
@@ -303,6 +315,7 @@ static int64_t dummy_method_to_enforce_bundling(void) {
     dummy_var ^= ((int64_t) (void*) new_box_autoadd_negotiate_visit_desktop_params_request_0);
     dummy_var ^= ((int64_t) (void*) new_box_autoadd_register_request_0);
     dummy_var ^= ((int64_t) (void*) new_box_autoadd_subscribe_request_0);
+    dummy_var ^= ((int64_t) (void*) new_box_autoadd_visit_reply_request_0);
     dummy_var ^= ((int64_t) (void*) new_box_autoadd_visit_request_0);
     dummy_var ^= ((int64_t) (void*) new_box_input_event_0);
     dummy_var ^= ((int64_t) (void*) new_uint_8_list_0);

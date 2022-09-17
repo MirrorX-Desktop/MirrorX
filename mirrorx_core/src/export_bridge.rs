@@ -45,6 +45,7 @@ use crate::api::signaling::subscribe::SubscribeRequest;
 use crate::api::signaling::visit::ResourceType;
 use crate::api::signaling::visit::VisitRequest;
 use crate::api::signaling::visit::VisitResponse;
+use crate::api::signaling::visit_reply::VisitReplyRequest;
 use crate::component::input::key::KeyboardKey;
 use crate::component::input::key::MouseKey;
 
@@ -213,6 +214,22 @@ fn wire_signaling_visit_impl(port_: MessagePort, req: impl Wire2Api<VisitRequest
         },
     )
 }
+fn wire_signaling_visit_reply_impl(
+    port_: MessagePort,
+    req: impl Wire2Api<VisitReplyRequest> + UnwindSafe,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap(
+        WrapInfo {
+            debug_name: "signaling_visit_reply",
+            port: Some(port_),
+            mode: FfiCallMode::Normal,
+        },
+        move || {
+            let api_req = req.wire2api();
+            move |task_callback| signaling_visit_reply(api_req)
+        },
+    )
+}
 fn wire_signaling_key_exchange_impl(
     port_: MessagePort,
     req: impl Wire2Api<KeyExchangeRequest> + UnwindSafe,
@@ -337,6 +354,12 @@ where
 {
     fn wire2api(self) -> Option<T> {
         (!self.is_null()).then(|| self.wire2api())
+    }
+}
+
+impl Wire2Api<bool> for bool {
+    fn wire2api(self) -> bool {
+        self
     }
 }
 
