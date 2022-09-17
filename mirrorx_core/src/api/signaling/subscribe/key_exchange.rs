@@ -241,7 +241,7 @@ async fn build_endpoint(
     crate::api::endpoint::handlers::connect::connect(ConnectRequest {
         local_device_id,
         remote_device_id,
-        addr: domain,
+        addr: String::from("192.168.0.101:28001"),
     })
     .await?;
 
