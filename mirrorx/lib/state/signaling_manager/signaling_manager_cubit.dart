@@ -207,7 +207,12 @@ class SignalingManagerCubit extends Cubit<SignalingManagerState> {
     final allow = await _dialogNotifier.popupDialog(
       contentBuilder: (context) {
         return Text(
-            "$activeDeviceId want to visit your ${resourceType == ResourceType.Desktop ? "Desktop" : "Files"}");
+          AppLocalizations.of(context)!
+              .connectPageConnectVisitRequestDialogContent(
+            activeDeviceId,
+            resourceType == ResourceType.Desktop ? "Desktop" : "Files",
+          ),
+        );
       },
       actionBuilder: (context, navState) {
         return [
