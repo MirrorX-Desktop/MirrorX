@@ -337,8 +337,8 @@ impl Wire2Api<Box<InputEvent>> for *mut wire_InputEvent {
 impl Wire2Api<ConnectRequest> for wire_ConnectRequest {
     fn wire2api(self) -> ConnectRequest {
         ConnectRequest {
-            active_device_id: self.active_device_id.wire2api(),
-            passive_device_id: self.passive_device_id.wire2api(),
+            local_device_id: self.active_device_id.wire2api(),
+            remote_device_id: self.passive_device_id.wire2api(),
             addr: self.addr.wire2api(),
         }
     }

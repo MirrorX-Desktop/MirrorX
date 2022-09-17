@@ -29,14 +29,12 @@ pub struct HandshakeRequest {
 
 pub async fn active_device_handshake(req: HandshakeRequest) -> CoreResult<()> {
     let mut opening_nonce = [0u8; ring::aead::NONCE_LEN];
-    for i in 0..ring::aead::NONCE_LEN {
-        opening_nonce[i] = req.opening_nonce_bytes[i];
-    }
+    opening_nonce[0..ring::aead::NONCE_LEN]
+        .copy_from_slice(&req.opening_nonce_bytes[0..ring::aead::NONCE_LEN]);
 
     let mut sealing_nonce = [0u8; ring::aead::NONCE_LEN];
-    for i in 0..ring::aead::NONCE_LEN {
-        sealing_nonce[i] = req.sealing_nonce_bytes[i];
-    }
+    sealing_nonce[0..ring::aead::NONCE_LEN]
+        .copy_from_slice(&req.sealing_nonce_bytes[0..ring::aead::NONCE_LEN]);
 
     let unbound_sealing_key = UnboundKey::new(&ring::aead::AES_256_GCM, &req.sealing_key_bytes)?;
     let sealing_key = SealingKey::new(unbound_sealing_key, NonceValue::new(sealing_nonce));
@@ -55,15 +53,15 @@ pub async fn active_device_handshake(req: HandshakeRequest) -> CoreResult<()> {
 }
 
 pub async fn passive_device_handshake(
-    active_device_id: i64,
-    passive_device_id: i64,
+    local_device_id: i64,
+    remote_device_id: i64,
     visit_credentials: String,
     opening_key: OpeningKey<NonceValue>,
     sealing_key: SealingKey<NonceValue>,
 ) -> CoreResult<()> {
     inner_handshake(
-        active_device_id,
-        passive_device_id,
+        local_device_id,
+        remote_device_id,
         visit_credentials,
         opening_key,
         sealing_key,
@@ -72,37 +70,41 @@ pub async fn passive_device_handshake(
 }
 
 async fn inner_handshake(
-    active_device_id: i64,
-    passive_device_id: i64,
+    local_device_id: i64,
+    remote_device_id: i64,
     visit_credentials: String,
     opening_key: OpeningKey<NonceValue>,
     sealing_key: SealingKey<NonceValue>,
 ) -> CoreResult<()> {
     let entry = RESERVE_STREAMS
-        .remove(&(active_device_id, passive_device_id))
+        .remove(&(local_device_id, remote_device_id))
         .ok_or(core_error!(
             "no stream exists in RESERVE_STREAMS with key ({},{})",
-            &active_device_id,
-            &passive_device_id
+            &local_device_id,
+            &remote_device_id
         ))?;
 
     let mut stream = entry.1;
 
     let handshake_req = EndPointHandshakeRequest {
-        active_device_id,
-        passive_device_id,
+        device_id: local_device_id,
         visit_credentials,
     };
 
     let handshake_resp: EndPointHandshakeResponse = stream_call(&mut stream, handshake_req).await?;
+    if handshake_resp.remote_device_id != remote_device_id {
+        return Err(core_error!(
+            "signaling server matched incorrect stream pair"
+        ));
+    }
 
     let (exit_tx, exit_rx) = async_broadcast::broadcast(16);
     let (send_message_tx, send_message_rx) = tokio::sync::mpsc::channel(1);
     let (sink, stream) = stream.split();
 
     super::super::serve_reader(
-        active_device_id,
-        passive_device_id,
+        local_device_id,
+        remote_device_id,
         exit_tx.clone(),
         exit_tx.new_receiver(),
         stream,
@@ -111,8 +113,8 @@ async fn inner_handshake(
     );
 
     super::super::serve_writer(
-        active_device_id,
-        passive_device_id,
+        local_device_id,
+        remote_device_id,
         exit_tx.clone(),
         exit_tx.new_receiver(),
         sink,

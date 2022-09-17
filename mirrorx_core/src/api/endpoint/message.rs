@@ -3,13 +3,14 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct EndPointHandshakeRequest {
-    pub active_device_id: i64,
-    pub passive_device_id: i64,
     pub visit_credentials: String,
+    pub device_id: i64,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-pub struct EndPointHandshakeResponse {}
+pub struct EndPointHandshakeResponse {
+    pub remote_device_id: i64,
+}
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub enum EndPointMessage {

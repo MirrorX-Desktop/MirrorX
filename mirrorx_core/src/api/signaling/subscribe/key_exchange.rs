@@ -28,8 +28,8 @@ pub async fn handle(config_path: &str, req: &KeyExchangeRequest) {
             opening_key,
         )) => {
             if let Err(err) = build_endpoint(
-                active_device_id,
                 passive_device_id,
+                active_device_id,
                 domain,
                 visit_credentials,
                 opening_key,
@@ -231,16 +231,16 @@ async fn key_agreement(
 }
 
 async fn build_endpoint(
-    active_device_id: i64,
-    passive_device_id: i64,
+    local_device_id: i64,
+    remote_device_id: i64,
     domain: String,
     visit_credentials: String,
     opening_key: OpeningKey<NonceValue>,
     sealing_key: SealingKey<NonceValue>,
 ) -> CoreResult<()> {
     crate::api::endpoint::handlers::connect::connect(ConnectRequest {
-        active_device_id,
-        passive_device_id,
+        local_device_id,
+        remote_device_id,
         addr: domain,
     })
     .await?;
@@ -248,8 +248,8 @@ async fn build_endpoint(
     // run in new future otherwise it will dead lock for waiting active device handshake
     TOKIO_RUNTIME.spawn(async move {
         if let Err(err) = crate::api::endpoint::handlers::handshake::passive_device_handshake(
-            active_device_id,
-            passive_device_id,
+            local_device_id,
+            remote_device_id,
             visit_credentials,
             opening_key,
             sealing_key,

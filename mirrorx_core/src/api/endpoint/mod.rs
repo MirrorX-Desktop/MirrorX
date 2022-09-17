@@ -169,8 +169,8 @@ pub static ENDPOINTS: Lazy<Cache<(i64, i64), tokio::sync::mpsc::Sender<EndPointM
 // }
 
 pub fn serve_reader(
-    active_device_id: i64,
-    passive_device_id: i64,
+    local_device_id: i64,
+    remote_device_id: i64,
     exit_tx: async_broadcast::Sender<()>,
     mut exit_rx: async_broadcast::Receiver<()>,
     mut stream: SplitStream<Framed<TcpStream, LengthDelimitedCodec>>,
@@ -189,8 +189,8 @@ pub fn serve_reader(
                         Ok(packet_bytes) => packet_bytes,
                         Err(err) => {
                             tracing::error!(
-                                ?active_device_id,
-                                ?passive_device_id,
+                                ?local_device_id,
+                                ?remote_device_id,
                                 ?err,
                                 "read from stream failed"
                             );
@@ -199,22 +199,22 @@ pub fn serve_reader(
                     };
 
                     if let Err(err) = open_packet(
-                        active_device_id,
-                        passive_device_id,
+                        local_device_id,
+                        remote_device_id,
                         &mut opening_key,
                         &mut packet_bytes,
                         message_tx.clone(),
                     ) {
                         tracing::error!(
-                            ?active_device_id,
-                            ?passive_device_id,
+                            ?local_device_id,
+                            ?remote_device_id,
                             ?err,
                             "open packet failed"
                         );
                     }
                 }
                 None => {
-                    tracing::info!(?active_device_id, ?passive_device_id, "stream closed");
+                    tracing::info!(?local_device_id, ?remote_device_id, "stream closed");
                     break;
                 }
             }
@@ -223,16 +223,16 @@ pub fn serve_reader(
         let _ = exit_tx.broadcast(()).await;
 
         ENDPOINTS
-            .invalidate(&(active_device_id.to_owned(), passive_device_id.to_owned()))
+            .invalidate(&(local_device_id.to_owned(), remote_device_id.to_owned()))
             .await;
 
-        tracing::info!(?active_device_id, ?passive_device_id, "read process exit");
+        tracing::info!(?local_device_id, ?remote_device_id, "read process exit");
     });
 }
 
 pub fn serve_writer(
-    active_device_id: i64,
-    passive_device_id: i64,
+    local_device_id: i64,
+    remote_device_id: i64,
     exit_tx: async_broadcast::Sender<()>,
     mut exit_rx: async_broadcast::Receiver<()>,
     mut sink: SplitSink<Framed<TcpStream, LengthDelimitedCodec>, Bytes>,
@@ -251,8 +251,8 @@ pub fn serve_writer(
                         Ok(buffer) => buffer,
                         Err(err) => {
                             tracing::error!(
-                                ?active_device_id,
-                                ?passive_device_id,
+                                ?local_device_id,
+                                ?remote_device_id,
                                 ?err,
                                 "seal packet failed"
                             );
@@ -262,8 +262,8 @@ pub fn serve_writer(
 
                     if let Err(err) = sink.send(buffer).await {
                         tracing::error!(
-                            ?active_device_id,
-                            ?passive_device_id,
+                            ?local_device_id,
+                            ?remote_device_id,
                             ?err,
                             "write to stream failed"
                         );
@@ -271,7 +271,7 @@ pub fn serve_writer(
                     }
                 }
                 None => {
-                    tracing::info!(?active_device_id, ?passive_device_id, "writer tx closed");
+                    tracing::info!(?local_device_id, ?remote_device_id, "writer tx closed");
                     break;
                 }
             }
@@ -280,10 +280,10 @@ pub fn serve_writer(
         let _ = exit_tx.broadcast(()).await;
 
         ENDPOINTS
-            .invalidate(&(active_device_id.to_owned(), passive_device_id.to_owned()))
+            .invalidate(&(local_device_id.to_owned(), remote_device_id.to_owned()))
             .await;
 
-        tracing::info!(?active_device_id, ?passive_device_id, "write process exit");
+        tracing::info!(?local_device_id, ?remote_device_id, "write process exit");
     });
 }
 
