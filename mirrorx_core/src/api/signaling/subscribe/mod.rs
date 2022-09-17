@@ -46,7 +46,7 @@ pub async fn subscribe(
                         message
                     } else {
                         tracing::error!("subscribe server stream was closed");
-                        crate::api::signaling::disconnect::disconnect().await;
+                        let _ = crate::api::signaling::disconnect::disconnect().await;
                         break;
                     }
                 }

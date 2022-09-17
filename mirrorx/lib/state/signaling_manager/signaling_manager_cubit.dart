@@ -72,6 +72,16 @@ class SignalingManagerCubit extends Cubit<SignalingManagerState> {
         ),
       );
 
+      if (_subscribeStream == null) {
+        throw Exception("signaling subscribe returns null stream");
+      }
+
+      _subscribeStream?.listen(
+        onSubscribeStreamData,
+        onError: onSubscribeStreamError,
+        onDone: onSubscribeStreamDone,
+      );
+
       emit(state.copyWith(
         connectionState: SignalingConnectionState.connected,
         domain: registerResponse.domain,
@@ -170,4 +180,10 @@ class SignalingManagerCubit extends Cubit<SignalingManagerState> {
       );
     }
   }
+
+  void onSubscribeStreamData(PublishMessage message) {}
+
+  void onSubscribeStreamError(Object object, StackTrace stackTrace) {}
+
+  void onSubscribeStreamDone() {}
 }

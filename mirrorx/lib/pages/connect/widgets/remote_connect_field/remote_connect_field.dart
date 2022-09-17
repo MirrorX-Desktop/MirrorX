@@ -2,6 +2,7 @@ import 'dart:developer';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:flutter_rust_bridge/flutter_rust_bridge.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:mirrorx/env/utility/error_notifier.dart';
 import 'package:mirrorx/pages/connect/widgets/remote_connect_field/digit_input.dart';
@@ -172,6 +173,7 @@ class _RemoteConnectFieldState extends State<RemoteConnectField> {
         _notifier.notifyError("remote device allow your visit request");
       }
     } catch (err) {
+      log("$err");
       if (err.toString().contains("not found")) {
         _notifier.notifyError("remote device is offline");
         return;
