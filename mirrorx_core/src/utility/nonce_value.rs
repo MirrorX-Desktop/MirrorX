@@ -9,9 +9,8 @@ impl NonceValue {
     pub fn new(initial_nonce: [u8; ring::aead::NONCE_LEN]) -> Self {
         let mut u128_bytes = [0u8; 16];
 
-        for i in 0..ring::aead::NONCE_LEN {
-            u128_bytes[i] = initial_nonce[i];
-        }
+        u128_bytes[0..ring::aead::NONCE_LEN]
+            .copy_from_slice(&initial_nonce[0..ring::aead::NONCE_LEN]);
 
         Self(u128::from_le_bytes(u128_bytes))
     }
