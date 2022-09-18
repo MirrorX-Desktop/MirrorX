@@ -35,25 +35,11 @@ class DesktopManagerCubit extends Cubit<DesktopManagerState> {
           ..add(prepareInfo)));
   }
 
-  Future connect(int remoteDeviceId) async {
-    final prepareInfoIndex = state.desktopPrepareInfoLists
-        .indexWhere((element) => element.remoteDeviceId == remoteDeviceId);
-
-    if (prepareInfoIndex == -1) {
-      throw Exception("no prepare info");
-    }
-
-    final prepareInfo = state.desktopPrepareInfoLists[prepareInfoIndex];
-
-    emit(state.copyWith(
-        desktopPrepareInfoLists: List.from(state.desktopPrepareInfoLists)
-          ..removeWhere(
-              (element) => element.remoteDeviceId == remoteDeviceId)));
-
+  Future connect(DesktopPrepareInfo prepareInfo) async {
     await MirrorXCoreSDK.instance.endpointConnect(
       req: ConnectRequest(
         localDeviceId: prepareInfo.localDeviceId,
-        remoteDeviceId: remoteDeviceId,
+        remoteDeviceId: prepareInfo.remoteDeviceId,
         addr: "192.168.0.101:28001",
       ),
     );
@@ -61,12 +47,43 @@ class DesktopManagerCubit extends Cubit<DesktopManagerState> {
     return await MirrorXCoreSDK.instance.endpointHandshake(
       req: HandshakeRequest(
         activeDeviceId: prepareInfo.localDeviceId,
-        passiveDeviceId: remoteDeviceId,
+        passiveDeviceId: prepareInfo.remoteDeviceId,
         visitCredentials: prepareInfo.visitCredentials,
         openingKeyBytes: prepareInfo.openingKeyBytes,
         openingNonceBytes: prepareInfo.openingNonceBytes,
         sealingKeyBytes: prepareInfo.sealingKeyBytes,
         sealingNonceBytes: prepareInfo.sealingNonceBytes,
+      ),
+    );
+  }
+
+  DesktopPrepareInfo? removePrepareInfo(int remoteDeviceId) {
+    final prepareInfoIndex = state.desktopPrepareInfoLists
+        .indexWhere((element) => element.remoteDeviceId == remoteDeviceId);
+
+    if (prepareInfoIndex == -1) {
+      return null;
+    }
+
+    final prepareInfo = state.desktopPrepareInfoLists[prepareInfoIndex];
+
+    emit(state.copyWith(
+        desktopPrepareInfoLists: List.from(state.desktopPrepareInfoLists)
+          ..removeAt(prepareInfoIndex)));
+
+    return prepareInfo;
+  }
+
+  void deviceInput(
+    int localDeviceId,
+    int remoteDeviceId,
+    InputEvent event,
+  ) async {
+    await MirrorXCoreSDK.instance.endpointInput(
+      req: InputRequest(
+        activeDeviceId: localDeviceId,
+        passiveDeviceId: remoteDeviceId,
+        event: event,
       ),
     );
   }

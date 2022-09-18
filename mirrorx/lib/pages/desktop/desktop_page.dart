@@ -29,41 +29,49 @@ class _DesktopPageState extends State<DesktopPage> {
   void initState() {
     super.initState();
     _dialogNotifier = DialogNotifier(context);
-    final cubit = context.read<DesktopManagerCubit>();
-    if (cubit.state.desktopPrepareInfoLists.any((element) =>
-        element.localDeviceId == widget.localDeviceId &&
-        element.remoteDeviceId == widget.remoteDeviceId)) {
-      Future.microtask(() async {
-        try {
-          await cubit.connect(widget.remoteDeviceId);
-        } catch (err) {
-          await _dialogNotifier.popupDialog(
-              contentBuilder: (_) => Text("Connect failed $err"),
-              actionBuilder: (context, navState) {
-                return [
-                  TextButton(
-                      onPressed: navState.pop,
-                      child: Text(AppLocalizations.of(context)!.dialogOK)),
-                ];
-              });
-
-          // todo: remote current page
-        }
-      });
-    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final cubit = context.read<DesktopManagerCubit>();
+
     return BlocBuilder<DesktopManagerCubit, DesktopManagerState>(
         builder: (context, state) {
-      if (state.desktopPrepareInfoLists.any((element) =>
-          element.localDeviceId == widget.localDeviceId &&
-          element.remoteDeviceId == widget.remoteDeviceId)) {
-        return CircularProgressIndicator();
-      } else {
-        return Text("finish");
-      }
+      return FutureBuilder(
+          future: _prepareConnection(cubit),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState != ConnectionState.done) {
+              return const Center(
+                child: SizedBox(
+                  width: 60,
+                  height: 60,
+                  child: CircularProgressIndicator(),
+                ),
+              );
+            }
+
+            if (snapshot.hasError) {
+              return Center(
+                child: SizedBox(
+                  width: 120,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text("Connect failed"),
+                      Text("${snapshot.error}"),
+                      TextButton(
+                          onPressed: () {
+                            // todo: remote this page
+                          },
+                          child: Text(AppLocalizations.of(context)!.dialogOK))
+                    ],
+                  ),
+                ),
+              );
+            }
+
+            return _buildDesktopSurface();
+          });
     });
   }
 
@@ -103,15 +111,15 @@ class _DesktopPageState extends State<DesktopPage> {
             ),
           ],
         ),
-        // Expanded(
-        //   child: Container(
-        //     color: Colors.black,
-        //     child: DesktopRenderBox(
-        //       model: widget.model,
-        //       fit: _fit,
-        //     ),
-        //   ),
-        // )
+        Expanded(
+          child: Container(
+            color: Colors.black,
+            // child: DesktopRenderBox(
+            //   model: widget.model,
+            //   fit: _fit,
+            // ),
+          ),
+        )
       ],
     );
   }
@@ -124,5 +132,16 @@ class _DesktopPageState extends State<DesktopPage> {
         _fit = BoxFit.none;
       }
     });
+  }
+
+  Future _prepareConnection(DesktopManagerCubit cubit) async {
+    if (cubit.state.desktopPrepareInfoLists.any((element) =>
+        element.localDeviceId == widget.localDeviceId &&
+        element.remoteDeviceId == widget.remoteDeviceId)) {
+      final prepareInfo = cubit.removePrepareInfo(widget.remoteDeviceId);
+      if (prepareInfo != null) {
+        await cubit.connect(prepareInfo);
+      }
+    }
   }
 }
