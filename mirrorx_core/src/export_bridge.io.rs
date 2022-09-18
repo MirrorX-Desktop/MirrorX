@@ -337,8 +337,8 @@ impl Wire2Api<Box<InputEvent>> for *mut wire_InputEvent {
 impl Wire2Api<ConnectRequest> for wire_ConnectRequest {
     fn wire2api(self) -> ConnectRequest {
         ConnectRequest {
-            local_device_id: self.active_device_id.wire2api(),
-            remote_device_id: self.passive_device_id.wire2api(),
+            local_device_id: self.local_device_id.wire2api(),
+            remote_device_id: self.remote_device_id.wire2api(),
             addr: self.addr.wire2api(),
         }
     }
@@ -556,8 +556,8 @@ impl Wire2Api<VisitRequest> for wire_VisitRequest {
 #[repr(C)]
 #[derive(Clone)]
 pub struct wire_ConnectRequest {
-    active_device_id: i64,
-    passive_device_id: i64,
+    local_device_id: i64,
+    remote_device_id: i64,
     addr: *mut wire_uint_8_list,
 }
 
@@ -785,8 +785,8 @@ impl<T> NewWithNullPtr for *mut T {
 impl NewWithNullPtr for wire_ConnectRequest {
     fn new_with_null_ptr() -> Self {
         Self {
-            active_device_id: Default::default(),
-            passive_device_id: Default::default(),
+            local_device_id: Default::default(),
+            remote_device_id: Default::default(),
             addr: core::ptr::null_mut(),
         }
     }

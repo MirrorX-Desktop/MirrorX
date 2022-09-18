@@ -4,10 +4,13 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:mirrorx/env/sdk/mirrorx_core_sdk.dart';
 import 'package:mirrorx/env/utility/error_notifier.dart';
 import 'package:mirrorx/pages/connect/widgets/remote_connect_field/digit_input.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:mirrorx/state/desktop_manager/desktop_manager_cubit.dart';
+import 'package:mirrorx/state/page_manager/page_manager_cubit.dart';
 import 'package:mirrorx/state/signaling_manager/signaling_manager_cubit.dart';
 
 class RemoteConnectField extends StatefulWidget {
@@ -102,9 +105,13 @@ class _RemoteConnectFieldState extends State<RemoteConnectField> {
                         : IconButton(
                             onPressed: _connectButtonDisabled
                                 ? null
-                                : () => _connect(
+                                : () {
+                                    _connect(
                                       context.read<SignalingManagerCubit>(),
-                                    ),
+                                      context.read<DesktopManagerCubit>(),
+                                      context.read<PageManagerCubit>(),
+                                    );
+                                  },
                             icon: const FaIcon(
                               FontAwesomeIcons.arrowRightToBracket,
                               size: 24,
@@ -163,7 +170,11 @@ class _RemoteConnectFieldState extends State<RemoteConnectField> {
     );
   }
 
-  void _connect(SignalingManagerCubit cubit) async {
+  void _connect(
+    SignalingManagerCubit signalingCubit,
+    DesktopManagerCubit desktopCubit,
+    PageManagerCubit pageCubit,
+  ) async {
     _updateVisitRequestingState(true);
 
     final GlobalKey<FormState> formKey = GlobalKey<FormState>();
@@ -173,7 +184,7 @@ class _RemoteConnectFieldState extends State<RemoteConnectField> {
       final remoteDeviceId =
           int.parse(_textControllers.map((e) => e.text).join());
 
-      final visitResponse = await cubit.visit(remoteDeviceId);
+      final visitResponse = await signalingCubit.visit(remoteDeviceId);
 
       if (!visitResponse.allow) {
         _snackBarNotifier.notifyError(
@@ -259,12 +270,21 @@ class _RemoteConnectFieldState extends State<RemoteConnectField> {
         return;
       }
 
-      log(inputPassword);
       final keyExchangeResponse =
-          await cubit.keyExchange(inputPassword, remoteDeviceId);
+          await signalingCubit.keyExchange(inputPassword, remoteDeviceId);
 
-      _snackBarNotifier.notifyError((context) => "key exchange ok");
-      // todo switch to desktop page
+      desktopCubit.prepare(
+        keyExchangeResponse.localDeviceId,
+        remoteDeviceId,
+        keyExchangeResponse.visitCredentials,
+        keyExchangeResponse.openingKeyBytes,
+        keyExchangeResponse.openingNonceBytes,
+        keyExchangeResponse.sealingKeyBytes,
+        keyExchangeResponse.sealingNonceBytes,
+      );
+
+      pageCubit.addDesktopPage(
+          keyExchangeResponse.localDeviceId, remoteDeviceId);
     } catch (err) {
       log("$err");
       if (err.toString().contains("not found")) {

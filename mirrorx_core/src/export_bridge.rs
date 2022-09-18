@@ -582,6 +582,8 @@ impl support::IntoDartExceptPrimitive for HeartbeatResponse {}
 impl support::IntoDart for KeyExchangeResponse {
     fn into_dart(self) -> support::DartAbi {
         vec![
+            self.local_device_id.into_dart(),
+            self.visit_credentials.into_dart(),
             self.opening_key_bytes.into_dart(),
             self.opening_nonce_bytes.into_dart(),
             self.sealing_key_bytes.into_dart(),

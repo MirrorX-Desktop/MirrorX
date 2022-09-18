@@ -6,7 +6,6 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:marquee/marquee.dart';
 import 'package:mirrorx/env/sdk/mirrorx_core_sdk.dart';
 import 'package:mirrorx/env/utility/dialog.dart';
-import 'package:mirrorx/model/desktop.dart';
 import 'package:mirrorx/state/desktop_manager/desktop_manager_cubit.dart';
 import 'package:mirrorx/state/page_manager/page_manager_cubit.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
@@ -32,7 +31,7 @@ class NavigationMenuItem extends StatefulWidget {
   final String title;
   final bool system;
   final bool? desktopClosed;
-  final DesktopModel? desktopModel;
+  final DesktopPrepareInfo? desktopModel;
 
   @override
   _NavigationMenuItemState createState() => _NavigationMenuItemState();
@@ -376,7 +375,7 @@ class _NavigationMenuItemState extends State<NavigationMenuItem>
           onPressed: () async {
             log("press yes");
 
-            desktopManagerCubit.removeDesktop(remoteDeviceId);
+            // desktopManagerCubit.removeDesktop(remoteDeviceId);
             pageManagerCubit.switchPage("Connect");
 
             // MirrorXCoreSDK.instance

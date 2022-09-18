@@ -52,7 +52,7 @@ class NavigationMenu extends StatelessWidget {
             ],
           ),
           Visibility(
-            visible: state.desktopModels.isNotEmpty,
+            visible: state.desktopPrepareInfoLists.isNotEmpty,
             child: Container(
               width: 36,
               margin: const EdgeInsets.symmetric(vertical: 6),
@@ -62,46 +62,33 @@ class NavigationMenu extends StatelessWidget {
               ),
             ),
           ),
-          Expanded(
-            child: SizedBox(
-              width: 72,
-              child: ListView(
-                primary: true,
-                physics: const BouncingScrollPhysics(),
-                children: state.desktopModels
-                    .map(
-                      (model) => Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 2.0),
-                        child: NavigationMenuItem(
-                          pageTag: model.remoteDeviceId,
-                          iconBuilder: (color) =>
-                              FaIcon(FontAwesomeIcons.windows),
-                          // FaIcon(_getOSIcon(model.osType), color: color),
-                          title: model.remoteDeviceId,
-                          system: false,
-                          desktopClosed: state.closedDesktops
-                              .contains(model.remoteDeviceId),
-                          desktopModel: model,
-                        ),
-                      ),
-                    )
-                    .toList(),
-                // children: [
-                //   Padding(
-                //     padding: const EdgeInsets.symmetric(vertical: 2.0),
-                //     child: NavigationMenuItem(
-                //       pageTag: "KDKDD",
-                //       iconBuilder: (color) =>
-                //           FaIcon(FontAwesomeIcons.redhat, color: color),
-                //       title: "DDSDDSDFS",
-                //       system: false,
-                //       desktopClosed: false,
-                //     ),
-                //   ),
-                // ],
-              ),
-            ),
-          )
+          // Expanded(
+          //   child: SizedBox(
+          //     width: 72,
+          //     child: ListView(
+          //       primary: true,
+          //       physics: const BouncingScrollPhysics(),
+          //       children: state.desktopPrepareInfoLists
+          //           .map(
+          //             (model) => Padding(
+          //               padding: const EdgeInsets.symmetric(vertical: 2.0),
+          //               child: NavigationMenuItem(
+          //                 pageTag: model.remoteDeviceId,
+          //                 iconBuilder: (color) =>
+          //                     FaIcon(FontAwesomeIcons.windows),
+          //                 // FaIcon(_getOSIcon(model.osType), color: color),
+          //                 title: model.remoteDeviceId,
+          //                 system: false,
+          //                 desktopClosed: state.closedDesktops
+          //                     .contains(model.remoteDeviceId),
+          //                 desktopModel: model,
+          //               ),
+          //             ),
+          //           )
+          //           .toList(),
+          //     ),
+          //   ),
+          // )
         ],
       ),
     );

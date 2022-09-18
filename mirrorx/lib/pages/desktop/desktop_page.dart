@@ -2,15 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:mirrorx/env/utility/dialog.dart';
-import 'package:mirrorx/model/desktop.dart';
+import 'package:mirrorx/env/utility/error_notifier.dart';
 import 'package:mirrorx/pages/desktop/widgets/desktop_render_box/desktop_render_box.dart';
 import 'package:mirrorx/state/desktop_manager/desktop_manager_cubit.dart';
 import 'package:mirrorx/state/page_manager/page_manager_cubit.dart';
 
 class DesktopPage extends StatefulWidget {
-  const DesktopPage({Key? key, required this.model}) : super(key: key);
+  const DesktopPage(
+    this.localDeviceId,
+    this.remoteDeviceId, {
+    Key? key,
+  }) : super(key: key);
 
-  final DesktopModel model;
+  final int localDeviceId;
+  final int remoteDeviceId;
 
   @override
   _DesktopPageState createState() => _DesktopPageState();
@@ -18,35 +23,46 @@ class DesktopPage extends StatefulWidget {
 
 class _DesktopPageState extends State<DesktopPage> {
   BoxFit _fit = BoxFit.none;
+  late DialogNotifier _dialogNotifier;
+
+  @override
+  void initState() {
+    super.initState();
+    _dialogNotifier = DialogNotifier(context);
+  }
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<DesktopManagerCubit, DesktopManagerState>(
-      listenWhen: ((previous, current) {
-        return !previous.closedDesktops.contains(widget.model.remoteDeviceId) &&
-            current.closedDesktops.contains(widget.model.remoteDeviceId);
-      }),
-      listener: (context, state) {
-        context
-            .read<DesktopManagerCubit>()
-            .removeDesktop(widget.model.remoteDeviceId);
+    return BlocBuilder<DesktopManagerCubit, DesktopManagerState>(
+      builder: (context, state) {
+        final cubit = context.read<DesktopManagerCubit>();
 
-        context.read<PageManagerCubit>().switchPage("Connect");
+        if (state.desktopPrepareInfoLists.any((element) =>
+            element.localDeviceId == widget.localDeviceId &&
+            element.remoteDeviceId == widget.remoteDeviceId)) {
+          Future.microtask(() async {
+            try {
+              await cubit.connect(widget.remoteDeviceId);
+            } catch (err) {
+              await _dialogNotifier.popupDialog(
+                  contentBuilder: (_) => Text("Connect failed $err"),
+                  actionBuilder: (context, navState) {
+                    return [
+                      TextButton(
+                          onPressed: navState.pop,
+                          child: Text(AppLocalizations.of(context)!.dialogOK)),
+                    ];
+                  });
 
-        popupDialog(
-          context,
-          contentBuilder: (_) => Text(
-              AppLocalizations.of(context)!.dialogContentConnectionDisconnected,
-              textAlign: TextAlign.center),
-          actionBuilder: (navigatorState) => [
-            TextButton(
-              onPressed: navigatorState.pop,
-              child: Text(AppLocalizations.of(context)!.dialogOK),
-            ),
-          ],
-        );
+              // todo: remote current page
+            }
+          });
+
+          return const CircularProgressIndicator();
+        }
+
+        return Container();
       },
-      child: _buildDesktopSurface(),
     );
   }
 
@@ -86,15 +102,15 @@ class _DesktopPageState extends State<DesktopPage> {
             ),
           ],
         ),
-        Expanded(
-          child: Container(
-            color: Colors.black,
-            child: DesktopRenderBox(
-              model: widget.model,
-              fit: _fit,
-            ),
-          ),
-        )
+        // Expanded(
+        //   child: Container(
+        //     color: Colors.black,
+        //     child: DesktopRenderBox(
+        //       model: widget.model,
+        //       fit: _fit,
+        //     ),
+        //   ),
+        // )
       ],
     );
   }

@@ -132,7 +132,9 @@ class SignalingManagerCubit extends Cubit<SignalingManagerState> {
   }
 
   Future<KeyExchangeResponse> keyExchange(
-      String password, int remoteDeviceId) async {
+    String password,
+    int remoteDeviceId,
+  ) async {
     final domain = state.domain;
     final domainConfig = state.domainConfig;
 

@@ -60,8 +60,8 @@ typedef struct wire_KeyExchangeRequest {
 } wire_KeyExchangeRequest;
 
 typedef struct wire_ConnectRequest {
-  int64_t active_device_id;
-  int64_t passive_device_id;
+  int64_t local_device_id;
+  int64_t remote_device_id;
   struct wire_uint_8_list *addr;
 } wire_ConnectRequest;
 

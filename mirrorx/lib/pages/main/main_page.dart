@@ -93,10 +93,10 @@ class _LayoutPageBuilderState extends State<_LayoutPageBuilder>
       case "Settings":
         return const SettingsPage();
       default:
-        for (final desktopModel
-            in context.read<DesktopManagerCubit>().state.desktopModels) {
-          if (desktopModel.remoteDeviceId == pageTag) {
-            return DesktopPage(model: desktopModel);
+        for (final id in context.read<PageManagerCubit>().state.desktopIds) {
+          if (id == pageTag) {
+            final splitIds = id.split("@");
+            return DesktopPage(int.parse(splitIds[0]), int.parse(splitIds[1]));
           }
         }
         log("Unknown page tag: $pageTag");

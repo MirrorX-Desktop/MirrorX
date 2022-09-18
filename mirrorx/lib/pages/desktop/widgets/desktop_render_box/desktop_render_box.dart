@@ -5,17 +5,16 @@ import 'package:flutter/services.dart';
 import 'package:mirrorx/env/sdk/mirrorx_core.dart';
 import 'package:mirrorx/env/sdk/mirrorx_core_sdk.dart';
 import 'package:mirrorx/env/utility/key_map.dart';
-import 'package:mirrorx/model/desktop.dart';
 import 'package:mirrorx/pages/desktop/widgets/desktop_render_box/desktop_render_box_scrollbar.dart';
 
 class DesktopRenderBox extends StatefulWidget {
   const DesktopRenderBox({
     Key? key,
-    required this.model,
+    // required this.model,
     required this.fit,
   }) : super(key: key);
 
-  final DesktopModel model;
+  // final DesktopModel model;
   final BoxFit fit;
 
   @override
@@ -41,83 +40,84 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
 
   @override
   Widget build(BuildContext context) {
-    return widget.fit == BoxFit.none ? _buildFitBox() : _buildTexture();
+    return Container();
+    // return widget.fit == BoxFit.none ? _buildFitBox() : _buildTexture();
   }
 
-  Widget _buildFitBox() {
-    return Stack(
-      children: [
-        Positioned(
-          top: _offsetY,
-          left: _offsetX,
-          child: _buildTexture(),
-        ),
-        LayoutBuilder(builder: (context, constraints) {
-          return DesktopRenderBoxScrollBar(
-            maxTrunkWidth: widget.model.monitorHeight.floorToDouble(),
-            axis: Axis.vertical,
-            trunkWidth: constraints.maxHeight,
-            onScroll: (offset) {
-              setState(() {
-                _offsetY = -offset;
-                if ((_offsetY + constraints.maxHeight) >
-                    widget.model.monitorHeight) {
-                  _offsetY = widget.model.monitorHeight - constraints.maxHeight;
-                }
-              });
-            },
-          );
-        }),
-        LayoutBuilder(builder: (context, constraints) {
-          return DesktopRenderBoxScrollBar(
-            maxTrunkWidth: widget.model.monitorWidth.floorToDouble(),
-            axis: Axis.horizontal,
-            trunkWidth: constraints.maxWidth,
-            onScroll: (offset) {
-              setState(() {
-                _offsetX = -offset;
-                if ((_offsetX + constraints.maxWidth) >
-                    widget.model.monitorWidth) {
-                  _offsetX = widget.model.monitorWidth - constraints.maxWidth;
-                }
-              });
-            },
-          );
-        })
-      ],
-    );
-  }
+  // Widget _buildFitBox() {
+  //   return Stack(
+  //     children: [
+  //       Positioned(
+  //         top: _offsetY,
+  //         left: _offsetX,
+  //         child: _buildTexture(),
+  //       ),
+  //       LayoutBuilder(builder: (context, constraints) {
+  //         return DesktopRenderBoxScrollBar(
+  //           maxTrunkWidth: widget.model.monitorHeight.floorToDouble(),
+  //           axis: Axis.vertical,
+  //           trunkWidth: constraints.maxHeight,
+  //           onScroll: (offset) {
+  //             setState(() {
+  //               _offsetY = -offset;
+  //               if ((_offsetY + constraints.maxHeight) >
+  //                   widget.model.monitorHeight) {
+  //                 _offsetY = widget.model.monitorHeight - constraints.maxHeight;
+  //               }
+  //             });
+  //           },
+  //         );
+  //       }),
+  //       LayoutBuilder(builder: (context, constraints) {
+  //         return DesktopRenderBoxScrollBar(
+  //           maxTrunkWidth: widget.model.monitorWidth.floorToDouble(),
+  //           axis: Axis.horizontal,
+  //           trunkWidth: constraints.maxWidth,
+  //           onScroll: (offset) {
+  //             setState(() {
+  //               _offsetX = -offset;
+  //               if ((_offsetX + constraints.maxWidth) >
+  //                   widget.model.monitorWidth) {
+  //                 _offsetX = widget.model.monitorWidth - constraints.maxWidth;
+  //               }
+  //             });
+  //           },
+  //         );
+  //       })
+  //     ],
+  //   );
+  // }
 
-  Widget _buildTexture() {
-    return FittedBox(
-      fit: widget.fit,
-      child: Listener(
-        behavior: HitTestBehavior.opaque,
-        onPointerDown: _handlePointerDown,
-        onPointerUp: _handlePointerUp,
-        onPointerHover: _handlePointerHover,
-        onPointerMove: _handlePointerMove,
-        onPointerSignal: _handlePointerSignal,
-        child: RepaintBoundary(
-          child: SizedBox(
-            width: widget.model.monitorWidth.floorToDouble(),
-            height: widget.model.monitorHeight.floorToDouble(),
-            child: Center(
-              child: AspectRatio(
-                aspectRatio: widget.model.monitorWidth.toDouble() /
-                    widget.model.monitorHeight.toDouble(),
-                child: Texture(
-                  textureId: widget.model.textureID,
-                  freeze: true,
-                  filterQuality: FilterQuality.medium,
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+  // Widget _buildTexture() {
+  //   return FittedBox(
+  //     fit: widget.fit,
+  //     child: Listener(
+  //       behavior: HitTestBehavior.opaque,
+  //       onPointerDown: _handlePointerDown,
+  //       onPointerUp: _handlePointerUp,
+  //       onPointerHover: _handlePointerHover,
+  //       onPointerMove: _handlePointerMove,
+  //       onPointerSignal: _handlePointerSignal,
+  //       child: RepaintBoundary(
+  //         child: SizedBox(
+  //           width: widget.model.monitorWidth.floorToDouble(),
+  //           height: widget.model.monitorHeight.floorToDouble(),
+  //           child: Center(
+  //             child: AspectRatio(
+  //               aspectRatio: widget.model.monitorWidth.toDouble() /
+  //                   widget.model.monitorHeight.toDouble(),
+  //               child: Texture(
+  //                 textureId: widget.model.textureID,
+  //                 freeze: true,
+  //                 filterQuality: FilterQuality.medium,
+  //               ),
+  //             ),
+  //           ),
+  //         ),
+  //       ),
+  //     ),
+  //   );
+  // }
 
   void _handlePointerDown(PointerDownEvent event) {
     log("pointer down ${event.buttons} ${event.pointer}");

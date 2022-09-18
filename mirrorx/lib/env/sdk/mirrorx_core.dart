@@ -123,13 +123,13 @@ enum AudioSampleRate {
 }
 
 class ConnectRequest {
-  final int activeDeviceId;
-  final int passiveDeviceId;
+  final int localDeviceId;
+  final int remoteDeviceId;
   final String addr;
 
   ConnectRequest({
-    required this.activeDeviceId,
-    required this.passiveDeviceId,
+    required this.localDeviceId,
+    required this.remoteDeviceId,
     required this.addr,
   });
 }
@@ -231,12 +231,16 @@ class KeyExchangeRequest {
 }
 
 class KeyExchangeResponse {
+  final int localDeviceId;
+  final String visitCredentials;
   final Uint8List openingKeyBytes;
   final Uint8List openingNonceBytes;
   final Uint8List sealingKeyBytes;
   final Uint8List sealingNonceBytes;
 
   KeyExchangeResponse({
+    required this.localDeviceId,
+    required this.visitCredentials,
     required this.openingKeyBytes,
     required this.openingNonceBytes,
     required this.sealingKeyBytes,
@@ -1002,13 +1006,15 @@ int _wire2api_i64(dynamic raw) {
 
 KeyExchangeResponse _wire2api_key_exchange_response(dynamic raw) {
   final arr = raw as List<dynamic>;
-  if (arr.length != 4)
-    throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+  if (arr.length != 6)
+    throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
   return KeyExchangeResponse(
-    openingKeyBytes: _wire2api_uint_8_list(arr[0]),
-    openingNonceBytes: _wire2api_uint_8_list(arr[1]),
-    sealingKeyBytes: _wire2api_uint_8_list(arr[2]),
-    sealingNonceBytes: _wire2api_uint_8_list(arr[3]),
+    localDeviceId: _wire2api_i64(arr[0]),
+    visitCredentials: _wire2api_String(arr[1]),
+    openingKeyBytes: _wire2api_uint_8_list(arr[2]),
+    openingNonceBytes: _wire2api_uint_8_list(arr[3]),
+    sealingKeyBytes: _wire2api_uint_8_list(arr[4]),
+    sealingNonceBytes: _wire2api_uint_8_list(arr[5]),
   );
 }
 
@@ -1395,8 +1401,8 @@ class MirrorXCorePlatform extends FlutterRustBridgeBase<MirrorXCoreWire> {
 
   void _api_fill_to_wire_connect_request(
       ConnectRequest apiObj, wire_ConnectRequest wireObj) {
-    wireObj.active_device_id = api2wire_i64(apiObj.activeDeviceId);
-    wireObj.passive_device_id = api2wire_i64(apiObj.passiveDeviceId);
+    wireObj.local_device_id = api2wire_i64(apiObj.localDeviceId);
+    wireObj.remote_device_id = api2wire_i64(apiObj.remoteDeviceId);
     wireObj.addr = api2wire_String(apiObj.addr);
   }
 
@@ -2351,10 +2357,10 @@ class wire_KeyExchangeRequest extends ffi.Struct {
 
 class wire_ConnectRequest extends ffi.Struct {
   @ffi.Int64()
-  external int active_device_id;
+  external int local_device_id;
 
   @ffi.Int64()
-  external int passive_device_id;
+  external int remote_device_id;
 
   external ffi.Pointer<wire_uint_8_list> addr;
 }
