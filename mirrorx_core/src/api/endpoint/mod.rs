@@ -180,6 +180,7 @@ pub fn serve_reader(
     TOKIO_RUNTIME.spawn(async move {
         loop {
             if let Err(async_broadcast::TryRecvError::Empty) = exit_rx.try_recv() {
+                tracing::info!("read processor receive exit tx send signal");
                 break;
             }
 
@@ -242,6 +243,7 @@ pub fn serve_writer(
     TOKIO_RUNTIME.spawn(async move {
         loop {
             if let Err(async_broadcast::TryRecvError::Empty) = exit_rx.try_recv() {
+                tracing::info!("write processor receive exit tx send signal");
                 break;
             }
 

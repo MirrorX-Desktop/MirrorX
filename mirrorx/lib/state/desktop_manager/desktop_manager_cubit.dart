@@ -46,7 +46,7 @@ class DesktopManagerCubit extends Cubit<DesktopManagerState> {
     final prepareInfo = state.desktopPrepareInfoLists[prepareInfoIndex];
 
     emit(state.copyWith(
-        desktopPrepareInfoLists: state.desktopPrepareInfoLists
+        desktopPrepareInfoLists: List.from(state.desktopPrepareInfoLists)
           ..removeWhere(
               (element) => element.remoteDeviceId == remoteDeviceId)));
 

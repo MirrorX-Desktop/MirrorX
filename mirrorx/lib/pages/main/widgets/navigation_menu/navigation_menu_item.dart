@@ -17,21 +17,14 @@ class NavigationMenuItem extends StatefulWidget {
     required this.iconBuilder,
     required this.title,
     required this.system,
-    this.desktopClosed,
-    this.desktopModel,
-  })  : assert(system == false
-            ? desktopModel != null
-                ? true
-                : false
-            : true),
-        super(key: key);
+    this.remoteDeviceId = 0,
+  }) : super(key: key);
 
+  final int remoteDeviceId;
   final String pageTag;
   final Widget Function(Color?) iconBuilder;
   final String title;
   final bool system;
-  final bool? desktopClosed;
-  final DesktopPrepareInfo? desktopModel;
 
   @override
   _NavigationMenuItemState createState() => _NavigationMenuItemState();
@@ -344,7 +337,8 @@ class _NavigationMenuItemState extends State<NavigationMenuItem>
               width: 8.5,
               height: 8.5,
               decoration: BoxDecoration(
-                color: widget.desktopClosed == true ? Colors.red : Colors.green,
+                color: Colors
+                    .green, // widget.desktopClosed == true ? Colors.red : Colors.green,
                 shape: BoxShape.circle,
               ),
             ),
@@ -355,8 +349,6 @@ class _NavigationMenuItemState extends State<NavigationMenuItem>
   }
 
   void askDisconnect() async {
-    final remoteDeviceId = widget.desktopModel!.remoteDeviceId;
-
     if (!mounted) {
       return;
     }

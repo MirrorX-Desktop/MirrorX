@@ -29,41 +29,42 @@ class _DesktopPageState extends State<DesktopPage> {
   void initState() {
     super.initState();
     _dialogNotifier = DialogNotifier(context);
+    final cubit = context.read<DesktopManagerCubit>();
+    if (cubit.state.desktopPrepareInfoLists.any((element) =>
+        element.localDeviceId == widget.localDeviceId &&
+        element.remoteDeviceId == widget.remoteDeviceId)) {
+      Future.microtask(() async {
+        try {
+          await cubit.connect(widget.remoteDeviceId);
+        } catch (err) {
+          await _dialogNotifier.popupDialog(
+              contentBuilder: (_) => Text("Connect failed $err"),
+              actionBuilder: (context, navState) {
+                return [
+                  TextButton(
+                      onPressed: navState.pop,
+                      child: Text(AppLocalizations.of(context)!.dialogOK)),
+                ];
+              });
+
+          // todo: remote current page
+        }
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<DesktopManagerCubit, DesktopManagerState>(
-      builder: (context, state) {
-        final cubit = context.read<DesktopManagerCubit>();
-
-        if (state.desktopPrepareInfoLists.any((element) =>
-            element.localDeviceId == widget.localDeviceId &&
-            element.remoteDeviceId == widget.remoteDeviceId)) {
-          Future.microtask(() async {
-            try {
-              await cubit.connect(widget.remoteDeviceId);
-            } catch (err) {
-              await _dialogNotifier.popupDialog(
-                  contentBuilder: (_) => Text("Connect failed $err"),
-                  actionBuilder: (context, navState) {
-                    return [
-                      TextButton(
-                          onPressed: navState.pop,
-                          child: Text(AppLocalizations.of(context)!.dialogOK)),
-                    ];
-                  });
-
-              // todo: remote current page
-            }
-          });
-
-          return const CircularProgressIndicator();
-        }
-
-        return Container();
-      },
-    );
+        builder: (context, state) {
+      if (state.desktopPrepareInfoLists.any((element) =>
+          element.localDeviceId == widget.localDeviceId &&
+          element.remoteDeviceId == widget.remoteDeviceId)) {
+        return CircularProgressIndicator();
+      } else {
+        return Text("finish");
+      }
+    });
   }
 
   Widget _buildDesktopSurface() {

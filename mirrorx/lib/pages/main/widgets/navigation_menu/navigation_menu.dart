@@ -3,6 +3,7 @@ import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mirrorx/state/desktop_manager/desktop_manager_cubit.dart';
+import 'package:mirrorx/state/page_manager/page_manager_cubit.dart';
 
 import 'navigation_menu_item.dart';
 
@@ -13,7 +14,7 @@ class NavigationMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<DesktopManagerCubit, DesktopManagerState>(
+    return BlocBuilder<PageManagerCubit, PageManagerState>(
       builder: (context, state) => Column(
         children: [
           Column(
@@ -52,7 +53,7 @@ class NavigationMenu extends StatelessWidget {
             ],
           ),
           Visibility(
-            visible: state.desktopPrepareInfoLists.isNotEmpty,
+            visible: state.desktopIds.isNotEmpty,
             child: Container(
               width: 36,
               margin: const EdgeInsets.symmetric(vertical: 6),
@@ -62,33 +63,30 @@ class NavigationMenu extends StatelessWidget {
               ),
             ),
           ),
-          // Expanded(
-          //   child: SizedBox(
-          //     width: 72,
-          //     child: ListView(
-          //       primary: true,
-          //       physics: const BouncingScrollPhysics(),
-          //       children: state.desktopPrepareInfoLists
-          //           .map(
-          //             (model) => Padding(
-          //               padding: const EdgeInsets.symmetric(vertical: 2.0),
-          //               child: NavigationMenuItem(
-          //                 pageTag: model.remoteDeviceId,
-          //                 iconBuilder: (color) =>
-          //                     FaIcon(FontAwesomeIcons.windows),
-          //                 // FaIcon(_getOSIcon(model.osType), color: color),
-          //                 title: model.remoteDeviceId,
-          //                 system: false,
-          //                 desktopClosed: state.closedDesktops
-          //                     .contains(model.remoteDeviceId),
-          //                 desktopModel: model,
-          //               ),
-          //             ),
-          //           )
-          //           .toList(),
-          //     ),
-          //   ),
-          // )
+          Expanded(
+            child: SizedBox(
+              width: 72,
+              child: ListView(
+                primary: true,
+                physics: const BouncingScrollPhysics(),
+                children: state.desktopIds.map((desktopId) {
+                  final splitIds = desktopId.split("@");
+                  return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 2.0),
+                      child: NavigationMenuItem(
+                        remoteDeviceId: int.parse(splitIds[1]),
+                        pageTag: desktopId,
+                        iconBuilder: (color) =>
+                            FaIcon(FontAwesomeIcons.windows),
+                        // FaIcon(_getOSIcon(model.osType), color: color),
+                        title: splitIds[1],
+                        system: false,
+                        // state.closedDesktops.contains(model.remoteDeviceId),
+                      ));
+                }).toList(),
+              ),
+            ),
+          )
         ],
       ),
     );
