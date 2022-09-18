@@ -22,6 +22,7 @@ use crate::{
     error::CoreResult,
     utility::{nonce_value::NonceValue, runtime::TOKIO_RUNTIME, serializer::BINCODE_SERIALIZER},
 };
+use async_broadcast::TryRecvError;
 use bincode::Options;
 use bytes::{Bytes, BytesMut};
 use dashmap::DashMap;
@@ -179,7 +180,17 @@ pub fn serve_reader(
 ) {
     TOKIO_RUNTIME.spawn(async move {
         loop {
-            if let Err(async_broadcast::TryRecvError::Empty) = exit_rx.try_recv() {
+            if exit_rx
+                .try_recv()
+                .map_err(|err| {
+                    if err == TryRecvError::Empty {
+                        Err(())
+                    } else {
+                        Ok(())
+                    }
+                })
+                .is_ok()
+            {
                 tracing::info!(
                     ?local_device_id,
                     ?remote_device_id,
@@ -246,7 +257,17 @@ pub fn serve_writer(
 ) {
     TOKIO_RUNTIME.spawn(async move {
         loop {
-            if let Err(async_broadcast::TryRecvError::Empty) = exit_rx.try_recv() {
+            if exit_rx
+                .try_recv()
+                .map_err(|err| {
+                    if err == TryRecvError::Empty {
+                        Err(())
+                    } else {
+                        Ok(())
+                    }
+                })
+                .is_ok()
+            {
                 tracing::info!(
                     ?local_device_id,
                     ?remote_device_id,
