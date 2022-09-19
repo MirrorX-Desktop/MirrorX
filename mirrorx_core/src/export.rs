@@ -128,8 +128,11 @@ pub fn endpoint_negotiate_select_monitor(
     async_block_on!(negotiate_select_monitor(req))
 }
 
-pub fn endpoint_negotiate_finished(req: NegotiateFinishedRequest) -> anyhow::Result<()> {
-    async_block_on!(negotiate_finished(req))
+pub fn endpoint_negotiate_finished(
+    req: NegotiateFinishedRequest,
+    stream: StreamSink<EndPointMediaMessage>,
+) -> anyhow::Result<()> {
+    async_block_on!(negotiate_finished(req, stream))
 }
 
 pub fn endpoint_input(req: InputRequest) -> anyhow::Result<()> {

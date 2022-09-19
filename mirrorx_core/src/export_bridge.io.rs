@@ -482,8 +482,10 @@ impl Wire2Api<NegotiateFinishedRequest> for wire_NegotiateFinishedRequest {
         NegotiateFinishedRequest {
             active_device_id: self.active_device_id.wire2api(),
             passive_device_id: self.passive_device_id.wire2api(),
-            selected_monitor_id: self.selected_monitor_id.wire2api(),
             expect_frame_rate: self.expect_frame_rate.wire2api(),
+            texture_id: self.texture_id.wire2api(),
+            video_texture_pointer: self.video_texture_pointer.wire2api(),
+            update_frame_callback_pointer: self.update_frame_callback_pointer.wire2api(),
         }
     }
 }
@@ -617,8 +619,10 @@ pub struct wire_KeyExchangeRequest {
 pub struct wire_NegotiateFinishedRequest {
     active_device_id: i64,
     passive_device_id: i64,
-    selected_monitor_id: *mut wire_uint_8_list,
     expect_frame_rate: u8,
+    texture_id: i64,
+    video_texture_pointer: i64,
+    update_frame_callback_pointer: i64,
 }
 
 #[repr(C)]
@@ -965,8 +969,10 @@ impl NewWithNullPtr for wire_NegotiateFinishedRequest {
         Self {
             active_device_id: Default::default(),
             passive_device_id: Default::default(),
-            selected_monitor_id: core::ptr::null_mut(),
             expect_frame_rate: Default::default(),
+            texture_id: Default::default(),
+            video_texture_pointer: Default::default(),
+            update_frame_callback_pointer: Default::default(),
         }
     }
 }

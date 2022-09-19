@@ -7,9 +7,7 @@ use crate::{
         audio_frame::handle_audio_frame,
         error::handle_error,
         input::handle_input,
-        negotiate_finished::{
-            handle_negotiate_finished_request, handle_negotiate_finished_response,
-        },
+        negotiate_finished::handle_negotiate_finished_request,
         negotiate_select_monitor::{
             handle_negotiate_select_monitor_request, handle_negotiate_select_monitor_response,
         },
@@ -367,7 +365,7 @@ async fn handle_message(
         reply EndPointMessage::NegotiateFinishedRequest => handle_negotiate_finished_request,
         noreply EndPointMessage::NegotiateVisitDesktopParamsResponse => handle_negotiate_visit_desktop_params_response,
         noreply EndPointMessage::NegotiateSelectMonitorResponse => handle_negotiate_select_monitor_response,
-        noreply EndPointMessage::NegotiateFinishedResponse => handle_negotiate_finished_response,
+        // noreply EndPointMessage::NegotiateFinishedResponse => handle_negotiate_finished_response,
         noreply EndPointMessage::VideoFrame => handle_video_frame,
         noreply EndPointMessage::AudioFrame => handle_audio_frame,
         noreply EndPointMessage::Input => handle_input,

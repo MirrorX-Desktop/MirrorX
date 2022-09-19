@@ -69,7 +69,7 @@ pub async fn handle_negotiate_select_monitor_request(
     _: EndPointNegotiateSelectMonitorRequest,
     message_tx: mpsc::Sender<EndPointMessage>,
 ) {
-    let resp = match crate::component::desktop::monitor::get_active_monitors() {
+    let resp = match crate::component::desktop::monitor::get_active_monitors(true) {
         Ok(monitors) => {
             let mut displays = Vec::new();
 

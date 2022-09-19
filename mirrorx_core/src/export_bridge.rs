@@ -21,6 +21,7 @@ use crate::api::config::DomainConfig;
 use crate::api::endpoint::handlers::connect::ConnectRequest;
 use crate::api::endpoint::handlers::handshake::HandshakeRequest;
 use crate::api::endpoint::handlers::input::InputRequest;
+use crate::api::endpoint::handlers::negotiate_finished::EndPointMediaMessage;
 use crate::api::endpoint::handlers::negotiate_finished::NegotiateFinishedRequest;
 use crate::api::endpoint::handlers::negotiate_select_monitor::NegotiateSelectMonitorRequest;
 use crate::api::endpoint::handlers::negotiate_select_monitor::NegotiateSelectMonitorResponse;
@@ -315,11 +316,11 @@ fn wire_endpoint_negotiate_finished_impl(
         WrapInfo {
             debug_name: "endpoint_negotiate_finished",
             port: Some(port_),
-            mode: FfiCallMode::Normal,
+            mode: FfiCallMode::Stream,
         },
         move || {
             let api_req = req.wire2api();
-            move |task_callback| endpoint_negotiate_finished(api_req)
+            move |task_callback| endpoint_negotiate_finished(api_req, task_callback.stream_sink())
         },
     )
 }
@@ -572,6 +573,26 @@ impl support::IntoDart for DomainConfig {
 }
 impl support::IntoDartExceptPrimitive for DomainConfig {}
 
+impl support::IntoDart for EndPointMediaMessage {
+    fn into_dart(self) -> support::DartAbi {
+        match self {
+            Self::Video(field0, field1, field2) => vec![
+                0.into_dart(),
+                field0.into_dart(),
+                field1.into_dart(),
+                field2.into_dart(),
+            ],
+            Self::Audio(field0, field1, field2) => vec![
+                1.into_dart(),
+                field0.into_dart(),
+                field1.into_dart(),
+                field2.into_dart(),
+            ],
+        }
+        .into_dart()
+    }
+}
+impl support::IntoDartExceptPrimitive for EndPointMediaMessage {}
 impl support::IntoDart for HeartbeatResponse {
     fn into_dart(self) -> support::DartAbi {
         vec![self.timestamp.into_dart()].into_dart()
@@ -626,6 +647,9 @@ impl support::IntoDart for NegotiateVisitDesktopParamsResponse {
             self.audio_dual_channel.into_dart(),
             self.os_type.into_dart(),
             self.os_version.into_dart(),
+            self.monitor_id.into_dart(),
+            self.monitor_width.into_dart(),
+            self.monitor_height.into_dart(),
         ]
         .into_dart()
     }

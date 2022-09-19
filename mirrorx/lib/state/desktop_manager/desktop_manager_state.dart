@@ -3,24 +3,24 @@ part of 'desktop_manager_cubit.dart';
 class DesktopManagerState extends Equatable {
   const DesktopManagerState({
     this.desktopPrepareInfoLists = const [],
-    this.closedDesktops = const [],
+    this.desktopInfoLists = const [],
   });
 
   final List<DesktopPrepareInfo> desktopPrepareInfoLists;
-  final List<String> closedDesktops;
+  final List<DesktopInfo> desktopInfoLists;
 
   DesktopManagerState copyWith({
     List<DesktopPrepareInfo>? desktopPrepareInfoLists,
-    List<String>? closedDesktops,
+    List<DesktopInfo>? desktopInfoLists,
   }) =>
       DesktopManagerState(
         desktopPrepareInfoLists:
             desktopPrepareInfoLists ?? this.desktopPrepareInfoLists,
-        closedDesktops: closedDesktops ?? this.closedDesktops,
+        desktopInfoLists: desktopInfoLists ?? this.desktopInfoLists,
       );
 
   @override
-  List<Object?> get props => [desktopPrepareInfoLists, closedDesktops];
+  List<Object?> get props => [desktopPrepareInfoLists, desktopInfoLists];
 }
 
 class DesktopPrepareInfo {
@@ -47,5 +47,23 @@ class DesktopPrepareInfo {
     this.openingNonceBytes,
     this.sealingKeyBytes,
     this.sealingNonceBytes,
+  );
+}
+
+class DesktopInfo {
+  final int localDeviceId;
+  final int remoteDeviceId;
+  final String monitorId;
+  final int monitorWidth;
+  final int monitorHeight;
+  final int textureId;
+
+  DesktopInfo(
+    this.localDeviceId,
+    this.remoteDeviceId,
+    this.monitorId,
+    this.monitorWidth,
+    this.monitorHeight,
+    this.textureId,
   );
 }

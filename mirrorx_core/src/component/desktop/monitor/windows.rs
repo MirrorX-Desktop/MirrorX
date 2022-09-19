@@ -18,16 +18,19 @@ use windows::{
     },
 };
 
-pub fn get_active_monitors() -> CoreResult<Vec<Monitor>> {
+pub fn get_active_monitors(take_screen_shot: bool) -> CoreResult<Vec<Monitor>> {
     unsafe {
         let all_monitors = enum_all_monitors_path_and_name()?;
-        let dxgi_output_monitors = enum_dxgi_outputs(all_monitors)?;
+        let dxgi_output_monitors = enum_dxgi_outputs(all_monitors, take_screen_shot)?;
 
         Ok(dxgi_output_monitors)
     }
 }
 
-unsafe fn enum_dxgi_outputs(all_monitors: HashMap<String, String>) -> CoreResult<Vec<Monitor>> {
+unsafe fn enum_dxgi_outputs(
+    all_monitors: HashMap<String, String>,
+    take_screen_shot: bool,
+) -> CoreResult<Vec<Monitor>> {
     let (device, _) = crate::component::desktop::windows::util::init_directx()?;
 
     let dxgi_device: IDXGIDevice = HRESULT!(device.cast());
@@ -109,13 +112,17 @@ unsafe fn enum_dxgi_outputs(all_monitors: HashMap<String, String>) -> CoreResult
             }
 
             if (display_device.StateFlags & DISPLAY_DEVICE_ATTACHED_TO_DESKTOP) != 0 {
-                let screent_shot_buffer = take_screen_shot(
-                    origin_device_name,
-                    monitor_info.rcMonitor.left,
-                    monitor_info.rcMonitor.top,
-                    monitor_resolution_width,
-                    monitor_resolution_height,
-                )?;
+                let screent_shot_buffer = if take_screen_shot {
+                    Some(take_screen_shot(
+                        origin_device_name,
+                        monitor_info.rcMonitor.left,
+                        monitor_info.rcMonitor.top,
+                        monitor_resolution_width,
+                        monitor_resolution_height,
+                    )?)
+                } else {
+                    None
+                };
 
                 let device_id = OsString::from_wide_null(&display_device.DeviceID)
                     .into_string()

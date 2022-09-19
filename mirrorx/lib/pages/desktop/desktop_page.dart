@@ -6,6 +6,9 @@ import 'package:mirrorx/env/utility/error_notifier.dart';
 import 'package:mirrorx/pages/desktop/widgets/desktop_render_box/desktop_render_box.dart';
 import 'package:mirrorx/state/desktop_manager/desktop_manager_cubit.dart';
 import 'package:mirrorx/state/page_manager/page_manager_cubit.dart';
+import 'package:texture_render/texture_render.dart';
+import 'package:texture_render/texture_render_platform_interface.dart';
+import 'package:tuple/tuple.dart';
 
 class DesktopPage extends StatefulWidget {
   const DesktopPage(
@@ -70,12 +73,15 @@ class _DesktopPageState extends State<DesktopPage> {
               );
             }
 
-            return _buildDesktopSurface();
+            final data = snapshot.data as Tuple3<int, int, int>;
+
+            return _buildDesktopSurface(data.item1, data.item2, data.item3);
           });
     });
   }
 
-  Widget _buildDesktopSurface() {
+  Widget _buildDesktopSurface(
+      int monitorWidth, int monitorHeight, int textureId) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -114,10 +120,11 @@ class _DesktopPageState extends State<DesktopPage> {
         Expanded(
           child: Container(
             color: Colors.black,
-            // child: DesktopRenderBox(
-            //   model: widget.model,
-            //   fit: _fit,
-            // ),
+            child: DesktopRenderBox(
+              localDeviceId: widget.localDeviceId,
+              remoteDeviceId: widget.remoteDeviceId,
+              fit: _fit,
+            ),
           ),
         )
       ],
@@ -140,7 +147,7 @@ class _DesktopPageState extends State<DesktopPage> {
         element.remoteDeviceId == widget.remoteDeviceId)) {
       final prepareInfo = cubit.removePrepareInfo(widget.remoteDeviceId);
       if (prepareInfo != null) {
-        await cubit.connect(prepareInfo);
+        await cubit.connectAndNegotiate(prepareInfo);
       }
     }
   }

@@ -15,6 +15,429 @@ final _privateConstructorUsedError = UnsupportedError(
     'It seems like you constructed your class using `MyClass._()`. This constructor is only meant to be used by freezed and you are not supposed to need it nor use it.\nPlease check the documentation here for more information: https://github.com/rrousselGit/freezed#custom-getters-and-methods');
 
 /// @nodoc
+mixin _$EndPointMediaMessage {
+  int get field0 => throw _privateConstructorUsedError;
+  int get field1 => throw _privateConstructorUsedError;
+  Uint8List get field2 => throw _privateConstructorUsedError;
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>({
+    required TResult Function(int field0, int field1, Uint8List field2) video,
+    required TResult Function(int field0, int field1, Uint8List field2) audio,
+  }) =>
+      throw _privateConstructorUsedError;
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>({
+    TResult Function(int field0, int field1, Uint8List field2)? video,
+    TResult Function(int field0, int field1, Uint8List field2)? audio,
+  }) =>
+      throw _privateConstructorUsedError;
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>({
+    TResult Function(int field0, int field1, Uint8List field2)? video,
+    TResult Function(int field0, int field1, Uint8List field2)? audio,
+    required TResult orElse(),
+  }) =>
+      throw _privateConstructorUsedError;
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>({
+    required TResult Function(EndPointMediaMessage_Video value) video,
+    required TResult Function(EndPointMediaMessage_Audio value) audio,
+  }) =>
+      throw _privateConstructorUsedError;
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>({
+    TResult Function(EndPointMediaMessage_Video value)? video,
+    TResult Function(EndPointMediaMessage_Audio value)? audio,
+  }) =>
+      throw _privateConstructorUsedError;
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>({
+    TResult Function(EndPointMediaMessage_Video value)? video,
+    TResult Function(EndPointMediaMessage_Audio value)? audio,
+    required TResult orElse(),
+  }) =>
+      throw _privateConstructorUsedError;
+
+  @JsonKey(ignore: true)
+  $EndPointMediaMessageCopyWith<EndPointMediaMessage> get copyWith =>
+      throw _privateConstructorUsedError;
+}
+
+/// @nodoc
+abstract class $EndPointMediaMessageCopyWith<$Res> {
+  factory $EndPointMediaMessageCopyWith(EndPointMediaMessage value,
+          $Res Function(EndPointMediaMessage) then) =
+      _$EndPointMediaMessageCopyWithImpl<$Res>;
+  $Res call({int field0, int field1, Uint8List field2});
+}
+
+/// @nodoc
+class _$EndPointMediaMessageCopyWithImpl<$Res>
+    implements $EndPointMediaMessageCopyWith<$Res> {
+  _$EndPointMediaMessageCopyWithImpl(this._value, this._then);
+
+  final EndPointMediaMessage _value;
+  // ignore: unused_field
+  final $Res Function(EndPointMediaMessage) _then;
+
+  @override
+  $Res call({
+    Object? field0 = freezed,
+    Object? field1 = freezed,
+    Object? field2 = freezed,
+  }) {
+    return _then(_value.copyWith(
+      field0: field0 == freezed
+          ? _value.field0
+          : field0 // ignore: cast_nullable_to_non_nullable
+              as int,
+      field1: field1 == freezed
+          ? _value.field1
+          : field1 // ignore: cast_nullable_to_non_nullable
+              as int,
+      field2: field2 == freezed
+          ? _value.field2
+          : field2 // ignore: cast_nullable_to_non_nullable
+              as Uint8List,
+    ));
+  }
+}
+
+/// @nodoc
+abstract class _$$EndPointMediaMessage_VideoCopyWith<$Res>
+    implements $EndPointMediaMessageCopyWith<$Res> {
+  factory _$$EndPointMediaMessage_VideoCopyWith(
+          _$EndPointMediaMessage_Video value,
+          $Res Function(_$EndPointMediaMessage_Video) then) =
+      __$$EndPointMediaMessage_VideoCopyWithImpl<$Res>;
+  @override
+  $Res call({int field0, int field1, Uint8List field2});
+}
+
+/// @nodoc
+class __$$EndPointMediaMessage_VideoCopyWithImpl<$Res>
+    extends _$EndPointMediaMessageCopyWithImpl<$Res>
+    implements _$$EndPointMediaMessage_VideoCopyWith<$Res> {
+  __$$EndPointMediaMessage_VideoCopyWithImpl(
+      _$EndPointMediaMessage_Video _value,
+      $Res Function(_$EndPointMediaMessage_Video) _then)
+      : super(_value, (v) => _then(v as _$EndPointMediaMessage_Video));
+
+  @override
+  _$EndPointMediaMessage_Video get _value =>
+      super._value as _$EndPointMediaMessage_Video;
+
+  @override
+  $Res call({
+    Object? field0 = freezed,
+    Object? field1 = freezed,
+    Object? field2 = freezed,
+  }) {
+    return _then(_$EndPointMediaMessage_Video(
+      field0 == freezed
+          ? _value.field0
+          : field0 // ignore: cast_nullable_to_non_nullable
+              as int,
+      field1 == freezed
+          ? _value.field1
+          : field1 // ignore: cast_nullable_to_non_nullable
+              as int,
+      field2 == freezed
+          ? _value.field2
+          : field2 // ignore: cast_nullable_to_non_nullable
+              as Uint8List,
+    ));
+  }
+}
+
+/// @nodoc
+
+class _$EndPointMediaMessage_Video implements EndPointMediaMessage_Video {
+  const _$EndPointMediaMessage_Video(this.field0, this.field1, this.field2);
+
+  @override
+  final int field0;
+  @override
+  final int field1;
+  @override
+  final Uint8List field2;
+
+  @override
+  String toString() {
+    return 'EndPointMediaMessage.video(field0: $field0, field1: $field1, field2: $field2)';
+  }
+
+  @override
+  bool operator ==(dynamic other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _$EndPointMediaMessage_Video &&
+            const DeepCollectionEquality().equals(other.field0, field0) &&
+            const DeepCollectionEquality().equals(other.field1, field1) &&
+            const DeepCollectionEquality().equals(other.field2, field2));
+  }
+
+  @override
+  int get hashCode => Object.hash(
+      runtimeType,
+      const DeepCollectionEquality().hash(field0),
+      const DeepCollectionEquality().hash(field1),
+      const DeepCollectionEquality().hash(field2));
+
+  @JsonKey(ignore: true)
+  @override
+  _$$EndPointMediaMessage_VideoCopyWith<_$EndPointMediaMessage_Video>
+      get copyWith => __$$EndPointMediaMessage_VideoCopyWithImpl<
+          _$EndPointMediaMessage_Video>(this, _$identity);
+
+  @override
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>({
+    required TResult Function(int field0, int field1, Uint8List field2) video,
+    required TResult Function(int field0, int field1, Uint8List field2) audio,
+  }) {
+    return video(field0, field1, field2);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>({
+    TResult Function(int field0, int field1, Uint8List field2)? video,
+    TResult Function(int field0, int field1, Uint8List field2)? audio,
+  }) {
+    return video?.call(field0, field1, field2);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>({
+    TResult Function(int field0, int field1, Uint8List field2)? video,
+    TResult Function(int field0, int field1, Uint8List field2)? audio,
+    required TResult orElse(),
+  }) {
+    if (video != null) {
+      return video(field0, field1, field2);
+    }
+    return orElse();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>({
+    required TResult Function(EndPointMediaMessage_Video value) video,
+    required TResult Function(EndPointMediaMessage_Audio value) audio,
+  }) {
+    return video(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>({
+    TResult Function(EndPointMediaMessage_Video value)? video,
+    TResult Function(EndPointMediaMessage_Audio value)? audio,
+  }) {
+    return video?.call(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>({
+    TResult Function(EndPointMediaMessage_Video value)? video,
+    TResult Function(EndPointMediaMessage_Audio value)? audio,
+    required TResult orElse(),
+  }) {
+    if (video != null) {
+      return video(this);
+    }
+    return orElse();
+  }
+}
+
+abstract class EndPointMediaMessage_Video implements EndPointMediaMessage {
+  const factory EndPointMediaMessage_Video(
+          final int field0, final int field1, final Uint8List field2) =
+      _$EndPointMediaMessage_Video;
+
+  @override
+  int get field0;
+  @override
+  int get field1;
+  @override
+  Uint8List get field2;
+  @override
+  @JsonKey(ignore: true)
+  _$$EndPointMediaMessage_VideoCopyWith<_$EndPointMediaMessage_Video>
+      get copyWith => throw _privateConstructorUsedError;
+}
+
+/// @nodoc
+abstract class _$$EndPointMediaMessage_AudioCopyWith<$Res>
+    implements $EndPointMediaMessageCopyWith<$Res> {
+  factory _$$EndPointMediaMessage_AudioCopyWith(
+          _$EndPointMediaMessage_Audio value,
+          $Res Function(_$EndPointMediaMessage_Audio) then) =
+      __$$EndPointMediaMessage_AudioCopyWithImpl<$Res>;
+  @override
+  $Res call({int field0, int field1, Uint8List field2});
+}
+
+/// @nodoc
+class __$$EndPointMediaMessage_AudioCopyWithImpl<$Res>
+    extends _$EndPointMediaMessageCopyWithImpl<$Res>
+    implements _$$EndPointMediaMessage_AudioCopyWith<$Res> {
+  __$$EndPointMediaMessage_AudioCopyWithImpl(
+      _$EndPointMediaMessage_Audio _value,
+      $Res Function(_$EndPointMediaMessage_Audio) _then)
+      : super(_value, (v) => _then(v as _$EndPointMediaMessage_Audio));
+
+  @override
+  _$EndPointMediaMessage_Audio get _value =>
+      super._value as _$EndPointMediaMessage_Audio;
+
+  @override
+  $Res call({
+    Object? field0 = freezed,
+    Object? field1 = freezed,
+    Object? field2 = freezed,
+  }) {
+    return _then(_$EndPointMediaMessage_Audio(
+      field0 == freezed
+          ? _value.field0
+          : field0 // ignore: cast_nullable_to_non_nullable
+              as int,
+      field1 == freezed
+          ? _value.field1
+          : field1 // ignore: cast_nullable_to_non_nullable
+              as int,
+      field2 == freezed
+          ? _value.field2
+          : field2 // ignore: cast_nullable_to_non_nullable
+              as Uint8List,
+    ));
+  }
+}
+
+/// @nodoc
+
+class _$EndPointMediaMessage_Audio implements EndPointMediaMessage_Audio {
+  const _$EndPointMediaMessage_Audio(this.field0, this.field1, this.field2);
+
+  @override
+  final int field0;
+  @override
+  final int field1;
+  @override
+  final Uint8List field2;
+
+  @override
+  String toString() {
+    return 'EndPointMediaMessage.audio(field0: $field0, field1: $field1, field2: $field2)';
+  }
+
+  @override
+  bool operator ==(dynamic other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _$EndPointMediaMessage_Audio &&
+            const DeepCollectionEquality().equals(other.field0, field0) &&
+            const DeepCollectionEquality().equals(other.field1, field1) &&
+            const DeepCollectionEquality().equals(other.field2, field2));
+  }
+
+  @override
+  int get hashCode => Object.hash(
+      runtimeType,
+      const DeepCollectionEquality().hash(field0),
+      const DeepCollectionEquality().hash(field1),
+      const DeepCollectionEquality().hash(field2));
+
+  @JsonKey(ignore: true)
+  @override
+  _$$EndPointMediaMessage_AudioCopyWith<_$EndPointMediaMessage_Audio>
+      get copyWith => __$$EndPointMediaMessage_AudioCopyWithImpl<
+          _$EndPointMediaMessage_Audio>(this, _$identity);
+
+  @override
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>({
+    required TResult Function(int field0, int field1, Uint8List field2) video,
+    required TResult Function(int field0, int field1, Uint8List field2) audio,
+  }) {
+    return audio(field0, field1, field2);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>({
+    TResult Function(int field0, int field1, Uint8List field2)? video,
+    TResult Function(int field0, int field1, Uint8List field2)? audio,
+  }) {
+    return audio?.call(field0, field1, field2);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>({
+    TResult Function(int field0, int field1, Uint8List field2)? video,
+    TResult Function(int field0, int field1, Uint8List field2)? audio,
+    required TResult orElse(),
+  }) {
+    if (audio != null) {
+      return audio(field0, field1, field2);
+    }
+    return orElse();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>({
+    required TResult Function(EndPointMediaMessage_Video value) video,
+    required TResult Function(EndPointMediaMessage_Audio value) audio,
+  }) {
+    return audio(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>({
+    TResult Function(EndPointMediaMessage_Video value)? video,
+    TResult Function(EndPointMediaMessage_Audio value)? audio,
+  }) {
+    return audio?.call(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>({
+    TResult Function(EndPointMediaMessage_Video value)? video,
+    TResult Function(EndPointMediaMessage_Audio value)? audio,
+    required TResult orElse(),
+  }) {
+    if (audio != null) {
+      return audio(this);
+    }
+    return orElse();
+  }
+}
+
+abstract class EndPointMediaMessage_Audio implements EndPointMediaMessage {
+  const factory EndPointMediaMessage_Audio(
+          final int field0, final int field1, final Uint8List field2) =
+      _$EndPointMediaMessage_Audio;
+
+  @override
+  int get field0;
+  @override
+  int get field1;
+  @override
+  Uint8List get field2;
+  @override
+  @JsonKey(ignore: true)
+  _$$EndPointMediaMessage_AudioCopyWith<_$EndPointMediaMessage_Audio>
+      get copyWith => throw _privateConstructorUsedError;
+}
+
+/// @nodoc
 mixin _$InputEvent {
   @optionalTypeArgs
   TResult when<TResult extends Object?>({

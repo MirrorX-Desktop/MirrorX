@@ -2,11 +2,12 @@ use crate::{
     api::endpoint::{
         message::{
             AudioSampleFormat, AudioSampleRate, EndPointMessage,
-            EndPointNegotiateVisitDesktopParamsRequest,
+            EndPointNegotiateVisitDesktopParams, EndPointNegotiateVisitDesktopParamsRequest,
             EndPointNegotiateVisitDesktopParamsResponse, VideoCodec,
         },
         ENDPOINTS, RECV_MESSAGE_TIMEOUT, SEND_MESSAGE_TIMEOUT,
     },
+    component::desktop::monitor::{get_active_monitors, get_primary_monitor_params},
     core_error,
     error::{CoreError, CoreResult},
 };
@@ -30,6 +31,9 @@ pub struct NegotiateVisitDesktopParamsResponse {
     pub audio_dual_channel: bool,
     pub os_type: String,
     pub os_version: String,
+    pub monitor_id: String,
+    pub monitor_width: i16,
+    pub monitor_height: i16,
 }
 
 pub async fn negotiate_visit_desktop_params(
@@ -74,14 +78,24 @@ pub async fn negotiate_visit_desktop_params(
 
     let negotiate_resp = tokio::time::timeout(RECV_MESSAGE_TIMEOUT, resp_rx).await??;
 
-    Ok(NegotiateVisitDesktopParamsResponse {
-        video_codec: negotiate_resp.video_codec,
-        audio_sample_rate: negotiate_resp.audio_sample_rate,
-        audio_sample_format: negotiate_resp.audio_sample_format,
-        audio_dual_channel: negotiate_resp.audio_dual_channel,
-        os_type: negotiate_resp.os_type,
-        os_version: negotiate_resp.os_version,
-    })
+    match negotiate_resp {
+        EndPointNegotiateVisitDesktopParamsResponse::Error => {
+            Err(core_error!("negotiate desktop params failed"))
+        }
+        EndPointNegotiateVisitDesktopParamsResponse::Params(params) => {
+            Ok(NegotiateVisitDesktopParamsResponse {
+                video_codec: params.video_codec,
+                audio_sample_rate: params.audio_sample_rate,
+                audio_sample_format: params.audio_sample_format,
+                audio_dual_channel: params.audio_dual_channel,
+                os_type: params.os_type,
+                os_version: params.os_version,
+                monitor_id: params.monitor_id,
+                monitor_width: params.monitor_width as i16,
+                monitor_height: params.monitor_height as i16,
+            })
+        }
+    }
 }
 
 pub async fn handle_negotiate_visit_desktop_params_request(
@@ -90,20 +104,15 @@ pub async fn handle_negotiate_visit_desktop_params_request(
     req: EndPointNegotiateVisitDesktopParamsRequest,
     message_tx: mpsc::Sender<EndPointMessage>,
 ) {
-    // todo: check support video and audio properties
+    let resp = get_media_params(req);
 
-    let resp = EndPointMessage::NegotiateVisitDesktopParamsResponse(
-        EndPointNegotiateVisitDesktopParamsResponse {
-            video_codec: VideoCodec::H264,
-            audio_sample_rate: req.audio_max_sample_rate,
-            audio_sample_format: AudioSampleFormat::F32,
-            audio_dual_channel: req.audio_dual_channel,
-            os_type: String::from(""),
-            os_version: String::from(""),
-        },
-    );
-
-    if let Err(err) = message_tx.send_timeout(resp, SEND_MESSAGE_TIMEOUT).await {
+    if let Err(err) = message_tx
+        .send_timeout(
+            EndPointMessage::NegotiateVisitDesktopParamsResponse(resp),
+            SEND_MESSAGE_TIMEOUT,
+        )
+        .await
+    {
         tracing::error!(
             ?active_device_id,
             ?passive_device_id,
@@ -122,4 +131,31 @@ pub async fn handle_negotiate_visit_desktop_params_response(
     if let Some((_, tx)) = RESPONSE_CHANNELS.remove(&(active_device_id, passive_device_id)) {
         let _ = tx.send(resp);
     }
+}
+
+fn get_media_params(
+    req: EndPointNegotiateVisitDesktopParamsRequest,
+) -> EndPointNegotiateVisitDesktopParamsResponse {
+    let mut params = EndPointNegotiateVisitDesktopParams {
+        video_codec: VideoCodec::H264,
+        audio_sample_rate: req.audio_max_sample_rate,
+        audio_sample_format: AudioSampleFormat::F32,
+        audio_dual_channel: req.audio_dual_channel,
+        os_type: String::from(""),
+        os_version: String::from(""),
+        ..Default::default()
+    };
+
+    // todo: check support video and audio properties
+
+    match get_primary_monitor_params() {
+        Ok((monitor_id, monitor_width, monitor_height)) => {
+            params.monitor_id = monitor_id;
+            params.monitor_width = monitor_width;
+            params.monitor_height = monitor_height;
+        }
+        Err(_) => return EndPointNegotiateVisitDesktopParamsResponse::Error,
+    }
+
+    EndPointNegotiateVisitDesktopParamsResponse::Params(params)
 }

@@ -8,7 +8,7 @@ pub use self::windows::get_active_monitors;
 mod macos;
 
 #[cfg(target_os = "macos")]
-pub use macos::{get_active_monitors, NSScreen};
+pub use macos::{get_active_monitors, get_primary_monitor_params, NSScreen};
 
 #[derive(Debug, Clone)]
 pub struct Monitor {
@@ -18,7 +18,7 @@ pub struct Monitor {
     pub width: u16,
     pub height: u16,
     pub is_primary: bool,
-    pub screen_shot: Vec<u8>,
+    pub screen_shot: Option<Vec<u8>>,
     pub left: u16,
     pub top: u16,
 }

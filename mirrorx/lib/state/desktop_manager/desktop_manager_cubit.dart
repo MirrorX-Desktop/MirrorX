@@ -5,6 +5,9 @@ import 'package:equatable/equatable.dart';
 import 'package:meta/meta.dart';
 import 'package:mirrorx/env/sdk/mirrorx_core.dart';
 import 'package:mirrorx/env/sdk/mirrorx_core_sdk.dart';
+import 'package:texture_render/model.dart';
+import 'package:texture_render/texture_render.dart';
+import 'package:tuple/tuple.dart';
 
 part 'desktop_manager_state.dart';
 
@@ -35,26 +38,81 @@ class DesktopManagerCubit extends Cubit<DesktopManagerState> {
           ..add(prepareInfo)));
   }
 
-  Future connect(DesktopPrepareInfo prepareInfo) async {
-    await MirrorXCoreSDK.instance.endpointConnect(
-      req: ConnectRequest(
-        localDeviceId: prepareInfo.localDeviceId,
-        remoteDeviceId: prepareInfo.remoteDeviceId,
-        addr: "192.168.0.101:28001",
-      ),
-    );
+  Future connectAndNegotiate(DesktopPrepareInfo prepareInfo) async {
+    RegisterTextureResponse? registerTextureResponse;
 
-    return await MirrorXCoreSDK.instance.endpointHandshake(
-      req: HandshakeRequest(
-        activeDeviceId: prepareInfo.localDeviceId,
-        passiveDeviceId: prepareInfo.remoteDeviceId,
-        visitCredentials: prepareInfo.visitCredentials,
-        openingKeyBytes: prepareInfo.openingKeyBytes,
-        openingNonceBytes: prepareInfo.openingNonceBytes,
-        sealingKeyBytes: prepareInfo.sealingKeyBytes,
-        sealingNonceBytes: prepareInfo.sealingNonceBytes,
-      ),
-    );
+    try {
+      await MirrorXCoreSDK.instance.endpointConnect(
+        req: ConnectRequest(
+          localDeviceId: prepareInfo.localDeviceId,
+          remoteDeviceId: prepareInfo.remoteDeviceId,
+          addr: "192.168.0.101:28001",
+        ),
+      );
+
+      await MirrorXCoreSDK.instance.endpointHandshake(
+        req: HandshakeRequest(
+          activeDeviceId: prepareInfo.localDeviceId,
+          passiveDeviceId: prepareInfo.remoteDeviceId,
+          visitCredentials: prepareInfo.visitCredentials,
+          openingKeyBytes: prepareInfo.openingKeyBytes,
+          openingNonceBytes: prepareInfo.openingNonceBytes,
+          sealingKeyBytes: prepareInfo.sealingKeyBytes,
+          sealingNonceBytes: prepareInfo.sealingNonceBytes,
+        ),
+      );
+
+      final negotiateVisitDesktopParamsResponse =
+          await MirrorXCoreSDK.instance.endpointNegotiateVisitDesktopParams(
+        req: NegotiateVisitDesktopParamsRequest(
+          activeDeviceId: prepareInfo.localDeviceId,
+          passiveDeviceId: prepareInfo.remoteDeviceId,
+        ),
+      );
+
+      registerTextureResponse = await TextureRender.instance.registerTexture();
+
+      final mediaStream = MirrorXCoreSDK.instance.endpointNegotiateFinished(
+        req: NegotiateFinishedRequest(
+          activeDeviceId: prepareInfo.localDeviceId,
+          passiveDeviceId: prepareInfo.remoteDeviceId,
+          expectFrameRate: 60,
+          textureId: registerTextureResponse.textureID,
+          videoTexturePointer: registerTextureResponse.videoTexturePointer,
+          updateFrameCallbackPointer:
+              registerTextureResponse.updateFrameCallbackPointer,
+        ),
+      );
+
+      mediaStream.listen(
+        (event) => onMediaStreamData(prepareInfo.remoteDeviceId, event),
+        onError: (err) => onMediaStreamError(prepareInfo.remoteDeviceId, err),
+        onDone: () => onMediaStreamDone(prepareInfo.remoteDeviceId),
+      );
+
+      emit(
+        state.copyWith(
+          desktopInfoLists: List.from(state.desktopInfoLists)
+            ..add(
+              DesktopInfo(
+                prepareInfo.localDeviceId,
+                prepareInfo.remoteDeviceId,
+                negotiateVisitDesktopParamsResponse.monitorId,
+                negotiateVisitDesktopParamsResponse.monitorWidth,
+                negotiateVisitDesktopParamsResponse.monitorHeight,
+                registerTextureResponse.textureID,
+              ),
+            ),
+        ),
+      );
+    } catch (err) {
+      if (registerTextureResponse != null) {
+        await TextureRender.instance.deregisterTexture(
+          registerTextureResponse.textureID,
+          registerTextureResponse.videoTexturePointer,
+        );
+      }
+    }
   }
 
   DesktopPrepareInfo? removePrepareInfo(int remoteDeviceId) {
@@ -87,4 +145,12 @@ class DesktopManagerCubit extends Cubit<DesktopManagerState> {
       ),
     );
   }
+
+  void onMediaStreamData(int remoteDeviceId, EndPointMediaMessage message) {
+    message.when(video: (a, b, videoBuffer) {}, audio: (a, b, audioBuffer) {});
+  }
+
+  void onMediaStreamError(int remoteDeviceId, Object err) {}
+
+  void onMediaStreamDone(int remoteDeviceId) {}
 }

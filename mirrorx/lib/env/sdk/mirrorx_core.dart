@@ -98,7 +98,7 @@ abstract class MirrorXCore {
 
   FlutterRustBridgeTaskConstMeta get kEndpointNegotiateSelectMonitorConstMeta;
 
-  Future<void> endpointNegotiateFinished(
+  Stream<EndPointMediaMessage> endpointNegotiateFinished(
       {required NegotiateFinishedRequest req, dynamic hint});
 
   FlutterRustBridgeTaskConstMeta get kEndpointNegotiateFinishedConstMeta;
@@ -154,6 +154,20 @@ class DomainConfig {
     required this.deviceFingerPrint,
     required this.devicePassword,
   });
+}
+
+@freezed
+class EndPointMediaMessage with _$EndPointMediaMessage {
+  const factory EndPointMediaMessage.video(
+    int field0,
+    int field1,
+    Uint8List field2,
+  ) = EndPointMediaMessage_Video;
+  const factory EndPointMediaMessage.audio(
+    int field0,
+    int field1,
+    Uint8List field2,
+  ) = EndPointMediaMessage_Audio;
 }
 
 class HandshakeRequest {
@@ -420,14 +434,18 @@ enum MouseKey {
 class NegotiateFinishedRequest {
   final int activeDeviceId;
   final int passiveDeviceId;
-  final String selectedMonitorId;
   final int expectFrameRate;
+  final int textureId;
+  final int videoTexturePointer;
+  final int updateFrameCallbackPointer;
 
   NegotiateFinishedRequest({
     required this.activeDeviceId,
     required this.passiveDeviceId,
-    required this.selectedMonitorId,
     required this.expectFrameRate,
+    required this.textureId,
+    required this.videoTexturePointer,
+    required this.updateFrameCallbackPointer,
   });
 }
 
@@ -466,6 +484,9 @@ class NegotiateVisitDesktopParamsResponse {
   final bool audioDualChannel;
   final String osType;
   final String osVersion;
+  final String monitorId;
+  final int monitorWidth;
+  final int monitorHeight;
 
   NegotiateVisitDesktopParamsResponse({
     required this.videoCodec,
@@ -474,6 +495,9 @@ class NegotiateVisitDesktopParamsResponse {
     required this.audioDualChannel,
     required this.osType,
     required this.osVersion,
+    required this.monitorId,
+    required this.monitorWidth,
+    required this.monitorHeight,
   });
 }
 
@@ -876,13 +900,13 @@ class MirrorXCoreImpl implements MirrorXCore {
         argNames: ["req"],
       );
 
-  Future<void> endpointNegotiateFinished(
+  Stream<EndPointMediaMessage> endpointNegotiateFinished(
           {required NegotiateFinishedRequest req, dynamic hint}) =>
-      _platform.executeNormal(FlutterRustBridgeTask(
+      _platform.executeStream(FlutterRustBridgeTask(
         callFfi: (port_) => _platform.inner.wire_endpoint_negotiate_finished(
             port_,
             _platform.api2wire_box_autoadd_negotiate_finished_request(req)),
-        parseSuccessData: _wire2api_unit,
+        parseSuccessData: _wire2api_end_point_media_message,
         constMeta: kEndpointNegotiateFinishedConstMeta,
         argValues: [req],
         hint: hint,
@@ -959,6 +983,10 @@ String _wire2api_String(dynamic raw) {
   return raw as String;
 }
 
+Uint8List _wire2api_ZeroCopyBuffer_Uint8List(dynamic raw) {
+  return raw as Uint8List;
+}
+
 AudioSampleFormat _wire2api_audio_sample_format(dynamic raw) {
   return AudioSampleFormat.values[raw];
 }
@@ -987,6 +1015,25 @@ DomainConfig _wire2api_domain_config(dynamic raw) {
   );
 }
 
+EndPointMediaMessage _wire2api_end_point_media_message(dynamic raw) {
+  switch (raw[0]) {
+    case 0:
+      return EndPointMediaMessage_Video(
+        _wire2api_i64(raw[1]),
+        _wire2api_i64(raw[2]),
+        _wire2api_ZeroCopyBuffer_Uint8List(raw[3]),
+      );
+    case 1:
+      return EndPointMediaMessage_Audio(
+        _wire2api_i64(raw[1]),
+        _wire2api_i64(raw[2]),
+        _wire2api_ZeroCopyBuffer_Uint8List(raw[3]),
+      );
+    default:
+      throw Exception("unreachable");
+  }
+}
+
 HeartbeatResponse _wire2api_heartbeat_response(dynamic raw) {
   final arr = raw as List<dynamic>;
   if (arr.length != 1)
@@ -994,6 +1041,10 @@ HeartbeatResponse _wire2api_heartbeat_response(dynamic raw) {
   return HeartbeatResponse(
     timestamp: _wire2api_u32(arr[0]),
   );
+}
+
+int _wire2api_i16(dynamic raw) {
+  return raw as int;
 }
 
 int _wire2api_i32(dynamic raw) {
@@ -1050,8 +1101,8 @@ NegotiateSelectMonitorResponse _wire2api_negotiate_select_monitor_response(
 NegotiateVisitDesktopParamsResponse
     _wire2api_negotiate_visit_desktop_params_response(dynamic raw) {
   final arr = raw as List<dynamic>;
-  if (arr.length != 6)
-    throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+  if (arr.length != 9)
+    throw Exception('unexpected arr length: expect 9 but see ${arr.length}');
   return NegotiateVisitDesktopParamsResponse(
     videoCodec: _wire2api_video_codec(arr[0]),
     audioSampleRate: _wire2api_audio_sample_rate(arr[1]),
@@ -1059,6 +1110,9 @@ NegotiateVisitDesktopParamsResponse
     audioDualChannel: _wire2api_bool(arr[3]),
     osType: _wire2api_String(arr[4]),
     osVersion: _wire2api_String(arr[5]),
+    monitorId: _wire2api_String(arr[6]),
+    monitorWidth: _wire2api_i16(arr[7]),
+    monitorHeight: _wire2api_i16(arr[8]),
   );
 }
 
@@ -1527,8 +1581,11 @@ class MirrorXCorePlatform extends FlutterRustBridgeBase<MirrorXCoreWire> {
       NegotiateFinishedRequest apiObj, wire_NegotiateFinishedRequest wireObj) {
     wireObj.active_device_id = api2wire_i64(apiObj.activeDeviceId);
     wireObj.passive_device_id = api2wire_i64(apiObj.passiveDeviceId);
-    wireObj.selected_monitor_id = api2wire_String(apiObj.selectedMonitorId);
     wireObj.expect_frame_rate = api2wire_u8(apiObj.expectFrameRate);
+    wireObj.texture_id = api2wire_i64(apiObj.textureId);
+    wireObj.video_texture_pointer = api2wire_i64(apiObj.videoTexturePointer);
+    wireObj.update_frame_callback_pointer =
+        api2wire_i64(apiObj.updateFrameCallbackPointer);
   }
 
   void _api_fill_to_wire_negotiate_select_monitor_request(
@@ -2406,10 +2463,17 @@ class wire_NegotiateFinishedRequest extends ffi.Struct {
   @ffi.Int64()
   external int passive_device_id;
 
-  external ffi.Pointer<wire_uint_8_list> selected_monitor_id;
-
   @ffi.Uint8()
   external int expect_frame_rate;
+
+  @ffi.Int64()
+  external int texture_id;
+
+  @ffi.Int64()
+  external int video_texture_pointer;
+
+  @ffi.Int64()
+  external int update_frame_callback_pointer;
 }
 
 class wire_MouseEvent_MouseUp extends ffi.Struct {

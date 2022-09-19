@@ -20,7 +20,7 @@ pub enum EndPointMessage {
     NegotiateSelectMonitorRequest(EndPointNegotiateSelectMonitorRequest),
     NegotiateSelectMonitorResponse(EndPointNegotiateSelectMonitorResponse),
     NegotiateFinishedRequest(EndPointNegotiateFinishedRequest),
-    NegotiateFinishedResponse(EndPointNegotiateFinishedResponse),
+    // NegotiateFinishedResponse(EndPointNegotiateFinishedResponse),
     VideoFrame(EndPointVideoFrame),
     AudioFrame(EndPointAudioFrame),
     Input(EndPointInput),
@@ -34,6 +34,12 @@ pub enum VideoCodec {
     VP9,
 }
 
+impl Default for VideoCodec {
+    fn default() -> Self {
+        return VideoCodec::H264;
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub enum AudioSampleRate {
     HZ8000,
@@ -43,11 +49,23 @@ pub enum AudioSampleRate {
     HZ480000,
 }
 
+impl Default for AudioSampleRate {
+    fn default() -> Self {
+        return AudioSampleRate::HZ8000;
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub enum AudioSampleFormat {
     I16,
     U16,
     F32,
+}
+
+impl Default for AudioSampleFormat {
+    fn default() -> Self {
+        return AudioSampleFormat::I16;
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
@@ -59,13 +77,22 @@ pub struct EndPointNegotiateVisitDesktopParamsRequest {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-pub struct EndPointNegotiateVisitDesktopParamsResponse {
+pub enum EndPointNegotiateVisitDesktopParamsResponse {
+    Error,
+    Params(EndPointNegotiateVisitDesktopParams),
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Default)]
+pub struct EndPointNegotiateVisitDesktopParams {
     pub video_codec: VideoCodec,
     pub audio_sample_rate: AudioSampleRate,
     pub audio_sample_format: AudioSampleFormat,
     pub audio_dual_channel: bool,
     pub os_type: String,
     pub os_version: String,
+    pub monitor_id: String,
+    pub monitor_width: u16,
+    pub monitor_height: u16,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
@@ -80,7 +107,7 @@ pub struct MonitorDescription {
     pub height: u16,
     pub is_primary: bool,
     #[serde(with = "serde_bytes")]
-    pub screen_shot: Vec<u8>,
+    pub screen_shot: Option<Vec<u8>>,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
@@ -90,12 +117,12 @@ pub struct EndPointNegotiateSelectMonitorResponse {
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct EndPointNegotiateFinishedRequest {
-    pub selected_monitor_id: String,
+    // pub selected_monitor_id: String,
     pub expected_frame_rate: u8,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-pub struct EndPointNegotiateFinishedResponse {}
+// #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+// pub struct EndPointNegotiateFinishedResponse {}
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct EndPointVideoFrame {
