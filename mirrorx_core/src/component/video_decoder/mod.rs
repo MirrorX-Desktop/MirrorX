@@ -2,10 +2,10 @@ mod frame;
 pub use frame::DecodedFrame;
 
 #[cfg(target_os = "windows")]
-mod video_decoder;
+mod ffmpeg;
 
 #[cfg(target_os = "windows")]
-pub use video_decoder::VideoDecoder;
+pub use ffmpeg::Decoder;
 
 #[cfg(target_os = "macos")]
 mod videotoolbox;

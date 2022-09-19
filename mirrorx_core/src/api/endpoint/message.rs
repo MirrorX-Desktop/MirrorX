@@ -126,11 +126,8 @@ pub struct EndPointNegotiateFinishedRequest {
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct EndPointVideoFrame {
-    #[serde(with = "serde_bytes")]
-    pub sps: Option<Vec<u8>>,
-
-    #[serde(with = "serde_bytes")]
-    pub pps: Option<Vec<u8>>,
+    pub width: i32,
+    pub height: i32,
 
     #[serde(with = "serde_bytes")]
     pub buffer: Vec<u8>,

@@ -2,7 +2,7 @@
 mod windows;
 
 #[cfg(target_os = "windows")]
-pub use self::windows::get_active_monitors;
+pub use self::windows::{get_active_monitors, get_primary_monitor_params};
 
 #[cfg(target_os = "macos")]
 mod macos;

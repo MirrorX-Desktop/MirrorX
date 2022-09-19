@@ -1019,8 +1019,8 @@ FlutterMediaMessage _wire2api_flutter_media_message(dynamic raw) {
   switch (raw[0]) {
     case 0:
       return FlutterMediaMessage_Video(
-        _wire2api_i64(raw[1]),
-        _wire2api_i64(raw[2]),
+        _wire2api_i32(raw[1]),
+        _wire2api_i32(raw[2]),
         _wire2api_ZeroCopyBuffer_Uint8List(raw[3]),
       );
     case 1:

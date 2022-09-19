@@ -21,7 +21,6 @@ impl Encoder {
         encoder_type: FFMPEGEncoderType,
         frame_width: i32,
         frame_height: i32,
-        excepted_fps: i32,
     ) -> CoreResult<Encoder> {
         let encoder_config = match encoder_type {
             FFMPEGEncoderType::Libx264 => Libx264Config::new()?,
@@ -51,11 +50,8 @@ impl Encoder {
 
             (*encoder.codec_ctx).width = frame_width;
             (*encoder.codec_ctx).height = frame_height;
-            (*encoder.codec_ctx).time_base = AVRational {
-                num: 1,
-                den: excepted_fps,
-            };
-            (*encoder.codec_ctx).gop_size = excepted_fps * 2;
+            (*encoder.codec_ctx).time_base = AVRational { num: 1, den: 1 };
+            (*encoder.codec_ctx).gop_size = 60 * 2;
             (*encoder.codec_ctx).bit_rate = 4000 * 1000;
             (*encoder.codec_ctx).rc_max_rate = 4000 * 1000;
             (*encoder.codec_ctx).rc_min_rate = 4000 * 1000;
@@ -228,8 +224,8 @@ impl Encoder {
                 }
 
                 let packet = EndPointMessage::VideoFrame(EndPointVideoFrame {
-                    sps: sps.take(),
-                    pps: pps.take(),
+                    width: (*self.codec_ctx).width,
+                    height: (*self.codec_ctx).height,
                     buffer,
                 });
 

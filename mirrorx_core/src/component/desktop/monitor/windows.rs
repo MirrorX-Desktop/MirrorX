@@ -18,6 +18,19 @@ use windows::{
     },
 };
 
+pub fn get_primary_monitor_params() -> CoreResult<(String, u16, u16)> {
+    unsafe {
+        let monitors = get_active_monitors(false)?;
+        for monitor in monitors {
+            if monitor.is_primary {
+                return Ok((monitor.id, monitor.width, monitor.height));
+            }
+        }
+
+        Err(core_error!("no primary display"))
+    }
+}
+
 pub fn get_active_monitors(take_screen_shot: bool) -> CoreResult<Vec<Monitor>> {
     unsafe {
         let all_monitors = enum_all_monitors_path_and_name()?;
@@ -29,7 +42,7 @@ pub fn get_active_monitors(take_screen_shot: bool) -> CoreResult<Vec<Monitor>> {
 
 unsafe fn enum_dxgi_outputs(
     all_monitors: HashMap<String, String>,
-    take_screen_shot: bool,
+    need_screen_shot: bool,
 ) -> CoreResult<Vec<Monitor>> {
     let (device, _) = crate::component::desktop::windows::util::init_directx()?;
 
@@ -112,7 +125,7 @@ unsafe fn enum_dxgi_outputs(
             }
 
             if (display_device.StateFlags & DISPLAY_DEVICE_ATTACHED_TO_DESKTOP) != 0 {
-                let screent_shot_buffer = if take_screen_shot {
+                let screent_shot_buffer = if need_screen_shot {
                     Some(take_screen_shot(
                         origin_device_name,
                         monitor_info.rcMonitor.left,
