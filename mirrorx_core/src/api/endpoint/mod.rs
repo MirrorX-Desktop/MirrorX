@@ -1,7 +1,7 @@
 pub mod handlers;
 pub mod message;
 
-use self::message::EndPointMessage;
+use self::{handlers::handshake::EndPointMediaMessage, message::EndPointMessage};
 use crate::{
     api::endpoint::handlers::{
         audio_frame::handle_audio_frame,
@@ -24,6 +24,7 @@ use async_broadcast::TryRecvError;
 use bincode::Options;
 use bytes::{Bytes, BytesMut};
 use dashmap::DashMap;
+use flutter_rust_bridge::StreamSink;
 use futures::{
     stream::{SplitSink, SplitStream},
     SinkExt, StreamExt,
@@ -39,7 +40,7 @@ const SEND_MESSAGE_TIMEOUT: Duration = Duration::from_secs(10);
 const RECV_MESSAGE_TIMEOUT: Duration = Duration::from_secs(30);
 
 pub static RESERVE_STREAMS: Lazy<DashMap<(i64, i64), Framed<TcpStream, LengthDelimitedCodec>>> =
-    Lazy::new(|| DashMap::new());
+    Lazy::new(DashMap::new);
 
 pub static ENDPOINTS: Lazy<Cache<(i64, i64), tokio::sync::mpsc::Sender<EndPointMessage>>> =
     Lazy::new(|| Cache::builder().initial_capacity(1).build());
@@ -175,6 +176,7 @@ pub fn serve_reader(
     mut stream: SplitStream<Framed<TcpStream, LengthDelimitedCodec>>,
     mut opening_key: OpeningKey<NonceValue>,
     message_tx: tokio::sync::mpsc::Sender<EndPointMessage>,
+    flutter_stream: Option<StreamSink<EndPointMediaMessage>>,
 ) {
     TOKIO_RUNTIME.spawn(async move {
         loop {
@@ -218,6 +220,7 @@ pub fn serve_reader(
                         &mut opening_key,
                         &mut packet_bytes,
                         message_tx.clone(),
+                        flutter_stream.clone(),
                     ) {
                         tracing::error!(
                             ?local_device_id,
@@ -322,12 +325,20 @@ fn open_packet(
     opening_key: &mut OpeningKey<NonceValue>,
     buffer: &mut BytesMut,
     message_tx: tokio::sync::mpsc::Sender<EndPointMessage>,
+    stream: Option<StreamSink<EndPointMediaMessage>>,
 ) -> CoreResult<()> {
     let opened_buffer = opening_key.open_in_place(ring::aead::Aad::empty(), buffer)?;
-    let message = BINCODE_SERIALIZER.deserialize::<EndPointMessage>(&opened_buffer)?;
+    let message = BINCODE_SERIALIZER.deserialize::<EndPointMessage>(opened_buffer)?;
 
     TOKIO_RUNTIME.spawn(async move {
-        handle_message(active_device_id, passive_device_id, message, message_tx).await;
+        handle_message(
+            active_device_id,
+            passive_device_id,
+            message,
+            message_tx,
+            stream,
+        )
+        .await;
     });
 
     Ok(())
@@ -347,27 +358,75 @@ async fn handle_message(
     passive_device_id: i64,
     message: EndPointMessage,
     message_tx: tokio::sync::mpsc::Sender<EndPointMessage>,
+    stream: Option<StreamSink<EndPointMediaMessage>>,
 ) {
-    macro_rules! match_and_handle_message {
-        ($message:expr, $(error $err_message_type:path => $err_handler:ident,)? $(reply $req_message_type:path => $req_handler:ident,)* $(noreply $other_message_type:path => $other_handler:ident,)*) => {
-            match $message{
-                $($err_message_type => $err_handler(active_device_id, passive_device_id).await,)?
-                $($req_message_type(req) => $req_handler(active_device_id, passive_device_id, req, message_tx).await,)+
-                $($other_message_type(req) => $other_handler(active_device_id, passive_device_id, req).await,)+
-            }
-        };
-    }
+    // macro_rules! match_and_handle_message {
+    //     ($message:expr, $(error $err_message_type:path => $err_handler:ident,)? $(reply $req_message_type:path => $req_handler:ident,)* $(noreply $other_message_type:path => $other_handler:ident,)*) => {
+    //         match $message{
+    //             $($err_message_type => $err_handler(active_device_id, passive_device_id).await,)?
+    //             $($req_message_type(req) => $req_handler(active_device_id, passive_device_id, req, message_tx).await,)+
+    //             $($other_message_type(req) => $other_handler(active_device_id, passive_device_id, req).await,)+
+    //         }
+    //     };
+    // }
 
-    match_and_handle_message!(message,
-        error EndPointMessage::Error => handle_error,
-        reply EndPointMessage::NegotiateVisitDesktopParamsRequest => handle_negotiate_visit_desktop_params_request,
-        reply EndPointMessage::NegotiateSelectMonitorRequest => handle_negotiate_select_monitor_request,
-        reply EndPointMessage::NegotiateFinishedRequest => handle_negotiate_finished_request,
-        noreply EndPointMessage::NegotiateVisitDesktopParamsResponse => handle_negotiate_visit_desktop_params_response,
-        noreply EndPointMessage::NegotiateSelectMonitorResponse => handle_negotiate_select_monitor_response,
-        // noreply EndPointMessage::NegotiateFinishedResponse => handle_negotiate_finished_response,
-        noreply EndPointMessage::VideoFrame => handle_video_frame,
-        noreply EndPointMessage::AudioFrame => handle_audio_frame,
-        noreply EndPointMessage::Input => handle_input,
-    );
+    // match_and_handle_message!(message,
+    //     error EndPointMessage::Error => handle_error,
+    //     reply EndPointMessage::NegotiateVisitDesktopParamsRequest => handle_negotiate_visit_desktop_params_request,
+    //     reply EndPointMessage::NegotiateSelectMonitorRequest => handle_negotiate_select_monitor_request,
+    //     reply EndPointMessage::NegotiateFinishedRequest => handle_negotiate_finished_request,
+    //     noreply EndPointMessage::NegotiateVisitDesktopParamsResponse => handle_negotiate_visit_desktop_params_response,
+    //     noreply EndPointMessage::NegotiateSelectMonitorResponse => handle_negotiate_select_monitor_response,
+    //     // noreply EndPointMessage::NegotiateFinishedResponse => handle_negotiate_finished_response,
+    //     noreply EndPointMessage::VideoFrame => handle_video_frame,
+    //     noreply EndPointMessage::AudioFrame => handle_audio_frame,
+    //     noreply EndPointMessage::Input => handle_input,
+    // );
+
+    match message {
+        EndPointMessage::Error => handle_error(active_device_id, passive_device_id).await,
+        EndPointMessage::NegotiateVisitDesktopParamsRequest(req) => {
+            handle_negotiate_visit_desktop_params_request(
+                active_device_id,
+                passive_device_id,
+                req,
+                message_tx,
+            )
+            .await
+        }
+        EndPointMessage::NegotiateVisitDesktopParamsResponse(resp) => {
+            handle_negotiate_visit_desktop_params_response(
+                active_device_id,
+                passive_device_id,
+                resp,
+            )
+            .await
+        }
+        EndPointMessage::NegotiateSelectMonitorRequest(req) => {
+            handle_negotiate_select_monitor_request(
+                active_device_id,
+                passive_device_id,
+                req,
+                message_tx,
+            )
+            .await
+        }
+        EndPointMessage::NegotiateSelectMonitorResponse(resp) => {
+            handle_negotiate_select_monitor_response(active_device_id, passive_device_id, resp)
+                .await
+        }
+        EndPointMessage::NegotiateFinishedRequest(req) => {
+            handle_negotiate_finished_request(active_device_id, passive_device_id, req, message_tx)
+                .await
+        }
+        EndPointMessage::VideoFrame(video_frame) => {
+            handle_video_frame(active_device_id, passive_device_id, video_frame, stream).await
+        }
+        EndPointMessage::AudioFrame(audio_frame) => {
+            handle_audio_frame(active_device_id, passive_device_id, audio_frame, stream).await
+        }
+        EndPointMessage::Input(input_event) => {
+            handle_input(active_device_id, passive_device_id, input_event).await
+        }
+    }
 }

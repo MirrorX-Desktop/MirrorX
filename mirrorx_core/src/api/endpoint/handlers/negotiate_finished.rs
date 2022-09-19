@@ -28,15 +28,7 @@ pub struct NegotiateFinishedRequest {
     pub update_frame_callback_pointer: i64,
 }
 
-pub enum EndPointMediaMessage {
-    Video(i64, i64, ZeroCopyBuffer<Vec<u8>>),
-    Audio(i64, i64, ZeroCopyBuffer<Vec<u8>>),
-}
-
-pub async fn negotiate_finished(
-    req: NegotiateFinishedRequest,
-    stream: StreamSink<EndPointMediaMessage>,
-) -> CoreResult<()> {
+pub async fn negotiate_finished(req: NegotiateFinishedRequest) -> CoreResult<()> {
     let message_tx = ENDPOINTS
         .get(&(req.active_device_id, req.passive_device_id))
         .ok_or(core_error!("endpoint not exists"))?;
@@ -75,7 +67,7 @@ pub async fn negotiate_finished(
 pub async fn handle_negotiate_finished_request(
     active_device_id: i64,
     passive_device_id: i64,
-    req: EndPointNegotiateFinishedRequest,
+    _: EndPointNegotiateFinishedRequest,
     message_tx: mpsc::Sender<EndPointMessage>,
 ) {
     // todo: launch video and audio

@@ -1,9 +1,11 @@
 use crate::api::endpoint::message::EndPointVideoFrame;
+use flutter_rust_bridge::StreamSink;
 
 pub async fn handle_video_frame(
     active_device_id: i64,
     passive_device_id: i64,
     video_frame: EndPointVideoFrame,
+    stream: Option<StreamSink<EndPointMediaMessage>>,
 ) {
 }
 
@@ -11,6 +13,8 @@ use std::os::raw::c_void;
 
 #[cfg(target_os = "macos")]
 use crate::ffi::os::macos::core_video::CVPixelBufferRef;
+
+use super::handshake::EndPointMediaMessage;
 
 #[cfg(target_os = "macos")]
 pub const unsafe fn create_callback_fn(

@@ -9,6 +9,7 @@ use crate::{
 };
 use bincode::Options;
 use bytes::{Buf, Bytes};
+use flutter_rust_bridge::{StreamSink, ZeroCopyBuffer};
 use futures::{SinkExt, StreamExt};
 use ring::aead::{BoundKey, OpeningKey, SealingKey, UnboundKey};
 use std::time::Duration;
@@ -25,9 +26,16 @@ pub struct HandshakeRequest {
     pub sealing_nonce_bytes: Vec<u8>,
 }
 
-// pub struct HandshakeResponse {}
+#[derive(Clone)]
+pub enum EndPointMediaMessage {
+    Video(i64, i64, ZeroCopyBuffer<Vec<u8>>),
+    Audio(i64, i64, ZeroCopyBuffer<Vec<u8>>),
+}
 
-pub async fn active_device_handshake(req: HandshakeRequest) -> CoreResult<()> {
+pub async fn active_device_handshake(
+    req: HandshakeRequest,
+    stream: StreamSink<EndPointMediaMessage>,
+) -> CoreResult<()> {
     let mut opening_nonce = [0u8; ring::aead::NONCE_LEN];
     opening_nonce[0..ring::aead::NONCE_LEN]
         .copy_from_slice(&req.opening_nonce_bytes[0..ring::aead::NONCE_LEN]);
@@ -48,6 +56,7 @@ pub async fn active_device_handshake(req: HandshakeRequest) -> CoreResult<()> {
         req.visit_credentials,
         opening_key,
         sealing_key,
+        Some(stream),
     )
     .await
 }
@@ -65,6 +74,7 @@ pub async fn passive_device_handshake(
         visit_credentials,
         opening_key,
         sealing_key,
+        None,
     )
     .await
 }
@@ -75,6 +85,7 @@ async fn inner_handshake(
     visit_credentials: String,
     opening_key: OpeningKey<NonceValue>,
     sealing_key: SealingKey<NonceValue>,
+    flutter_stream: Option<StreamSink<EndPointMediaMessage>>,
 ) -> CoreResult<()> {
     let entry = RESERVE_STREAMS
         .remove(&(local_device_id, remote_device_id))
@@ -110,6 +121,7 @@ async fn inner_handshake(
         stream,
         opening_key,
         send_message_tx,
+        flutter_stream,
     );
 
     super::super::serve_writer(

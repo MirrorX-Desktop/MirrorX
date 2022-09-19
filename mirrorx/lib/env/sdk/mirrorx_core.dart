@@ -82,7 +82,8 @@ abstract class MirrorXCore {
 
   FlutterRustBridgeTaskConstMeta get kEndpointConnectConstMeta;
 
-  Future<void> endpointHandshake({required HandshakeRequest req, dynamic hint});
+  Stream<EndPointMediaMessage> endpointHandshake(
+      {required HandshakeRequest req, dynamic hint});
 
   FlutterRustBridgeTaskConstMeta get kEndpointHandshakeConstMeta;
 
@@ -98,7 +99,7 @@ abstract class MirrorXCore {
 
   FlutterRustBridgeTaskConstMeta get kEndpointNegotiateSelectMonitorConstMeta;
 
-  Stream<EndPointMediaMessage> endpointNegotiateFinished(
+  Future<void> endpointNegotiateFinished(
       {required NegotiateFinishedRequest req, dynamic hint});
 
   FlutterRustBridgeTaskConstMeta get kEndpointNegotiateFinishedConstMeta;
@@ -387,7 +388,7 @@ class MonitorDescription {
   final int width;
   final int height;
   final bool isPrimary;
-  final Uint8List screenShot;
+  final Uint8List? screenShot;
 
   MonitorDescription({
     required this.id,
@@ -396,7 +397,7 @@ class MonitorDescription {
     required this.width,
     required this.height,
     required this.isPrimary,
-    required this.screenShot,
+    this.screenShot,
   });
 }
 
@@ -839,12 +840,12 @@ class MirrorXCoreImpl implements MirrorXCore {
         argNames: ["req"],
       );
 
-  Future<void> endpointHandshake(
+  Stream<EndPointMediaMessage> endpointHandshake(
           {required HandshakeRequest req, dynamic hint}) =>
-      _platform.executeNormal(FlutterRustBridgeTask(
+      _platform.executeStream(FlutterRustBridgeTask(
         callFfi: (port_) => _platform.inner.wire_endpoint_handshake(
             port_, _platform.api2wire_box_autoadd_handshake_request(req)),
-        parseSuccessData: _wire2api_unit,
+        parseSuccessData: _wire2api_end_point_media_message,
         constMeta: kEndpointHandshakeConstMeta,
         argValues: [req],
         hint: hint,
@@ -900,13 +901,13 @@ class MirrorXCoreImpl implements MirrorXCore {
         argNames: ["req"],
       );
 
-  Stream<EndPointMediaMessage> endpointNegotiateFinished(
+  Future<void> endpointNegotiateFinished(
           {required NegotiateFinishedRequest req, dynamic hint}) =>
-      _platform.executeStream(FlutterRustBridgeTask(
+      _platform.executeNormal(FlutterRustBridgeTask(
         callFfi: (port_) => _platform.inner.wire_endpoint_negotiate_finished(
             port_,
             _platform.api2wire_box_autoadd_negotiate_finished_request(req)),
-        parseSuccessData: _wire2api_end_point_media_message,
+        parseSuccessData: _wire2api_unit,
         constMeta: kEndpointNegotiateFinishedConstMeta,
         argValues: [req],
         hint: hint,
@@ -1084,7 +1085,7 @@ MonitorDescription _wire2api_monitor_description(dynamic raw) {
     width: _wire2api_u16(arr[3]),
     height: _wire2api_u16(arr[4]),
     isPrimary: _wire2api_bool(arr[5]),
-    screenShot: _wire2api_uint_8_list(arr[6]),
+    screenShot: _wire2api_opt_uint_8_list(arr[6]),
   );
 }
 
@@ -1122,6 +1123,10 @@ String? _wire2api_opt_String(dynamic raw) {
 
 DomainConfig? _wire2api_opt_box_autoadd_domain_config(dynamic raw) {
   return raw == null ? null : _wire2api_box_autoadd_domain_config(raw);
+}
+
+Uint8List? _wire2api_opt_uint_8_list(dynamic raw) {
+  return raw == null ? null : _wire2api_uint_8_list(raw);
 }
 
 PublishMessage _wire2api_publish_message(dynamic raw) {

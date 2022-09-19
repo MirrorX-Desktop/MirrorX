@@ -19,9 +19,9 @@ use flutter_rust_bridge::*;
 
 use crate::api::config::DomainConfig;
 use crate::api::endpoint::handlers::connect::ConnectRequest;
+use crate::api::endpoint::handlers::handshake::EndPointMediaMessage;
 use crate::api::endpoint::handlers::handshake::HandshakeRequest;
 use crate::api::endpoint::handlers::input::InputRequest;
-use crate::api::endpoint::handlers::negotiate_finished::EndPointMediaMessage;
 use crate::api::endpoint::handlers::negotiate_finished::NegotiateFinishedRequest;
 use crate::api::endpoint::handlers::negotiate_select_monitor::NegotiateSelectMonitorRequest;
 use crate::api::endpoint::handlers::negotiate_select_monitor::NegotiateSelectMonitorResponse;
@@ -268,11 +268,11 @@ fn wire_endpoint_handshake_impl(
         WrapInfo {
             debug_name: "endpoint_handshake",
             port: Some(port_),
-            mode: FfiCallMode::Normal,
+            mode: FfiCallMode::Stream,
         },
         move || {
             let api_req = req.wire2api();
-            move |task_callback| endpoint_handshake(api_req)
+            move |task_callback| endpoint_handshake(api_req, task_callback.stream_sink())
         },
     )
 }
@@ -316,11 +316,11 @@ fn wire_endpoint_negotiate_finished_impl(
         WrapInfo {
             debug_name: "endpoint_negotiate_finished",
             port: Some(port_),
-            mode: FfiCallMode::Stream,
+            mode: FfiCallMode::Normal,
         },
         move || {
             let api_req = req.wire2api();
-            move |task_callback| endpoint_negotiate_finished(api_req, task_callback.stream_sink())
+            move |task_callback| endpoint_negotiate_finished(api_req)
         },
     )
 }

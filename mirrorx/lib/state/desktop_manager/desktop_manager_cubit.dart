@@ -2,12 +2,10 @@ import 'dart:typed_data';
 
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
-import 'package:meta/meta.dart';
 import 'package:mirrorx/env/sdk/mirrorx_core.dart';
 import 'package:mirrorx/env/sdk/mirrorx_core_sdk.dart';
 import 'package:texture_render/model.dart';
 import 'package:texture_render/texture_render.dart';
-import 'package:tuple/tuple.dart';
 
 part 'desktop_manager_state.dart';
 
@@ -50,7 +48,7 @@ class DesktopManagerCubit extends Cubit<DesktopManagerState> {
         ),
       );
 
-      await MirrorXCoreSDK.instance.endpointHandshake(
+      final mediaStream = MirrorXCoreSDK.instance.endpointHandshake(
         req: HandshakeRequest(
           activeDeviceId: prepareInfo.localDeviceId,
           passiveDeviceId: prepareInfo.remoteDeviceId,
@@ -60,6 +58,12 @@ class DesktopManagerCubit extends Cubit<DesktopManagerState> {
           sealingKeyBytes: prepareInfo.sealingKeyBytes,
           sealingNonceBytes: prepareInfo.sealingNonceBytes,
         ),
+      );
+
+      mediaStream.listen(
+        (event) => onMediaStreamData(prepareInfo.remoteDeviceId, event),
+        onError: (err) => onMediaStreamError(prepareInfo.remoteDeviceId, err),
+        onDone: () => onMediaStreamDone(prepareInfo.remoteDeviceId),
       );
 
       final negotiateVisitDesktopParamsResponse =
@@ -72,7 +76,7 @@ class DesktopManagerCubit extends Cubit<DesktopManagerState> {
 
       registerTextureResponse = await TextureRender.instance.registerTexture();
 
-      final mediaStream = MirrorXCoreSDK.instance.endpointNegotiateFinished(
+      await MirrorXCoreSDK.instance.endpointNegotiateFinished(
         req: NegotiateFinishedRequest(
           activeDeviceId: prepareInfo.localDeviceId,
           passiveDeviceId: prepareInfo.remoteDeviceId,
@@ -82,12 +86,6 @@ class DesktopManagerCubit extends Cubit<DesktopManagerState> {
           updateFrameCallbackPointer:
               registerTextureResponse.updateFrameCallbackPointer,
         ),
-      );
-
-      mediaStream.listen(
-        (event) => onMediaStreamData(prepareInfo.remoteDeviceId, event),
-        onError: (err) => onMediaStreamError(prepareInfo.remoteDeviceId, err),
-        onDone: () => onMediaStreamDone(prepareInfo.remoteDeviceId),
       );
 
       emit(

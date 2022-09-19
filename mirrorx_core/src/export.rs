@@ -112,8 +112,11 @@ pub fn endpoint_connect(req: ConnectRequest) -> anyhow::Result<()> {
     async_block_on!(connect(req))
 }
 
-pub fn endpoint_handshake(req: HandshakeRequest) -> anyhow::Result<()> {
-    async_block_on!(active_device_handshake(req))
+pub fn endpoint_handshake(
+    req: HandshakeRequest,
+    stream: StreamSink<EndPointMediaMessage>,
+) -> anyhow::Result<()> {
+    async_block_on!(active_device_handshake(req, stream))
 }
 
 pub fn endpoint_negotiate_visit_desktop_params(
@@ -128,11 +131,8 @@ pub fn endpoint_negotiate_select_monitor(
     async_block_on!(negotiate_select_monitor(req))
 }
 
-pub fn endpoint_negotiate_finished(
-    req: NegotiateFinishedRequest,
-    stream: StreamSink<EndPointMediaMessage>,
-) -> anyhow::Result<()> {
-    async_block_on!(negotiate_finished(req, stream))
+pub fn endpoint_negotiate_finished(req: NegotiateFinishedRequest) -> anyhow::Result<()> {
+    async_block_on!(negotiate_finished(req))
 }
 
 pub fn endpoint_input(req: InputRequest) -> anyhow::Result<()> {
