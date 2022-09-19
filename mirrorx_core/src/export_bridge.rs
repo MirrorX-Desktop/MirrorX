@@ -18,8 +18,8 @@ use flutter_rust_bridge::*;
 // Section: imports
 
 use crate::api::config::DomainConfig;
+use crate::api::endpoint::flutter_message::FlutterMediaMessage;
 use crate::api::endpoint::handlers::connect::ConnectRequest;
-use crate::api::endpoint::handlers::handshake::EndPointMediaMessage;
 use crate::api::endpoint::handlers::handshake::HandshakeRequest;
 use crate::api::endpoint::handlers::input::InputRequest;
 use crate::api::endpoint::handlers::negotiate_finished::NegotiateFinishedRequest;
@@ -268,11 +268,11 @@ fn wire_endpoint_handshake_impl(
         WrapInfo {
             debug_name: "endpoint_handshake",
             port: Some(port_),
-            mode: FfiCallMode::Stream,
+            mode: FfiCallMode::Normal,
         },
         move || {
             let api_req = req.wire2api();
-            move |task_callback| endpoint_handshake(api_req, task_callback.stream_sink())
+            move |task_callback| endpoint_handshake(api_req)
         },
     )
 }
@@ -316,11 +316,11 @@ fn wire_endpoint_negotiate_finished_impl(
         WrapInfo {
             debug_name: "endpoint_negotiate_finished",
             port: Some(port_),
-            mode: FfiCallMode::Normal,
+            mode: FfiCallMode::Stream,
         },
         move || {
             let api_req = req.wire2api();
-            move |task_callback| endpoint_negotiate_finished(api_req)
+            move |task_callback| endpoint_negotiate_finished(api_req, task_callback.stream_sink())
         },
     )
 }
@@ -573,7 +573,7 @@ impl support::IntoDart for DomainConfig {
 }
 impl support::IntoDartExceptPrimitive for DomainConfig {}
 
-impl support::IntoDart for EndPointMediaMessage {
+impl support::IntoDart for FlutterMediaMessage {
     fn into_dart(self) -> support::DartAbi {
         match self {
             Self::Video(field0, field1, field2) => vec![
@@ -592,7 +592,7 @@ impl support::IntoDart for EndPointMediaMessage {
         .into_dart()
     }
 }
-impl support::IntoDartExceptPrimitive for EndPointMediaMessage {}
+impl support::IntoDartExceptPrimitive for FlutterMediaMessage {}
 impl support::IntoDart for HeartbeatResponse {
     fn into_dart(self) -> support::DartAbi {
         vec![self.timestamp.into_dart()].into_dart()

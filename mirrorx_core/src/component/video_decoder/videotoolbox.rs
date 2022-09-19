@@ -1,5 +1,5 @@
 use crate::{
-    api::endpoint::{handlers::handshake::EndPointMediaMessage, message::EndPointVideoFrame},
+    api::endpoint::{flutter_message::FlutterMediaMessage, message::EndPointVideoFrame},
     component::NALU_HEADER_LENGTH,
     core_error,
     error::{CoreError, CoreResult},
@@ -21,13 +21,13 @@ use std::os::raw::c_void;
 pub struct Decoder {
     format_description: CMVideoFormatDescriptionRef,
     session: VTDecompressionSessionRef,
-    stream: StreamSink<EndPointMediaMessage>,
+    stream: StreamSink<FlutterMediaMessage>,
 }
 
 unsafe impl Send for Decoder {}
 
 impl Decoder {
-    pub fn new(stream: StreamSink<EndPointMediaMessage>) -> Self {
+    pub fn new(stream: StreamSink<FlutterMediaMessage>) -> Self {
         Decoder {
             format_description: std::ptr::null_mut(),
             session: std::ptr::null_mut(),
@@ -244,11 +244,11 @@ unsafe extern "C" fn decode_output_callback(
         return;
     }
 
-    let tx = sourceFrameRefCon as *mut StreamSink<EndPointMediaMessage>;
+    let tx = sourceFrameRefCon as *mut StreamSink<FlutterMediaMessage>;
     let pixel_buffer = CVPixelBufferRetain(imageBuffer);
     let pixel_buffer_memory_address: usize = std::mem::transmute(pixel_buffer);
 
-    let success = (*tx).add(EndPointMediaMessage::Video(
+    let success = (*tx).add(FlutterMediaMessage::Video(
         1,
         1,
         ZeroCopyBuffer(pixel_buffer_memory_address.to_le_bytes().to_vec()),
@@ -256,6 +256,6 @@ unsafe extern "C" fn decode_output_callback(
 
     if !success {
         CVPixelBufferRelease(pixel_buffer);
-        tracing::error!("send EndPointMediaMessage failed");
+        tracing::error!("send FlutterMediaMessage failed");
     }
 }

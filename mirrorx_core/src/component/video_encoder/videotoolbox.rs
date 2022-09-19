@@ -1,4 +1,5 @@
 use crate::{
+    api::endpoint::message::EndPointMessage,
     component::{capture_frame::CaptureFrame, NALU_HEADER_LENGTH},
     core_error,
     error::{CoreError, CoreResult},
@@ -11,6 +12,7 @@ use core_foundation::{
     number::{kCFBooleanFalse, kCFBooleanTrue, CFNumber},
 };
 use std::os::raw::c_void;
+use tokio::sync::mpsc::Sender;
 
 pub struct Encoder {
     session: VTCompressionSessionRef,
@@ -29,9 +31,7 @@ impl Encoder {
     pub fn encode(
         &mut self,
         capture_frame: CaptureFrame,
-        endpoint_message_tx: &mut tokio::sync::mpsc::Sender<
-            crate::api::endpoint::message::EndPointMessage,
-        >,
+        endpoint_message_tx: &mut Sender<EndPointMessage>,
     ) -> CoreResult<()> {
         unsafe {
             let ret = VTCompressionSessionEncodeFrame(

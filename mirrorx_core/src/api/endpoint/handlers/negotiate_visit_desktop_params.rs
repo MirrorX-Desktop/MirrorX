@@ -7,7 +7,7 @@ use crate::{
         },
         ENDPOINTS, RECV_MESSAGE_TIMEOUT, SEND_MESSAGE_TIMEOUT,
     },
-    component::desktop::monitor::{get_active_monitors, get_primary_monitor_params},
+    component::desktop::monitor::get_primary_monitor_params,
     core_error,
     error::{CoreError, CoreResult},
 };
@@ -17,7 +17,7 @@ use tokio::sync::{mpsc, oneshot};
 
 static RESPONSE_CHANNELS: Lazy<
     DashMap<(i64, i64), oneshot::Sender<EndPointNegotiateVisitDesktopParamsResponse>>,
-> = Lazy::new(|| DashMap::new());
+> = Lazy::new(DashMap::new);
 
 pub struct NegotiateVisitDesktopParamsRequest {
     pub active_device_id: i64,
@@ -150,7 +150,7 @@ fn negotiate_media_params(
 
     match get_primary_monitor_params() {
         Ok((monitor_id, monitor_width, monitor_height)) => {
-            params.monitor_id = monitor_id;
+            params.monitor_id = monitor_id.to_string();
             params.monitor_width = monitor_width;
             params.monitor_height = monitor_height;
         }

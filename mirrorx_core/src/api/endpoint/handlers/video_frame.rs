@@ -1,6 +1,6 @@
-use super::handshake::EndPointMediaMessage;
 use crate::{
-    api::endpoint::message::EndPointVideoFrame, component::video_decoder::Decoder,
+    api::endpoint::{flutter_message::FlutterMediaMessage, message::EndPointVideoFrame},
+    component::video_decoder::Decoder,
     utility::runtime::TOKIO_RUNTIME,
 };
 use dashmap::DashMap;
@@ -30,7 +30,7 @@ pub async fn handle_video_frame(
 pub fn serve_decoder(
     active_device_id: i64,
     passive_device_id: i64,
-    stream: StreamSink<EndPointMediaMessage>,
+    stream: StreamSink<FlutterMediaMessage>,
 ) {
     if !DECODERS.contains_key(&(active_device_id, passive_device_id)) {
         let (tx, mut rx) = tokio::sync::mpsc::channel(180);

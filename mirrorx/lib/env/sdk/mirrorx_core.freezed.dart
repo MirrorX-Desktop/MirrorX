@@ -15,7 +15,7 @@ final _privateConstructorUsedError = UnsupportedError(
     'It seems like you constructed your class using `MyClass._()`. This constructor is only meant to be used by freezed and you are not supposed to need it nor use it.\nPlease check the documentation here for more information: https://github.com/rrousselGit/freezed#custom-getters-and-methods');
 
 /// @nodoc
-mixin _$EndPointMediaMessage {
+mixin _$FlutterMediaMessage {
   int get field0 => throw _privateConstructorUsedError;
   int get field1 => throw _privateConstructorUsedError;
   Uint8List get field2 => throw _privateConstructorUsedError;
@@ -40,45 +40,45 @@ mixin _$EndPointMediaMessage {
       throw _privateConstructorUsedError;
   @optionalTypeArgs
   TResult map<TResult extends Object?>({
-    required TResult Function(EndPointMediaMessage_Video value) video,
-    required TResult Function(EndPointMediaMessage_Audio value) audio,
+    required TResult Function(FlutterMediaMessage_Video value) video,
+    required TResult Function(FlutterMediaMessage_Audio value) audio,
   }) =>
       throw _privateConstructorUsedError;
   @optionalTypeArgs
   TResult? mapOrNull<TResult extends Object?>({
-    TResult Function(EndPointMediaMessage_Video value)? video,
-    TResult Function(EndPointMediaMessage_Audio value)? audio,
+    TResult Function(FlutterMediaMessage_Video value)? video,
+    TResult Function(FlutterMediaMessage_Audio value)? audio,
   }) =>
       throw _privateConstructorUsedError;
   @optionalTypeArgs
   TResult maybeMap<TResult extends Object?>({
-    TResult Function(EndPointMediaMessage_Video value)? video,
-    TResult Function(EndPointMediaMessage_Audio value)? audio,
+    TResult Function(FlutterMediaMessage_Video value)? video,
+    TResult Function(FlutterMediaMessage_Audio value)? audio,
     required TResult orElse(),
   }) =>
       throw _privateConstructorUsedError;
 
   @JsonKey(ignore: true)
-  $EndPointMediaMessageCopyWith<EndPointMediaMessage> get copyWith =>
+  $FlutterMediaMessageCopyWith<FlutterMediaMessage> get copyWith =>
       throw _privateConstructorUsedError;
 }
 
 /// @nodoc
-abstract class $EndPointMediaMessageCopyWith<$Res> {
-  factory $EndPointMediaMessageCopyWith(EndPointMediaMessage value,
-          $Res Function(EndPointMediaMessage) then) =
-      _$EndPointMediaMessageCopyWithImpl<$Res>;
+abstract class $FlutterMediaMessageCopyWith<$Res> {
+  factory $FlutterMediaMessageCopyWith(
+          FlutterMediaMessage value, $Res Function(FlutterMediaMessage) then) =
+      _$FlutterMediaMessageCopyWithImpl<$Res>;
   $Res call({int field0, int field1, Uint8List field2});
 }
 
 /// @nodoc
-class _$EndPointMediaMessageCopyWithImpl<$Res>
-    implements $EndPointMediaMessageCopyWith<$Res> {
-  _$EndPointMediaMessageCopyWithImpl(this._value, this._then);
+class _$FlutterMediaMessageCopyWithImpl<$Res>
+    implements $FlutterMediaMessageCopyWith<$Res> {
+  _$FlutterMediaMessageCopyWithImpl(this._value, this._then);
 
-  final EndPointMediaMessage _value;
+  final FlutterMediaMessage _value;
   // ignore: unused_field
-  final $Res Function(EndPointMediaMessage) _then;
+  final $Res Function(FlutterMediaMessage) _then;
 
   @override
   $Res call({
@@ -104,28 +104,27 @@ class _$EndPointMediaMessageCopyWithImpl<$Res>
 }
 
 /// @nodoc
-abstract class _$$EndPointMediaMessage_VideoCopyWith<$Res>
-    implements $EndPointMediaMessageCopyWith<$Res> {
-  factory _$$EndPointMediaMessage_VideoCopyWith(
-          _$EndPointMediaMessage_Video value,
-          $Res Function(_$EndPointMediaMessage_Video) then) =
-      __$$EndPointMediaMessage_VideoCopyWithImpl<$Res>;
+abstract class _$$FlutterMediaMessage_VideoCopyWith<$Res>
+    implements $FlutterMediaMessageCopyWith<$Res> {
+  factory _$$FlutterMediaMessage_VideoCopyWith(
+          _$FlutterMediaMessage_Video value,
+          $Res Function(_$FlutterMediaMessage_Video) then) =
+      __$$FlutterMediaMessage_VideoCopyWithImpl<$Res>;
   @override
   $Res call({int field0, int field1, Uint8List field2});
 }
 
 /// @nodoc
-class __$$EndPointMediaMessage_VideoCopyWithImpl<$Res>
-    extends _$EndPointMediaMessageCopyWithImpl<$Res>
-    implements _$$EndPointMediaMessage_VideoCopyWith<$Res> {
-  __$$EndPointMediaMessage_VideoCopyWithImpl(
-      _$EndPointMediaMessage_Video _value,
-      $Res Function(_$EndPointMediaMessage_Video) _then)
-      : super(_value, (v) => _then(v as _$EndPointMediaMessage_Video));
+class __$$FlutterMediaMessage_VideoCopyWithImpl<$Res>
+    extends _$FlutterMediaMessageCopyWithImpl<$Res>
+    implements _$$FlutterMediaMessage_VideoCopyWith<$Res> {
+  __$$FlutterMediaMessage_VideoCopyWithImpl(_$FlutterMediaMessage_Video _value,
+      $Res Function(_$FlutterMediaMessage_Video) _then)
+      : super(_value, (v) => _then(v as _$FlutterMediaMessage_Video));
 
   @override
-  _$EndPointMediaMessage_Video get _value =>
-      super._value as _$EndPointMediaMessage_Video;
+  _$FlutterMediaMessage_Video get _value =>
+      super._value as _$FlutterMediaMessage_Video;
 
   @override
   $Res call({
@@ -133,7 +132,7 @@ class __$$EndPointMediaMessage_VideoCopyWithImpl<$Res>
     Object? field1 = freezed,
     Object? field2 = freezed,
   }) {
-    return _then(_$EndPointMediaMessage_Video(
+    return _then(_$FlutterMediaMessage_Video(
       field0 == freezed
           ? _value.field0
           : field0 // ignore: cast_nullable_to_non_nullable
@@ -152,8 +151,8 @@ class __$$EndPointMediaMessage_VideoCopyWithImpl<$Res>
 
 /// @nodoc
 
-class _$EndPointMediaMessage_Video implements EndPointMediaMessage_Video {
-  const _$EndPointMediaMessage_Video(this.field0, this.field1, this.field2);
+class _$FlutterMediaMessage_Video implements FlutterMediaMessage_Video {
+  const _$FlutterMediaMessage_Video(this.field0, this.field1, this.field2);
 
   @override
   final int field0;
@@ -164,14 +163,14 @@ class _$EndPointMediaMessage_Video implements EndPointMediaMessage_Video {
 
   @override
   String toString() {
-    return 'EndPointMediaMessage.video(field0: $field0, field1: $field1, field2: $field2)';
+    return 'FlutterMediaMessage.video(field0: $field0, field1: $field1, field2: $field2)';
   }
 
   @override
   bool operator ==(dynamic other) {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
-            other is _$EndPointMediaMessage_Video &&
+            other is _$FlutterMediaMessage_Video &&
             const DeepCollectionEquality().equals(other.field0, field0) &&
             const DeepCollectionEquality().equals(other.field1, field1) &&
             const DeepCollectionEquality().equals(other.field2, field2));
@@ -186,9 +185,9 @@ class _$EndPointMediaMessage_Video implements EndPointMediaMessage_Video {
 
   @JsonKey(ignore: true)
   @override
-  _$$EndPointMediaMessage_VideoCopyWith<_$EndPointMediaMessage_Video>
-      get copyWith => __$$EndPointMediaMessage_VideoCopyWithImpl<
-          _$EndPointMediaMessage_Video>(this, _$identity);
+  _$$FlutterMediaMessage_VideoCopyWith<_$FlutterMediaMessage_Video>
+      get copyWith => __$$FlutterMediaMessage_VideoCopyWithImpl<
+          _$FlutterMediaMessage_Video>(this, _$identity);
 
   @override
   @optionalTypeArgs
@@ -224,8 +223,8 @@ class _$EndPointMediaMessage_Video implements EndPointMediaMessage_Video {
   @override
   @optionalTypeArgs
   TResult map<TResult extends Object?>({
-    required TResult Function(EndPointMediaMessage_Video value) video,
-    required TResult Function(EndPointMediaMessage_Audio value) audio,
+    required TResult Function(FlutterMediaMessage_Video value) video,
+    required TResult Function(FlutterMediaMessage_Audio value) audio,
   }) {
     return video(this);
   }
@@ -233,8 +232,8 @@ class _$EndPointMediaMessage_Video implements EndPointMediaMessage_Video {
   @override
   @optionalTypeArgs
   TResult? mapOrNull<TResult extends Object?>({
-    TResult Function(EndPointMediaMessage_Video value)? video,
-    TResult Function(EndPointMediaMessage_Audio value)? audio,
+    TResult Function(FlutterMediaMessage_Video value)? video,
+    TResult Function(FlutterMediaMessage_Audio value)? audio,
   }) {
     return video?.call(this);
   }
@@ -242,8 +241,8 @@ class _$EndPointMediaMessage_Video implements EndPointMediaMessage_Video {
   @override
   @optionalTypeArgs
   TResult maybeMap<TResult extends Object?>({
-    TResult Function(EndPointMediaMessage_Video value)? video,
-    TResult Function(EndPointMediaMessage_Audio value)? audio,
+    TResult Function(FlutterMediaMessage_Video value)? video,
+    TResult Function(FlutterMediaMessage_Audio value)? audio,
     required TResult orElse(),
   }) {
     if (video != null) {
@@ -253,10 +252,10 @@ class _$EndPointMediaMessage_Video implements EndPointMediaMessage_Video {
   }
 }
 
-abstract class EndPointMediaMessage_Video implements EndPointMediaMessage {
-  const factory EndPointMediaMessage_Video(
+abstract class FlutterMediaMessage_Video implements FlutterMediaMessage {
+  const factory FlutterMediaMessage_Video(
           final int field0, final int field1, final Uint8List field2) =
-      _$EndPointMediaMessage_Video;
+      _$FlutterMediaMessage_Video;
 
   @override
   int get field0;
@@ -266,33 +265,32 @@ abstract class EndPointMediaMessage_Video implements EndPointMediaMessage {
   Uint8List get field2;
   @override
   @JsonKey(ignore: true)
-  _$$EndPointMediaMessage_VideoCopyWith<_$EndPointMediaMessage_Video>
+  _$$FlutterMediaMessage_VideoCopyWith<_$FlutterMediaMessage_Video>
       get copyWith => throw _privateConstructorUsedError;
 }
 
 /// @nodoc
-abstract class _$$EndPointMediaMessage_AudioCopyWith<$Res>
-    implements $EndPointMediaMessageCopyWith<$Res> {
-  factory _$$EndPointMediaMessage_AudioCopyWith(
-          _$EndPointMediaMessage_Audio value,
-          $Res Function(_$EndPointMediaMessage_Audio) then) =
-      __$$EndPointMediaMessage_AudioCopyWithImpl<$Res>;
+abstract class _$$FlutterMediaMessage_AudioCopyWith<$Res>
+    implements $FlutterMediaMessageCopyWith<$Res> {
+  factory _$$FlutterMediaMessage_AudioCopyWith(
+          _$FlutterMediaMessage_Audio value,
+          $Res Function(_$FlutterMediaMessage_Audio) then) =
+      __$$FlutterMediaMessage_AudioCopyWithImpl<$Res>;
   @override
   $Res call({int field0, int field1, Uint8List field2});
 }
 
 /// @nodoc
-class __$$EndPointMediaMessage_AudioCopyWithImpl<$Res>
-    extends _$EndPointMediaMessageCopyWithImpl<$Res>
-    implements _$$EndPointMediaMessage_AudioCopyWith<$Res> {
-  __$$EndPointMediaMessage_AudioCopyWithImpl(
-      _$EndPointMediaMessage_Audio _value,
-      $Res Function(_$EndPointMediaMessage_Audio) _then)
-      : super(_value, (v) => _then(v as _$EndPointMediaMessage_Audio));
+class __$$FlutterMediaMessage_AudioCopyWithImpl<$Res>
+    extends _$FlutterMediaMessageCopyWithImpl<$Res>
+    implements _$$FlutterMediaMessage_AudioCopyWith<$Res> {
+  __$$FlutterMediaMessage_AudioCopyWithImpl(_$FlutterMediaMessage_Audio _value,
+      $Res Function(_$FlutterMediaMessage_Audio) _then)
+      : super(_value, (v) => _then(v as _$FlutterMediaMessage_Audio));
 
   @override
-  _$EndPointMediaMessage_Audio get _value =>
-      super._value as _$EndPointMediaMessage_Audio;
+  _$FlutterMediaMessage_Audio get _value =>
+      super._value as _$FlutterMediaMessage_Audio;
 
   @override
   $Res call({
@@ -300,7 +298,7 @@ class __$$EndPointMediaMessage_AudioCopyWithImpl<$Res>
     Object? field1 = freezed,
     Object? field2 = freezed,
   }) {
-    return _then(_$EndPointMediaMessage_Audio(
+    return _then(_$FlutterMediaMessage_Audio(
       field0 == freezed
           ? _value.field0
           : field0 // ignore: cast_nullable_to_non_nullable
@@ -319,8 +317,8 @@ class __$$EndPointMediaMessage_AudioCopyWithImpl<$Res>
 
 /// @nodoc
 
-class _$EndPointMediaMessage_Audio implements EndPointMediaMessage_Audio {
-  const _$EndPointMediaMessage_Audio(this.field0, this.field1, this.field2);
+class _$FlutterMediaMessage_Audio implements FlutterMediaMessage_Audio {
+  const _$FlutterMediaMessage_Audio(this.field0, this.field1, this.field2);
 
   @override
   final int field0;
@@ -331,14 +329,14 @@ class _$EndPointMediaMessage_Audio implements EndPointMediaMessage_Audio {
 
   @override
   String toString() {
-    return 'EndPointMediaMessage.audio(field0: $field0, field1: $field1, field2: $field2)';
+    return 'FlutterMediaMessage.audio(field0: $field0, field1: $field1, field2: $field2)';
   }
 
   @override
   bool operator ==(dynamic other) {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
-            other is _$EndPointMediaMessage_Audio &&
+            other is _$FlutterMediaMessage_Audio &&
             const DeepCollectionEquality().equals(other.field0, field0) &&
             const DeepCollectionEquality().equals(other.field1, field1) &&
             const DeepCollectionEquality().equals(other.field2, field2));
@@ -353,9 +351,9 @@ class _$EndPointMediaMessage_Audio implements EndPointMediaMessage_Audio {
 
   @JsonKey(ignore: true)
   @override
-  _$$EndPointMediaMessage_AudioCopyWith<_$EndPointMediaMessage_Audio>
-      get copyWith => __$$EndPointMediaMessage_AudioCopyWithImpl<
-          _$EndPointMediaMessage_Audio>(this, _$identity);
+  _$$FlutterMediaMessage_AudioCopyWith<_$FlutterMediaMessage_Audio>
+      get copyWith => __$$FlutterMediaMessage_AudioCopyWithImpl<
+          _$FlutterMediaMessage_Audio>(this, _$identity);
 
   @override
   @optionalTypeArgs
@@ -391,8 +389,8 @@ class _$EndPointMediaMessage_Audio implements EndPointMediaMessage_Audio {
   @override
   @optionalTypeArgs
   TResult map<TResult extends Object?>({
-    required TResult Function(EndPointMediaMessage_Video value) video,
-    required TResult Function(EndPointMediaMessage_Audio value) audio,
+    required TResult Function(FlutterMediaMessage_Video value) video,
+    required TResult Function(FlutterMediaMessage_Audio value) audio,
   }) {
     return audio(this);
   }
@@ -400,8 +398,8 @@ class _$EndPointMediaMessage_Audio implements EndPointMediaMessage_Audio {
   @override
   @optionalTypeArgs
   TResult? mapOrNull<TResult extends Object?>({
-    TResult Function(EndPointMediaMessage_Video value)? video,
-    TResult Function(EndPointMediaMessage_Audio value)? audio,
+    TResult Function(FlutterMediaMessage_Video value)? video,
+    TResult Function(FlutterMediaMessage_Audio value)? audio,
   }) {
     return audio?.call(this);
   }
@@ -409,8 +407,8 @@ class _$EndPointMediaMessage_Audio implements EndPointMediaMessage_Audio {
   @override
   @optionalTypeArgs
   TResult maybeMap<TResult extends Object?>({
-    TResult Function(EndPointMediaMessage_Video value)? video,
-    TResult Function(EndPointMediaMessage_Audio value)? audio,
+    TResult Function(FlutterMediaMessage_Video value)? video,
+    TResult Function(FlutterMediaMessage_Audio value)? audio,
     required TResult orElse(),
   }) {
     if (audio != null) {
@@ -420,10 +418,10 @@ class _$EndPointMediaMessage_Audio implements EndPointMediaMessage_Audio {
   }
 }
 
-abstract class EndPointMediaMessage_Audio implements EndPointMediaMessage {
-  const factory EndPointMediaMessage_Audio(
+abstract class FlutterMediaMessage_Audio implements FlutterMediaMessage {
+  const factory FlutterMediaMessage_Audio(
           final int field0, final int field1, final Uint8List field2) =
-      _$EndPointMediaMessage_Audio;
+      _$FlutterMediaMessage_Audio;
 
   @override
   int get field0;
@@ -433,7 +431,7 @@ abstract class EndPointMediaMessage_Audio implements EndPointMediaMessage {
   Uint8List get field2;
   @override
   @JsonKey(ignore: true)
-  _$$EndPointMediaMessage_AudioCopyWith<_$EndPointMediaMessage_Audio>
+  _$$FlutterMediaMessage_AudioCopyWith<_$FlutterMediaMessage_Audio>
       get copyWith => throw _privateConstructorUsedError;
 }
 

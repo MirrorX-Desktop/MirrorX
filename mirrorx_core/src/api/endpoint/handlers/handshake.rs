@@ -28,16 +28,7 @@ pub struct HandshakeRequest {
     pub sealing_nonce_bytes: Vec<u8>,
 }
 
-#[derive(Clone)]
-pub enum EndPointMediaMessage {
-    Video(i64, i64, ZeroCopyBuffer<Vec<u8>>),
-    Audio(i64, i64, ZeroCopyBuffer<Vec<u8>>),
-}
-
-pub async fn active_device_handshake(
-    req: HandshakeRequest,
-    stream: StreamSink<EndPointMediaMessage>,
-) -> CoreResult<()> {
+pub async fn active_device_handshake(req: HandshakeRequest) -> CoreResult<()> {
     let mut opening_nonce = [0u8; ring::aead::NONCE_LEN];
     opening_nonce[0..ring::aead::NONCE_LEN]
         .copy_from_slice(&req.opening_nonce_bytes[0..ring::aead::NONCE_LEN]);
@@ -61,8 +52,6 @@ pub async fn active_device_handshake(
         sealing_key,
     )
     .await?;
-
-    serve_decoder(req.active_device_id, req.passive_device_id, stream);
 
     Ok(())
 }

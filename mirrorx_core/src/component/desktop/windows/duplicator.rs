@@ -68,12 +68,17 @@ pub struct Duplicator {
     mouse_visible: bool,
     mouse_shape_buffer: Vec<u8>,
     mouse_shape_info: DXGI_OUTDUPL_POINTER_SHAPE_INFO,
+
+    capture_frame_tx: crossbeam::channel::Sender<CaptureFrame>,
 }
 
 unsafe impl Send for Duplicator {}
 
 impl Duplicator {
-    pub fn new(monitor_id: Option<String>) -> CoreResult<Duplicator> {
+    pub fn new(
+        monitor_id: Option<String>,
+        capture_frame_tx: crossbeam::channel::Sender<CaptureFrame>,
+    ) -> CoreResult<Duplicator> {
         unsafe {
             prepare_desktop()?;
 
@@ -141,15 +146,17 @@ impl Duplicator {
                 mouse_visible: false,
                 mouse_shape_buffer: Vec::new(),
                 mouse_shape_info: std::mem::zeroed(),
+                capture_frame_tx,
             })
         }
     }
 
-    pub fn capture(&mut self) -> CoreResult<CaptureFrame> {
+    pub fn capture(&mut self) -> CoreResult<()> {
         unsafe {
             self.acquire_frame()?;
             self.draw_lumina_and_chrominance_texture()?;
-            self.create_capture_frame()
+            let capture_frame = self.create_capture_frame()?;
+            let _ = self.capture_frame_tx.send(capture_frame);
         }
     }
 

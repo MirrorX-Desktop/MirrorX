@@ -9,6 +9,7 @@ use core_foundation::base::CFRelease;
 use dispatch::ffi::{dispatch_queue_create, dispatch_release, DISPATCH_QUEUE_SERIAL};
 use scopeguard::defer;
 use std::{cell::Cell, ffi::CString, ops::Deref, rc::Rc};
+
 pub struct Duplicator {
     display_stream: CGDisplayStreamRef,
 }
@@ -17,13 +18,20 @@ unsafe impl Send for Duplicator {}
 
 impl Duplicator {
     pub fn new(
-        display: core_graphics::display::CGDirectDisplayID,
+        monitor_id: Option<core_graphics::display::CGDirectDisplayID>,
         capture_frame_tx: crossbeam::channel::Sender<CaptureFrame>,
     ) -> CoreResult<Self> {
         unsafe {
             let screens = NSScreen::screens()?;
-            let screen = match screens.iter().find(|s| s.screenNumber() == display) {
-                Some(screen) => screen,
+            if screens.is_empty() {
+                return Err(core_error!("no screen exist"));
+            }
+
+            let screen = match monitor_id {
+                Some(monitor_id) => match screens.iter().find(|s| s.screenNumber() == monitor_id) {
+                    Some(screen) => screen,
+                    None => &screens[0],
+                },
                 None => &screens[0],
             };
 
@@ -60,7 +68,7 @@ impl Duplicator {
             let block = block.copy();
 
             let display_stream = CGDisplayStreamCreateWithDispatchQueue(
-                display,
+                screen.screenNumber(),
                 screen_size.width as usize,
                 screen_size.height as usize,
                 kCVPixelFormatType_420YpCbCr8BiPlanarFullRange as i32,

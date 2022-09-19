@@ -82,8 +82,7 @@ abstract class MirrorXCore {
 
   FlutterRustBridgeTaskConstMeta get kEndpointConnectConstMeta;
 
-  Stream<EndPointMediaMessage> endpointHandshake(
-      {required HandshakeRequest req, dynamic hint});
+  Future<void> endpointHandshake({required HandshakeRequest req, dynamic hint});
 
   FlutterRustBridgeTaskConstMeta get kEndpointHandshakeConstMeta;
 
@@ -99,7 +98,7 @@ abstract class MirrorXCore {
 
   FlutterRustBridgeTaskConstMeta get kEndpointNegotiateSelectMonitorConstMeta;
 
-  Future<void> endpointNegotiateFinished(
+  Stream<FlutterMediaMessage> endpointNegotiateFinished(
       {required NegotiateFinishedRequest req, dynamic hint});
 
   FlutterRustBridgeTaskConstMeta get kEndpointNegotiateFinishedConstMeta;
@@ -158,17 +157,17 @@ class DomainConfig {
 }
 
 @freezed
-class EndPointMediaMessage with _$EndPointMediaMessage {
-  const factory EndPointMediaMessage.video(
+class FlutterMediaMessage with _$FlutterMediaMessage {
+  const factory FlutterMediaMessage.video(
     int field0,
     int field1,
     Uint8List field2,
-  ) = EndPointMediaMessage_Video;
-  const factory EndPointMediaMessage.audio(
+  ) = FlutterMediaMessage_Video;
+  const factory FlutterMediaMessage.audio(
     int field0,
     int field1,
     Uint8List field2,
-  ) = EndPointMediaMessage_Audio;
+  ) = FlutterMediaMessage_Audio;
 }
 
 class HandshakeRequest {
@@ -840,12 +839,12 @@ class MirrorXCoreImpl implements MirrorXCore {
         argNames: ["req"],
       );
 
-  Stream<EndPointMediaMessage> endpointHandshake(
+  Future<void> endpointHandshake(
           {required HandshakeRequest req, dynamic hint}) =>
-      _platform.executeStream(FlutterRustBridgeTask(
+      _platform.executeNormal(FlutterRustBridgeTask(
         callFfi: (port_) => _platform.inner.wire_endpoint_handshake(
             port_, _platform.api2wire_box_autoadd_handshake_request(req)),
-        parseSuccessData: _wire2api_end_point_media_message,
+        parseSuccessData: _wire2api_unit,
         constMeta: kEndpointHandshakeConstMeta,
         argValues: [req],
         hint: hint,
@@ -901,13 +900,13 @@ class MirrorXCoreImpl implements MirrorXCore {
         argNames: ["req"],
       );
 
-  Future<void> endpointNegotiateFinished(
+  Stream<FlutterMediaMessage> endpointNegotiateFinished(
           {required NegotiateFinishedRequest req, dynamic hint}) =>
-      _platform.executeNormal(FlutterRustBridgeTask(
+      _platform.executeStream(FlutterRustBridgeTask(
         callFfi: (port_) => _platform.inner.wire_endpoint_negotiate_finished(
             port_,
             _platform.api2wire_box_autoadd_negotiate_finished_request(req)),
-        parseSuccessData: _wire2api_unit,
+        parseSuccessData: _wire2api_flutter_media_message,
         constMeta: kEndpointNegotiateFinishedConstMeta,
         argValues: [req],
         hint: hint,
@@ -1016,16 +1015,16 @@ DomainConfig _wire2api_domain_config(dynamic raw) {
   );
 }
 
-EndPointMediaMessage _wire2api_end_point_media_message(dynamic raw) {
+FlutterMediaMessage _wire2api_flutter_media_message(dynamic raw) {
   switch (raw[0]) {
     case 0:
-      return EndPointMediaMessage_Video(
+      return FlutterMediaMessage_Video(
         _wire2api_i64(raw[1]),
         _wire2api_i64(raw[2]),
         _wire2api_ZeroCopyBuffer_Uint8List(raw[3]),
       );
     case 1:
-      return EndPointMediaMessage_Audio(
+      return FlutterMediaMessage_Audio(
         _wire2api_i64(raw[1]),
         _wire2api_i64(raw[2]),
         _wire2api_ZeroCopyBuffer_Uint8List(raw[3]),

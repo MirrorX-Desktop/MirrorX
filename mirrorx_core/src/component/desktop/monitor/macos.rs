@@ -17,7 +17,7 @@ use std::{
     os::raw::c_void,
 };
 
-pub fn get_primary_monitor_params() -> CoreResult<(String, u16, u16)> {
+pub fn get_primary_monitor_params() -> CoreResult<(CGDirectDisplayID, u16, u16)> {
     unsafe {
         let main_display_id = CGMainDisplayID();
         let ns_screens = NSScreen::screens()?;
@@ -26,11 +26,7 @@ pub fn get_primary_monitor_params() -> CoreResult<(String, u16, u16)> {
                 let monitor_width = CGDisplayPixelsWide(main_display_id);
                 let monitor_height = CGDisplayPixelsHigh(main_display_id);
 
-                return Ok((
-                    main_display_id.to_string(),
-                    monitor_width as u16,
-                    monitor_height as u16,
-                ));
+                return Ok((main_display_id, monitor_width as u16, monitor_height as u16));
             }
         }
 

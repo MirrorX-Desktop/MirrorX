@@ -1,7 +1,8 @@
+pub mod flutter_message;
 pub mod handlers;
 pub mod message;
 
-use self::{handlers::handshake::EndPointMediaMessage, message::EndPointMessage};
+use self::message::EndPointMessage;
 use crate::{
     api::endpoint::handlers::{
         audio_frame::handle_audio_frame,
@@ -24,7 +25,6 @@ use async_broadcast::TryRecvError;
 use bincode::Options;
 use bytes::{Bytes, BytesMut};
 use dashmap::DashMap;
-use flutter_rust_bridge::StreamSink;
 use futures::{
     stream::{SplitSink, SplitStream},
     SinkExt, StreamExt,

@@ -48,7 +48,7 @@ class DesktopManagerCubit extends Cubit<DesktopManagerState> {
         ),
       );
 
-      final mediaStream = MirrorXCoreSDK.instance.endpointHandshake(
+      await MirrorXCoreSDK.instance.endpointHandshake(
         req: HandshakeRequest(
           activeDeviceId: prepareInfo.localDeviceId,
           passiveDeviceId: prepareInfo.remoteDeviceId,
@@ -58,12 +58,6 @@ class DesktopManagerCubit extends Cubit<DesktopManagerState> {
           sealingKeyBytes: prepareInfo.sealingKeyBytes,
           sealingNonceBytes: prepareInfo.sealingNonceBytes,
         ),
-      );
-
-      mediaStream.listen(
-        (event) => onMediaStreamData(prepareInfo.remoteDeviceId, event),
-        onError: (err) => onMediaStreamError(prepareInfo.remoteDeviceId, err),
-        onDone: () => onMediaStreamDone(prepareInfo.remoteDeviceId),
       );
 
       final negotiateVisitDesktopParamsResponse =
@@ -76,7 +70,7 @@ class DesktopManagerCubit extends Cubit<DesktopManagerState> {
 
       registerTextureResponse = await TextureRender.instance.registerTexture();
 
-      await MirrorXCoreSDK.instance.endpointNegotiateFinished(
+      final mediaStream = MirrorXCoreSDK.instance.endpointNegotiateFinished(
         req: NegotiateFinishedRequest(
           activeDeviceId: prepareInfo.localDeviceId,
           passiveDeviceId: prepareInfo.remoteDeviceId,
@@ -86,6 +80,12 @@ class DesktopManagerCubit extends Cubit<DesktopManagerState> {
           updateFrameCallbackPointer:
               registerTextureResponse.updateFrameCallbackPointer,
         ),
+      );
+
+      mediaStream.listen(
+        (event) => onMediaStreamData(prepareInfo.remoteDeviceId, event),
+        onError: (err) => onMediaStreamError(prepareInfo.remoteDeviceId, err),
+        onDone: () => onMediaStreamDone(prepareInfo.remoteDeviceId),
       );
 
       emit(
@@ -144,7 +144,7 @@ class DesktopManagerCubit extends Cubit<DesktopManagerState> {
     );
   }
 
-  void onMediaStreamData(int remoteDeviceId, EndPointMediaMessage message) {
+  void onMediaStreamData(int remoteDeviceId, FlutterMediaMessage message) {
     message.when(video: (a, b, videoBuffer) {}, audio: (a, b, audioBuffer) {});
   }
 

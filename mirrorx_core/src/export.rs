@@ -1,9 +1,12 @@
 use crate::{
     api::{
         config::DomainConfig,
-        endpoint::handlers::{
-            connect::*, handshake::*, input::*, negotiate_finished::*, negotiate_select_monitor::*,
-            negotiate_visit_desktop_params::*,
+        endpoint::{
+            flutter_message::FlutterMediaMessage,
+            handlers::{
+                connect::*, handshake::*, input::*, negotiate_finished::*,
+                negotiate_select_monitor::*, negotiate_visit_desktop_params::*,
+            },
         },
         signaling::{
             dial::{dial, DialRequest},
@@ -112,11 +115,8 @@ pub fn endpoint_connect(req: ConnectRequest) -> anyhow::Result<()> {
     async_block_on!(connect(req))
 }
 
-pub fn endpoint_handshake(
-    req: HandshakeRequest,
-    stream: StreamSink<EndPointMediaMessage>,
-) -> anyhow::Result<()> {
-    async_block_on!(active_device_handshake(req, stream))
+pub fn endpoint_handshake(req: HandshakeRequest) -> anyhow::Result<()> {
+    async_block_on!(active_device_handshake(req))
 }
 
 pub fn endpoint_negotiate_visit_desktop_params(
@@ -131,8 +131,11 @@ pub fn endpoint_negotiate_select_monitor(
     async_block_on!(negotiate_select_monitor(req))
 }
 
-pub fn endpoint_negotiate_finished(req: NegotiateFinishedRequest) -> anyhow::Result<()> {
-    async_block_on!(negotiate_finished(req))
+pub fn endpoint_negotiate_finished(
+    req: NegotiateFinishedRequest,
+    stream: StreamSink<FlutterMediaMessage>,
+) -> anyhow::Result<()> {
+    async_block_on!(negotiate_finished(req, stream))
 }
 
 pub fn endpoint_input(req: InputRequest) -> anyhow::Result<()> {
