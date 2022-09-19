@@ -136,6 +136,9 @@ pub struct EndPointVideoFrame {
     pub buffer: Vec<u8>,
 }
 
+// unsafe impl Send for EndPointVideoFrame {}
+// unsafe impl Sync for EndPointVideoFrame {}
+
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct EndPointAudioFrame {
     #[serde(with = "serde_bytes")]

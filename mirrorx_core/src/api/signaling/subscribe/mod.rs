@@ -69,7 +69,7 @@ pub async fn subscribe(
                                 continue;
                             },
                         };
- 
+                        
                         let publish_message = PublishMessage::VisitRequest{
                             active_device_id: visit_request.active_device_id,
                             passive_device_id: visit_request.passive_device_id,

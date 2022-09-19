@@ -104,7 +104,7 @@ pub async fn handle_negotiate_visit_desktop_params_request(
     req: EndPointNegotiateVisitDesktopParamsRequest,
     message_tx: mpsc::Sender<EndPointMessage>,
 ) {
-    let resp = get_media_params(req);
+    let resp = negotiate_media_params(req);
 
     if let Err(err) = message_tx
         .send_timeout(
@@ -133,7 +133,7 @@ pub async fn handle_negotiate_visit_desktop_params_response(
     }
 }
 
-fn get_media_params(
+fn negotiate_media_params(
     req: EndPointNegotiateVisitDesktopParamsRequest,
 ) -> EndPointNegotiateVisitDesktopParamsResponse {
     let mut params = EndPointNegotiateVisitDesktopParams {

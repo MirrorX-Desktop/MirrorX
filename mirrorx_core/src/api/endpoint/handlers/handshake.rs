@@ -16,6 +16,8 @@ use std::time::Duration;
 use tokio::net::TcpStream;
 use tokio_util::codec::{Framed, LengthDelimitedCodec};
 
+use super::video_frame::serve_decoder;
+
 pub struct HandshakeRequest {
     pub active_device_id: i64,
     pub passive_device_id: i64,
@@ -51,14 +53,18 @@ pub async fn active_device_handshake(
     let opening_key = OpeningKey::new(unbound_opening_key, NonceValue::new(opening_nonce));
 
     inner_handshake(
+        false,
         req.active_device_id,
         req.passive_device_id,
         req.visit_credentials,
         opening_key,
         sealing_key,
-        Some(stream),
     )
-    .await
+    .await?;
+
+    serve_decoder(req.active_device_id, req.passive_device_id, stream);
+
+    Ok(())
 }
 
 pub async fn passive_device_handshake(
@@ -69,23 +75,26 @@ pub async fn passive_device_handshake(
     sealing_key: SealingKey<NonceValue>,
 ) -> CoreResult<()> {
     inner_handshake(
+        true,
         local_device_id,
         remote_device_id,
         visit_credentials,
         opening_key,
         sealing_key,
-        None,
     )
-    .await
+    .await?;
+
+    // serve encode process
+    Ok(())
 }
 
 async fn inner_handshake(
+    is_passive_endpoint: bool,
     local_device_id: i64,
     remote_device_id: i64,
     visit_credentials: String,
     opening_key: OpeningKey<NonceValue>,
     sealing_key: SealingKey<NonceValue>,
-    flutter_stream: Option<StreamSink<EndPointMediaMessage>>,
 ) -> CoreResult<()> {
     let entry = RESERVE_STREAMS
         .remove(&(local_device_id, remote_device_id))
@@ -121,7 +130,6 @@ async fn inner_handshake(
         stream,
         opening_key,
         send_message_tx,
-        flutter_stream,
     );
 
     super::super::serve_writer(

@@ -176,7 +176,6 @@ pub fn serve_reader(
     mut stream: SplitStream<Framed<TcpStream, LengthDelimitedCodec>>,
     mut opening_key: OpeningKey<NonceValue>,
     message_tx: tokio::sync::mpsc::Sender<EndPointMessage>,
-    flutter_stream: Option<StreamSink<EndPointMediaMessage>>,
 ) {
     TOKIO_RUNTIME.spawn(async move {
         loop {
@@ -220,7 +219,6 @@ pub fn serve_reader(
                         &mut opening_key,
                         &mut packet_bytes,
                         message_tx.clone(),
-                        flutter_stream.clone(),
                     ) {
                         tracing::error!(
                             ?local_device_id,
@@ -325,20 +323,12 @@ fn open_packet(
     opening_key: &mut OpeningKey<NonceValue>,
     buffer: &mut BytesMut,
     message_tx: tokio::sync::mpsc::Sender<EndPointMessage>,
-    stream: Option<StreamSink<EndPointMediaMessage>>,
 ) -> CoreResult<()> {
     let opened_buffer = opening_key.open_in_place(ring::aead::Aad::empty(), buffer)?;
     let message = BINCODE_SERIALIZER.deserialize::<EndPointMessage>(opened_buffer)?;
 
     TOKIO_RUNTIME.spawn(async move {
-        handle_message(
-            active_device_id,
-            passive_device_id,
-            message,
-            message_tx,
-            stream,
-        )
-        .await;
+        handle_message(active_device_id, passive_device_id, message, message_tx).await;
     });
 
     Ok(())
@@ -358,7 +348,6 @@ async fn handle_message(
     passive_device_id: i64,
     message: EndPointMessage,
     message_tx: tokio::sync::mpsc::Sender<EndPointMessage>,
-    stream: Option<StreamSink<EndPointMediaMessage>>,
 ) {
     // macro_rules! match_and_handle_message {
     //     ($message:expr, $(error $err_message_type:path => $err_handler:ident,)? $(reply $req_message_type:path => $req_handler:ident,)* $(noreply $other_message_type:path => $other_handler:ident,)*) => {
@@ -420,10 +409,10 @@ async fn handle_message(
                 .await
         }
         EndPointMessage::VideoFrame(video_frame) => {
-            handle_video_frame(active_device_id, passive_device_id, video_frame, stream).await
+            handle_video_frame(active_device_id, passive_device_id, video_frame).await
         }
         EndPointMessage::AudioFrame(audio_frame) => {
-            handle_audio_frame(active_device_id, passive_device_id, audio_frame, stream).await
+            handle_audio_frame(active_device_id, passive_device_id, audio_frame).await
         }
         EndPointMessage::Input(input_event) => {
             handle_input(active_device_id, passive_device_id, input_event).await
