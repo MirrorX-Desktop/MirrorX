@@ -1,6 +1,6 @@
 use crate::{
     api::endpoint::{flutter_message::FlutterMediaMessage, message::EndPointVideoFrame},
-    component::video_decoder::Decoder,
+    component::video_decoder::video_decoder::VideoDecoder,
     utility::runtime::TOKIO_RUNTIME,
 };
 use dashmap::DashMap;
@@ -42,7 +42,7 @@ pub fn serve_decoder(
                 DECODERS.remove(&(active_device_id, passive_device_id));
             }
 
-            let mut decoder = Decoder::new(stream);
+            let mut decoder = VideoDecoder::new(stream);
 
             while let Some(video_frame) = rx.blocking_recv() {
                 if let Err(err) = decoder.decode(video_frame) {

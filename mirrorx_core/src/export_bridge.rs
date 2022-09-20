@@ -47,6 +47,7 @@ use crate::api::signaling::visit::ResourceType;
 use crate::api::signaling::visit::VisitRequest;
 use crate::api::signaling::visit::VisitResponse;
 use crate::api::signaling::visit_reply::VisitReplyRequest;
+use crate::component::frame::DesktopDecodeFrame;
 use crate::component::input::key::KeyboardKey;
 use crate::component::input::key::MouseKey;
 
@@ -560,6 +561,21 @@ impl support::IntoDart for AudioSampleRate {
     }
 }
 
+impl support::IntoDart for DesktopDecodeFrame {
+    fn into_dart(self) -> support::DartAbi {
+        vec![
+            self.width.into_dart(),
+            self.height.into_dart(),
+            self.luminance_bytes.into_dart(),
+            self.luminance_stride.into_dart(),
+            self.chrominance_bytes.into_dart(),
+            self.chrominance_stride.into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl support::IntoDartExceptPrimitive for DesktopDecodeFrame {}
+
 impl support::IntoDart for DomainConfig {
     fn into_dart(self) -> support::DartAbi {
         vec![
@@ -576,12 +592,7 @@ impl support::IntoDartExceptPrimitive for DomainConfig {}
 impl support::IntoDart for FlutterMediaMessage {
     fn into_dart(self) -> support::DartAbi {
         match self {
-            Self::Video(field0, field1, field2) => vec![
-                0.into_dart(),
-                field0.into_dart(),
-                field1.into_dart(),
-                field2.into_dart(),
-            ],
+            Self::Video(field0) => vec![0.into_dart(), field0.into_dart()],
             Self::Audio(field0, field1, field2) => vec![
                 1.into_dart(),
                 field0.into_dart(),

@@ -1,44 +1,27 @@
-use super::frame::DecodedFrame;
 use crate::{
     api::endpoint::flutter_message::FlutterMediaMessage,
+    component::frame::DesktopDecodeFrame,
     core_error,
     error::{CoreError, CoreResult},
-    ffi::{
-        ffmpeg::{avcodec::*, avutil::*},
-        libyuv::*,
-    },
+    ffi::ffmpeg::{avcodec::*, avutil::*},
 };
-use crossbeam::channel::Sender;
 use flutter_rust_bridge::{StreamSink, ZeroCopyBuffer};
-use std::{
-    cell::Cell,
-    ffi::{CStr, CString},
-};
+use std::ffi::{CStr, CString};
 
-pub struct Decoder {
-    decode_ctx: *mut DecodeContext,
+pub struct VideoDecoder {
+    decode_context: *mut DecodeContext,
     stream: StreamSink<FlutterMediaMessage>,
-    last_width: i32,
-    last_height: i32,
-    last_sps: Vec<u8>,
-    last_pps: Vec<u8>,
 }
 
-unsafe impl Send for Decoder {}
-
-impl Decoder {
-    pub fn new(stream: StreamSink<FlutterMediaMessage>) -> Decoder {
+impl VideoDecoder {
+    pub fn new(stream: StreamSink<FlutterMediaMessage>) -> VideoDecoder {
         unsafe {
             av_log_set_level(AV_LOG_TRACE);
             av_log_set_flags(AV_LOG_SKIP_REPEATED);
 
-            Decoder {
-                decode_ctx: std::ptr::null_mut(),
+            VideoDecoder {
+                decode_context: std::ptr::null_mut(),
                 stream,
-                last_width: 0,
-                last_height: 0,
-                last_sps: Vec::new(),
-                last_pps: Vec::new(),
             }
         }
     }
@@ -48,23 +31,30 @@ impl Decoder {
         mut video_frame: crate::api::endpoint::message::EndPointVideoFrame,
     ) -> CoreResult<()> {
         unsafe {
-            if self.last_width != video_frame.width || self.last_height != video_frame.height {
-                // drop old decode context
-                let _ = Box::from_raw(self.decode_ctx);
-                let new_codec_ctx = DecodeContext::new(video_frame.width, video_frame.height)?;
-                self.decode_ctx = Box::into_raw(Box::from(new_codec_ctx));
+            if self.decode_context.is_null()
+                || (*(*self.decode_context).codec_ctx).width != video_frame.width
+                || (*(*self.decode_context).codec_ctx).height != video_frame.height
+            {
+                if !self.decode_context.is_null() {
+                    let _ = Box::from_raw(self.decode_context);
+                }
+
+                self.decode_context = Box::into_raw(Box::new(DecodeContext::new(
+                    video_frame.width,
+                    video_frame.height,
+                )?));
             }
 
-            if self.decode_ctx.is_null() {
+            if self.decode_context.is_null() {
                 return Err(core_error!("decode context is null"));
             }
 
-            if !(*self.decode_ctx).parser_ctx.is_null() {
+            if !(*self.decode_context).parser_ctx.is_null() {
                 let ret = av_parser_parse2(
-                    (*self.decode_ctx).parser_ctx,
-                    (*self.decode_ctx).codec_ctx,
-                    &mut (*(*self.decode_ctx).packet).data,
-                    &mut (*(*self.decode_ctx).packet).size,
+                    (*self.decode_context).parser_ctx,
+                    (*self.decode_context).codec_ctx,
+                    &mut (*(*self.decode_context).packet).data,
+                    &mut (*(*self.decode_context).packet).size,
                     video_frame.buffer.as_ptr(),
                     video_frame.buffer.len() as i32,
                     0,
@@ -76,16 +66,18 @@ impl Decoder {
                     return Err(core_error!("av_parser_parse2 returns error code: {}", ret));
                 }
             } else {
-                (*(*self.decode_ctx).packet).data = video_frame.buffer.as_mut_ptr();
-                (*(*self.decode_ctx).packet).size = video_frame.buffer.len() as i32;
+                (*(*self.decode_context).packet).data = video_frame.buffer.as_mut_ptr();
+                (*(*self.decode_context).packet).size = video_frame.buffer.len() as i32;
                 // (*self.packet).pts = frame.pts;
                 // (*self.packet).dts = frame.pts;
             }
 
             // av_packet_rescale_ts(self.packet, AV_TIME_BASE_Q, (*self.codec_ctx).pkt_timebase);
 
-            let mut ret =
-                avcodec_send_packet((*self.decode_ctx).codec_ctx, (*self.decode_ctx).packet);
+            let mut ret = avcodec_send_packet(
+                (*self.decode_context).codec_ctx,
+                (*self.decode_context).packet,
+            );
 
             if ret == AVERROR(libc::EAGAIN) {
                 return Err(core_error!("avcodec_send_packet returns EAGAIN"));
@@ -100,8 +92,8 @@ impl Decoder {
 
             loop {
                 ret = avcodec_receive_frame(
-                    (*self.decode_ctx).codec_ctx,
-                    (*self.decode_ctx).decode_frame,
+                    (*self.decode_context).codec_ctx,
+                    (*self.decode_context).decode_frame,
                 );
                 if ret == AVERROR(libc::EAGAIN) || ret == AVERROR_EOF {
                     return Ok(());
@@ -112,14 +104,12 @@ impl Decoder {
                     ));
                 }
 
-                let mut tmp_frame: *mut AVFrame;
-
-                if !(*self.decode_ctx).parser_ctx.is_null() {
-                    tmp_frame = (*self.decode_ctx).decode_frame;
+                let tmp_frame = if !(*self.decode_context).parser_ctx.is_null() {
+                    (*self.decode_context).decode_frame
                 } else {
                     let ret = av_hwframe_transfer_data(
-                        (*self.decode_ctx).hw_decode_frame,
-                        (*self.decode_ctx).decode_frame,
+                        (*self.decode_context).hw_decode_frame,
+                        (*self.decode_context).decode_frame,
                         0,
                     );
                     if ret < 0 {
@@ -129,18 +119,36 @@ impl Decoder {
                         ));
                     }
 
-                    tmp_frame = (*self.decode_ctx).hw_decode_frame;
-                }
+                    (*self.decode_context).hw_decode_frame
+                };
+
+                let desktop_decode_frame = DesktopDecodeFrame {
+                    width: (*tmp_frame).width,
+                    height: (*tmp_frame).height,
+                    luminance_bytes: ZeroCopyBuffer(
+                        std::slice::from_raw_parts(
+                            (*tmp_frame).data[0],
+                            ((*tmp_frame).linesize[0] * (*tmp_frame).height) as usize,
+                        )
+                        .to_vec(),
+                    ),
+                    luminance_stride: (*tmp_frame).linesize[0],
+                    chrominance_bytes: ZeroCopyBuffer(
+                        std::slice::from_raw_parts(
+                            (*tmp_frame).data[1],
+                            ((*tmp_frame).linesize[1] * (*tmp_frame).height / 2) as usize,
+                        )
+                        .to_vec(),
+                    ),
+                    chrominance_stride: (*tmp_frame).linesize[1],
+                };
 
                 av_frame_unref(tmp_frame);
 
-                let decode_frame_buffer = convert_yuv_to_rgb(tmp_frame)?;
-
-                if !self.stream.add(FlutterMediaMessage::Video(
-                    (*tmp_frame).width,
-                    (*tmp_frame).height,
-                    ZeroCopyBuffer(decode_frame_buffer),
-                )) {
+                if !self
+                    .stream
+                    .add(FlutterMediaMessage::Video(desktop_decode_frame))
+                {
                     return Err(core_error!("decoded frame tx is disconnected"));
                 }
             }
@@ -179,10 +187,16 @@ impl DecodeContext {
             (*decode_ctx.codec_ctx).color_primaries = AVCOL_PRI_BT709;
             (*decode_ctx.codec_ctx).color_trc = AVCOL_TRC_BT709;
             (*decode_ctx.codec_ctx).colorspace = AVCOL_SPC_BT709;
-            (*decode_ctx.codec_ctx).flags |= AV_CODEC_FLAG_LOW_DELAY;
+            (*decode_ctx.codec_ctx).flags2 |= AV_CODEC_FLAG2_LOCAL_HEADER;
 
-            let mut hw_device_type =
-                av_hwdevice_find_type_by_name(CString::new("d3d11va")?.as_ptr());
+            let mut hw_device_type = av_hwdevice_find_type_by_name(
+                CString::new(if cfg!(target_os = "windows") {
+                    "d3d11va"
+                } else {
+                    "videotoolbox"
+                })?
+                .as_ptr(),
+            );
 
             if hw_device_type == AV_HWDEVICE_TYPE_NONE {
                 tracing::error!("current environment does't support 'd3d11va'");
@@ -301,28 +315,28 @@ impl Drop for DecodeContext {
     }
 }
 
-unsafe fn convert_yuv_to_rgb(frame: *mut AVFrame) -> CoreResult<Vec<u8>> {
-    let argb_stride = 4 * ((32 * (*frame).width + 31) / 32);
-    let argb_frame_size = (argb_stride as usize) * ((*frame).height as usize) * 4;
-    let mut argb_frame_buffer = Vec::<u8>::with_capacity(argb_frame_size);
+// unsafe fn convert_yuv_to_rgb(frame: *mut AVFrame) -> CoreResult<Vec<u8>> {
+//     let argb_stride = 4 * ((32 * (*frame).width + 31) / 32);
+//     let argb_frame_size = (argb_stride as usize) * ((*frame).height as usize) * 4;
+//     let mut argb_frame_buffer = Vec::<u8>::with_capacity(argb_frame_size);
 
-    let ret = NV21ToARGBMatrix(
-        (*frame).data[0],
-        (*frame).linesize[0] as isize,
-        (*frame).data[1],
-        (*frame).linesize[1] as isize,
-        argb_frame_buffer.as_mut_ptr(),
-        argb_stride as isize,
-        &kYvuF709Constants,
-        (*frame).width as isize,
-        (*frame).height as isize,
-    );
+//     let ret = NV21ToARGBMatrix(
+//         (*frame).data[0],
+//         (*frame).linesize[0] as isize,
+//         (*frame).data[1],
+//         (*frame).linesize[1] as isize,
+//         argb_frame_buffer.as_mut_ptr(),
+//         argb_stride as isize,
+//         &kYvuF709Constants,
+//         (*frame).width as isize,
+//         (*frame).height as isize,
+//     );
 
-    if ret != 0 {
-        return Err(core_error!("NV21ToARGBMatrix returns error code: {}", ret));
-    }
+//     if ret != 0 {
+//         return Err(core_error!("NV21ToARGBMatrix returns error code: {}", ret));
+//     }
 
-    argb_frame_buffer.set_len(argb_frame_size);
+//     argb_frame_buffer.set_len(argb_frame_size);
 
-    Ok(argb_frame_buffer)
-}
+//     Ok(argb_frame_buffer)
+// }

@@ -1,28 +1,27 @@
-use super::{set_codec_ctx_option, FFMPEGEncoderConfig};
+use super::{set_codec_ctx_option, EncoderConfig};
 use crate::{
     error::CoreResult,
-    ffi::ffmpeg::avcodec::{AVCodecContext, AVCodecID, AV_CODEC_ID_H264},
+    ffi::ffmpeg::avcodec::{AVCodecContext, AVCodecID, AV_CODEC_ID_HEVC},
 };
 use std::ffi::CString;
 
-pub struct H264VideoToolboxConfig {
+pub struct HEVCVideoToolboxConfig {
     ffmpeg_encoder_name: CString,
 }
 
-impl H264VideoToolboxConfig {
+impl HEVCVideoToolboxConfig {
     pub fn new() -> Self {
-        let ffmpeg_encoder_name = CString::new("h264_videotoolbox").unwrap();
+        let ffmpeg_encoder_name = CString::new("hevc_videotoolbox").unwrap();
 
-        H264VideoToolboxConfig {
+        HEVCVideoToolboxConfig {
             ffmpeg_encoder_name,
         }
     }
 }
 
-impl FFMPEGEncoderConfig for H264VideoToolboxConfig {
+impl EncoderConfig for HEVCVideoToolboxConfig {
     fn apply_option(&self, codec_ctx: *mut AVCodecContext) -> CoreResult<()> {
         set_codec_ctx_option(codec_ctx, "profile", "high", 0)?;
-        set_codec_ctx_option(codec_ctx, "level", "5.0", 0)?;
         set_codec_ctx_option(codec_ctx, "realtime", "true", 0)?;
         set_codec_ctx_option(codec_ctx, "prio_speed", "true", 0)?;
 
@@ -34,6 +33,6 @@ impl FFMPEGEncoderConfig for H264VideoToolboxConfig {
     }
 
     fn av_codec_id(&self) -> AVCodecID {
-        AV_CODEC_ID_H264
+        AV_CODEC_ID_HEVC
     }
 }

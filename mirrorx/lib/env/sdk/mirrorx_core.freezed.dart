@@ -16,24 +16,21 @@ final _privateConstructorUsedError = UnsupportedError(
 
 /// @nodoc
 mixin _$FlutterMediaMessage {
-  int get field0 => throw _privateConstructorUsedError;
-  int get field1 => throw _privateConstructorUsedError;
-  Uint8List get field2 => throw _privateConstructorUsedError;
   @optionalTypeArgs
   TResult when<TResult extends Object?>({
-    required TResult Function(int field0, int field1, Uint8List field2) video,
+    required TResult Function(DesktopDecodeFrame field0) video,
     required TResult Function(int field0, int field1, Uint8List field2) audio,
   }) =>
       throw _privateConstructorUsedError;
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>({
-    TResult Function(int field0, int field1, Uint8List field2)? video,
+    TResult Function(DesktopDecodeFrame field0)? video,
     TResult Function(int field0, int field1, Uint8List field2)? audio,
   }) =>
       throw _privateConstructorUsedError;
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>({
-    TResult Function(int field0, int field1, Uint8List field2)? video,
+    TResult Function(DesktopDecodeFrame field0)? video,
     TResult Function(int field0, int field1, Uint8List field2)? audio,
     required TResult orElse(),
   }) =>
@@ -57,10 +54,6 @@ mixin _$FlutterMediaMessage {
     required TResult orElse(),
   }) =>
       throw _privateConstructorUsedError;
-
-  @JsonKey(ignore: true)
-  $FlutterMediaMessageCopyWith<FlutterMediaMessage> get copyWith =>
-      throw _privateConstructorUsedError;
 }
 
 /// @nodoc
@@ -68,7 +61,6 @@ abstract class $FlutterMediaMessageCopyWith<$Res> {
   factory $FlutterMediaMessageCopyWith(
           FlutterMediaMessage value, $Res Function(FlutterMediaMessage) then) =
       _$FlutterMediaMessageCopyWithImpl<$Res>;
-  $Res call({int field0, int field1, Uint8List field2});
 }
 
 /// @nodoc
@@ -79,39 +71,15 @@ class _$FlutterMediaMessageCopyWithImpl<$Res>
   final FlutterMediaMessage _value;
   // ignore: unused_field
   final $Res Function(FlutterMediaMessage) _then;
-
-  @override
-  $Res call({
-    Object? field0 = freezed,
-    Object? field1 = freezed,
-    Object? field2 = freezed,
-  }) {
-    return _then(_value.copyWith(
-      field0: field0 == freezed
-          ? _value.field0
-          : field0 // ignore: cast_nullable_to_non_nullable
-              as int,
-      field1: field1 == freezed
-          ? _value.field1
-          : field1 // ignore: cast_nullable_to_non_nullable
-              as int,
-      field2: field2 == freezed
-          ? _value.field2
-          : field2 // ignore: cast_nullable_to_non_nullable
-              as Uint8List,
-    ));
-  }
 }
 
 /// @nodoc
-abstract class _$$FlutterMediaMessage_VideoCopyWith<$Res>
-    implements $FlutterMediaMessageCopyWith<$Res> {
+abstract class _$$FlutterMediaMessage_VideoCopyWith<$Res> {
   factory _$$FlutterMediaMessage_VideoCopyWith(
           _$FlutterMediaMessage_Video value,
           $Res Function(_$FlutterMediaMessage_Video) then) =
       __$$FlutterMediaMessage_VideoCopyWithImpl<$Res>;
-  @override
-  $Res call({int field0, int field1, Uint8List field2});
+  $Res call({DesktopDecodeFrame field0});
 }
 
 /// @nodoc
@@ -129,22 +97,12 @@ class __$$FlutterMediaMessage_VideoCopyWithImpl<$Res>
   @override
   $Res call({
     Object? field0 = freezed,
-    Object? field1 = freezed,
-    Object? field2 = freezed,
   }) {
     return _then(_$FlutterMediaMessage_Video(
       field0 == freezed
           ? _value.field0
           : field0 // ignore: cast_nullable_to_non_nullable
-              as int,
-      field1 == freezed
-          ? _value.field1
-          : field1 // ignore: cast_nullable_to_non_nullable
-              as int,
-      field2 == freezed
-          ? _value.field2
-          : field2 // ignore: cast_nullable_to_non_nullable
-              as Uint8List,
+              as DesktopDecodeFrame,
     ));
   }
 }
@@ -152,18 +110,14 @@ class __$$FlutterMediaMessage_VideoCopyWithImpl<$Res>
 /// @nodoc
 
 class _$FlutterMediaMessage_Video implements FlutterMediaMessage_Video {
-  const _$FlutterMediaMessage_Video(this.field0, this.field1, this.field2);
+  const _$FlutterMediaMessage_Video(this.field0);
 
   @override
-  final int field0;
-  @override
-  final int field1;
-  @override
-  final Uint8List field2;
+  final DesktopDecodeFrame field0;
 
   @override
   String toString() {
-    return 'FlutterMediaMessage.video(field0: $field0, field1: $field1, field2: $field2)';
+    return 'FlutterMediaMessage.video(field0: $field0)';
   }
 
   @override
@@ -171,17 +125,12 @@ class _$FlutterMediaMessage_Video implements FlutterMediaMessage_Video {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
             other is _$FlutterMediaMessage_Video &&
-            const DeepCollectionEquality().equals(other.field0, field0) &&
-            const DeepCollectionEquality().equals(other.field1, field1) &&
-            const DeepCollectionEquality().equals(other.field2, field2));
+            const DeepCollectionEquality().equals(other.field0, field0));
   }
 
   @override
-  int get hashCode => Object.hash(
-      runtimeType,
-      const DeepCollectionEquality().hash(field0),
-      const DeepCollectionEquality().hash(field1),
-      const DeepCollectionEquality().hash(field2));
+  int get hashCode =>
+      Object.hash(runtimeType, const DeepCollectionEquality().hash(field0));
 
   @JsonKey(ignore: true)
   @override
@@ -192,30 +141,30 @@ class _$FlutterMediaMessage_Video implements FlutterMediaMessage_Video {
   @override
   @optionalTypeArgs
   TResult when<TResult extends Object?>({
-    required TResult Function(int field0, int field1, Uint8List field2) video,
+    required TResult Function(DesktopDecodeFrame field0) video,
     required TResult Function(int field0, int field1, Uint8List field2) audio,
   }) {
-    return video(field0, field1, field2);
+    return video(field0);
   }
 
   @override
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>({
-    TResult Function(int field0, int field1, Uint8List field2)? video,
+    TResult Function(DesktopDecodeFrame field0)? video,
     TResult Function(int field0, int field1, Uint8List field2)? audio,
   }) {
-    return video?.call(field0, field1, field2);
+    return video?.call(field0);
   }
 
   @override
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>({
-    TResult Function(int field0, int field1, Uint8List field2)? video,
+    TResult Function(DesktopDecodeFrame field0)? video,
     TResult Function(int field0, int field1, Uint8List field2)? audio,
     required TResult orElse(),
   }) {
     if (video != null) {
-      return video(field0, field1, field2);
+      return video(field0);
     }
     return orElse();
   }
@@ -253,30 +202,21 @@ class _$FlutterMediaMessage_Video implements FlutterMediaMessage_Video {
 }
 
 abstract class FlutterMediaMessage_Video implements FlutterMediaMessage {
-  const factory FlutterMediaMessage_Video(
-          final int field0, final int field1, final Uint8List field2) =
+  const factory FlutterMediaMessage_Video(final DesktopDecodeFrame field0) =
       _$FlutterMediaMessage_Video;
 
-  @override
-  int get field0;
-  @override
-  int get field1;
-  @override
-  Uint8List get field2;
-  @override
+  DesktopDecodeFrame get field0;
   @JsonKey(ignore: true)
   _$$FlutterMediaMessage_VideoCopyWith<_$FlutterMediaMessage_Video>
       get copyWith => throw _privateConstructorUsedError;
 }
 
 /// @nodoc
-abstract class _$$FlutterMediaMessage_AudioCopyWith<$Res>
-    implements $FlutterMediaMessageCopyWith<$Res> {
+abstract class _$$FlutterMediaMessage_AudioCopyWith<$Res> {
   factory _$$FlutterMediaMessage_AudioCopyWith(
           _$FlutterMediaMessage_Audio value,
           $Res Function(_$FlutterMediaMessage_Audio) then) =
       __$$FlutterMediaMessage_AudioCopyWithImpl<$Res>;
-  @override
   $Res call({int field0, int field1, Uint8List field2});
 }
 
@@ -358,7 +298,7 @@ class _$FlutterMediaMessage_Audio implements FlutterMediaMessage_Audio {
   @override
   @optionalTypeArgs
   TResult when<TResult extends Object?>({
-    required TResult Function(int field0, int field1, Uint8List field2) video,
+    required TResult Function(DesktopDecodeFrame field0) video,
     required TResult Function(int field0, int field1, Uint8List field2) audio,
   }) {
     return audio(field0, field1, field2);
@@ -367,7 +307,7 @@ class _$FlutterMediaMessage_Audio implements FlutterMediaMessage_Audio {
   @override
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>({
-    TResult Function(int field0, int field1, Uint8List field2)? video,
+    TResult Function(DesktopDecodeFrame field0)? video,
     TResult Function(int field0, int field1, Uint8List field2)? audio,
   }) {
     return audio?.call(field0, field1, field2);
@@ -376,7 +316,7 @@ class _$FlutterMediaMessage_Audio implements FlutterMediaMessage_Audio {
   @override
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>({
-    TResult Function(int field0, int field1, Uint8List field2)? video,
+    TResult Function(DesktopDecodeFrame field0)? video,
     TResult Function(int field0, int field1, Uint8List field2)? audio,
     required TResult orElse(),
   }) {
@@ -423,13 +363,9 @@ abstract class FlutterMediaMessage_Audio implements FlutterMediaMessage {
           final int field0, final int field1, final Uint8List field2) =
       _$FlutterMediaMessage_Audio;
 
-  @override
   int get field0;
-  @override
   int get field1;
-  @override
   Uint8List get field2;
-  @override
   @JsonKey(ignore: true)
   _$$FlutterMediaMessage_AudioCopyWith<_$FlutterMediaMessage_Audio>
       get copyWith => throw _privateConstructorUsedError;

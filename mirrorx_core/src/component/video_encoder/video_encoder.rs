@@ -1,33 +1,28 @@
-use super::ffmpeg_encoder_config::{FFMPEGEncoderConfig, FFMPEGEncoderType};
+use super::config::{EncoderConfig, EncoderType};
 use crate::{
     api::endpoint::message::{EndPointMessage, EndPointVideoFrame},
-    component::capture_frame::CaptureFrame,
+    component::frame::DesktopEncodeFrame,
     core_error,
     error::{CoreError, CoreResult},
     ffi::ffmpeg::{avcodec::*, avutil::*},
 };
 use tokio::sync::mpsc::Sender;
 
-pub struct Encoder {
-    encode_config: Box<dyn FFMPEGEncoderConfig>,
+pub struct VideoEncoder {
+    encode_config: Box<dyn EncoderConfig>,
     encode_context: *mut EncodeContext,
     tx: Sender<EndPointMessage>,
 }
 
-unsafe impl Send for Encoder {}
-
-impl Encoder {
-    pub fn new(
-        encoder_type: FFMPEGEncoderType,
-        tx: Sender<EndPointMessage>,
-    ) -> CoreResult<Encoder> {
+impl VideoEncoder {
+    pub fn new(encoder_type: EncoderType, tx: Sender<EndPointMessage>) -> CoreResult<VideoEncoder> {
         let encode_config = encoder_type.create_config();
 
         unsafe {
             av_log_set_level(AV_LOG_TRACE);
             av_log_set_flags(AV_LOG_SKIP_REPEATED);
 
-            Ok(Encoder {
+            Ok(VideoEncoder {
                 encode_config,
                 encode_context: std::ptr::null_mut(),
                 tx,
@@ -35,7 +30,7 @@ impl Encoder {
         }
     }
 
-    pub fn encode(&mut self, capture_frame: CaptureFrame) -> CoreResult<()> {
+    pub fn encode(&mut self, capture_frame: DesktopEncodeFrame) -> CoreResult<()> {
         if self.tx.is_closed() {
             return Err(core_error!("message tx has closed"));
         }
@@ -44,10 +39,8 @@ impl Encoder {
             let mut ret: i32;
 
             if self.encode_context.is_null()
-                || (*self.encode_context).frame.is_null()
-                || (*self.encode_context).packet.is_null()
-                || (*(*self.encode_context).frame).width != capture_frame.width
-                || (*(*self.encode_context).frame).height != capture_frame.height
+                || (*(*self.encode_context).codec_ctx).width != capture_frame.width
+                || (*(*self.encode_context).codec_ctx).height != capture_frame.height
             {
                 if !self.encode_context.is_null() {
                     let _ = Box::from_raw(self.encode_context);
@@ -151,7 +144,7 @@ impl EncodeContext {
     pub fn new(
         width: i32,
         height: i32,
-        encoder_config: &dyn FFMPEGEncoderConfig,
+        encoder_config: &dyn EncoderConfig,
     ) -> CoreResult<EncodeContext> {
         unsafe {
             let codec = avcodec_find_encoder(encoder_config.av_codec_id());

@@ -12,27 +12,28 @@ use crate::{
 };
 use std::ffi::CString;
 
-pub enum FFMPEGEncoderType {
+#[allow(unused)]
+pub enum EncoderType {
     Libx264,
     H264VideoToolbox,
     HEVCVideoToolbox,
 }
 
-impl FFMPEGEncoderType {
-    pub fn create_config(self) -> Box<dyn FFMPEGEncoderConfig> {
+impl EncoderType {
+    pub fn create_config(self) -> Box<dyn EncoderConfig> {
         match self {
-            FFMPEGEncoderType::Libx264 => Box::new(libx264::Libx264Config::new()),
-            FFMPEGEncoderType::H264VideoToolbox => {
+            EncoderType::Libx264 => Box::new(libx264::Libx264Config::new()),
+            EncoderType::H264VideoToolbox => {
                 Box::new(h264_videotoolbox::H264VideoToolboxConfig::new())
             }
-            FFMPEGEncoderType::HEVCVideoToolbox => {
+            EncoderType::HEVCVideoToolbox => {
                 Box::new(hevc_videotoolbox::HEVCVideoToolboxConfig::new())
             }
         }
     }
 }
 
-pub trait FFMPEGEncoderConfig {
+pub trait EncoderConfig {
     fn apply_option(&self, codec_ctx: *mut AVCodecContext) -> CoreResult<()>;
     fn ffmpeg_encoder_name(&self) -> *const i8;
     fn av_codec_id(&self) -> AVCodecID;
@@ -56,18 +57,18 @@ fn set_codec_ctx_option(
         );
 
         if ret == AVERROR_OPTION_NOT_FOUND {
-            return Err(core_error!(
+            Err(core_error!(
                 "set AVCodecContext returns AVERROR_OPTION_NOT_FOUND"
-            ));
+            ))
         } else if ret == AVERROR(libc::ERANGE) {
-            return Err(core_error!("set AVCodecContext returns ERANGE"));
+            Err(core_error!("set AVCodecContext returns ERANGE"))
         } else if ret == AVERROR(libc::EINVAL) {
-            return Err(core_error!("set AVCodecContext returns EINVAL"));
+            Err(core_error!("set AVCodecContext returns EINVAL"))
         } else if ret != 0 {
-            return Err(core_error!(
+            Err(core_error!(
                 "set AVCodecContext returns error code: {}",
                 ret
-            ));
+            ))
         } else {
             Ok(())
         }

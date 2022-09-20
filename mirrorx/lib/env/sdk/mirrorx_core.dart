@@ -134,6 +134,24 @@ class ConnectRequest {
   });
 }
 
+class DesktopDecodeFrame {
+  final int width;
+  final int height;
+  final Uint8List luminanceBytes;
+  final int luminanceStride;
+  final Uint8List chrominanceBytes;
+  final int chrominanceStride;
+
+  DesktopDecodeFrame({
+    required this.width,
+    required this.height,
+    required this.luminanceBytes,
+    required this.luminanceStride,
+    required this.chrominanceBytes,
+    required this.chrominanceStride,
+  });
+}
+
 class DialRequest {
   final String uri;
 
@@ -159,9 +177,7 @@ class DomainConfig {
 @freezed
 class FlutterMediaMessage with _$FlutterMediaMessage {
   const factory FlutterMediaMessage.video(
-    int field0,
-    int field1,
-    Uint8List field2,
+    DesktopDecodeFrame field0,
   ) = FlutterMediaMessage_Video;
   const factory FlutterMediaMessage.audio(
     int field0,
@@ -999,8 +1015,26 @@ bool _wire2api_bool(dynamic raw) {
   return raw as bool;
 }
 
+DesktopDecodeFrame _wire2api_box_autoadd_desktop_decode_frame(dynamic raw) {
+  return _wire2api_desktop_decode_frame(raw);
+}
+
 DomainConfig _wire2api_box_autoadd_domain_config(dynamic raw) {
   return _wire2api_domain_config(raw);
+}
+
+DesktopDecodeFrame _wire2api_desktop_decode_frame(dynamic raw) {
+  final arr = raw as List<dynamic>;
+  if (arr.length != 6)
+    throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+  return DesktopDecodeFrame(
+    width: _wire2api_i32(arr[0]),
+    height: _wire2api_i32(arr[1]),
+    luminanceBytes: _wire2api_ZeroCopyBuffer_Uint8List(arr[2]),
+    luminanceStride: _wire2api_i32(arr[3]),
+    chrominanceBytes: _wire2api_ZeroCopyBuffer_Uint8List(arr[4]),
+    chrominanceStride: _wire2api_i32(arr[5]),
+  );
 }
 
 DomainConfig _wire2api_domain_config(dynamic raw) {
@@ -1019,9 +1053,7 @@ FlutterMediaMessage _wire2api_flutter_media_message(dynamic raw) {
   switch (raw[0]) {
     case 0:
       return FlutterMediaMessage_Video(
-        _wire2api_i32(raw[1]),
-        _wire2api_i32(raw[2]),
-        _wire2api_ZeroCopyBuffer_Uint8List(raw[3]),
+        _wire2api_box_autoadd_desktop_decode_frame(raw[1]),
       );
     case 1:
       return FlutterMediaMessage_Audio(

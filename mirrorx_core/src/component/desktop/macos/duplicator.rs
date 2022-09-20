@@ -1,5 +1,5 @@
 use crate::{
-    component::{capture_frame::CaptureFrame, desktop::monitor::NSScreen},
+    component::{desktop::monitor::NSScreen, frame::DesktopEncodeFrame},
     core_error,
     error::{CoreError, CoreResult},
     ffi::os::macos::{core_graphics::*, core_media::*, core_video::*, io_surface::*},
@@ -18,7 +18,7 @@ unsafe impl Send for Duplicator {}
 impl Duplicator {
     pub fn new(
         monitor_id: Option<core_graphics::display::CGDirectDisplayID>,
-        capture_frame_tx: crossbeam::channel::Sender<CaptureFrame>,
+        capture_frame_tx: crossbeam::channel::Sender<DesktopEncodeFrame>,
     ) -> CoreResult<Self> {
         unsafe {
             let screens = NSScreen::screens()?;
@@ -111,7 +111,7 @@ impl Duplicator {
 
 unsafe fn frame_available_handler(
     start_time: Rc<Cell<Option<std::time::Instant>>>,
-    capture_frame_tx: *mut crossbeam::channel::Sender<CaptureFrame>,
+    capture_frame_tx: *mut crossbeam::channel::Sender<DesktopEncodeFrame>,
     status: CGDisplayStreamFrameStatus,
     display_time: u64,
     frame_surface: IOSurfaceRef,
@@ -176,7 +176,7 @@ unsafe fn frame_available_handler(
 
     let pts = CMTimeMakeWithSeconds(elapsed_time, 1000);
 
-    let capture_frame = CaptureFrame {
+    let capture_frame = DesktopEncodeFrame {
         width: width as i32,
         height: height as i32,
         luminance_bytes,

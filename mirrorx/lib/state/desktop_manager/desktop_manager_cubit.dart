@@ -145,7 +145,7 @@ class DesktopManagerCubit extends Cubit<DesktopManagerState> {
   }
 
   void onMediaStreamData(int remoteDeviceId, FlutterMediaMessage message) {
-    message.when(video: (a, b, videoBuffer) {}, audio: (a, b, audioBuffer) {});
+    message.when(video: (desktopDecodeFrame) {}, audio: (a, b, audioBuffer) {});
   }
 
   void onMediaStreamError(int remoteDeviceId, Object err) {}

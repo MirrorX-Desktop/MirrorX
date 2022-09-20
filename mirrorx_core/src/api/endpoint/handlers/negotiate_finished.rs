@@ -7,7 +7,7 @@ use crate::{
     },
     component::{
         desktop::{monitor::get_primary_monitor_params, Duplicator},
-        video_encoder::Encoder,
+        video_encoder::{config::EncoderType, video_encoder::VideoEncoder},
     },
     core_error,
     error::{CoreError, CoreResult},
@@ -17,14 +17,9 @@ use flutter_rust_bridge::StreamSink;
 use scopeguard::defer;
 use tokio::sync::mpsc::Sender;
 
-// static RESPONSE_CHANNELS: Lazy<
-//     DashMap<(i64, i64), oneshot::Sender<EndPointNegotiateFinishedResponse>>,
-// > = Lazy::new(|| DashMap::new());
-
 pub struct NegotiateFinishedRequest {
     pub active_device_id: i64,
     pub passive_device_id: i64,
-    // pub selected_monitor_id: String,
     pub expect_frame_rate: u8,
     pub texture_id: i64,
     pub video_texture_pointer: i64,
@@ -41,31 +36,18 @@ pub async fn negotiate_finished(
 
     let negotiate_req =
         EndPointMessage::NegotiateFinishedRequest(EndPointNegotiateFinishedRequest {
-            // selected_monitor_id: req.selected_monitor_id,
             expected_frame_rate: req.expect_frame_rate,
         });
-
-    // let (resp_tx, resp_rx) = tokio::sync::oneshot::channel();
-    // RESPONSE_CHANNELS.insert(
-    //     (
-    //         req.active_device_id.to_owned(),
-    //         req.passive_device_id.to_owned(),
-    //     ),
-    //     resp_tx,
-    // );
 
     if let Err(err) = message_tx
         .send_timeout(negotiate_req, SEND_MESSAGE_TIMEOUT)
         .await
     {
-        // RESPONSE_CHANNELS.remove(&(req.active_device_id, req.passive_device_id));
         return Err(core_error!(
             "negotiate_finished: message send failed ({})",
             err
         ));
     }
-
-    // let _ = tokio::time::timeout(RECV_MESSAGE_TIMEOUT, resp_rx).await??;
 
     serve_decoder(req.active_device_id, req.passive_device_id, stream);
 
@@ -78,8 +60,6 @@ pub async fn handle_negotiate_finished_request(
     _: EndPointNegotiateFinishedRequest,
     message_tx: Sender<EndPointMessage>,
 ) {
-    // todo: launch video and audio
-
     spawn_desktop_capture_and_encode_process(active_device_id, passive_device_id, message_tx);
 }
 
@@ -89,8 +69,6 @@ fn spawn_desktop_capture_and_encode_process(
     passive_device_id: i64,
     message_tx: Sender<EndPointMessage>,
 ) {
-    use crate::component::video_encoder::FFMPEGEncoderType;
-
     let (capture_frame_tx, capture_frame_rx) = crossbeam::channel::bounded(180);
 
     TOKIO_RUNTIME.spawn_blocking(move || {
@@ -111,7 +89,7 @@ fn spawn_desktop_capture_and_encode_process(
             }
         };
 
-        let mut encoder = match Encoder::new(FFMPEGEncoderType::H264VideoToolbox, message_tx) {
+        let mut encoder = match VideoEncoder::new(EncoderType::H264VideoToolbox, message_tx) {
             Ok(encoder) => encoder,
             Err(err) => {
                 tracing::error!(
@@ -247,8 +225,8 @@ fn spawn_desktop_capture_and_encode_process(
             tracing::info!(?active_device_id, ?passive_device_id, "encode process exit");
         }
 
-        let mut encoder = match Encoder::new(
-            FFMPEGEncoderType::Libx264,
+        let mut encoder = match VideoEncoder::new(
+            EncoderType::Libx264,
             monitor_width as i32,
             monitor_height as i32,
         ) {

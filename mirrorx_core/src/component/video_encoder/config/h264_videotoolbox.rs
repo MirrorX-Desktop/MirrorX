@@ -1,30 +1,30 @@
-use super::{set_codec_ctx_option, FFMPEGEncoderConfig};
+use super::{set_codec_ctx_option, EncoderConfig};
 use crate::{
     error::CoreResult,
     ffi::ffmpeg::avcodec::{AVCodecContext, AVCodecID, AV_CODEC_ID_H264},
 };
 use std::ffi::CString;
 
-pub struct Libx264Config {
+pub struct H264VideoToolboxConfig {
     ffmpeg_encoder_name: CString,
 }
 
-impl Libx264Config {
+impl H264VideoToolboxConfig {
     pub fn new() -> Self {
-        let ffmpeg_encoder_name = CString::new("libx264").unwrap();
+        let ffmpeg_encoder_name = CString::new("h264_videotoolbox").unwrap();
 
-        Libx264Config {
+        H264VideoToolboxConfig {
             ffmpeg_encoder_name,
         }
     }
 }
 
-impl FFMPEGEncoderConfig for Libx264Config {
+impl EncoderConfig for H264VideoToolboxConfig {
     fn apply_option(&self, codec_ctx: *mut AVCodecContext) -> CoreResult<()> {
         set_codec_ctx_option(codec_ctx, "profile", "high", 0)?;
         set_codec_ctx_option(codec_ctx, "level", "5.0", 0)?;
-        set_codec_ctx_option(codec_ctx, "preset", "ultrafast", 0)?;
-        set_codec_ctx_option(codec_ctx, "tune", "zerolatency", 0)?;
+        set_codec_ctx_option(codec_ctx, "realtime", "true", 0)?;
+        set_codec_ctx_option(codec_ctx, "prio_speed", "true", 0)?;
 
         Ok(())
     }

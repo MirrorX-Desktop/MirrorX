@@ -9,14 +9,11 @@ use crate::{
 };
 use bincode::Options;
 use bytes::{Buf, Bytes};
-use flutter_rust_bridge::{StreamSink, ZeroCopyBuffer};
 use futures::{SinkExt, StreamExt};
 use ring::aead::{BoundKey, OpeningKey, SealingKey, UnboundKey};
 use std::time::Duration;
 use tokio::net::TcpStream;
 use tokio_util::codec::{Framed, LengthDelimitedCodec};
-
-use super::video_frame::serve_decoder;
 
 pub struct HandshakeRequest {
     pub active_device_id: i64,
@@ -44,7 +41,6 @@ pub async fn active_device_handshake(req: HandshakeRequest) -> CoreResult<()> {
     let opening_key = OpeningKey::new(unbound_opening_key, NonceValue::new(opening_nonce));
 
     inner_handshake(
-        false,
         req.active_device_id,
         req.passive_device_id,
         req.visit_credentials,
@@ -64,7 +60,6 @@ pub async fn passive_device_handshake(
     sealing_key: SealingKey<NonceValue>,
 ) -> CoreResult<()> {
     inner_handshake(
-        true,
         local_device_id,
         remote_device_id,
         visit_credentials,
@@ -78,7 +73,6 @@ pub async fn passive_device_handshake(
 }
 
 async fn inner_handshake(
-    is_passive_endpoint: bool,
     local_device_id: i64,
     remote_device_id: i64,
     visit_credentials: String,
