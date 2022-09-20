@@ -134,19 +134,6 @@ unsafe fn create_compression_session(
 
     ret = VTSessionSetProperty(
         session,
-        kVTCompressionPropertyKey_AllowFrameReordering,
-        kCFBooleanFalse.to_void(),
-    );
-
-    if ret != 0 {
-        return Err(core_error!(
-            "VTSessionSetProperty returns error code: {}",
-            ret,
-        ));
-    }
-
-    ret = VTSessionSetProperty(
-        session,
         kVTCompressionPropertyKey_MaxKeyFrameInterval,
         CFNumber::from(120).to_void(),
     );

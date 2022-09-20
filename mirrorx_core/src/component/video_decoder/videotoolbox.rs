@@ -246,7 +246,7 @@ unsafe extern "C" fn decode_output_callback(
 
     let tx = sourceFrameRefCon as *mut StreamSink<FlutterMediaMessage>;
     let pixel_buffer = CVPixelBufferRetain(imageBuffer);
-    let pixel_buffer_memory_address: usize = std::mem::transmute(pixel_buffer);
+    let pixel_buffer_memory_address: usize = pixel_buffer as usize;
 
     let success = (*tx).add(FlutterMediaMessage::Video(
         1,

@@ -1,23 +1,41 @@
+mod h264_videotoolbox;
+mod hevc_videotoolbox;
+mod libx264;
+
 use crate::{
     core_error,
     error::{CoreError, CoreResult},
     ffi::ffmpeg::{
-        avcodec::AVCodecContext,
+        avcodec::{AVCodecContext, AVCodecID},
         avutil::{av_opt_set, AVERROR, AVERROR_OPTION_NOT_FOUND},
     },
 };
 use std::ffi::CString;
 
-mod libx264;
-pub use libx264::Libx264Config;
-
 pub enum FFMPEGEncoderType {
     Libx264,
+    H264VideoToolbox,
+    HEVCVideoToolbox,
+}
+
+impl FFMPEGEncoderType {
+    pub fn create_config(self) -> Box<dyn FFMPEGEncoderConfig> {
+        match self {
+            FFMPEGEncoderType::Libx264 => Box::new(libx264::Libx264Config::new()),
+            FFMPEGEncoderType::H264VideoToolbox => {
+                Box::new(h264_videotoolbox::H264VideoToolboxConfig::new())
+            }
+            FFMPEGEncoderType::HEVCVideoToolbox => {
+                Box::new(hevc_videotoolbox::HEVCVideoToolboxConfig::new())
+            }
+        }
+    }
 }
 
 pub trait FFMPEGEncoderConfig {
     fn apply_option(&self, codec_ctx: *mut AVCodecContext) -> CoreResult<()>;
     fn ffmpeg_encoder_name(&self) -> *const i8;
+    fn av_codec_id(&self) -> AVCodecID;
 }
 
 fn set_codec_ctx_option(

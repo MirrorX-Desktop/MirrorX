@@ -1,7 +1,7 @@
-use super::ffmpeg_encoder_config::{FFMPEGEncoderType, Libx264Config};
+use super::ffmpeg_encoder_config::{FFMPEGEncoderConfig, FFMPEGEncoderType};
 use crate::{
     api::endpoint::message::{EndPointMessage, EndPointVideoFrame},
-    component::{capture_frame::CaptureFrame, NALU_HEADER_LENGTH},
+    component::capture_frame::CaptureFrame,
     core_error,
     error::{CoreError, CoreResult},
     ffi::ffmpeg::{avcodec::*, avutil::*},
@@ -9,9 +9,9 @@ use crate::{
 use tokio::sync::mpsc::Sender;
 
 pub struct Encoder {
-    codec_ctx: *mut AVCodecContext,
-    frame: *mut AVFrame,
-    packet: *mut AVPacket,
+    encode_config: Box<dyn FFMPEGEncoderConfig>,
+    encode_context: *mut EncodeContext,
+    tx: Sender<EndPointMessage>,
 }
 
 unsafe impl Send for Encoder {}
@@ -19,119 +19,48 @@ unsafe impl Send for Encoder {}
 impl Encoder {
     pub fn new(
         encoder_type: FFMPEGEncoderType,
-        frame_width: i32,
-        frame_height: i32,
+        tx: Sender<EndPointMessage>,
     ) -> CoreResult<Encoder> {
-        let encoder_config = match encoder_type {
-            FFMPEGEncoderType::Libx264 => Libx264Config::new()?,
-        };
-
-        let mut encoder = Self {
-            codec_ctx: std::ptr::null_mut(),
-            frame: std::ptr::null_mut(),
-            packet: std::ptr::null_mut(),
-        };
+        let encode_config = encoder_type.create_config();
 
         unsafe {
             av_log_set_level(AV_LOG_TRACE);
             av_log_set_flags(AV_LOG_SKIP_REPEATED);
 
-            let codec = avcodec_find_encoder_by_name(encoder_config.ffmpeg_encoder_name());
-            if codec.is_null() {
-                return Err(core_error!(
-                    "avcodec_find_encoder_by_name returns null pointer"
-                ));
-            }
-
-            encoder.codec_ctx = avcodec_alloc_context3(codec);
-            if encoder.codec_ctx.is_null() {
-                return Err(core_error!("avcodec_alloc_context3 returns null pointer"));
-            }
-
-            (*encoder.codec_ctx).width = frame_width;
-            (*encoder.codec_ctx).height = frame_height;
-            (*encoder.codec_ctx).time_base = AVRational { num: 1, den: 1 };
-            (*encoder.codec_ctx).gop_size = 60 * 2;
-            (*encoder.codec_ctx).bit_rate = 4000 * 1000;
-            (*encoder.codec_ctx).rc_max_rate = 4000 * 1000;
-            (*encoder.codec_ctx).rc_min_rate = 4000 * 1000;
-            (*encoder.codec_ctx).rc_buffer_size = 4000 * 1000 * 2;
-            (*encoder.codec_ctx).has_b_frames = 0;
-            (*encoder.codec_ctx).max_b_frames = 0;
-            (*encoder.codec_ctx).pix_fmt = AV_PIX_FMT_NV12;
-            (*encoder.codec_ctx).flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
-            (*encoder.codec_ctx).color_range = AVCOL_RANGE_JPEG;
-            (*encoder.codec_ctx).color_primaries = AVCOL_PRI_BT709;
-            (*encoder.codec_ctx).color_trc = AVCOL_TRC_BT709;
-            (*encoder.codec_ctx).colorspace = AVCOL_SPC_BT709;
-
-            encoder_config.apply_option(encoder.codec_ctx)?;
-
-            let ret = avcodec_open2(encoder.codec_ctx, codec, std::ptr::null_mut());
-            if ret != 0 {
-                return Err(core_error!("avcodec_open2 returns null pointer"));
-            }
-
-            Ok(encoder)
+            Ok(Encoder {
+                encode_config,
+                encode_context: std::ptr::null_mut(),
+                tx,
+            })
         }
     }
 
-    pub fn encode(&mut self, frame: CaptureFrame, tx: &Sender<EndPointMessage>) -> CoreResult<()> {
+    pub fn encode(&mut self, capture_frame: CaptureFrame) -> CoreResult<()> {
+        if self.tx.is_closed() {
+            return Err(core_error!("message tx has closed"));
+        }
+
         unsafe {
             let mut ret: i32;
 
-            if self.frame.is_null()
-                || (*self.frame).width != frame.width as i32
-                || (*self.frame).height != frame.height as i32
+            if self.encode_context.is_null()
+                || (*self.encode_context).frame.is_null()
+                || (*self.encode_context).packet.is_null()
+                || (*(*self.encode_context).frame).width != capture_frame.width
+                || (*(*self.encode_context).frame).height != capture_frame.height
             {
-                if !self.frame.is_null() {
-                    av_frame_free(&mut self.frame);
+                if !self.encode_context.is_null() {
+                    let _ = Box::from_raw(self.encode_context);
                 }
 
-                if !self.packet.is_null() {
-                    av_packet_free(&mut self.packet);
-                }
-
-                let new_frame = av_frame_alloc();
-                if new_frame.is_null() {
-                    return Err(core_error!("av_frame_alloc returns null pointer"));
-                }
-
-                (*new_frame).width = frame.width as i32;
-                (*new_frame).height = frame.height as i32;
-                (*new_frame).format = AV_PIX_FMT_NV12;
-                (*new_frame).color_range = AVCOL_RANGE_JPEG;
-
-                ret = av_frame_get_buffer(new_frame, 1);
-                if ret < 0 {
-                    return Err(core_error!(
-                        "av_frame_get_buffer returns error code: {}",
-                        ret
-                    ));
-                }
-
-                let packet = av_packet_alloc();
-                if packet.is_null() {
-                    return Err(core_error!("av_packet_alloc returns null pointer"));
-                }
-
-                let packet_size = av_image_get_buffer_size(
-                    (*new_frame).format,
-                    frame.width as i32,
-                    frame.height as i32,
-                    32,
-                );
-
-                ret = av_new_packet(packet, packet_size);
-                if ret < 0 {
-                    return Err(core_error!("av_new_packet returns error code: {}", ret));
-                }
-
-                self.frame = new_frame;
-                self.packet = packet;
+                self.encode_context = Box::into_raw(Box::new(EncodeContext::new(
+                    capture_frame.width,
+                    capture_frame.height,
+                    self.encode_config.as_ref(),
+                )?));
             }
 
-            ret = av_frame_make_writable(self.frame);
+            ret = av_frame_make_writable((*self.encode_context).frame);
             if ret < 0 {
                 return Err(core_error!(
                     "av_frame_make_writable returns error code: {}",
@@ -139,18 +68,22 @@ impl Encoder {
                 ));
             }
 
-            (*self.frame).data[0] = frame.luminance_bytes.as_ptr() as *mut _;
-            (*self.frame).linesize[0] = frame.luminance_stride as i32;
-            (*self.frame).data[1] = frame.chrominance_bytes.as_ptr() as *mut _;
-            (*self.frame).linesize[1] = frame.chrominance_stride as i32;
-            // (*self.frame).pts = av_rescale_q(
-            //     frame.capture_time,
-            //     AV_TIME_BASE_Q,
-            //     (*self.codec_ctx).time_base,
-            // );
-            (*self.frame).pts = chrono::Utc::now().timestamp_millis();
+            (*(*self.encode_context).frame).data[0] =
+                capture_frame.luminance_bytes.as_ptr() as *mut _;
 
-            ret = avcodec_send_frame(self.codec_ctx, self.frame);
+            (*(*self.encode_context).frame).linesize[0] = capture_frame.luminance_stride;
+
+            (*(*self.encode_context).frame).data[1] =
+                capture_frame.chrominance_bytes.as_ptr() as *mut _;
+
+            (*(*self.encode_context).frame).linesize[1] = capture_frame.chrominance_stride;
+
+            // (*(*self.encode_context).frame).pts = chrono::Utc::now().timestamp_millis();
+
+            ret = avcodec_send_frame(
+                (*self.encode_context).codec_ctx,
+                (*self.encode_context).frame,
+            );
 
             if ret != 0 {
                 if ret == AVERROR(libc::EAGAIN) {
@@ -165,7 +98,11 @@ impl Encoder {
             }
 
             loop {
-                ret = avcodec_receive_packet(self.codec_ctx, self.packet);
+                ret = avcodec_receive_packet(
+                    (*self.encode_context).codec_ctx,
+                    (*self.encode_context).packet,
+                );
+
                 if ret == AVERROR(libc::EAGAIN) || ret == AVERROR_EOF {
                     return Ok(());
                 } else if ret < 0 {
@@ -175,78 +112,116 @@ impl Encoder {
                     ));
                 }
 
-                let mut sps = once_cell::unsync::OnceCell::new();
-                let mut pps = once_cell::unsync::OnceCell::new();
+                let buffer = std::slice::from_raw_parts(
+                    (*(*self.encode_context).packet).data,
+                    (*(*self.encode_context).packet).size as usize,
+                )
+                .to_vec();
 
-                let buffer =
-                    std::slice::from_raw_parts((*self.packet).data, (*self.packet).size as usize)
-                        .to_vec();
-
-                // if packet has key frame, copy sps and pps from AVCodecContext
-                if (*self.packet).flags & 0x0001 != 0 && (*self.codec_ctx).extradata_size > 0 {
-                    let extra_data = std::slice::from_raw_parts(
-                        (*self.codec_ctx).extradata,
-                        (*self.codec_ctx).extradata_size as usize,
-                    );
-
-                    let mut delimiter_positions = Vec::new();
-
-                    for i in 0..extra_data.len() - NALU_HEADER_LENGTH {
-                        if extra_data[i + 0] == 0
-                            && extra_data[i + 1] == 0
-                            && extra_data[i + 2] == 0
-                            && extra_data[i + 3] == 1
-                        {
-                            delimiter_positions.push(i);
-                        }
-                    }
-
-                    delimiter_positions.push(extra_data.len());
-
-                    let mut wd = delimiter_positions.windows(2);
-
-                    while let Some(indexes) = wd.next() {
-                        let (start, end) = (indexes[0], indexes[1]);
-                        let nalu_type = extra_data[start + 4] & 0x1F;
-                        let cell = match nalu_type {
-                            7 => Some(&sps),
-                            8 => Some(&pps),
-                            _ => None,
-                        };
-
-                        if let Some(cell) = cell {
-                            let payload = extra_data[start + 4..end].to_vec();
-                            if let Err(_) = cell.set(payload) {
-                                return Err(core_error!("set SPS or PPS cell repeatly"));
-                            }
-                        }
-                    }
-                }
+                av_packet_unref((*self.encode_context).packet);
 
                 let packet = EndPointMessage::VideoFrame(EndPointVideoFrame {
-                    width: (*self.codec_ctx).width,
-                    height: (*self.codec_ctx).height,
+                    width: (*(*self.encode_context).codec_ctx).width,
+                    height: (*(*self.encode_context).codec_ctx).height,
                     buffer,
                 });
 
-                if let Err(err) = tx.try_send(packet) {
+                if let Err(err) = self.tx.try_send(packet) {
                     match err {
                         tokio::sync::mpsc::error::TrySendError::Full(_) => {
-                            tracing::warn!("network send channel is full")
+                            tracing::warn!("EndPointMessage channel is full")
                         }
                         tokio::sync::mpsc::error::TrySendError::Closed(_) => {
                             return Err(core_error!("channel closed"));
                         }
                     }
                 }
-
-                av_packet_unref(self.packet);
             }
         }
     }
 }
 
-impl Drop for Encoder {
+struct EncodeContext {
+    codec_ctx: *mut AVCodecContext,
+    frame: *mut AVFrame,
+    packet: *mut AVPacket,
+}
+
+impl EncodeContext {
+    pub fn new(
+        width: i32,
+        height: i32,
+        encoder_config: &dyn FFMPEGEncoderConfig,
+    ) -> CoreResult<EncodeContext> {
+        unsafe {
+            let codec = avcodec_find_encoder(encoder_config.av_codec_id());
+            if codec.is_null() {
+                return Err(core_error!("avcodec_find_encoder returns null pointer"));
+            }
+
+            let encoder_context = EncodeContext {
+                codec_ctx: avcodec_alloc_context3(codec),
+                frame: av_frame_alloc(),
+                packet: av_packet_alloc(),
+            };
+
+            if encoder_context.codec_ctx.is_null()
+                || encoder_context.frame.is_null()
+                || encoder_context.packet.is_null()
+            {
+                return Err(core_error!("avcodec_alloc_context3 returns null pointer"));
+            }
+
+            (*encoder_context.codec_ctx).width = width;
+            (*encoder_context.codec_ctx).height = height;
+            (*encoder_context.codec_ctx).framerate = AVRational { num: 60, den: 1 };
+            (*encoder_context.codec_ctx).time_base = AVRational { num: 1, den: 1 };
+            (*encoder_context.codec_ctx).gop_size = 60 * 2;
+            (*encoder_context.codec_ctx).bit_rate = 4000 * 1000;
+            (*encoder_context.codec_ctx).rc_max_rate = 4000 * 1000;
+            (*encoder_context.codec_ctx).rc_min_rate = 4000 * 1000;
+            (*encoder_context.codec_ctx).rc_buffer_size = 4000 * 1000 * 2;
+            (*encoder_context.codec_ctx).has_b_frames = 0;
+            (*encoder_context.codec_ctx).max_b_frames = 0;
+            (*encoder_context.codec_ctx).pix_fmt = AV_PIX_FMT_NV12;
+            (*encoder_context.codec_ctx).flags2 |= AV_CODEC_FLAG2_LOCAL_HEADER;
+            (*encoder_context.codec_ctx).color_range = AVCOL_RANGE_JPEG;
+            (*encoder_context.codec_ctx).color_primaries = AVCOL_PRI_BT709;
+            (*encoder_context.codec_ctx).color_trc = AVCOL_TRC_BT709;
+            (*encoder_context.codec_ctx).colorspace = AVCOL_SPC_BT709;
+
+            (*encoder_context.frame).width = width;
+            (*encoder_context.frame).height = height;
+
+            encoder_config.apply_option(encoder_context.codec_ctx)?;
+
+            let mut ret = av_frame_get_buffer(encoder_context.frame, 1);
+            if ret < 0 {
+                return Err(core_error!(
+                    "av_frame_get_buffer returns error code: {}",
+                    ret
+                ));
+            }
+
+            let packet_size =
+                av_image_get_buffer_size((*encoder_context.codec_ctx).pix_fmt, width, height, 32);
+
+            ret = av_new_packet(encoder_context.packet, packet_size);
+            if ret < 0 {
+                return Err(core_error!("av_new_packet returns error code: {}", ret));
+            }
+
+            let ret = avcodec_open2(encoder_context.codec_ctx, codec, std::ptr::null_mut());
+            if ret != 0 {
+                return Err(core_error!("avcodec_open2 returns null pointer"));
+            }
+
+            Ok(encoder_context)
+        }
+    }
+}
+
+impl Drop for EncodeContext {
     fn drop(&mut self) {
         unsafe {
             if !self.codec_ctx.is_null() {

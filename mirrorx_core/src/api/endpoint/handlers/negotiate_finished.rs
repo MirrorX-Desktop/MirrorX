@@ -87,8 +87,10 @@ pub async fn handle_negotiate_finished_request(
 fn spawn_desktop_capture_and_encode_process(
     active_device_id: i64,
     passive_device_id: i64,
-    mut message_tx: Sender<EndPointMessage>,
+    message_tx: Sender<EndPointMessage>,
 ) {
+    use crate::component::video_encoder::FFMPEGEncoderType;
+
     let (capture_frame_tx, capture_frame_rx) = crossbeam::channel::bounded(180);
 
     TOKIO_RUNTIME.spawn_blocking(move || {
@@ -109,7 +111,7 @@ fn spawn_desktop_capture_and_encode_process(
             }
         };
 
-        let mut encoder = match Encoder::new(monitor_width as i32, monitor_height as i32) {
+        let mut encoder = match Encoder::new(FFMPEGEncoderType::H264VideoToolbox, message_tx) {
             Ok(encoder) => encoder,
             Err(err) => {
                 tracing::error!(
@@ -152,16 +154,7 @@ fn spawn_desktop_capture_and_encode_process(
         loop {
             match capture_frame_rx.recv() {
                 Ok(capture_frame) => {
-                    if message_tx.is_closed() {
-                        tracing::error!(
-                            ?active_device_id,
-                            ?passive_device_id,
-                            "message tx has closed, encode process will exit"
-                        );
-                        break;
-                    }
-
-                    if let Err(err) = encoder.encode(capture_frame, &mut message_tx) {
+                    if let Err(err) = encoder.encode(capture_frame) {
                         tracing::error!(
                             ?active_device_id,
                             ?passive_device_id,
