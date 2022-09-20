@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
 import 'model.dart';
@@ -29,8 +30,12 @@ abstract class TextureRenderPlatform extends PlatformInterface {
         'registerVideoTexture() has not been implemented.');
   }
 
-  Future<void> deregisterTexture(int textureID, int videoTexturePointer) {
+  Future<void> deregisterTexture(int textureId) {
     throw UnimplementedError(
         'deregisterVideoTexture() has not been implemented.');
+  }
+
+  Future<void> sendVideoFrameBuffer(Uint8List videoFrameBuffer) {
+    throw UnimplementedError('sendVideoBuffer() has not been implemented.');
   }
 }

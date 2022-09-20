@@ -22,8 +22,8 @@ pub struct NegotiateFinishedRequest {
     pub passive_device_id: i64,
     pub expect_frame_rate: u8,
     pub texture_id: i64,
-    pub video_texture_pointer: i64,
-    pub update_frame_callback_pointer: i64,
+    // pub video_texture_pointer: i64,
+    // pub update_frame_callback_pointer: i64,
 }
 
 pub async fn negotiate_finished(
@@ -49,7 +49,12 @@ pub async fn negotiate_finished(
         ));
     }
 
-    serve_decoder(req.active_device_id, req.passive_device_id, stream);
+    serve_decoder(
+        req.active_device_id,
+        req.passive_device_id,
+        req.texture_id,
+        stream,
+    );
 
     Ok(())
 }

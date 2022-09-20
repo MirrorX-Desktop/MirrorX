@@ -47,7 +47,6 @@ use crate::api::signaling::visit::ResourceType;
 use crate::api::signaling::visit::VisitRequest;
 use crate::api::signaling::visit::VisitResponse;
 use crate::api::signaling::visit_reply::VisitReplyRequest;
-use crate::component::frame::DesktopDecodeFrame;
 use crate::component::input::key::KeyboardKey;
 use crate::component::input::key::MouseKey;
 
@@ -560,21 +559,6 @@ impl support::IntoDart for AudioSampleRate {
         .into_dart()
     }
 }
-
-impl support::IntoDart for DesktopDecodeFrame {
-    fn into_dart(self) -> support::DartAbi {
-        vec![
-            self.width.into_dart(),
-            self.height.into_dart(),
-            self.luminance_bytes.into_dart(),
-            self.luminance_stride.into_dart(),
-            self.chrominance_bytes.into_dart(),
-            self.chrominance_stride.into_dart(),
-        ]
-        .into_dart()
-    }
-}
-impl support::IntoDartExceptPrimitive for DesktopDecodeFrame {}
 
 impl support::IntoDart for DomainConfig {
     fn into_dart(self) -> support::DartAbi {

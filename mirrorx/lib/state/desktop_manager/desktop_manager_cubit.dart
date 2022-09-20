@@ -75,10 +75,10 @@ class DesktopManagerCubit extends Cubit<DesktopManagerState> {
           activeDeviceId: prepareInfo.localDeviceId,
           passiveDeviceId: prepareInfo.remoteDeviceId,
           expectFrameRate: 60,
-          textureId: registerTextureResponse.textureID,
-          videoTexturePointer: registerTextureResponse.videoTexturePointer,
-          updateFrameCallbackPointer:
-              registerTextureResponse.updateFrameCallbackPointer,
+          textureId: registerTextureResponse.textureId,
+          // videoTexturePointer: registerTextureResponse.videoTexturePointer,
+          // updateFrameCallbackPointer:
+          //     registerTextureResponse.updateFrameCallbackPointer,
         ),
       );
 
@@ -98,7 +98,7 @@ class DesktopManagerCubit extends Cubit<DesktopManagerState> {
                 negotiateVisitDesktopParamsResponse.monitorId,
                 negotiateVisitDesktopParamsResponse.monitorWidth,
                 negotiateVisitDesktopParamsResponse.monitorHeight,
-                registerTextureResponse.textureID,
+                registerTextureResponse.textureId,
               ),
             ),
         ),
@@ -106,8 +106,7 @@ class DesktopManagerCubit extends Cubit<DesktopManagerState> {
     } catch (err) {
       if (registerTextureResponse != null) {
         await TextureRender.instance.deregisterTexture(
-          registerTextureResponse.textureID,
-          registerTextureResponse.videoTexturePointer,
+          registerTextureResponse.textureId,
         );
       }
     }
@@ -145,7 +144,11 @@ class DesktopManagerCubit extends Cubit<DesktopManagerState> {
   }
 
   void onMediaStreamData(int remoteDeviceId, FlutterMediaMessage message) {
-    message.when(video: (desktopDecodeFrame) {}, audio: (a, b, audioBuffer) {});
+    message.when(
+        video: (videoFrameBuffer) async {
+          await TextureRender.instance.sendVideoFrameBuffer(videoFrameBuffer);
+        },
+        audio: (a, b, audioBuffer) {});
   }
 
   void onMediaStreamError(int remoteDeviceId, Object err) {}

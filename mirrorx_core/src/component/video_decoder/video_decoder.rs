@@ -5,22 +5,25 @@ use crate::{
     error::{CoreError, CoreResult},
     ffi::ffmpeg::{avcodec::*, avutil::*},
 };
+use bytes::BufMut;
 use flutter_rust_bridge::{StreamSink, ZeroCopyBuffer};
 use std::ffi::{CStr, CString};
 
 pub struct VideoDecoder {
     decode_context: *mut DecodeContext,
+    texture_id: i64,
     stream: StreamSink<FlutterMediaMessage>,
 }
 
 impl VideoDecoder {
-    pub fn new(stream: StreamSink<FlutterMediaMessage>) -> VideoDecoder {
+    pub fn new(texture_id: i64, stream: StreamSink<FlutterMediaMessage>) -> VideoDecoder {
         unsafe {
             av_log_set_level(AV_LOG_TRACE);
             av_log_set_flags(AV_LOG_SKIP_REPEATED);
 
             VideoDecoder {
                 decode_context: std::ptr::null_mut(),
+                texture_id,
                 stream,
             }
         }
@@ -122,33 +125,51 @@ impl VideoDecoder {
                     (*self.decode_context).hw_decode_frame
                 };
 
-                let desktop_decode_frame = DesktopDecodeFrame {
-                    width: (*tmp_frame).width,
-                    height: (*tmp_frame).height,
-                    luminance_bytes: ZeroCopyBuffer(
-                        std::slice::from_raw_parts(
-                            (*tmp_frame).data[0],
-                            ((*tmp_frame).linesize[0] * (*tmp_frame).height) as usize,
-                        )
-                        .to_vec(),
-                    ),
-                    luminance_stride: (*tmp_frame).linesize[0],
-                    chrominance_bytes: ZeroCopyBuffer(
-                        std::slice::from_raw_parts(
-                            (*tmp_frame).data[1],
-                            ((*tmp_frame).linesize[1] * (*tmp_frame).height / 2) as usize,
-                        )
-                        .to_vec(),
-                    ),
-                    chrominance_stride: (*tmp_frame).linesize[1],
-                };
+                // 8: id
+                // 4: width
+                // 4: height
+                // 4: lumina stride
+                // 4: chroma stride
+                // 4: lumina body length
+                // n: lumina body
+                // 4: chroma body length
+                // n: chroma body
+
+                let width = (*tmp_frame).width;
+                let height = (*tmp_frame).height;
+                let luminance_stride = (*tmp_frame).linesize[0];
+                let chrominance_stride = (*tmp_frame).linesize[1];
+                let luminance_bytes_length = height * luminance_stride;
+                let chrominance_bytes_length = height * chrominance_stride / 2;
+
+                let mut video_frame_buffer = Vec::<u8>::with_capacity(
+                    24 + 4
+                        + (luminance_bytes_length as usize)
+                        + 4
+                        + (chrominance_bytes_length as usize),
+                );
+
+                video_frame_buffer.put_i64_le(self.texture_id);
+                video_frame_buffer.put_i32_le(width);
+                video_frame_buffer.put_i32_le(height);
+                video_frame_buffer.put_i32_le(luminance_stride);
+                video_frame_buffer.put_i32_le(chrominance_stride);
+                video_frame_buffer.put_i32_le(luminance_bytes_length);
+                video_frame_buffer.put_slice(std::slice::from_raw_parts(
+                    (*tmp_frame).data[0],
+                    luminance_bytes_length as usize,
+                ));
+                video_frame_buffer.put_i32_le(chrominance_bytes_length);
+                video_frame_buffer.put_slice(std::slice::from_raw_parts(
+                    (*tmp_frame).data[1],
+                    chrominance_bytes_length as usize,
+                ));
 
                 av_frame_unref(tmp_frame);
 
-                if !self
-                    .stream
-                    .add(FlutterMediaMessage::Video(desktop_decode_frame))
-                {
+                if !self.stream.add(FlutterMediaMessage::Video(ZeroCopyBuffer(
+                    video_frame_buffer,
+                ))) {
                     return Err(core_error!("decoded frame tx is disconnected"));
                 }
             }

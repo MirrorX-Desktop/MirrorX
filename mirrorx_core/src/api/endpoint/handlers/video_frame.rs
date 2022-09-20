@@ -30,6 +30,7 @@ pub async fn handle_video_frame(
 pub fn serve_decoder(
     active_device_id: i64,
     passive_device_id: i64,
+    texture_id: i64,
     stream: StreamSink<FlutterMediaMessage>,
 ) {
     if !DECODERS.contains_key(&(active_device_id, passive_device_id)) {
@@ -42,7 +43,7 @@ pub fn serve_decoder(
                 DECODERS.remove(&(active_device_id, passive_device_id));
             }
 
-            let mut decoder = VideoDecoder::new(stream);
+            let mut decoder = VideoDecoder::new(texture_id, stream);
 
             while let Some(video_frame) = rx.blocking_recv() {
                 if let Err(err) = decoder.decode(video_frame) {

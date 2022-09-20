@@ -134,24 +134,6 @@ class ConnectRequest {
   });
 }
 
-class DesktopDecodeFrame {
-  final int width;
-  final int height;
-  final Uint8List luminanceBytes;
-  final int luminanceStride;
-  final Uint8List chrominanceBytes;
-  final int chrominanceStride;
-
-  DesktopDecodeFrame({
-    required this.width,
-    required this.height,
-    required this.luminanceBytes,
-    required this.luminanceStride,
-    required this.chrominanceBytes,
-    required this.chrominanceStride,
-  });
-}
-
 class DialRequest {
   final String uri;
 
@@ -177,7 +159,7 @@ class DomainConfig {
 @freezed
 class FlutterMediaMessage with _$FlutterMediaMessage {
   const factory FlutterMediaMessage.video(
-    DesktopDecodeFrame field0,
+    Uint8List field0,
   ) = FlutterMediaMessage_Video;
   const factory FlutterMediaMessage.audio(
     int field0,
@@ -452,16 +434,12 @@ class NegotiateFinishedRequest {
   final int passiveDeviceId;
   final int expectFrameRate;
   final int textureId;
-  final int videoTexturePointer;
-  final int updateFrameCallbackPointer;
 
   NegotiateFinishedRequest({
     required this.activeDeviceId,
     required this.passiveDeviceId,
     required this.expectFrameRate,
     required this.textureId,
-    required this.videoTexturePointer,
-    required this.updateFrameCallbackPointer,
   });
 }
 
@@ -1015,26 +993,8 @@ bool _wire2api_bool(dynamic raw) {
   return raw as bool;
 }
 
-DesktopDecodeFrame _wire2api_box_autoadd_desktop_decode_frame(dynamic raw) {
-  return _wire2api_desktop_decode_frame(raw);
-}
-
 DomainConfig _wire2api_box_autoadd_domain_config(dynamic raw) {
   return _wire2api_domain_config(raw);
-}
-
-DesktopDecodeFrame _wire2api_desktop_decode_frame(dynamic raw) {
-  final arr = raw as List<dynamic>;
-  if (arr.length != 6)
-    throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
-  return DesktopDecodeFrame(
-    width: _wire2api_i32(arr[0]),
-    height: _wire2api_i32(arr[1]),
-    luminanceBytes: _wire2api_ZeroCopyBuffer_Uint8List(arr[2]),
-    luminanceStride: _wire2api_i32(arr[3]),
-    chrominanceBytes: _wire2api_ZeroCopyBuffer_Uint8List(arr[4]),
-    chrominanceStride: _wire2api_i32(arr[5]),
-  );
 }
 
 DomainConfig _wire2api_domain_config(dynamic raw) {
@@ -1053,7 +1013,7 @@ FlutterMediaMessage _wire2api_flutter_media_message(dynamic raw) {
   switch (raw[0]) {
     case 0:
       return FlutterMediaMessage_Video(
-        _wire2api_box_autoadd_desktop_decode_frame(raw[1]),
+        _wire2api_ZeroCopyBuffer_Uint8List(raw[1]),
       );
     case 1:
       return FlutterMediaMessage_Audio(
@@ -1619,9 +1579,6 @@ class MirrorXCorePlatform extends FlutterRustBridgeBase<MirrorXCoreWire> {
     wireObj.passive_device_id = api2wire_i64(apiObj.passiveDeviceId);
     wireObj.expect_frame_rate = api2wire_u8(apiObj.expectFrameRate);
     wireObj.texture_id = api2wire_i64(apiObj.textureId);
-    wireObj.video_texture_pointer = api2wire_i64(apiObj.videoTexturePointer);
-    wireObj.update_frame_callback_pointer =
-        api2wire_i64(apiObj.updateFrameCallbackPointer);
   }
 
   void _api_fill_to_wire_negotiate_select_monitor_request(
@@ -2504,12 +2461,6 @@ class wire_NegotiateFinishedRequest extends ffi.Struct {
 
   @ffi.Int64()
   external int texture_id;
-
-  @ffi.Int64()
-  external int video_texture_pointer;
-
-  @ffi.Int64()
-  external int update_frame_callback_pointer;
 }
 
 class wire_MouseEvent_MouseUp extends ffi.Struct {

@@ -18,19 +18,19 @@ final _privateConstructorUsedError = UnsupportedError(
 mixin _$FlutterMediaMessage {
   @optionalTypeArgs
   TResult when<TResult extends Object?>({
-    required TResult Function(DesktopDecodeFrame field0) video,
+    required TResult Function(Uint8List field0) video,
     required TResult Function(int field0, int field1, Uint8List field2) audio,
   }) =>
       throw _privateConstructorUsedError;
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>({
-    TResult Function(DesktopDecodeFrame field0)? video,
+    TResult Function(Uint8List field0)? video,
     TResult Function(int field0, int field1, Uint8List field2)? audio,
   }) =>
       throw _privateConstructorUsedError;
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>({
-    TResult Function(DesktopDecodeFrame field0)? video,
+    TResult Function(Uint8List field0)? video,
     TResult Function(int field0, int field1, Uint8List field2)? audio,
     required TResult orElse(),
   }) =>
@@ -79,7 +79,7 @@ abstract class _$$FlutterMediaMessage_VideoCopyWith<$Res> {
           _$FlutterMediaMessage_Video value,
           $Res Function(_$FlutterMediaMessage_Video) then) =
       __$$FlutterMediaMessage_VideoCopyWithImpl<$Res>;
-  $Res call({DesktopDecodeFrame field0});
+  $Res call({Uint8List field0});
 }
 
 /// @nodoc
@@ -102,7 +102,7 @@ class __$$FlutterMediaMessage_VideoCopyWithImpl<$Res>
       field0 == freezed
           ? _value.field0
           : field0 // ignore: cast_nullable_to_non_nullable
-              as DesktopDecodeFrame,
+              as Uint8List,
     ));
   }
 }
@@ -113,7 +113,7 @@ class _$FlutterMediaMessage_Video implements FlutterMediaMessage_Video {
   const _$FlutterMediaMessage_Video(this.field0);
 
   @override
-  final DesktopDecodeFrame field0;
+  final Uint8List field0;
 
   @override
   String toString() {
@@ -141,7 +141,7 @@ class _$FlutterMediaMessage_Video implements FlutterMediaMessage_Video {
   @override
   @optionalTypeArgs
   TResult when<TResult extends Object?>({
-    required TResult Function(DesktopDecodeFrame field0) video,
+    required TResult Function(Uint8List field0) video,
     required TResult Function(int field0, int field1, Uint8List field2) audio,
   }) {
     return video(field0);
@@ -150,7 +150,7 @@ class _$FlutterMediaMessage_Video implements FlutterMediaMessage_Video {
   @override
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>({
-    TResult Function(DesktopDecodeFrame field0)? video,
+    TResult Function(Uint8List field0)? video,
     TResult Function(int field0, int field1, Uint8List field2)? audio,
   }) {
     return video?.call(field0);
@@ -159,7 +159,7 @@ class _$FlutterMediaMessage_Video implements FlutterMediaMessage_Video {
   @override
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>({
-    TResult Function(DesktopDecodeFrame field0)? video,
+    TResult Function(Uint8List field0)? video,
     TResult Function(int field0, int field1, Uint8List field2)? audio,
     required TResult orElse(),
   }) {
@@ -202,10 +202,10 @@ class _$FlutterMediaMessage_Video implements FlutterMediaMessage_Video {
 }
 
 abstract class FlutterMediaMessage_Video implements FlutterMediaMessage {
-  const factory FlutterMediaMessage_Video(final DesktopDecodeFrame field0) =
+  const factory FlutterMediaMessage_Video(final Uint8List field0) =
       _$FlutterMediaMessage_Video;
 
-  DesktopDecodeFrame get field0;
+  Uint8List get field0;
   @JsonKey(ignore: true)
   _$$FlutterMediaMessage_VideoCopyWith<_$FlutterMediaMessage_Video>
       get copyWith => throw _privateConstructorUsedError;
@@ -298,7 +298,7 @@ class _$FlutterMediaMessage_Audio implements FlutterMediaMessage_Audio {
   @override
   @optionalTypeArgs
   TResult when<TResult extends Object?>({
-    required TResult Function(DesktopDecodeFrame field0) video,
+    required TResult Function(Uint8List field0) video,
     required TResult Function(int field0, int field1, Uint8List field2) audio,
   }) {
     return audio(field0, field1, field2);
@@ -307,7 +307,7 @@ class _$FlutterMediaMessage_Audio implements FlutterMediaMessage_Audio {
   @override
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>({
-    TResult Function(DesktopDecodeFrame field0)? video,
+    TResult Function(Uint8List field0)? video,
     TResult Function(int field0, int field1, Uint8List field2)? audio,
   }) {
     return audio?.call(field0, field1, field2);
@@ -316,7 +316,7 @@ class _$FlutterMediaMessage_Audio implements FlutterMediaMessage_Audio {
   @override
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>({
-    TResult Function(DesktopDecodeFrame field0)? video,
+    TResult Function(Uint8List field0)? video,
     TResult Function(int field0, int field1, Uint8List field2)? audio,
     required TResult orElse(),
   }) {

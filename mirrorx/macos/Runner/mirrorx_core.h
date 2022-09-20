@@ -90,8 +90,6 @@ typedef struct wire_NegotiateFinishedRequest {
   int64_t passive_device_id;
   uint8_t expect_frame_rate;
   int64_t texture_id;
-  int64_t video_texture_pointer;
-  int64_t update_frame_callback_pointer;
 } wire_NegotiateFinishedRequest;
 
 typedef struct wire_MouseEvent_MouseUp {
