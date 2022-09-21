@@ -18,7 +18,7 @@ public class TextureRenderPlugin: NSObject, FlutterPlugin {
     
     init(textureRegistry: FlutterTextureRegistry, binaryMessager:FlutterBinaryMessenger) {
         self.textureRegistry = textureRegistry
-        self.videoBufferChannel = FlutterBasicMessageChannel(name: "texture_render_binary_channel", binaryMessenger: binaryMessager, codec: FlutterBinaryCodec())
+        self.videoBufferChannel = FlutterBasicMessageChannel(name: "texture_render_binary_channel", binaryMessenger: binaryMessager, codec: FlutterBinaryCodec.sharedInstance())
         self.videoTextures = [Int64:VideoTexture]()
         self.videoTexturesRWLock = pthread_rwlock_t()
         
@@ -27,10 +27,11 @@ public class TextureRenderPlugin: NSObject, FlutterPlugin {
         super.init()
         
         self.videoBufferChannel.setMessageHandler{message,reply in
+            reply(nil)
             guard let buffer = message as? Data else {
                 return
             }
-            
+
             self.handleVideoBuffer(buffer)
         }
     }
@@ -93,7 +94,7 @@ public class TextureRenderPlugin: NSObject, FlutterPlugin {
         
         
         var byteBuffer = ByteBuffer(data: buffer)
-       
+        
         guard let id = byteBuffer.readInteger(endianness: .little, as: Int64.self) else{
             return
         }
@@ -123,15 +124,13 @@ public class TextureRenderPlugin: NSObject, FlutterPlugin {
         }
         
         pthread_rwlock_rdlock(&self.videoTexturesRWLock)
-        defer{
-            pthread_rwlock_unlock(&self.videoTexturesRWLock)
-        }
-        
         guard let videoTexture = videoTextures[id] else{
+            pthread_rwlock_unlock(&self.videoTexturesRWLock)
             return
         }
+        pthread_rwlock_unlock(&self.videoTexturesRWLock)
         
-        print("before update frame")
+        
         videoTexture.updateFrame(width, height, luminaStride, chromaStride, luminaBody, chromaBody)
     }
     

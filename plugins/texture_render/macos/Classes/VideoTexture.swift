@@ -7,7 +7,8 @@ class VideoTexture: NSObject, FlutterTexture {
     var textureId:Int64 = 0
     private var registry: FlutterTextureRegistry
     private var semaphore:DispatchSemaphore = DispatchSemaphore.init(value: 1)
-    private var pixelBuffer: CVPixelBuffer?
+    private var nextPixelBuffer: CVPixelBuffer?
+    private var renderPixelBuffer:CVPixelBuffer?
     private var pixelBufferPool:CVPixelBufferPool?
     private var width:Int32 = 0
     private var height:Int32 = 0
@@ -42,9 +43,6 @@ class VideoTexture: NSObject, FlutterTexture {
             return
         }
         
-        self.width = width
-        self.height = height
-        
         var pixelBuffer:CVPixelBuffer?
         if CVPixelBufferPoolCreatePixelBuffer(kCFAllocatorDefault, pixelBufferPool, &pixelBuffer) != kCVReturnSuccess{
             return
@@ -54,11 +52,13 @@ class VideoTexture: NSObject, FlutterTexture {
             return
         }
         
+        self.width = width
+        self.height = height
+        
         CVPixelBufferLockBaseAddress(pixelBuffer, CVPixelBufferLockFlags.init(rawValue: 0))
         
         let luminaBaseAddress = CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, 0)
         let _ = luminaBytebuffer.withUnsafeReadableBytes({luminaByteBufferAddress in
-            
             memcpy(luminaBaseAddress, luminaByteBufferAddress.baseAddress, Int(height * luminaStride))
         })
         
@@ -68,8 +68,8 @@ class VideoTexture: NSObject, FlutterTexture {
         })
         
         CVPixelBufferUnlockBaseAddress(pixelBuffer, CVPixelBufferLockFlags.init(rawValue: 0))
-        
-        self.pixelBuffer = pixelBuffer
+       
+        self.nextPixelBuffer = pixelBuffer
         self.registry.textureFrameAvailable(self.textureId)
     }
     
@@ -79,11 +79,13 @@ class VideoTexture: NSObject, FlutterTexture {
             self.semaphore.signal()
         }
         
-        guard let pixelBuffer = self.pixelBuffer else {
+        self.renderPixelBuffer = self.nextPixelBuffer
+       
+        guard let pixelBuffer = self.renderPixelBuffer else {
+            print("copy nil pixelbuffer")
             return nil
         }
         
-        print("copy pixel buffer")
         return Unmanaged.passRetained(pixelBuffer)
     }
     

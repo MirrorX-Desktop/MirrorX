@@ -32,12 +32,12 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
   @override
   void initState() {
     super.initState();
-    HardwareKeyboard.instance.addHandler(_handleKeyboardEvent);
+    // HardwareKeyboard.instance.addHandler(_handleKeyboardEvent);
   }
 
   @override
   void dispose() {
-    HardwareKeyboard.instance.removeHandler(_handleKeyboardEvent);
+    // HardwareKeyboard.instance.removeHandler(_handleKeyboardEvent);
     super.dispose();
   }
 
@@ -113,11 +113,11 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
       fit: widget.fit,
       child: Listener(
         behavior: HitTestBehavior.opaque,
-        onPointerDown: _handlePointerDown,
-        onPointerUp: _handlePointerUp,
-        onPointerHover: _handlePointerHover,
-        onPointerMove: _handlePointerMove,
-        onPointerSignal: _handlePointerSignal,
+        // onPointerDown: _handlePointerDown,
+        // onPointerUp: _handlePointerUp,
+        // onPointerHover: _handlePointerHover,
+        // onPointerMove: _handlePointerMove,
+        // onPointerSignal: _handlePointerSignal,
         child: RepaintBoundary(
           child: SizedBox(
             width: desktopInfo.monitorWidth.floorToDouble(),
