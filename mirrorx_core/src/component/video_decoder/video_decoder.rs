@@ -1,16 +1,12 @@
 use crate::{
     api::endpoint::flutter_message::FlutterMediaMessage,
-    component::frame::DesktopDecodeFrame,
     core_error,
     error::{CoreError, CoreResult},
     ffi::ffmpeg::{avcodec::*, avutil::*},
 };
 use bytes::{Buf, BufMut};
 use flutter_rust_bridge::{StreamSink, ZeroCopyBuffer};
-use std::{
-    ffi::{CStr, CString},
-    io::Read,
-};
+use std::ffi::{CStr, CString};
 
 pub struct VideoDecoder {
     decode_context: *mut DecodeContext,
@@ -224,52 +220,52 @@ impl DecodeContext {
                 .as_ptr(),
             );
 
-            // if hw_device_type == AV_HWDEVICE_TYPE_NONE {
-            //     tracing::error!("current environment does't support 'd3d11va'");
+            if hw_device_type == AV_HWDEVICE_TYPE_NONE {
+                tracing::error!("current environment does't support 'd3d11va'");
 
-            //     let mut devices = Vec::new();
-            //     loop {
-            //         hw_device_type = av_hwdevice_iterate_types(hw_device_type);
-            //         if hw_device_type == AV_HWDEVICE_TYPE_NONE {
-            //             break;
-            //         }
+                let mut devices = Vec::new();
+                loop {
+                    hw_device_type = av_hwdevice_iterate_types(hw_device_type);
+                    if hw_device_type == AV_HWDEVICE_TYPE_NONE {
+                        break;
+                    }
 
-            //         let device_name = av_hwdevice_get_type_name(hw_device_type);
+                    let device_name = av_hwdevice_get_type_name(hw_device_type);
 
-            //         devices.push(
-            //             CStr::from_ptr(device_name)
-            //                 .to_str()
-            //                 .map_or("unknown", |v| v),
-            //         );
-            //     }
+                    devices.push(
+                        CStr::from_ptr(device_name)
+                            .to_str()
+                            .map_or("unknown", |v| v),
+                    );
+                }
 
-            //     tracing::info!(?devices, "support hw device");
-            //     tracing::info!("init software decoder");
+                tracing::info!(?devices, "support hw device");
+                tracing::info!("init software decoder");
 
-            decode_ctx.parser_ctx = av_parser_init((*codec).id);
-            if decode_ctx.parser_ctx.is_null() {
-                return Err(core_error!("av_parser_init returns null"));
+                decode_ctx.parser_ctx = av_parser_init((*codec).id);
+                if decode_ctx.parser_ctx.is_null() {
+                    return Err(core_error!("av_parser_init returns null"));
+                }
+            } else {
+                let mut hwdevice_ctx = std::ptr::null_mut();
+
+                let ret = av_hwdevice_ctx_create(
+                    &mut hwdevice_ctx,
+                    hw_device_type,
+                    std::ptr::null(),
+                    std::ptr::null_mut(),
+                    0,
+                );
+
+                if ret < 0 {
+                    return Err(core_error!(
+                        "av_hwdevice_ctx_create returns error code: {}",
+                        ret,
+                    ));
+                }
+
+                (*decode_ctx.codec_ctx).hw_device_ctx = av_buffer_ref(hwdevice_ctx);
             }
-            // } else {
-            //     let mut hwdevice_ctx = std::ptr::null_mut();
-
-            //     let ret = av_hwdevice_ctx_create(
-            //         &mut hwdevice_ctx,
-            //         hw_device_type,
-            //         std::ptr::null(),
-            //         std::ptr::null_mut(),
-            //         0,
-            //     );
-
-            //     if ret < 0 {
-            //         return Err(core_error!(
-            //             "av_hwdevice_ctx_create returns error code: {}",
-            //             ret,
-            //         ));
-            //     }
-
-            //     (*decode_ctx.codec_ctx).hw_device_ctx = av_buffer_ref(hwdevice_ctx);
-            // }
 
             decode_ctx.packet = av_packet_alloc();
             if decode_ctx.packet.is_null() {

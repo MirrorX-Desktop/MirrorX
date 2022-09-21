@@ -131,6 +131,7 @@ public class TextureRenderPlugin: NSObject, FlutterPlugin {
             return
         }
         
+        print("before update frame")
         videoTexture.updateFrame(width, height, luminaStride, chromaStride, luminaBody, chromaBody)
     }
     

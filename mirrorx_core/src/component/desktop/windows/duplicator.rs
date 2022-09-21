@@ -198,11 +198,11 @@ impl Duplicator {
             self.device_context
                 .CopyResource(&self.backend_texture, desktop_texture);
 
-            self.update_mouse(&dxgi_outdupl_frame_info)?;
+            // self.update_mouse(&dxgi_outdupl_frame_info)?;
 
-            if self.mouse_visible {
-                self.draw_mouse(&dxgi_outdupl_frame_info)?;
-            }
+            // if self.mouse_visible {
+            //     self.draw_mouse(&dxgi_outdupl_frame_info)?;
+            // }
 
             if let Err(err) = self.duplication.ReleaseFrame() {
                 tracing::error!("DXGI release frame failed ({:?})", err.code());
@@ -570,8 +570,6 @@ impl Duplicator {
         self.device_context.RSSetViewports(&self.backend_viewport);
 
         self.device_context.Draw(VERTICES.len() as u32, 0);
-
-        self.device_context.Flush();
 
         Ok(())
     }

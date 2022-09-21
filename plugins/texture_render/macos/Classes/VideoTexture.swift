@@ -83,6 +83,7 @@ class VideoTexture: NSObject, FlutterTexture {
             return nil
         }
         
+        print("copy pixel buffer")
         return Unmanaged.passRetained(pixelBuffer)
     }
     

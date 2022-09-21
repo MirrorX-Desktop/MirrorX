@@ -136,13 +136,13 @@ class DesktopManagerCubit extends Cubit<DesktopManagerState> {
     int remoteDeviceId,
     InputEvent event,
   ) async {
-    await MirrorXCoreSDK.instance.endpointInput(
-      req: InputRequest(
-        activeDeviceId: localDeviceId,
-        passiveDeviceId: remoteDeviceId,
-        event: event,
-      ),
-    );
+    // await MirrorXCoreSDK.instance.endpointInput(
+    //   req: InputRequest(
+    //     activeDeviceId: localDeviceId,
+    //     passiveDeviceId: remoteDeviceId,
+    //     event: event,
+    //   ),
+    // );
   }
 
   void onMediaStreamData(int remoteDeviceId, FlutterMediaMessage message) {
