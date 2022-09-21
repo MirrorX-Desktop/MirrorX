@@ -183,6 +183,7 @@ impl EncodeContext {
             (*encoder_context.codec_ctx).color_trc = AVCOL_TRC_BT709;
             (*encoder_context.codec_ctx).colorspace = AVCOL_SPC_BT709;
 
+            (*encoder_context.frame).format = (*encoder_context.codec_ctx).pix_fmt;
             (*encoder_context.frame).width = width;
             (*encoder_context.frame).height = height;
 
