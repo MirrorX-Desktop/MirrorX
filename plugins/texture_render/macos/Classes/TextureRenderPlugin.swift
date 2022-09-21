@@ -51,7 +51,7 @@ public class TextureRenderPlugin: NSObject, FlutterPlugin {
                 return
             }
             
-            let textureId = videoTexture.textureID
+            let textureId = videoTexture.textureId
             
             pthread_rwlock_wrlock(&self.videoTexturesRWLock)
             self.videoTextures[textureId]=videoTexture

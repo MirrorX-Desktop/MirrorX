@@ -4,30 +4,23 @@ import FlutterMacOS
 
 class VideoTexture: NSObject, FlutterTexture {
     
-    var textureID:Int64 = 0
+    var textureId:Int64 = 0
     private var registry: FlutterTextureRegistry
     private var semaphore:DispatchSemaphore = DispatchSemaphore.init(value: 1)
-    private var pixelBuffer: Unmanaged<CVPixelBuffer>?
+    private var pixelBuffer: CVPixelBuffer?
     private var pixelBufferPool:CVPixelBufferPool?
     private var width:Int32 = 0
     private var height:Int32 = 0
     
     init?(_ registry: FlutterTextureRegistry) {
         self.registry = registry
-        
         super.init()
-        
-        self.textureID = self.registry.register(self)
-        
+        self.textureId = self.registry.register(self)
     }
     
     deinit {
-        if self.textureID > 0 {
-            self.registry.unregisterTexture(self.textureID)
-        }
-        
-        if self.pixelBuffer != nil {
-            self.pixelBuffer!.release()
+        if self.textureId > 0 {
+            self.registry.unregisterTexture(self.textureId)
         }
     }
     
@@ -45,11 +38,15 @@ class VideoTexture: NSObject, FlutterTexture {
             }
         }
         
+        guard let pixelBufferPool = self.pixelBufferPool else {
+            return
+        }
+        
         self.width = width
         self.height = height
         
         var pixelBuffer:CVPixelBuffer?
-        if CVPixelBufferPoolCreatePixelBuffer(kCFAllocatorDefault, self.pixelBufferPool!, &pixelBuffer) != kCVReturnSuccess{
+        if CVPixelBufferPoolCreatePixelBuffer(kCFAllocatorDefault, pixelBufferPool, &pixelBuffer) != kCVReturnSuccess{
             return
         }
         
@@ -71,8 +68,8 @@ class VideoTexture: NSObject, FlutterTexture {
         
         CVPixelBufferUnlockBaseAddress(pixelBuffer, CVPixelBufferLockFlags.init(rawValue: 0))
         
-        self.pixelBuffer = Unmanaged.passRetained(pixelBuffer)
-        self.registry.textureFrameAvailable(self.textureID)
+        self.pixelBuffer = pixelBuffer
+        self.registry.textureFrameAvailable(self.textureId)
     }
     
     func copyPixelBuffer() -> Unmanaged<CVPixelBuffer>? {
@@ -81,11 +78,11 @@ class VideoTexture: NSObject, FlutterTexture {
             self.semaphore.signal()
         }
         
-        guard let pixelBuffer = self.pixelBuffer else{
+        guard let pixelBuffer = self.pixelBuffer else {
             return nil
         }
         
-        return pixelBuffer
+        return Unmanaged.passRetained(pixelBuffer)
     }
     
     func createPixelBufferPool(_ width:Int32, _ height:Int32) -> CVReturn{
