@@ -3,12 +3,12 @@ import FlutterMacOS
 import NIOCore
 import NIOFoundationCompat
 
-let update_frame_callback:
-@convention(c) (UnsafeRawPointer, UnsafeRawPointer) -> Void = {
-    (videoTexturePointer, pixelBufferPointer) in
-    let videoTexture = Unmanaged<VideoTexture>.fromOpaque(videoTexturePointer).takeUnretainedValue()
-    videoTexture.updateFrame(pixelBufferPointer: pixelBufferPointer)
-}
+//let update_frame_callback:
+//@convention(c) (UnsafeRawPointer, UnsafeRawPointer) -> Void = {
+//    (videoTexturePointer, pixelBufferPointer) in
+//    let videoTexture = Unmanaged<VideoTexture>.fromOpaque(videoTexturePointer).takeUnretainedValue()
+//    videoTexture.updateFrame(pixelBufferPointer: pixelBufferPointer)
+//}
 
 public class TextureRenderPlugin: NSObject, FlutterPlugin {
     var textureRegistry: FlutterTextureRegistry
@@ -130,7 +130,7 @@ public class TextureRenderPlugin: NSObject, FlutterPlugin {
             return
         }
         
-        // todo: videoTexture.updateFrame(pixelBufferPointer: <#T##UnsafeRawPointer#>)
+        videoTexture.updateFrame(width, height, luminaStride, chromaStride, luminaBody, chromaBody)
     }
     
     deinit{

@@ -73,15 +73,12 @@ class _DesktopPageState extends State<DesktopPage> {
               );
             }
 
-            final data = snapshot.data as Tuple3<int, int, int>;
-
-            return _buildDesktopSurface(data.item1, data.item2, data.item3);
+            return _buildDesktopSurface();
           });
     });
   }
 
-  Widget _buildDesktopSurface(
-      int monitorWidth, int monitorHeight, int textureId) {
+  Widget _buildDesktopSurface() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -141,7 +138,7 @@ class _DesktopPageState extends State<DesktopPage> {
     });
   }
 
-  Future _prepareConnection(DesktopManagerCubit cubit) async {
+  Future<void> _prepareConnection(DesktopManagerCubit cubit) async {
     if (cubit.state.desktopPrepareInfoLists.any((element) =>
         element.localDeviceId == widget.localDeviceId &&
         element.remoteDeviceId == widget.remoteDeviceId)) {
