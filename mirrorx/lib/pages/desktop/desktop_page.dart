@@ -8,7 +8,6 @@ import 'package:mirrorx/state/desktop_manager/desktop_manager_cubit.dart';
 import 'package:mirrorx/state/page_manager/page_manager_cubit.dart';
 import 'package:texture_render/texture_render.dart';
 import 'package:texture_render/texture_render_platform_interface.dart';
-import 'package:tuple/tuple.dart';
 
 class DesktopPage extends StatefulWidget {
   const DesktopPage(

@@ -165,10 +165,8 @@ fn spawn_desktop_capture_and_encode_process(
 fn spawn_desktop_capture_and_encode_process(
     active_device_id: i64,
     passive_device_id: i64,
-    mut message_tx: Sender<EndPointMessage>,
+    message_tx: Sender<EndPointMessage>,
 ) {
-    use crate::component::video_encoder::FFMPEGEncoderType;
-
     let (monitor_id, monitor_height, monitor_width) = match get_primary_monitor_params() {
         Ok(params) => params,
         Err(err) => {
@@ -230,11 +228,7 @@ fn spawn_desktop_capture_and_encode_process(
             tracing::info!(?active_device_id, ?passive_device_id, "encode process exit");
         }
 
-        let mut encoder = match VideoEncoder::new(
-            EncoderType::Libx264,
-            monitor_width as i32,
-            monitor_height as i32,
-        ) {
+        let mut encoder = match VideoEncoder::new(EncoderType::Libx264, message_tx) {
             Ok(encoder) => encoder,
             Err(err) => {
                 tracing::error!(
@@ -250,16 +244,7 @@ fn spawn_desktop_capture_and_encode_process(
         loop {
             match capture_frame_rx.recv() {
                 Ok(capture_frame) => {
-                    if message_tx.is_closed() {
-                        tracing::error!(
-                            ?active_device_id,
-                            ?passive_device_id,
-                            "message tx has closed, encode process will exit"
-                        );
-                        break;
-                    }
-
-                    if let Err(err) = encoder.encode(capture_frame, &mut message_tx) {
+                    if let Err(err) = encoder.encode(capture_frame) {
                         tracing::error!(
                             ?active_device_id,
                             ?passive_device_id,

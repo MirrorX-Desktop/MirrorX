@@ -5,8 +5,8 @@ use super::{
 };
 use crate::{
     component::{
-        capture_frame::CaptureFrame,
         desktop::windows::dx_math::{BPP, VERTEX},
+        frame::DesktopEncodeFrame,
     },
     core_error,
     error::{CoreError, CoreResult},
@@ -145,7 +145,7 @@ impl Duplicator {
         }
     }
 
-    pub fn capture(&mut self) -> CoreResult<CaptureFrame> {
+    pub fn capture(&mut self) -> CoreResult<DesktopEncodeFrame> {
         unsafe {
             self.acquire_frame()?;
             self.draw_lumina_and_chrominance_texture()?;
@@ -274,7 +274,7 @@ impl Duplicator {
         Ok(())
     }
 
-    unsafe fn create_capture_frame(&self) -> CoreResult<CaptureFrame> {
+    unsafe fn create_capture_frame(&self) -> CoreResult<DesktopEncodeFrame> {
         self.device_context.CopyResource(
             &self.luminance_staging_texture,
             &self.luminance_render_texture,
@@ -292,11 +292,11 @@ impl Duplicator {
             0
         ));
 
-        let lumina_stride = lumina_mapped_resource.RowPitch;
+        let luminance_stride = lumina_mapped_resource.RowPitch;
 
-        let lumina_bytes = std::slice::from_raw_parts(
+        let luminance_bytes = std::slice::from_raw_parts(
             lumina_mapped_resource.pData as *mut u8,
-            (self.dxgi_outdupl_desc.ModeDesc.Height * lumina_stride) as usize,
+            (self.dxgi_outdupl_desc.ModeDesc.Height * luminance_stride) as usize,
         )
         .to_vec();
 
@@ -321,13 +321,13 @@ impl Duplicator {
         self.device_context
             .Unmap(&self.chrominance_staging_texture, 0);
 
-        Ok(CaptureFrame {
-            width: self.dxgi_outdupl_desc.ModeDesc.Width,
-            height: self.dxgi_outdupl_desc.ModeDesc.Height,
-            luminance_bytes: lumina_bytes,
-            luminance_stride: lumina_stride,
+        Ok(DesktopEncodeFrame {
+            width: self.dxgi_outdupl_desc.ModeDesc.Width as i32,
+            height: self.dxgi_outdupl_desc.ModeDesc.Height as i32,
+            luminance_bytes,
+            luminance_stride: luminance_stride as i32,
             chrominance_bytes,
-            chrominance_stride,
+            chrominance_stride: chrominance_stride as i32,
         })
     }
 
