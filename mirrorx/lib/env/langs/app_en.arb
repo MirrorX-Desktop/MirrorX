@@ -4,6 +4,8 @@
     "dialogCancel": "Cancel",
     "dialogYes": "Yes",
     "dialogNo": "No",
+    "dialogAllow": "Allow",
+    "dialogDisallow": "Disallow",
     "dialogConnectRemoteError": "An error occurs while connecting to the remote device",
     "dialogConnectRemoteOffline": "The remote device is offline",
     "dialogContentInputDevicePassword": "Please enter the password for the remote device",
@@ -11,6 +13,7 @@
     "dialogContentConnectionDisconnected": "The remote device connection is disconnected",
     "dialogContentManuallyClose": "Do you really want to disconnect the connection?",
     "connectPageTitle": "Connect",
+    "connectPageDomainTitle": "Connect Domain",
     "connectPageDeviceIDTitle": "Device ID",
     "connectPageDeviceIDButtonCopyTooltip": "Copy Device ID",
     "connectPageDeviceIDButtonCopySnackbarContent": "Device ID copied to clipboard",
@@ -32,6 +35,17 @@
     },
     "connectPageConnectRemoteTitle": "Connect Remote",
     "connectPageConnectRemoteButtonConnectTooltip": "Connect to Remote",
+    "connectPageConnectVisitRequestDialogContent": "{active_device_id} want to visit your {resource_type}",
+    "@connectPageConnectVisitRequestDialogContent": {
+        "placeholders": {
+            "active_device_id": {
+                "type": "int"
+            },
+            "resource_type": {
+                "type": "String"
+            }
+        }
+    },
     "connectPageConnectProgressTipKeyExchange": "E2EE KeyExchange ...",
     "connectPageConnectProgressTipKeyExchangeFailed": "E2EE KeyExchange Failed",
     "connectPageConnectProgressTipListMonitors": "Listing Monitors ...",

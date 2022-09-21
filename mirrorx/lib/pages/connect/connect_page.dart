@@ -1,3 +1,4 @@
+import 'package:mirrorx/pages/connect/widgets/domain_select_field/domain_select_field.dart';
 import 'package:mirrorx/pages/connect/widgets/remote_connect_field/remote_connect_field.dart';
 import 'package:flutter/material.dart';
 
@@ -20,6 +21,10 @@ class ConnectPage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: const [
+                Padding(
+                  padding: EdgeInsets.only(bottom: 10),
+                  child: DomainSelectField(),
+                ),
                 Padding(
                   padding: EdgeInsets.only(bottom: 10),
                   child: DeviceIdField(),

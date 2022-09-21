@@ -29,7 +29,15 @@ final DynamicLibrary _dylib = () {
 }();
 
 class MirrorXCoreSDK {
-  static final MirrorXCoreImpl _instance = MirrorXCoreImpl(_dylib);
+  static MirrorXCoreImpl? _instance;
 
-  static MirrorXCoreImpl get instance => _instance;
+  static MirrorXCoreImpl get instance => _getInstance();
+
+  static MirrorXCoreImpl _getInstance() {
+    if (_instance == null) {
+      _instance = MirrorXCoreImpl(_dylib);
+      _instance!.initLogger();
+    }
+    return _instance!;
+  }
 }

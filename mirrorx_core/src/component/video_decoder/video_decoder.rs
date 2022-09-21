@@ -1,17 +1,183 @@
-use super::frame::DecodedFrame;
 use crate::{
+    api::endpoint::flutter_message::FlutterMediaMessage,
+    component::frame::DesktopDecodeFrame,
     core_error,
     error::{CoreError, CoreResult},
-    ffi::{
-        ffmpeg::{avcodec::*, avutil::*},
-        libyuv::*,
-    },
-    service::endpoint::message::VideoFrame,
+    ffi::ffmpeg::{avcodec::*, avutil::*},
 };
-use crossbeam::channel::Sender;
+use bytes::BufMut;
+use flutter_rust_bridge::{StreamSink, ZeroCopyBuffer};
 use std::ffi::{CStr, CString};
 
 pub struct VideoDecoder {
+    decode_context: *mut DecodeContext,
+    texture_id: i64,
+    stream: StreamSink<FlutterMediaMessage>,
+}
+
+impl VideoDecoder {
+    pub fn new(texture_id: i64, stream: StreamSink<FlutterMediaMessage>) -> VideoDecoder {
+        unsafe {
+            av_log_set_level(AV_LOG_TRACE);
+            av_log_set_flags(AV_LOG_SKIP_REPEATED);
+
+            VideoDecoder {
+                decode_context: std::ptr::null_mut(),
+                texture_id,
+                stream,
+            }
+        }
+    }
+
+    pub fn decode(
+        &mut self,
+        mut video_frame: crate::api::endpoint::message::EndPointVideoFrame,
+    ) -> CoreResult<()> {
+        unsafe {
+            if self.decode_context.is_null()
+                || (*(*self.decode_context).codec_ctx).width != video_frame.width
+                || (*(*self.decode_context).codec_ctx).height != video_frame.height
+            {
+                if !self.decode_context.is_null() {
+                    let _ = Box::from_raw(self.decode_context);
+                }
+
+                self.decode_context = Box::into_raw(Box::new(DecodeContext::new(
+                    video_frame.width,
+                    video_frame.height,
+                )?));
+            }
+
+            if self.decode_context.is_null() {
+                return Err(core_error!("decode context is null"));
+            }
+
+            if !(*self.decode_context).parser_ctx.is_null() {
+                let ret = av_parser_parse2(
+                    (*self.decode_context).parser_ctx,
+                    (*self.decode_context).codec_ctx,
+                    &mut (*(*self.decode_context).packet).data,
+                    &mut (*(*self.decode_context).packet).size,
+                    video_frame.buffer.as_ptr(),
+                    video_frame.buffer.len() as i32,
+                    0,
+                    0,
+                    0,
+                );
+
+                if ret < 0 {
+                    return Err(core_error!("av_parser_parse2 returns error code: {}", ret));
+                }
+            } else {
+                (*(*self.decode_context).packet).data = video_frame.buffer.as_mut_ptr();
+                (*(*self.decode_context).packet).size = video_frame.buffer.len() as i32;
+                // (*self.packet).pts = frame.pts;
+                // (*self.packet).dts = frame.pts;
+            }
+
+            // av_packet_rescale_ts(self.packet, AV_TIME_BASE_Q, (*self.codec_ctx).pkt_timebase);
+
+            let mut ret = avcodec_send_packet(
+                (*self.decode_context).codec_ctx,
+                (*self.decode_context).packet,
+            );
+
+            if ret == AVERROR(libc::EAGAIN) {
+                return Err(core_error!("avcodec_send_packet returns EAGAIN"));
+            } else if ret == AVERROR_EOF {
+                return Err(core_error!("avcodec_send_packet returns AVERROR_EOF"));
+            } else if ret < 0 {
+                return Err(core_error!(
+                    "avcodec_send_packet returns error code: {}",
+                    ret
+                ));
+            }
+
+            loop {
+                ret = avcodec_receive_frame(
+                    (*self.decode_context).codec_ctx,
+                    (*self.decode_context).decode_frame,
+                );
+                if ret == AVERROR(libc::EAGAIN) || ret == AVERROR_EOF {
+                    return Ok(());
+                } else if ret < 0 {
+                    return Err(core_error!(
+                        "avcodec_receive_frame returns error code: {}",
+                        ret
+                    ));
+                }
+
+                let tmp_frame = if !(*self.decode_context).parser_ctx.is_null() {
+                    (*self.decode_context).decode_frame
+                } else {
+                    let ret = av_hwframe_transfer_data(
+                        (*self.decode_context).hw_decode_frame,
+                        (*self.decode_context).decode_frame,
+                        0,
+                    );
+                    if ret < 0 {
+                        return Err(core_error!(
+                            "av_hwframe_transfer_data returns error code: {}",
+                            ret
+                        ));
+                    }
+
+                    (*self.decode_context).hw_decode_frame
+                };
+
+                // 8: id
+                // 4: width
+                // 4: height
+                // 4: lumina stride
+                // 4: chroma stride
+                // 4: lumina body length
+                // n: lumina body
+                // 4: chroma body length
+                // n: chroma body
+
+                let width = (*tmp_frame).width;
+                let height = (*tmp_frame).height;
+                let luminance_stride = (*tmp_frame).linesize[0];
+                let chrominance_stride = (*tmp_frame).linesize[1];
+                let luminance_bytes_length = height * luminance_stride;
+                let chrominance_bytes_length = height * chrominance_stride / 2;
+
+                let mut video_frame_buffer = Vec::<u8>::with_capacity(
+                    24 + 4
+                        + (luminance_bytes_length as usize)
+                        + 4
+                        + (chrominance_bytes_length as usize),
+                );
+
+                video_frame_buffer.put_i64_le(self.texture_id);
+                video_frame_buffer.put_i32_le(width);
+                video_frame_buffer.put_i32_le(height);
+                video_frame_buffer.put_i32_le(luminance_stride);
+                video_frame_buffer.put_i32_le(chrominance_stride);
+                video_frame_buffer.put_i32_le(luminance_bytes_length);
+                video_frame_buffer.put_slice(std::slice::from_raw_parts(
+                    (*tmp_frame).data[0],
+                    luminance_bytes_length as usize,
+                ));
+                video_frame_buffer.put_i32_le(chrominance_bytes_length);
+                video_frame_buffer.put_slice(std::slice::from_raw_parts(
+                    (*tmp_frame).data[1],
+                    chrominance_bytes_length as usize,
+                ));
+
+                av_frame_unref(tmp_frame);
+
+                if !self.stream.add(FlutterMediaMessage::Video(ZeroCopyBuffer(
+                    video_frame_buffer,
+                ))) {
+                    return Err(core_error!("decoded frame tx is disconnected"));
+                }
+            }
+        }
+    }
+}
+
+struct DecodeContext {
     codec_ctx: *mut AVCodecContext,
     parser_ctx: *mut AVCodecParserContext,
     packet: *mut AVPacket,
@@ -19,45 +185,39 @@ pub struct VideoDecoder {
     hw_decode_frame: *mut AVFrame,
 }
 
-unsafe impl Send for VideoDecoder {}
-
-impl VideoDecoder {
-    pub fn new(width: i32, height: i32) -> CoreResult<VideoDecoder> {
+impl DecodeContext {
+    fn new(width: i32, height: i32) -> CoreResult<DecodeContext> {
         unsafe {
-            av_log_set_level(AV_LOG_TRACE);
-            av_log_set_flags(AV_LOG_SKIP_REPEATED);
-
-            let mut decoder = VideoDecoder {
-                codec_ctx: std::ptr::null_mut(),
-                parser_ctx: std::ptr::null_mut(),
-                packet: std::ptr::null_mut(),
-                decode_frame: std::ptr::null_mut(),
-                hw_decode_frame: std::ptr::null_mut(),
-            };
+            let mut decode_ctx = DecodeContext::default();
 
             let codec = avcodec_find_decoder(AV_CODEC_ID_H264);
             if codec.is_null() {
                 return Err(core_error!("avcodec_find_decoder returns null"));
             }
 
-            decoder.codec_ctx = avcodec_alloc_context3(codec);
-            if decoder.codec_ctx.is_null() {
+            decode_ctx.codec_ctx = avcodec_alloc_context3(codec);
+            if decode_ctx.codec_ctx.is_null() {
                 return Err(core_error!("avcodec_alloc_context3 returns null"));
             }
 
-            (*decoder.codec_ctx).width = width;
-            (*decoder.codec_ctx).height = height;
-            (*decoder.codec_ctx).framerate = AVRational { num: 1, den: 1 };
-            // (*decoder.codec_ctx).pkt_timebase = AVRational { num: 1, den: fps };
-            (*decoder.codec_ctx).pix_fmt = AV_PIX_FMT_NV12;
-            (*decoder.codec_ctx).color_range = AVCOL_RANGE_JPEG;
-            (*decoder.codec_ctx).color_primaries = AVCOL_PRI_BT709;
-            (*decoder.codec_ctx).color_trc = AVCOL_TRC_BT709;
-            (*decoder.codec_ctx).colorspace = AVCOL_SPC_BT709;
-            (*decoder.codec_ctx).flags |= AV_CODEC_FLAG_LOW_DELAY;
+            (*decode_ctx.codec_ctx).width = width;
+            (*decode_ctx.codec_ctx).height = height;
+            (*decode_ctx.codec_ctx).framerate = AVRational { num: 1, den: 1 };
+            (*decode_ctx.codec_ctx).pix_fmt = AV_PIX_FMT_NV12;
+            (*decode_ctx.codec_ctx).color_range = AVCOL_RANGE_JPEG;
+            (*decode_ctx.codec_ctx).color_primaries = AVCOL_PRI_BT709;
+            (*decode_ctx.codec_ctx).color_trc = AVCOL_TRC_BT709;
+            (*decode_ctx.codec_ctx).colorspace = AVCOL_SPC_BT709;
+            (*decode_ctx.codec_ctx).flags2 |= AV_CODEC_FLAG2_LOCAL_HEADER;
 
-            let mut hw_device_type =
-                av_hwdevice_find_type_by_name(CString::new("d3d11va")?.as_ptr());
+            let mut hw_device_type = av_hwdevice_find_type_by_name(
+                CString::new(if cfg!(target_os = "windows") {
+                    "d3d11va"
+                } else {
+                    "videotoolbox"
+                })?
+                .as_ptr(),
+            );
 
             if hw_device_type == AV_HWDEVICE_TYPE_NONE {
                 tracing::error!("current environment does't support 'd3d11va'");
@@ -81,8 +241,8 @@ impl VideoDecoder {
                 tracing::info!(?devices, "support hw device");
                 tracing::info!("init software decoder");
 
-                decoder.parser_ctx = av_parser_init(AV_CODEC_ID_H264);
-                if decoder.parser_ctx.is_null() {
+                decode_ctx.parser_ctx = av_parser_init(AV_CODEC_ID_H264);
+                if decode_ctx.parser_ctx.is_null() {
                     return Err(core_error!("av_parser_init returns null"));
                 }
             } else {
@@ -103,122 +263,47 @@ impl VideoDecoder {
                     ));
                 }
 
-                (*decoder.codec_ctx).hw_device_ctx = av_buffer_ref(hwdevice_ctx);
+                (*decode_ctx.codec_ctx).hw_device_ctx = av_buffer_ref(hwdevice_ctx);
             }
 
-            decoder.packet = av_packet_alloc();
-            if decoder.packet.is_null() {
+            decode_ctx.packet = av_packet_alloc();
+            if decode_ctx.packet.is_null() {
                 return Err(core_error!("av_packet_alloc returns null"));
             }
 
-            decoder.decode_frame = av_frame_alloc();
-            if decoder.decode_frame.is_null() {
+            decode_ctx.decode_frame = av_frame_alloc();
+            if decode_ctx.decode_frame.is_null() {
                 return Err(core_error!("av_frame_alloc returns null"));
             }
 
-            decoder.hw_decode_frame = av_frame_alloc();
-            if decoder.hw_decode_frame.is_null() {
+            decode_ctx.hw_decode_frame = av_frame_alloc();
+            if decode_ctx.hw_decode_frame.is_null() {
                 return Err(core_error!("av_frame_alloc returns null"));
             }
 
-            let ret = avcodec_open2(decoder.codec_ctx, codec, std::ptr::null_mut());
+            let ret = avcodec_open2(decode_ctx.codec_ctx, codec, std::ptr::null_mut());
             if ret != 0 {
                 return Err(core_error!("avcodec_open2 returns error code: {}", ret));
             }
 
-            Ok(decoder)
-        }
-    }
-
-    pub fn decode(&self, mut frame: VideoFrame, tx: &Sender<DecodedFrame>) -> CoreResult<()> {
-        unsafe {
-            if !self.parser_ctx.is_null() {
-                let ret = av_parser_parse2(
-                    self.parser_ctx,
-                    self.codec_ctx,
-                    &mut (*self.packet).data,
-                    &mut (*self.packet).size,
-                    frame.buffer.as_ptr(),
-                    frame.buffer.len() as i32,
-                    0,
-                    0,
-                    0,
-                );
-
-                if ret < 0 {
-                    return Err(core_error!("av_parser_parse2 returns error code: {}", ret));
-                }
-            } else {
-                (*self.packet).data = frame.buffer.as_mut_ptr();
-                (*self.packet).size = frame.buffer.len() as i32;
-                // (*self.packet).pts = frame.pts;
-                // (*self.packet).dts = frame.pts;
-            }
-
-            // av_packet_rescale_ts(self.packet, AV_TIME_BASE_Q, (*self.codec_ctx).pkt_timebase);
-
-            let mut ret = avcodec_send_packet(self.codec_ctx, self.packet);
-
-            if ret == AVERROR(libc::EAGAIN) {
-                return Err(core_error!("avcodec_send_packet returns EAGAIN"));
-            } else if ret == AVERROR_EOF {
-                return Err(core_error!("avcodec_send_packet returns AVERROR_EOF"));
-            } else if ret < 0 {
-                return Err(core_error!(
-                    "avcodec_send_packet returns error code: {}",
-                    ret
-                ));
-            }
-
-            loop {
-                ret = avcodec_receive_frame(self.codec_ctx, self.decode_frame);
-                if ret == AVERROR(libc::EAGAIN) || ret == AVERROR_EOF {
-                    return Ok(());
-                } else if ret < 0 {
-                    return Err(core_error!(
-                        "avcodec_receive_frame returns error code: {}",
-                        ret
-                    ));
-                }
-
-                let mut tmp_frame: *mut AVFrame;
-
-                if !self.parser_ctx.is_null() {
-                    tmp_frame = self.decode_frame;
-                } else {
-                    let ret = av_hwframe_transfer_data(self.hw_decode_frame, self.decode_frame, 0);
-                    if ret < 0 {
-                        return Err(core_error!(
-                            "av_hwframe_transfer_data returns error code: {}",
-                            ret
-                        ));
-                    }
-
-                    tmp_frame = self.hw_decode_frame;
-                }
-
-                av_frame_unref(tmp_frame);
-
-                let decode_frame_buffer = convert_yuv_to_rgb(tmp_frame)?;
-                let decoded_frame = DecodedFrame {
-                    buffer: decode_frame_buffer,
-                    width: (*tmp_frame).width,
-                    height: (*tmp_frame).height,
-                };
-
-                if let Err(err) = tx.try_send(decoded_frame) {
-                    if err.is_full() {
-                        tracing::warn!("decoded frame tx is full");
-                    } else if err.is_disconnected() {
-                        return Err(core_error!("decoded frame tx is disconnected"));
-                    }
-                }
-            }
+            Ok(decode_ctx)
         }
     }
 }
 
-impl Drop for VideoDecoder {
+impl Default for DecodeContext {
+    fn default() -> Self {
+        Self {
+            codec_ctx: std::ptr::null_mut(),
+            parser_ctx: std::ptr::null_mut(),
+            packet: std::ptr::null_mut(),
+            decode_frame: std::ptr::null_mut(),
+            hw_decode_frame: std::ptr::null_mut(),
+        }
+    }
+}
+
+impl Drop for DecodeContext {
     fn drop(&mut self) {
         unsafe {
             if !self.codec_ctx.is_null() {
@@ -251,28 +336,28 @@ impl Drop for VideoDecoder {
     }
 }
 
-unsafe fn convert_yuv_to_rgb(frame: *mut AVFrame) -> CoreResult<Vec<u8>> {
-    let argb_stride = 4 * ((32 * (*frame).width + 31) / 32);
-    let argb_frame_size = (argb_stride as usize) * ((*frame).height as usize) * 4;
-    let mut argb_frame_buffer = Vec::<u8>::with_capacity(argb_frame_size);
+// unsafe fn convert_yuv_to_rgb(frame: *mut AVFrame) -> CoreResult<Vec<u8>> {
+//     let argb_stride = 4 * ((32 * (*frame).width + 31) / 32);
+//     let argb_frame_size = (argb_stride as usize) * ((*frame).height as usize) * 4;
+//     let mut argb_frame_buffer = Vec::<u8>::with_capacity(argb_frame_size);
 
-    let ret = NV21ToARGBMatrix(
-        (*frame).data[0],
-        (*frame).linesize[0] as isize,
-        (*frame).data[1],
-        (*frame).linesize[1] as isize,
-        argb_frame_buffer.as_mut_ptr(),
-        argb_stride as isize,
-        &kYvuF709Constants,
-        (*frame).width as isize,
-        (*frame).height as isize,
-    );
+//     let ret = NV21ToARGBMatrix(
+//         (*frame).data[0],
+//         (*frame).linesize[0] as isize,
+//         (*frame).data[1],
+//         (*frame).linesize[1] as isize,
+//         argb_frame_buffer.as_mut_ptr(),
+//         argb_stride as isize,
+//         &kYvuF709Constants,
+//         (*frame).width as isize,
+//         (*frame).height as isize,
+//     );
 
-    if ret != 0 {
-        return Err(core_error!("NV21ToARGBMatrix returns error code: {}", ret));
-    }
+//     if ret != 0 {
+//         return Err(core_error!("NV21ToARGBMatrix returns error code: {}", ret));
+//     }
 
-    argb_frame_buffer.set_len(argb_frame_size);
+//     argb_frame_buffer.set_len(argb_frame_size);
 
-    Ok(argb_frame_buffer)
-}
+//     Ok(argb_frame_buffer)
+// }

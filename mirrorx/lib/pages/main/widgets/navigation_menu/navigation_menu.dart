@@ -2,9 +2,8 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:mirrorx/env/sdk/mirrorx_core.dart';
 import 'package:mirrorx/state/desktop_manager/desktop_manager_cubit.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:mirrorx/state/page_manager/page_manager_cubit.dart';
 
 import 'navigation_menu_item.dart';
 
@@ -15,7 +14,7 @@ class NavigationMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<DesktopManagerCubit, DesktopManagerState>(
+    return BlocBuilder<PageManagerCubit, PageManagerState>(
       builder: (context, state) => Column(
         children: [
           Column(
@@ -54,7 +53,7 @@ class NavigationMenu extends StatelessWidget {
             ],
           ),
           Visibility(
-            visible: state.desktopModels.isNotEmpty,
+            visible: state.desktopIds.isNotEmpty,
             child: Container(
               width: 36,
               margin: const EdgeInsets.symmetric(vertical: 6),
@@ -70,36 +69,21 @@ class NavigationMenu extends StatelessWidget {
               child: ListView(
                 primary: true,
                 physics: const BouncingScrollPhysics(),
-                children: state.desktopModels
-                    .map(
-                      (model) => Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 2.0),
-                        child: NavigationMenuItem(
-                          pageTag: model.remoteDeviceId,
-                          iconBuilder: (color) =>
-                              FaIcon(_getOSIcon(model.osType), color: color),
-                          title: model.remoteDeviceId,
-                          system: false,
-                          desktopClosed: state.closedDesktops
-                              .contains(model.remoteDeviceId),
-                          desktopModel: model,
-                        ),
-                      ),
-                    )
-                    .toList(),
-                // children: [
-                //   Padding(
-                //     padding: const EdgeInsets.symmetric(vertical: 2.0),
-                //     child: NavigationMenuItem(
-                //       pageTag: "KDKDD",
-                //       iconBuilder: (color) =>
-                //           FaIcon(FontAwesomeIcons.redhat, color: color),
-                //       title: "DDSDDSDFS",
-                //       system: false,
-                //       desktopClosed: false,
-                //     ),
-                //   ),
-                // ],
+                children: state.desktopIds.map((desktopId) {
+                  final splitIds = desktopId.split("@");
+                  return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 2.0),
+                      child: NavigationMenuItem(
+                        remoteDeviceId: int.parse(splitIds[1]),
+                        pageTag: desktopId,
+                        iconBuilder: (color) =>
+                            FaIcon(FontAwesomeIcons.windows),
+                        // FaIcon(_getOSIcon(model.osType), color: color),
+                        title: splitIds[1],
+                        system: false,
+                        // state.closedDesktops.contains(model.remoteDeviceId),
+                      ));
+                }).toList(),
               ),
             ),
           )
@@ -108,33 +92,33 @@ class NavigationMenu extends StatelessWidget {
     );
   }
 
-  IconData _getOSIcon(OperatingSystemType osType) {
-    if (osType is Windows) {
-      return FontAwesomeIcons.windows;
-    } else if (osType is macOS) {
-      return FontAwesomeIcons.apple;
-    } else if (osType is iOS) {
-      return FontAwesomeIcons.apple;
-    } else if (osType is Android) {
-      return FontAwesomeIcons.android;
-    } else if (osType is Linux) {
-      switch (osType.field0) {
-        case LinuxType.CentOS:
-          return FontAwesomeIcons.centos;
-        case LinuxType.Fedora:
-          return FontAwesomeIcons.fedora;
-        case LinuxType.Redhat:
-          return FontAwesomeIcons.redhat;
-        case LinuxType.openSUSE:
-          return FontAwesomeIcons.suse;
-        case LinuxType.Ubuntu:
-          return FontAwesomeIcons.ubuntu;
-        case LinuxType.Other:
-        default:
-          return FontAwesomeIcons.linux;
-      }
-    } else {
-      return FontAwesomeIcons.display;
-    }
-  }
+  // IconData _getOSIcon(OperatingSystemType osType) {
+  //   if (osType is OperatingSystemType_Windows) {
+  //     return FontAwesomeIcons.windows;
+  //   } else if (osType is OperatingSystemType_macOS) {
+  //     return FontAwesomeIcons.apple;
+  //   } else if (osType is OperatingSystemType_iOS) {
+  //     return FontAwesomeIcons.apple;
+  //   } else if (osType is OperatingSystemType_Android) {
+  //     return FontAwesomeIcons.android;
+  //   } else if (osType is OperatingSystemType_Linux) {
+  //     switch (osType.field0) {
+  //       case LinuxType.CentOS:
+  //         return FontAwesomeIcons.centos;
+  //       case LinuxType.Fedora:
+  //         return FontAwesomeIcons.fedora;
+  //       case LinuxType.Redhat:
+  //         return FontAwesomeIcons.redhat;
+  //       case LinuxType.openSUSE:
+  //         return FontAwesomeIcons.suse;
+  //       case LinuxType.Ubuntu:
+  //         return FontAwesomeIcons.ubuntu;
+  //       case LinuxType.Other:
+  //       default:
+  //         return FontAwesomeIcons.linux;
+  //     }
+  //   } else {
+  //     return FontAwesomeIcons.display;
+  //   }
+  // }
 }

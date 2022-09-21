@@ -17,7 +17,24 @@ use std::{
     os::raw::c_void,
 };
 
-pub fn get_active_monitors() -> CoreResult<Vec<Monitor>> {
+pub fn get_primary_monitor_params() -> CoreResult<(CGDirectDisplayID, u16, u16)> {
+    unsafe {
+        let main_display_id = CGMainDisplayID();
+        let ns_screens = NSScreen::screens()?;
+        for screen in ns_screens {
+            if screen.screenNumber() == main_display_id {
+                let monitor_width = CGDisplayPixelsWide(main_display_id);
+                let monitor_height = CGDisplayPixelsHigh(main_display_id);
+
+                return Ok((main_display_id, monitor_width as u16, monitor_height as u16));
+            }
+        }
+
+        Err(core_error!("no primary display"))
+    }
+}
+
+pub fn get_active_monitors(take_screen_shot: bool) -> CoreResult<Vec<Monitor>> {
     unsafe {
         let main_display_id = CGMainDisplayID();
         let ns_screens = NSScreen::screens()?;
@@ -30,21 +47,23 @@ pub fn get_active_monitors() -> CoreResult<Vec<Monitor>> {
             let monitor_width = CGDisplayPixelsWide(display_id);
             let monitor_height = CGDisplayPixelsHigh(display_id);
 
-            let screen_shot_buffer = take_screen_shot_as_png(display_id);
+            let screen_shot_buffer = if take_screen_shot {
+                take_screen_shot_as_png(display_id)
+            } else {
+                None
+            };
 
-            if let Some(screen_shot_buffer) = screen_shot_buffer {
-                displays.push(Monitor {
-                    id: display_id.to_string(),
-                    name: ns_screen.localizedName(),
-                    refresh_rate: (ns_screen.maximumFramesPerSecond().min(u8::MAX as isize)) as u8,
-                    width: monitor_width as u16,
-                    height: monitor_height as u16,
-                    is_primary: display_id == main_display_id,
-                    screen_shot: screen_shot_buffer,
-                    left: 0,
-                    top: 0,
-                });
-            }
+            displays.push(Monitor {
+                id: display_id.to_string(),
+                name: ns_screen.localizedName(),
+                refresh_rate: (ns_screen.maximumFramesPerSecond().min(u8::MAX as isize)) as u8,
+                width: monitor_width as u16,
+                height: monitor_height as u16,
+                is_primary: display_id == main_display_id,
+                screen_shot: screen_shot_buffer,
+                left: 0,
+                top: 0,
+            });
         }
 
         Ok(displays)

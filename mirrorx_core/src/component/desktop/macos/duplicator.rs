@@ -1,14 +1,14 @@
 use crate::{
-    component::{capture_frame::CaptureFrame, desktop::monitor::NSScreen},
+    component::{desktop::monitor::NSScreen, frame::DesktopEncodeFrame},
     core_error,
     error::{CoreError, CoreResult},
     ffi::os::macos::{core_graphics::*, core_media::*, core_video::*, io_surface::*},
 };
 use block::ConcreteBlock;
-use core_foundation::base::CFRelease;
 use dispatch::ffi::{dispatch_queue_create, dispatch_release, DISPATCH_QUEUE_SERIAL};
 use scopeguard::defer;
 use std::{cell::Cell, ffi::CString, ops::Deref, rc::Rc};
+
 pub struct Duplicator {
     display_stream: CGDisplayStreamRef,
 }
@@ -17,13 +17,20 @@ unsafe impl Send for Duplicator {}
 
 impl Duplicator {
     pub fn new(
-        display: core_graphics::display::CGDirectDisplayID,
-        capture_frame_tx: crossbeam::channel::Sender<CaptureFrame>,
+        monitor_id: Option<core_graphics::display::CGDirectDisplayID>,
+        capture_frame_tx: crossbeam::channel::Sender<DesktopEncodeFrame>,
     ) -> CoreResult<Self> {
         unsafe {
             let screens = NSScreen::screens()?;
-            let screen = match screens.iter().find(|s| s.screenNumber() == display) {
-                Some(screen) => screen,
+            if screens.is_empty() {
+                return Err(core_error!("no screen exist"));
+            }
+
+            let screen = match monitor_id {
+                Some(monitor_id) => match screens.iter().find(|s| s.screenNumber() == monitor_id) {
+                    Some(screen) => screen,
+                    None => &screens[0],
+                },
                 None => &screens[0],
             };
 
@@ -60,7 +67,7 @@ impl Duplicator {
             let block = block.copy();
 
             let display_stream = CGDisplayStreamCreateWithDispatchQueue(
-                display,
+                screen.screenNumber(),
                 screen_size.width as usize,
                 screen_size.height as usize,
                 kCVPixelFormatType_420YpCbCr8BiPlanarFullRange as i32,
@@ -104,7 +111,7 @@ impl Duplicator {
 
 unsafe fn frame_available_handler(
     start_time: Rc<Cell<Option<std::time::Instant>>>,
-    capture_frame_tx: *mut crossbeam::channel::Sender<CaptureFrame>,
+    capture_frame_tx: *mut crossbeam::channel::Sender<DesktopEncodeFrame>,
     status: CGDisplayStreamFrameStatus,
     display_time: u64,
     frame_surface: IOSurfaceRef,
@@ -112,6 +119,10 @@ unsafe fn frame_available_handler(
 ) {
     if status == kCGDisplayStreamFrameStatusStopped {
         let _ = Box::from_raw(capture_frame_tx);
+        return;
+    }
+
+    if capture_frame_tx.is_null() {
         return;
     }
 
@@ -136,11 +147,46 @@ unsafe fn frame_available_handler(
         return;
     }
 
+    defer! {
+        if !pixel_buffer.is_null(){
+            CVPixelBufferRelease(pixel_buffer);
+        }
+    }
+
+    CVPixelBufferLockBaseAddress(pixel_buffer, 1);
+
+    let width = CVPixelBufferGetWidth(pixel_buffer);
+    let height = CVPixelBufferGetHeight(pixel_buffer);
+    let luminance_bytes_address = CVPixelBufferGetBaseAddressOfPlane(pixel_buffer, 0);
+    let luminance_stride = CVPixelBufferGetBytesPerRowOfPlane(pixel_buffer, 0);
+    let luminance_bytes = std::slice::from_raw_parts(
+        luminance_bytes_address as *mut u8,
+        height * luminance_stride,
+    )
+    .to_vec();
+    let chrominance_bytes_address = CVPixelBufferGetBaseAddressOfPlane(pixel_buffer, 1);
+    let chrominance_stride = CVPixelBufferGetBytesPerRowOfPlane(pixel_buffer, 1);
+    let chrominance_bytes = std::slice::from_raw_parts(
+        chrominance_bytes_address as *mut u8,
+        height * chrominance_stride / 2,
+    )
+    .to_vec();
+
+    CVPixelBufferUnlockBaseAddress(pixel_buffer, 1);
+
     let pts = CMTimeMakeWithSeconds(elapsed_time, 1000);
 
-    if let Err(err) = (*capture_frame_tx).send(CaptureFrame { pts, pixel_buffer }) {
-        let capture_frame = err.into_inner();
-        CFRelease(capture_frame.pixel_buffer);
+    let capture_frame = DesktopEncodeFrame {
+        width: width as i32,
+        height: height as i32,
+        luminance_bytes,
+        luminance_stride: luminance_stride as i32,
+        chrominance_bytes,
+        chrominance_stride: chrominance_stride as i32,
+    };
+
+    if let Err(err) = (*capture_frame_tx).send(capture_frame) {
+        tracing::error!(?err, "capture frame tx send failed");
     }
 
     let dropped_frames = CGDisplayStreamUpdateGetDropCount(update_ref);

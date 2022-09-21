@@ -2,15 +2,23 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:mirrorx/env/utility/dialog.dart';
-import 'package:mirrorx/model/desktop.dart';
+import 'package:mirrorx/env/utility/error_notifier.dart';
 import 'package:mirrorx/pages/desktop/widgets/desktop_render_box/desktop_render_box.dart';
 import 'package:mirrorx/state/desktop_manager/desktop_manager_cubit.dart';
 import 'package:mirrorx/state/page_manager/page_manager_cubit.dart';
+import 'package:texture_render/texture_render.dart';
+import 'package:texture_render/texture_render_platform_interface.dart';
+import 'package:tuple/tuple.dart';
 
 class DesktopPage extends StatefulWidget {
-  const DesktopPage({Key? key, required this.model}) : super(key: key);
+  const DesktopPage(
+    this.localDeviceId,
+    this.remoteDeviceId, {
+    Key? key,
+  }) : super(key: key);
 
-  final DesktopModel model;
+  final int localDeviceId;
+  final int remoteDeviceId;
 
   @override
   _DesktopPageState createState() => _DesktopPageState();
@@ -18,39 +26,62 @@ class DesktopPage extends StatefulWidget {
 
 class _DesktopPageState extends State<DesktopPage> {
   BoxFit _fit = BoxFit.none;
+  late DialogNotifier _dialogNotifier;
+
+  @override
+  void initState() {
+    super.initState();
+    _dialogNotifier = DialogNotifier(context);
+  }
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<DesktopManagerCubit, DesktopManagerState>(
-      listenWhen: ((previous, current) {
-        return !previous.closedDesktops.contains(widget.model.remoteDeviceId) &&
-            current.closedDesktops.contains(widget.model.remoteDeviceId);
-      }),
-      listener: (context, state) {
-        context
-            .read<DesktopManagerCubit>()
-            .removeDesktop(widget.model.remoteDeviceId);
+    final cubit = context.read<DesktopManagerCubit>();
 
-        context.read<PageManagerCubit>().switchPage("Connect");
+    return BlocBuilder<DesktopManagerCubit, DesktopManagerState>(
+        builder: (context, state) {
+      return FutureBuilder(
+          future: _prepareConnection(cubit),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState != ConnectionState.done) {
+              return const Center(
+                child: SizedBox(
+                  width: 60,
+                  height: 60,
+                  child: CircularProgressIndicator(),
+                ),
+              );
+            }
 
-        popupDialog(
-          context,
-          contentBuilder: (_) => Text(
-              AppLocalizations.of(context)!.dialogContentConnectionDisconnected,
-              textAlign: TextAlign.center),
-          actionBuilder: (navigatorState) => [
-            TextButton(
-              onPressed: navigatorState.pop,
-              child: Text(AppLocalizations.of(context)!.dialogOK),
-            ),
-          ],
-        );
-      },
-      child: _buildDesktopSurface(),
-    );
+            if (snapshot.hasError) {
+              return Center(
+                child: SizedBox(
+                  width: 120,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text("Connect failed"),
+                      Text("${snapshot.error}"),
+                      TextButton(
+                          onPressed: () {
+                            // todo: remote this page
+                          },
+                          child: Text(AppLocalizations.of(context)!.dialogOK))
+                    ],
+                  ),
+                ),
+              );
+            }
+
+            final data = snapshot.data as Tuple3<int, int, int>;
+
+            return _buildDesktopSurface(data.item1, data.item2, data.item3);
+          });
+    });
   }
 
-  Widget _buildDesktopSurface() {
+  Widget _buildDesktopSurface(
+      int monitorWidth, int monitorHeight, int textureId) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -90,7 +121,8 @@ class _DesktopPageState extends State<DesktopPage> {
           child: Container(
             color: Colors.black,
             child: DesktopRenderBox(
-              model: widget.model,
+              localDeviceId: widget.localDeviceId,
+              remoteDeviceId: widget.remoteDeviceId,
               fit: _fit,
             ),
           ),
@@ -107,5 +139,16 @@ class _DesktopPageState extends State<DesktopPage> {
         _fit = BoxFit.none;
       }
     });
+  }
+
+  Future _prepareConnection(DesktopManagerCubit cubit) async {
+    if (cubit.state.desktopPrepareInfoLists.any((element) =>
+        element.localDeviceId == widget.localDeviceId &&
+        element.remoteDeviceId == widget.remoteDeviceId)) {
+      final prepareInfo = cubit.removePrepareInfo(widget.remoteDeviceId);
+      if (prepareInfo != null) {
+        await cubit.connectAndNegotiate(prepareInfo);
+      }
+    }
   }
 }

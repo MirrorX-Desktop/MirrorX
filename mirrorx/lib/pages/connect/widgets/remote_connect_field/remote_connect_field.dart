@@ -1,12 +1,17 @@
 import 'dart:developer';
 
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:flutter_rust_bridge/flutter_rust_bridge.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:mirrorx/env/sdk/mirrorx_core_sdk.dart';
-import 'package:mirrorx/env/utility/dialog.dart';
-import 'package:mirrorx/pages/connect/widgets/connect_progress_dialog/connect_progress_dialog.dart';
+import 'package:mirrorx/env/utility/error_notifier.dart';
 import 'package:mirrorx/pages/connect/widgets/remote_connect_field/digit_input.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:mirrorx/state/desktop_manager/desktop_manager_cubit.dart';
+import 'package:mirrorx/state/page_manager/page_manager_cubit.dart';
+import 'package:mirrorx/state/signaling_manager/signaling_manager_cubit.dart';
 
 class RemoteConnectField extends StatefulWidget {
   const RemoteConnectField({Key? key}) : super(key: key);
@@ -17,13 +22,18 @@ class RemoteConnectField extends StatefulWidget {
 
 class _RemoteConnectFieldState extends State<RemoteConnectField> {
   final List<TextEditingController> _textControllers = [];
+  late SnackBarNotifier _snackBarNotifier;
+  late DialogNotifier _dialogNotifier;
   late FocusScopeNode _focusScopeNode;
   bool _connectButtonDisabled = true;
-  bool _connectHandshake = false;
+  bool _isVisitRequesting = false;
 
   @override
   void initState() {
     super.initState();
+
+    _snackBarNotifier = SnackBarNotifier(context);
+    _dialogNotifier = DialogNotifier(context);
 
     _focusScopeNode = FocusScopeNode(
       onKeyEvent: ((node, event) {
@@ -83,17 +93,35 @@ class _RemoteConnectFieldState extends State<RemoteConnectField> {
                   AppLocalizations.of(context)!.connectPageConnectRemoteTitle,
                   style: const TextStyle(fontSize: 27),
                 ),
-                _connectHandshake
-                    ? const CircularProgressIndicator()
-                    : IconButton(
-                        onPressed: _connectButtonDisabled ? null : _connect,
-                        icon: const Icon(Icons.login),
-                        splashRadius: 20,
-                        hoverColor: Colors.yellow,
-                        disabledColor: Colors.grey,
-                        tooltip: AppLocalizations.of(context)!
-                            .connectPageConnectRemoteButtonConnectTooltip,
-                      ),
+                SizedBox(
+                  width: 50,
+                  child: Center(
+                    child: _isVisitRequesting
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(),
+                          )
+                        : IconButton(
+                            onPressed: _connectButtonDisabled
+                                ? null
+                                : () {
+                                    _connect(
+                                      context.read<SignalingManagerCubit>(),
+                                      context.read<DesktopManagerCubit>(),
+                                      context.read<PageManagerCubit>(),
+                                    );
+                                  },
+                            icon: const FaIcon(
+                              FontAwesomeIcons.arrowRightToBracket,
+                              size: 24,
+                            ),
+                            disabledColor: Colors.grey,
+                            tooltip: AppLocalizations.of(context)!
+                                .connectPageConnectRemoteButtonConnectTooltip,
+                          ),
+                  ),
+                ),
               ],
             ),
             Expanded(
@@ -142,79 +170,205 @@ class _RemoteConnectFieldState extends State<RemoteConnectField> {
     );
   }
 
-  void _connect() async {
-    _updateHandshakeState(true);
+  void _connect(
+    SignalingManagerCubit signalingCubit,
+    DesktopManagerCubit desktopCubit,
+    PageManagerCubit pageCubit,
+  ) async {
+    _updateVisitRequestingState(true);
 
-    final remoteDeviceId = _textControllers.map((e) => e.text).join();
-    log(remoteDeviceId);
+    final GlobalKey<FormState> formKey = GlobalKey<FormState>();
+    final passwordTextEditingController = TextEditingController();
+
     try {
-      final success = await MirrorXCoreSDK.instance
-          .signalingConnect(remoteDeviceId: remoteDeviceId);
+      final remoteDeviceId =
+          int.parse(_textControllers.map((e) => e.text).join());
 
-      if (!success) {
-        _updateHandshakeState(false);
-        if (mounted) {
-          popupDialog(
-            context,
-            contentBuilder: (_) =>
-                Text(AppLocalizations.of(context)!.dialogConnectRemoteOffline),
-            actionBuilder: (navigatorState) => [
-              TextButton(
-                onPressed: navigatorState.pop,
-                child: Text(AppLocalizations.of(context)!.dialogOK),
-              )
-            ],
-          );
-        }
+      final visitResponse = await signalingCubit.visit(remoteDeviceId);
+
+      if (!visitResponse.allow) {
+        _snackBarNotifier.notifyError(
+            (context) => "remote device rejects your visit request");
         return;
       }
-    } catch (e) {
-      _updateHandshakeState(false);
-      popupDialog(
-        context,
-        contentBuilder: (_) => Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(AppLocalizations.of(context)!.dialogConnectRemoteError),
-            Text(e.toString()),
-          ],
-        ),
-        actionBuilder: (navigatorState) => [
+
+      String? inputPassword = await _dialogNotifier.popupDialog(
+        contentBuilder: (context) {
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text("Please input remote device password"),
+              Form(
+                key: formKey,
+                autovalidateMode: AutovalidateMode.always,
+                child: TextFormField(
+                  controller: passwordTextEditingController,
+                  cursorColor: Colors.yellow,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(
+                        RegExp(r'[a-zA-Z0-9@#$%^*?!=+<>(){}]')),
+                  ],
+                  decoration: const InputDecoration(
+                    isDense: true,
+                    focusedBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(width: 2, color: Colors.yellow),
+                    ),
+                  ),
+                  style: const TextStyle(fontSize: 14),
+                  keyboardType: TextInputType.visiblePassword,
+                  textInputAction: TextInputAction.next,
+                  textAlign: TextAlign.center,
+                  textAlignVertical: TextAlignVertical.center,
+                  enableSuggestions: false,
+                  maxLength: 24,
+                  maxLines: 1,
+                  autocorrect: false,
+                  validator: (text) {
+                    if (text == null || text.isEmpty || text.length < 8) {
+                      return AppLocalizations.of(context)!
+                          .connectPagePasswordValidationErrorLength;
+                    }
+
+                    if (!RegExp(r'[A-Z]').hasMatch(text)) {
+                      return AppLocalizations.of(context)!
+                          .connectPagePasswordValidationErrorUpper;
+                    }
+
+                    if (!RegExp(r'[@#$%^*?!=+<>(){}]').hasMatch(text)) {
+                      return AppLocalizations.of(context)!
+                          .connectPagePasswordValidationErrorSpecial(
+                        r'@#$%^*?!=+<>(){}',
+                      );
+                    }
+
+                    return null;
+                  },
+                ),
+              ),
+            ],
+          );
+        },
+        actionBuilder: (context, navState) => [
           TextButton(
-            onPressed: navigatorState.pop,
+            onPressed: () {
+              if (formKey.currentState?.validate() ?? false) {
+                navState.pop(passwordTextEditingController.text);
+              }
+            },
             child: Text(AppLocalizations.of(context)!.dialogOK),
-          )
+          ),
+          TextButton(
+            onPressed: () {
+              navState.pop(null);
+            },
+            child: Text(AppLocalizations.of(context)!.dialogCancel),
+          ),
         ],
       );
-      return;
+
+      if (inputPassword == null) {
+        return;
+      }
+
+      final keyExchangeResponse =
+          await signalingCubit.keyExchange(inputPassword, remoteDeviceId);
+
+      desktopCubit.prepare(
+        keyExchangeResponse.localDeviceId,
+        remoteDeviceId,
+        keyExchangeResponse.visitCredentials,
+        keyExchangeResponse.openingKeyBytes,
+        keyExchangeResponse.openingNonceBytes,
+        keyExchangeResponse.sealingKeyBytes,
+        keyExchangeResponse.sealingNonceBytes,
+      );
+
+      pageCubit.addDesktopPage(
+          keyExchangeResponse.localDeviceId, remoteDeviceId);
+
+      log("prepare finish");
+    } catch (err) {
+      log("$err");
+      if (err.toString().contains("not found")) {
+        _snackBarNotifier.notifyError((context) => "remote device is offline");
+        return;
+      }
+
+      _snackBarNotifier.notifyError(
+          (context) => "an error occurs when request visit",
+          error: err);
+    } finally {
+      passwordTextEditingController.dispose();
+      _updateVisitRequestingState(false);
     }
 
-    _updateHandshakeState(false);
+    // try {
+    //   final success = await context.read<SignalingManagerCubit>().visit (remoteDeviceId: remoteDeviceId);
 
-    showGeneralDialog(
-      context: context,
-      pageBuilder: (context, animationValue1, animationValue2) {
-        return StatefulBuilder(builder: (context, setter) {
-          return ConnectProgressStateDialog(remoteDeviceId: remoteDeviceId);
-        });
-      },
-      barrierDismissible: false,
-      transitionBuilder: (context, animationValue1, animationValue2, child) {
-        return Transform.scale(
-          scale: animationValue1.value,
-          child: Opacity(
-            opacity: animationValue1.value,
-            child: child,
-          ),
-        );
-      },
-      transitionDuration: kThemeAnimationDuration * 2,
-    );
+    //   if (!success) {
+    //     _updateHandshakeState(false);
+    //     if (mounted) {
+    //       popupDialog(
+    //         context,
+    //         contentBuilder: (_) =>
+    //             Text(AppLocalizations.of(context)!.dialogConnectRemoteOffline),
+    //         actionBuilder: (navigatorState) => [
+    //           TextButton(
+    //             onPressed: navigatorState.pop,
+    //             child: Text(AppLocalizations.of(context)!.dialogOK),
+    //           )
+    //         ],
+    //       );
+    //     }
+    //     return;
+    //   }
+    // } catch (e) {
+    //   _updateHandshakeState(false);
+    //   popupDialog(
+    //     context,
+    //     contentBuilder: (_) => Column(
+    //       mainAxisAlignment: MainAxisAlignment.center,
+    //       children: [
+    //         Text(AppLocalizations.of(context)!.dialogConnectRemoteError),
+    //         Text(e.toString()),
+    //       ],
+    //     ),
+    //     actionBuilder: (navigatorState) => [
+    //       TextButton(
+    //         onPressed: navigatorState.pop,
+    //         child: Text(AppLocalizations.of(context)!.dialogOK),
+    //       )
+    //     ],
+    //   );
+    //   return;
+    // }
+
+    // _updateHandshakeState(false);
+
+    // showGeneralDialog(
+    //   context: context,
+    //   pageBuilder: (context, animationValue1, animationValue2) {
+    //     return StatefulBuilder(builder: (context, setter) {
+    //       return ConnectProgressStateDialog(remoteDeviceId: remoteDeviceId);
+    //     });
+    //   },
+    //   barrierDismissible: false,
+    //   transitionBuilder: (context, animationValue1, animationValue2, child) {
+    //     return Transform.scale(
+    //       scale: animationValue1.value,
+    //       child: Opacity(
+    //         opacity: animationValue1.value,
+    //         child: child,
+    //       ),
+    //     );
+    //   },
+    //   transitionDuration: kThemeAnimationDuration * 2,
+    // );
   }
 
-  void _updateHandshakeState(bool isHandshaking) {
+  void _updateVisitRequestingState(bool isVisitRequesting) {
     setState(() {
-      _connectHandshake = isHandshaking;
+      _isVisitRequesting = isVisitRequesting;
     });
   }
 

@@ -2,20 +2,22 @@ import 'dart:developer';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mirrorx/env/sdk/mirrorx_core.dart';
-import 'package:mirrorx/env/sdk/mirrorx_core_sdk.dart';
 import 'package:mirrorx/env/utility/key_map.dart';
-import 'package:mirrorx/model/desktop.dart';
 import 'package:mirrorx/pages/desktop/widgets/desktop_render_box/desktop_render_box_scrollbar.dart';
+import 'package:mirrorx/state/desktop_manager/desktop_manager_cubit.dart';
 
 class DesktopRenderBox extends StatefulWidget {
   const DesktopRenderBox({
     Key? key,
-    required this.model,
+    required this.localDeviceId,
+    required this.remoteDeviceId,
     required this.fit,
   }) : super(key: key);
 
-  final DesktopModel model;
+  final int localDeviceId;
+  final int remoteDeviceId;
   final BoxFit fit;
 
   @override
@@ -41,28 +43,46 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
 
   @override
   Widget build(BuildContext context) {
-    return widget.fit == BoxFit.none ? _buildFitBox() : _buildTexture();
+    return BlocBuilder<DesktopManagerCubit, DesktopManagerState>(
+      builder: (context, state) {
+        final desktopInfoIndex = state.desktopInfoLists.indexWhere((element) =>
+            element.localDeviceId == widget.localDeviceId &&
+            element.remoteDeviceId == widget.remoteDeviceId);
+
+        if (desktopInfoIndex == -1) {
+          return const Center(
+            child: Text("Internal Render Error"),
+          );
+        }
+
+        final desktopInfo = state.desktopInfoLists[desktopInfoIndex];
+
+        return widget.fit == BoxFit.none
+            ? _buildWithFitBox(desktopInfo)
+            : _buildWithoutFitBox(desktopInfo);
+      },
+    );
   }
 
-  Widget _buildFitBox() {
+  Widget _buildWithFitBox(DesktopInfo desktopInfo) {
     return Stack(
       children: [
         Positioned(
           top: _offsetY,
           left: _offsetX,
-          child: _buildTexture(),
+          child: _buildWithoutFitBox(desktopInfo),
         ),
         LayoutBuilder(builder: (context, constraints) {
           return DesktopRenderBoxScrollBar(
-            maxTrunkWidth: widget.model.monitorHeight.floorToDouble(),
+            maxTrunkWidth: desktopInfo.monitorHeight.floorToDouble(),
             axis: Axis.vertical,
             trunkWidth: constraints.maxHeight,
             onScroll: (offset) {
               setState(() {
                 _offsetY = -offset;
                 if ((_offsetY + constraints.maxHeight) >
-                    widget.model.monitorHeight) {
-                  _offsetY = widget.model.monitorHeight - constraints.maxHeight;
+                    desktopInfo.monitorHeight) {
+                  _offsetY = desktopInfo.monitorHeight - constraints.maxHeight;
                 }
               });
             },
@@ -70,15 +90,15 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
         }),
         LayoutBuilder(builder: (context, constraints) {
           return DesktopRenderBoxScrollBar(
-            maxTrunkWidth: widget.model.monitorWidth.floorToDouble(),
+            maxTrunkWidth: desktopInfo.monitorWidth.floorToDouble(),
             axis: Axis.horizontal,
             trunkWidth: constraints.maxWidth,
             onScroll: (offset) {
               setState(() {
                 _offsetX = -offset;
                 if ((_offsetX + constraints.maxWidth) >
-                    widget.model.monitorWidth) {
-                  _offsetX = widget.model.monitorWidth - constraints.maxWidth;
+                    desktopInfo.monitorWidth) {
+                  _offsetX = desktopInfo.monitorWidth - constraints.maxWidth;
                 }
               });
             },
@@ -88,7 +108,7 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
     );
   }
 
-  Widget _buildTexture() {
+  Widget _buildWithoutFitBox(DesktopInfo desktopInfo) {
     return FittedBox(
       fit: widget.fit,
       child: Listener(
@@ -100,14 +120,14 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
         onPointerSignal: _handlePointerSignal,
         child: RepaintBoundary(
           child: SizedBox(
-            width: widget.model.monitorWidth.floorToDouble(),
-            height: widget.model.monitorHeight.floorToDouble(),
+            width: desktopInfo.monitorWidth.floorToDouble(),
+            height: desktopInfo.monitorHeight.floorToDouble(),
             child: Center(
               child: AspectRatio(
-                aspectRatio: widget.model.monitorWidth.toDouble() /
-                    widget.model.monitorHeight.toDouble(),
+                aspectRatio: desktopInfo.monitorWidth.toDouble() /
+                    desktopInfo.monitorHeight.toDouble(),
                 child: Texture(
-                  textureId: widget.model.textureID,
+                  textureId: desktopInfo.textureId,
                   freeze: true,
                   filterQuality: FilterQuality.medium,
                 ),
@@ -135,16 +155,17 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
         mouseKey = MouseKey.Wheel;
     }
 
-    MirrorXCoreSDK.instance.endpointInput(
-      remoteDeviceId: widget.model.remoteDeviceId,
-      event: InputEvent.mouse(
-        MouseEvent.mouseDown(
-          mouseKey,
-          event.localPosition.dx,
-          event.localPosition.dy,
-        ),
-      ),
-    );
+    context.read<DesktopManagerCubit>().deviceInput(
+          widget.localDeviceId,
+          widget.remoteDeviceId,
+          InputEvent.mouse(
+            MouseEvent.mouseDown(
+              mouseKey,
+              event.localPosition.dx,
+              event.localPosition.dy,
+            ),
+          ),
+        );
 
     _downButtons[event.pointer] = event.buttons;
   }
@@ -170,16 +191,17 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
         mouseKey = MouseKey.Wheel;
     }
 
-    MirrorXCoreSDK.instance.endpointInput(
-      remoteDeviceId: widget.model.remoteDeviceId,
-      event: InputEvent.mouse(
-        MouseEvent.mouseUp(
-          mouseKey,
-          event.localPosition.dx,
-          event.localPosition.dy,
-        ),
-      ),
-    );
+    context.read<DesktopManagerCubit>().deviceInput(
+          widget.localDeviceId,
+          widget.remoteDeviceId,
+          InputEvent.mouse(
+            MouseEvent.mouseUp(
+              mouseKey,
+              event.localPosition.dx,
+              event.localPosition.dy,
+            ),
+          ),
+        );
   }
 
   void _handlePointerMove(PointerMoveEvent event) {
@@ -201,41 +223,44 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
         return;
     }
 
-    MirrorXCoreSDK.instance.endpointInput(
-      remoteDeviceId: widget.model.remoteDeviceId,
-      event: InputEvent.mouse(
-        MouseEvent.mouseMove(
-          mouseKey,
-          event.localPosition.dx,
-          event.localPosition.dy,
-        ),
-      ),
-    );
+    context.read<DesktopManagerCubit>().deviceInput(
+          widget.localDeviceId,
+          widget.remoteDeviceId,
+          InputEvent.mouse(
+            MouseEvent.mouseMove(
+              mouseKey,
+              event.localPosition.dx,
+              event.localPosition.dy,
+            ),
+          ),
+        );
   }
 
   void _handlePointerHover(PointerHoverEvent event) {
     log("pointer hover ${event.buttons} ${event.localPosition}");
 
-    MirrorXCoreSDK.instance.endpointInput(
-      remoteDeviceId: widget.model.remoteDeviceId,
-      event: InputEvent.mouse(
-        MouseEvent.mouseMove(
-          MouseKey.None,
-          event.localPosition.dx,
-          event.localPosition.dy,
-        ),
-      ),
-    );
+    context.read<DesktopManagerCubit>().deviceInput(
+          widget.localDeviceId,
+          widget.remoteDeviceId,
+          InputEvent.mouse(
+            MouseEvent.mouseMove(
+              MouseKey.None,
+              event.localPosition.dx,
+              event.localPosition.dy,
+            ),
+          ),
+        );
   }
 
   void _handlePointerSignal(PointerSignalEvent event) {
     if (event is PointerScrollEvent) {
-      MirrorXCoreSDK.instance.endpointInput(
-        remoteDeviceId: widget.model.remoteDeviceId,
-        event: InputEvent.mouse(
-          MouseEvent.mouseScrollWheel(event.scrollDelta.dy),
-        ),
-      );
+      context.read<DesktopManagerCubit>().deviceInput(
+            widget.localDeviceId,
+            widget.remoteDeviceId,
+            InputEvent.mouse(
+              MouseEvent.mouseScrollWheel(event.scrollDelta.dy),
+            ),
+          );
     }
   }
 
@@ -263,10 +288,8 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
 
     log("press $keyboardEvent");
 
-    MirrorXCoreSDK.instance.endpointInput(
-      remoteDeviceId: widget.model.remoteDeviceId,
-      event: InputEvent.keyboard(keyboardEvent),
-    );
+    context.read<DesktopManagerCubit>().deviceInput(widget.localDeviceId,
+        widget.remoteDeviceId, InputEvent.keyboard(keyboardEvent));
 
     return true;
   }

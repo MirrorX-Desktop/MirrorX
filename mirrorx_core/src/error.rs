@@ -27,6 +27,33 @@ pub enum CoreError {
     #[error("operation timeout")]
     Timeout(#[from] tokio::time::error::Elapsed),
 
+    #[error("tokio oneshot channel receive error ({0:?})")]
+    OneshotReceiveError(#[from] tokio::sync::oneshot::error::RecvError),
+
     #[error("bincode serialization or deserialization failed ({0:?})")]
     BincodeError(#[from] bincode::Error),
+
+    #[error("tonic transport error ({0:?})")]
+    TonicTransportError(#[from] tonic::transport::Error),
+
+    #[error("tonic rpc error ({0:?})")]
+    TonicRPCError(#[from] tonic::Status),
+
+    #[error("rsa error ({0:?})")]
+    RSAError(#[from] rsa::errors::Error),
+
+    #[error("ring unspecified error")]
+    RingUnspecifiedError(#[from] ring::error::Unspecified),
+
+    #[error("prost encode error")]
+    ProstEncodeError(#[from] prost::EncodeError),
+
+    #[error("prost decode error")]
+    ProstDecodeError(#[from] prost::DecodeError),
+
+    #[error("serde json serialize/deserialize error ({0:?})")]
+    SerdeJsonError(#[from] serde_json::Error),
+
+    #[error("key exchange reply error ({0:?})")]
+    KeyExchangeReplyError(signaling_proto::message::KeyExchangeReplyError),
 }

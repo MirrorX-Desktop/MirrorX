@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
@@ -8,7 +10,11 @@ import 'texture_render_platform_interface.dart';
 class MethodChannelTextureRender extends TextureRenderPlatform {
   /// The method channel used to interact with the native platform.
   @visibleForTesting
-  final methodChannel = const MethodChannel('texture_render');
+  final methodChannel = const MethodChannel('texture_render_method_channel');
+
+  @visibleForTesting
+  final binaryChannel =
+      const BasicMessageChannel('texture_render_binary_channel', BinaryCodec());
 
   @override
   Future<RegisterTextureResponse> registerTexture() async {
@@ -20,8 +26,13 @@ class MethodChannelTextureRender extends TextureRenderPlatform {
   }
 
   @override
-  Future<void> deregisterTexture(int textureID, int videoTexturePointer) async {
-    await methodChannel.invokeMethod('deregister_texture',
-        DeregisterTextureRequest(textureID, videoTexturePointer).toMap());
+  Future<void> deregisterTexture(int textureId) async {
+    await methodChannel.invokeMethod(
+        'deregister_texture', DeregisterTextureRequest(textureId).toMap());
+  }
+
+  @override
+  Future<void> sendVideoFrameBuffer(Uint8List videoFrameBuffer) {
+    return binaryChannel.send(ByteData.view(videoFrameBuffer.buffer));
   }
 }

@@ -42,7 +42,7 @@ fn link_ffmpeg() {
         println!("cargo:rustc-link-lib=libavutil");
         println!("cargo:rustc-link-lib=libavformat");
         println!("cargo:rustc-link-lib=libavdevice");
-       
+
         // println!("cargo:rustc-link-search=../third/dependencies/libyuv/Release");
         // println!("cargo:rustc-link-lib=yuv");
 

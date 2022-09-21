@@ -1,10 +1,9 @@
-use super::DecodedFrame;
 use crate::{
+    api::endpoint::{flutter_message::FlutterMediaMessage, message::EndPointVideoFrame},
     component::NALU_HEADER_LENGTH,
     core_error,
     error::{CoreError, CoreResult},
     ffi::os::macos::{core_media::*, core_video::*, videotoolbox::*},
-    service::endpoint::message::VideoFrame,
 };
 use core_foundation::{
     base::{kCFAllocatorDefault, kCFAllocatorNull, CFRelease, OSStatus, ToVoid},
@@ -15,29 +14,28 @@ use core_foundation::{
     mach_port::CFIndex,
     number::{kCFBooleanTrue, CFNumber},
 };
+use flutter_rust_bridge::{StreamSink, ZeroCopyBuffer};
 use scopeguard::defer;
 use std::os::raw::c_void;
 
 pub struct Decoder {
     format_description: CMVideoFormatDescriptionRef,
     session: VTDecompressionSessionRef,
+    stream: StreamSink<FlutterMediaMessage>,
 }
 
 unsafe impl Send for Decoder {}
 
 impl Decoder {
-    pub fn new() -> Self {
+    pub fn new(stream: StreamSink<FlutterMediaMessage>) -> Self {
         Decoder {
             format_description: std::ptr::null_mut(),
             session: std::ptr::null_mut(),
+            stream,
         }
     }
 
-    pub fn decode(
-        &mut self,
-        mut video_frame: VideoFrame,
-        decoded_frame_tx: *mut crossbeam::channel::Sender<DecodedFrame>,
-    ) -> CoreResult<()> {
+    pub fn decode(&mut self, mut video_frame: EndPointVideoFrame) -> CoreResult<()> {
         unsafe {
             if let (Some(sps), Some(pps)) = (video_frame.sps, video_frame.pps) {
                 let format_description = create_format_description(&sps, &pps)?;
@@ -116,7 +114,7 @@ impl Decoder {
                 self.session,
                 sample_buffer,
                 kVTDecodeFrame_EnableAsynchronousDecompression,
-                decoded_frame_tx as *mut c_void,
+                &mut self.stream as *mut _ as *mut c_void,
                 std::ptr::null_mut(), // todo: pass frame dropped to statistic
             );
 
@@ -171,7 +169,7 @@ unsafe fn create_decompression_session(
         CFBoolean::true_value().to_void(),
     ];
 
-    let desitination_pixel_buffer_attributes = CFDictionaryCreate(
+    let destination_pixel_buffer_attributes = CFDictionaryCreate(
         kCFAllocatorDefault,
         keys.as_ptr(),
         values.as_ptr(),
@@ -181,7 +179,7 @@ unsafe fn create_decompression_session(
     );
 
     defer! {
-        CFRelease(desitination_pixel_buffer_attributes.to_void());
+        CFRelease(destination_pixel_buffer_attributes.to_void());
     }
 
     let output_callback = VTDecompressionOutputCallbackRecord {
@@ -194,7 +192,7 @@ unsafe fn create_decompression_session(
         kCFAllocatorDefault,
         format_description,
         std::ptr::null(),
-        desitination_pixel_buffer_attributes,
+        destination_pixel_buffer_attributes,
         &output_callback,
         &mut session,
     );
@@ -232,24 +230,32 @@ unsafe extern "C" fn decode_output_callback(
     presentationDuration: CMTime,
 ) {
     if status != 0 {
-        tracing::error!("VTDecompressionOutputCallback returns error ({})", status);
+        tracing::error!(?status, "status is not ok");
         return;
     }
 
-    let tx = sourceFrameRefCon as *mut crossbeam::channel::Sender<DecodedFrame>;
-    if tx.is_null() {
+    if sourceFrameRefCon.is_null() {
+        tracing::error!("sourceFrameRefCon is null");
         return;
     }
 
     if imageBuffer.is_null() {
+        tracing::error!("imageBuffer is null");
         return;
     }
 
+    let tx = sourceFrameRefCon as *mut StreamSink<FlutterMediaMessage>;
     let pixel_buffer = CVPixelBufferRetain(imageBuffer);
+    let pixel_buffer_memory_address: usize = pixel_buffer as usize;
 
-    if let Err(err) = (*tx).try_send(DecodedFrame(pixel_buffer)) {
-        tracing::error!("send decoded frame failed ({})", err);
-        let decoded_frame = err.into_inner();
-        CVPixelBufferRelease(decoded_frame.0);
+    let success = (*tx).add(FlutterMediaMessage::Video(
+        1,
+        1,
+        ZeroCopyBuffer(pixel_buffer_memory_address.to_le_bytes().to_vec()),
+    ));
+
+    if !success {
+        CVPixelBufferRelease(pixel_buffer);
+        tracing::error!("send FlutterMediaMessage failed");
     }
 }

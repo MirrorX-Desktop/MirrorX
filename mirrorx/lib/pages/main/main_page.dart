@@ -11,7 +11,6 @@ import 'package:mirrorx/pages/intranet/intranet_page.dart';
 import 'package:mirrorx/pages/settings/settings_page.dart';
 import 'package:mirrorx/state/desktop_manager/desktop_manager_cubit.dart';
 import 'package:mirrorx/state/page_manager/page_manager_cubit.dart';
-import 'package:mirrorx/state/profile/profile_state_cubit.dart';
 
 import 'widgets/navigation_menu/navigation_menu.dart';
 
@@ -94,10 +93,10 @@ class _LayoutPageBuilderState extends State<_LayoutPageBuilder>
       case "Settings":
         return const SettingsPage();
       default:
-        for (final desktopModel
-            in context.read<DesktopManagerCubit>().state.desktopModels) {
-          if (desktopModel.remoteDeviceId == pageTag) {
-            return DesktopPage(model: desktopModel);
+        for (final id in context.read<PageManagerCubit>().state.desktopIds) {
+          if (id == pageTag) {
+            final splitIds = id.split("@");
+            return DesktopPage(int.parse(splitIds[0]), int.parse(splitIds[1]));
           }
         }
         log("Unknown page tag: $pageTag");

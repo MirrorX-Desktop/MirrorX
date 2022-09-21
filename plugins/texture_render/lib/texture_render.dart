@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import 'model.dart';
 import 'texture_render_platform_interface.dart';
 
@@ -10,8 +12,12 @@ class TextureRender {
     return TextureRenderPlatform.instance.registerTexture();
   }
 
-  Future<void> deregisterTexture(int textureID, int videoTexturePointer) {
+  Future<void> deregisterTexture(int textureID) {
+    return TextureRenderPlatform.instance.deregisterTexture(textureID);
+  }
+
+  Future<void> sendVideoFrameBuffer(Uint8List videoFrameBuffer) {
     return TextureRenderPlatform.instance
-        .deregisterTexture(textureID, videoTexturePointer);
+        .sendVideoFrameBuffer(videoFrameBuffer);
   }
 }

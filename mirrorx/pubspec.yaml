@@ -40,13 +40,13 @@ dependencies:
   provider: ^6.0.2
   font_awesome_flutter: ^10.1.0
   path_provider: ^2.0.9
-  ffi: ^1.1.2
-  device_info_plus: ^3.2.3
+  ffi: ^2.0.1
+  device_info_plus: ^4.1.2
   just_the_tooltip: ^0.0.11+2
   flutter_bloc: ^8.0.1
   equatable: ^2.0.3
   intl: ^0.17.0
-  flutter_rust_bridge: ^1.37.2
+  flutter_rust_bridge: ^1.45.0
 
   texture_render:
     path: ../plugins/texture_render
@@ -54,6 +54,7 @@ dependencies:
 
   freezed_annotation: ^2.0.3
   marquee: ^2.2.3
+  tuple: ^2.0.0
   
 dev_dependencies:
   flutter_test:
@@ -67,7 +68,8 @@ dev_dependencies:
   flutter_lints: ^2.0.0
   build_runner: ^2.2.0
   freezed: ^2.0.5
-
+  ffigen: ^6.1.2
+  
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
