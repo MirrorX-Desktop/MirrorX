@@ -244,6 +244,8 @@ impl Duplicator {
         self.device_context
             .PSSetShaderResources(0, &vec![Some(shader_resouce_view)]);
 
+        self.device_context.VSSetShader(&self.vertex_shader, &[]);
+
         // draw lumina plane
 
         self.device_context

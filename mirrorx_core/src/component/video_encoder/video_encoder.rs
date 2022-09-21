@@ -6,6 +6,7 @@ use crate::{
     error::{CoreError, CoreResult},
     ffi::ffmpeg::{avcodec::*, avutil::*},
 };
+use bytes::Buf;
 use tokio::sync::mpsc::Sender;
 
 pub struct VideoEncoder {
@@ -116,7 +117,14 @@ impl VideoEncoder {
                 if self.write_first_frame {
                     let dump_path = std::env::temp_dir().join("first_image");
                     tracing::info!(?dump_path, "dump path");
-                    std::fs::write(dump_path, &buffer);
+                    std::fs::write(
+                        dump_path,
+                        bytes::Bytes::copy_from_slice(&capture_frame.luminance_bytes)
+                            .chain(bytes::Bytes::copy_from_slice(
+                                &capture_frame.chrominance_bytes,
+                            ))
+                            .chunk(),
+                    );
                     self.write_first_frame = false;
                 }
 
