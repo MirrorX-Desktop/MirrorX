@@ -1,3 +1,4 @@
+import 'dart:developer';
 import 'dart:typed_data';
 
 import 'package:bloc/bloc.dart';
@@ -104,6 +105,7 @@ class DesktopManagerCubit extends Cubit<DesktopManagerState> {
         ),
       );
     } catch (err) {
+      log("negotiate $err");
       if (registerTextureResponse != null) {
         await TextureRender.instance.deregisterTexture(
           registerTextureResponse.textureId,
@@ -146,12 +148,17 @@ class DesktopManagerCubit extends Cubit<DesktopManagerState> {
   void onMediaStreamData(int remoteDeviceId, FlutterMediaMessage message) {
     message.when(
         video: (videoFrameBuffer) async {
+          log("on video frame buffer");
           await TextureRender.instance.sendVideoFrameBuffer(videoFrameBuffer);
         },
         audio: (a, b, audioBuffer) {});
   }
 
-  void onMediaStreamError(int remoteDeviceId, Object err) {}
+  void onMediaStreamError(int remoteDeviceId, Object err) {
+    log("onMediaStreamError: $err");
+  }
 
-  void onMediaStreamDone(int remoteDeviceId) {}
+  void onMediaStreamDone(int remoteDeviceId) {
+    log("onMediaStreamDone");
+  }
 }

@@ -1,7 +1,7 @@
 use crate::{
     api::endpoint::{
         message::{EndPointHandshakeRequest, EndPointHandshakeResponse},
-        RESERVE_STREAMS,
+        ENDPOINTS, RESERVE_STREAMS,
     },
     core_error,
     error::{CoreError, CoreResult},
@@ -112,7 +112,7 @@ async fn inner_handshake(
         exit_rx.clone(),
         stream,
         opening_key,
-        send_message_tx,
+        send_message_tx.clone(),
     );
 
     super::super::serve_writer(
@@ -124,6 +124,10 @@ async fn inner_handshake(
         sealing_key,
         send_message_rx,
     );
+
+    ENDPOINTS
+        .insert((local_device_id, remote_device_id), send_message_tx)
+        .await;
 
     Ok(())
 }

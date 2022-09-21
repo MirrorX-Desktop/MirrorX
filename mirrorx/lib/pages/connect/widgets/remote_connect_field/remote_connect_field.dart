@@ -285,8 +285,6 @@ class _RemoteConnectFieldState extends State<RemoteConnectField> {
 
       pageCubit.addDesktopPage(
           keyExchangeResponse.localDeviceId, remoteDeviceId);
-
-      log("prepare finish");
     } catch (err) {
       log("$err");
       if (err.toString().contains("not found")) {

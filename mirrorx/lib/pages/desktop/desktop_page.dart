@@ -37,44 +37,41 @@ class _DesktopPageState extends State<DesktopPage> {
   Widget build(BuildContext context) {
     final cubit = context.read<DesktopManagerCubit>();
 
-    return BlocBuilder<DesktopManagerCubit, DesktopManagerState>(
-        builder: (context, state) {
-      return FutureBuilder(
-          future: _prepareConnection(cubit),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState != ConnectionState.done) {
-              return const Center(
-                child: SizedBox(
-                  width: 60,
-                  height: 60,
-                  child: CircularProgressIndicator(),
-                ),
-              );
-            }
+    return FutureBuilder(
+        future: _prepareConnection(cubit),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState != ConnectionState.done) {
+            return const Center(
+              child: SizedBox(
+                width: 60,
+                height: 60,
+                child: CircularProgressIndicator(),
+              ),
+            );
+          }
 
-            if (snapshot.hasError) {
-              return Center(
-                child: SizedBox(
-                  width: 120,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text("Connect failed"),
-                      Text("${snapshot.error}"),
-                      TextButton(
-                          onPressed: () {
-                            // todo: remote this page
-                          },
-                          child: Text(AppLocalizations.of(context)!.dialogOK))
-                    ],
-                  ),
+          if (snapshot.hasError) {
+            return Center(
+              child: SizedBox(
+                width: 120,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text("Connect failed"),
+                    Text("${snapshot.error}"),
+                    TextButton(
+                        onPressed: () {
+                          // todo: remote this page
+                        },
+                        child: Text(AppLocalizations.of(context)!.dialogOK))
+                  ],
                 ),
-              );
-            }
+              ),
+            );
+          }
 
-            return _buildDesktopSurface();
-          });
-    });
+          return _buildDesktopSurface();
+        });
   }
 
   Widget _buildDesktopSurface() {
@@ -83,8 +80,8 @@ class _DesktopPageState extends State<DesktopPage> {
       children: [
         Row(
           children: [
-            // Text(widget.model.remoteDeviceID),
-            // VerticalDivider(),
+            Text(widget.remoteDeviceId.toString()),
+            const VerticalDivider(),
             Tooltip(
               message: _fit == BoxFit.none
                   ? AppLocalizations.of(context)!
