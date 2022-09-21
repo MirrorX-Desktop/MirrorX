@@ -174,8 +174,8 @@ pub async fn key_exchange(req: KeyExchangeRequest) -> CoreResult<KeyExchangeResp
         local_device_id: req.local_device_id,
         visit_credentials,
         opening_key_bytes: raw_opening_key,
-        opening_nonce_bytes: passive_device_secret.passive_exchange_nonce,
+        opening_nonce_bytes: active_exchange_nonce.to_vec(),
         sealing_key_bytes: raw_sealing_key,
-        sealing_nonce_bytes: active_exchange_nonce.to_vec(),
+        sealing_nonce_bytes: passive_device_secret.passive_exchange_nonce,
     })
 }
