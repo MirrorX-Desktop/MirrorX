@@ -237,7 +237,9 @@ build_ffmpeg() {
         --enable-encoder=hevc_videotoolbox \
         --enable-hwaccel=h264_videotoolbox \
         --enable-hwaccel=hevc_videotoolbox \
-        --enable-hwaccel=vp9_videotoolbox
+        --enable-hwaccel=vp9_videotoolbox \
+        --enable-parser=h264 \
+        --enable-parser=h265
     set +x
 
     # --enable-libx265 \
@@ -338,18 +340,18 @@ check_tool_installed "nasm"
 check_tool_installed "autoconf"
 check_tool_installed "pkg-config"
 
-clone_source "x264" "https://code.videolan.org/videolan/x264.git" "stable" "./dependencies_repo/x264"
+# clone_source "x264" "https://code.videolan.org/videolan/x264.git" "stable" "./dependencies_repo/x264"
 # clone_source "x265" "https://bitbucket.org/multicoreware/x265_git.git" "3.5" "./dependencies_repo/x265"
 # clone_source "opus" "https://gitlab.xiph.org/xiph/opus.git" "v1.3.1" "./dependencies_repo/opus"
 # clone_source "libvpx" "https://github.com/webmproject/libvpx.git" "main" "./dependencies_repo/libvpx"
-clone_source "ffmpeg" "https://git.ffmpeg.org/ffmpeg.git" "release/5.0" "./dependencies_repo/ffmpeg"
-clone_source "libyuv" "https://chromium.googlesource.com/libyuv/libyuv" "stable" "./dependencies_repo/libyuv"
+# clone_source "ffmpeg" "https://git.ffmpeg.org/ffmpeg.git" "release/5.0" "./dependencies_repo/ffmpeg"
+# clone_source "libyuv" "https://chromium.googlesource.com/libyuv/libyuv" "stable" "./dependencies_repo/libyuv"
 
-build_x264 "./dependencies_repo/x264" "./dependencies_build/x264"
+# build_x264 "./dependencies_repo/x264" "./dependencies_build/x264"
 # build_x265 "./dependencies_repo/x265" "./dependencies_build/x265"
 # build_opus "./dependencies_repo/opus" "./dependencies_build/opus"
 # build_libvpx "./dependencies_repo/libvpx" "./dependencies_build/libvpx"
-build_libyuv "./dependencies_repo/libyuv" "./dependencies_build/libyuv"
+# build_libyuv "./dependencies_repo/libyuv" "./dependencies_build/libyuv"
 build_ffmpeg "./dependencies_build" "./dependencies_repo/ffmpeg" "./dependencies_build/ffmpeg"
 
 echo "All dependencies has built successfully!"

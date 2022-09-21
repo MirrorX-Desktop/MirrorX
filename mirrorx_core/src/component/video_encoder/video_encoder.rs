@@ -12,6 +12,7 @@ pub struct VideoEncoder {
     encode_config: Box<dyn EncoderConfig>,
     encode_context: *mut EncodeContext,
     tx: Sender<EndPointMessage>,
+    write_first_frame: bool,
 }
 
 impl VideoEncoder {
@@ -26,6 +27,7 @@ impl VideoEncoder {
                 encode_config,
                 encode_context: std::ptr::null_mut(),
                 tx,
+                write_first_frame: true,
             })
         }
     }
@@ -110,6 +112,13 @@ impl VideoEncoder {
                     (*(*self.encode_context).packet).size as usize,
                 )
                 .to_vec();
+
+                if self.write_first_frame {
+                    let dump_path = std::env::temp_dir().join("first_image");
+                    tracing::info!(?dump_path, "dump path");
+                    std::fs::write(dump_path, &buffer);
+                    self.write_first_frame = false;
+                }
 
                 av_packet_unref((*self.encode_context).packet);
 

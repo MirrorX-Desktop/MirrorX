@@ -57,12 +57,13 @@ class VideoTexture: NSObject, FlutterTexture {
         CVPixelBufferLockBaseAddress(pixelBuffer, CVPixelBufferLockFlags.init(rawValue: 0))
         
         let luminaBaseAddress = CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, 0)
-        let _ = luminaBytebuffer.withVeryUnsafeBytes({luminaByteBufferAddress in
+        let _ = luminaBytebuffer.withUnsafeReadableBytes({luminaByteBufferAddress in
+            
             memcpy(luminaBaseAddress, luminaByteBufferAddress.baseAddress, Int(height * luminaStride))
         })
         
         let chromaBaseAddress = CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, 1)
-        let _ = chromaByteBuffer.withVeryUnsafeBytes(   { chromaByteBufferAddress in
+        let _ = chromaByteBuffer.withUnsafeReadableBytes(   { chromaByteBufferAddress in
             memcpy(chromaBaseAddress, chromaByteBufferAddress.baseAddress, Int(height * chromaStride / 2))
         })
         

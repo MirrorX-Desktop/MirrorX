@@ -24,7 +24,7 @@ impl EncoderConfig for H264VideoToolboxConfig {
         set_codec_ctx_option(codec_ctx, "profile", "high", 0)?;
         set_codec_ctx_option(codec_ctx, "level", "5.0", 0)?;
         set_codec_ctx_option(codec_ctx, "realtime", "true", 0)?;
-        set_codec_ctx_option(codec_ctx, "prio_speed", "true", 0)?;
+        // set_codec_ctx_option(codec_ctx, "prio_speed", "true", 0)?;
 
         Ok(())
     }

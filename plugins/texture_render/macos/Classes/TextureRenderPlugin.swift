@@ -91,6 +91,7 @@ public class TextureRenderPlugin: NSObject, FlutterPlugin {
         // 4: chroma body length
         // n: chroma body
         
+        
         var byteBuffer = ByteBuffer(data: buffer)
        
         guard let id = byteBuffer.readInteger(endianness: .little, as: Int64.self) else{
