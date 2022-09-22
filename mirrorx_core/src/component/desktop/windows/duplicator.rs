@@ -193,9 +193,9 @@ impl Duplicator {
             self.device_context
                 .CopyResource(&self.backend_texture, desktop_texture);
 
-            if self.mouse_visible {
-                self.draw_mouse()?;
-            }
+            // if self.mouse_visible {
+            //     self.draw_mouse()?;
+            // }
         }
 
         HRESULT!(self.duplication.ReleaseFrame());
