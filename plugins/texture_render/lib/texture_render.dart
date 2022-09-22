@@ -16,7 +16,7 @@ class TextureRender {
     return TextureRenderPlatform.instance.deregisterTexture(textureID);
   }
 
-  Future<void> sendVideoFrameBuffer(Uint8List videoFrameBuffer) {
+  void sendVideoFrameBuffer(Uint8List videoFrameBuffer) {
     return TextureRenderPlatform.instance
         .sendVideoFrameBuffer(videoFrameBuffer);
   }

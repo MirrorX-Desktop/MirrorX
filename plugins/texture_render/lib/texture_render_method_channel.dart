@@ -32,7 +32,7 @@ class MethodChannelTextureRender extends TextureRenderPlatform {
   }
 
   @override
-  Future<void> sendVideoFrameBuffer(Uint8List videoFrameBuffer) {
-    return binaryChannel.send(ByteData.view(videoFrameBuffer.buffer));
+  void sendVideoFrameBuffer(Uint8List videoFrameBuffer) {
+    return binaryChannel.send(ByteData.view(videoFrameBuffer.buffer)).ignore();
   }
 }

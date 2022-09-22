@@ -35,7 +35,7 @@ abstract class TextureRenderPlatform extends PlatformInterface {
         'deregisterVideoTexture() has not been implemented.');
   }
 
-  Future<void> sendVideoFrameBuffer(Uint8List videoFrameBuffer) {
+  void sendVideoFrameBuffer(Uint8List videoFrameBuffer) {
     throw UnimplementedError('sendVideoBuffer() has not been implemented.');
   }
 }

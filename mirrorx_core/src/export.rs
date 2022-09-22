@@ -139,5 +139,6 @@ pub fn endpoint_negotiate_finished(
 }
 
 pub fn endpoint_input(req: InputRequest) -> anyhow::Result<()> {
-    async_block_on!(input(req))
+    // async_block_on!(input(req))
+    input(req).map_err(|err| anyhow::anyhow!(err))
 }
