@@ -6,7 +6,7 @@ use crate::{
         ENDPOINTS, ENDPOINTS_MONITOR, SEND_MESSAGE_TIMEOUT,
     },
     component::{
-        desktop::{monitor::get_primary_monitor_params, Duplicator},
+        desktop::Duplicator,
         video_encoder::{config::EncoderType, video_encoder::VideoEncoder},
     },
     core_error,
