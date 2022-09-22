@@ -35,20 +35,19 @@ pub async fn input(req: InputRequest) -> CoreResult<()> {
 pub async fn handle_input(active_device_id: i64, passive_device_id: i64, input: EndPointInput) {
     match input.event {
         InputEvent::Mouse(event) => {
-            if let Some(monitor_id) = ENDPOINTS_MONITOR.get(&(active_device_id, passive_device_id))
-            {
+            if let Some(monitor) = ENDPOINTS_MONITOR.get(&(active_device_id, passive_device_id)) {
                 match event {
                     MouseEvent::MouseUp(key, x, y) => {
-                        component::input::mouse_up(&monitor_id, key, x, y);
+                        component::input::mouse_up(&monitor, key, x, y);
                     }
                     MouseEvent::MouseDown(key, x, y) => {
-                        component::input::mouse_down(&monitor_id, key, x, y);
+                        component::input::mouse_down(&monitor, key, x, y);
                     }
                     MouseEvent::MouseMove(key, x, y) => {
-                        component::input::mouse_move(&monitor_id, key, x, y);
+                        component::input::mouse_move(&monitor, key, x, y);
                     }
                     MouseEvent::MouseScrollWheel(delta) => {
-                        component::input::mouse_scroll_wheel(&monitor_id, delta);
+                        component::input::mouse_scroll_wheel(&monitor, delta);
                     }
                 }
             } else {

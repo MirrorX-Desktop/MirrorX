@@ -17,7 +17,7 @@ unsafe impl Send for Duplicator {}
 
 impl Duplicator {
     pub fn new(
-        monitor_id: Option<core_graphics::display::CGDirectDisplayID>,
+        monitor_id: Option<String>,
         capture_frame_tx: crossbeam::channel::Sender<DesktopEncodeFrame>,
     ) -> CoreResult<(Self, String)> {
         unsafe {
@@ -27,10 +27,13 @@ impl Duplicator {
             }
 
             let screen = match monitor_id {
-                Some(monitor_id) => match screens.iter().find(|s| s.screenNumber() == monitor_id) {
-                    Some(screen) => screen,
-                    None => &screens[0],
-                },
+                Some(monitor_id) => {
+                    let monitor_id = monitor_id.parse::<u32>()?;
+                    match screens.iter().find(|s| s.screenNumber() == monitor_id) {
+                        Some(screen) => screen,
+                        None => &screens[0],
+                    }
+                }
                 None => &screens[0],
             };
 

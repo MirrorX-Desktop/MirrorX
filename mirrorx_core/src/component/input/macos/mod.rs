@@ -3,6 +3,7 @@ mod key_code;
 use self::key_code::*;
 use super::key::{KeyboardKey, MouseKey};
 use crate::{
+    component::desktop::monitor::Monitor,
     core_error,
     error::{CoreError, CoreResult},
 };
@@ -17,8 +18,8 @@ use core_graphics::{
 
 // https://developer.mozilla.org/en-US/docs/Web/API/UI_Events/Keyboard_event_code_values
 
-pub fn mouse_up(monitor_id: &str, key: MouseKey, x: f32, y: f32) -> CoreResult<()> {
-    let display_id = monitor_id.parse::<u32>()?;
+pub fn mouse_up(monitor: &Monitor, key: MouseKey, x: f32, y: f32) -> CoreResult<()> {
+    let display_id = monitor.id.parse::<u32>()?;
 
     let (event_type, mouse_button) = match key {
         MouseKey::None => return Err(core_error!("unsupport key")),
@@ -50,8 +51,8 @@ pub fn mouse_up(monitor_id: &str, key: MouseKey, x: f32, y: f32) -> CoreResult<(
     }
 }
 
-pub fn mouse_down(monitor_id: &str, key: MouseKey, x: f32, y: f32) -> CoreResult<()> {
-    let display_id = monitor_id.parse::<u32>()?;
+pub fn mouse_down(monitor: &Monitor, key: MouseKey, x: f32, y: f32) -> CoreResult<()> {
+    let display_id = monitor.id.parse::<u32>()?;
 
     let (event_type, mouse_button) = match key {
         MouseKey::None => return Err(core_error!("unsupport key")),
@@ -83,8 +84,8 @@ pub fn mouse_down(monitor_id: &str, key: MouseKey, x: f32, y: f32) -> CoreResult
     }
 }
 
-pub fn mouse_move(monitor_id: &str, key: MouseKey, x: f32, y: f32) -> CoreResult<()> {
-    let display_id = monitor_id.parse::<u32>()?;
+pub fn mouse_move(monitor: &Monitor, key: MouseKey, x: f32, y: f32) -> CoreResult<()> {
+    let display_id = monitor.id.parse::<u32>()?;
 
     let (event_type, mouse_button) = match key {
         MouseKey::None => (CGEventType::MouseMoved, CGMouseButton::Left),
@@ -116,8 +117,8 @@ pub fn mouse_move(monitor_id: &str, key: MouseKey, x: f32, y: f32) -> CoreResult
     }
 }
 
-pub fn mouse_scroll_wheel(monitor_id: &str, delta: f32) -> CoreResult<()> {
-    let display_id = monitor_id.parse::<u32>()?;
+pub fn mouse_scroll_wheel(monitor: &Monitor, delta: f32) -> CoreResult<()> {
+    let display_id = monitor.id.parse::<u32>()?;
 
     unsafe {
         post_mouse_event(display_id, 0f32, 0f32, move |event_source, _| {
