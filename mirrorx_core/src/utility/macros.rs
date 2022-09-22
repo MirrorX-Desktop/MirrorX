@@ -2,12 +2,8 @@
 #[macro_export]
 macro_rules! HRESULT {
     ($exp:expr) => {
-        $exp.map_err(|err| CoreError::Other {
-            message: format!(
-                "Windows API returns failed HRESULT (code={:?}, message={:?})",
-                err.code(),
-                err.message()
-            ),
+        $exp.map_err(|err| CoreError::HResultError {
+            error: err,
             file: file!().to_string(),
             line: line!().to_string(),
         })?

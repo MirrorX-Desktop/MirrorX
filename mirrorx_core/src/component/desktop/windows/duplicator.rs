@@ -60,8 +60,6 @@ pub struct Duplicator {
 
     sampler_state: [Option<ID3D11SamplerState>; 1],
     blend_state: ID3D11BlendState,
-    input_layout: ID3D11InputLayout,
-
     mouse_position_x: i32,
     mouse_position_y: i32,
     mouse_last_timestamp: i64,
@@ -111,6 +109,8 @@ impl Duplicator {
 
             let input_layout = init_input_layout(&device)?;
 
+            device_context.IASetInputLayout(input_layout);
+
             Ok(Duplicator {
                 device,
                 device_context,
@@ -134,7 +134,6 @@ impl Duplicator {
                 chrominance_rtv: [Some(chrominance_rtv)],
                 sampler_state: [Some(sampler_state)],
                 blend_state,
-                input_layout,
                 mouse_position_x: 0,
                 mouse_position_y: 0,
                 mouse_last_timestamp: 0,
@@ -147,7 +146,21 @@ impl Duplicator {
 
     pub fn capture(&mut self) -> CoreResult<DesktopEncodeFrame> {
         unsafe {
-            self.acquire_frame()?;
+            if let Err(err) = self.acquire_frame() {
+                if let CoreError::HResultError {
+                    ref error,
+                    file: _,
+                    line: _,
+                } = err
+                {
+                    if error.code() == DXGI_ERROR_ACCESS_LOST {
+                        // todo: re-init dxig
+                        tracing::warn!("DXGI ACCESS LOST");
+                    }
+                }
+                return Err(err);
+            }
+
             self.draw_lumina_and_chrominance_texture()?;
             self.create_capture_frame()
         }
@@ -157,39 +170,21 @@ impl Duplicator {
         let mut dxgi_resource = None;
         let mut dxgi_outdupl_frame_info = std::mem::zeroed();
 
-        let mut failures = 0;
-        while failures < 10 {
-            let hr = match self.duplication.AcquireNextFrame(
+        loop {
+            HRESULT!(self.duplication.AcquireNextFrame(
                 INFINITE,
                 &mut dxgi_outdupl_frame_info,
                 &mut dxgi_resource,
-            ) {
-                Ok(_) => break,
-                Err(err) => {
-                    failures += 1;
-                    err.code()
-                }
-            };
+            ));
 
-            if failures > 10 {
-                return Err(core_error!("too many failures on DXGI acquire frame"));
+            self.update_mouse(&dxgi_outdupl_frame_info)?;
+
+            if dxgi_outdupl_frame_info.LastPresentTime == 0 {
+                HRESULT!(self.duplication.ReleaseFrame());
+                continue;
             }
 
-            if hr == DXGI_ERROR_ACCESS_LOST {
-                tracing::warn!("Duplication: IDXGIOutputDuplication::AcquireNextFrame returns DXGI_ERROR_ACCESS_LOST, re-init DXGIOutputDuplication");
-
-                // todo
-
-                // let _ = self.output_duplication.ReleaseFrame();
-
-                // std::ptr::drop_in_place(&mut self.output_duplication);
-
-                // let (dxgi_output_desc, dxgi_output_duplication) =
-                //     init_output_duplication(&self.dx, 0)?;
-
-                // self.output_duplication = dxgi_output_duplication;
-                // self.output_desc = dxgi_output_desc;
-            }
+            break;
         }
 
         if let Some(resource) = dxgi_resource {
@@ -198,20 +193,13 @@ impl Duplicator {
             self.device_context
                 .CopyResource(&self.backend_texture, desktop_texture);
 
-            // self.update_mouse(&dxgi_outdupl_frame_info)?;
-
-            // if self.mouse_visible {
-            //     self.draw_mouse(&dxgi_outdupl_frame_info)?;
-            // }
-
-            if let Err(err) = self.duplication.ReleaseFrame() {
-                tracing::error!("DXGI release frame failed ({:?})", err.code());
+            if self.mouse_visible {
+                self.draw_mouse()?;
             }
-
-            Ok(())
-        } else {
-            Err(core_error!("DXGI frame resource is None"))
         }
+
+        HRESULT!(self.duplication.ReleaseFrame());
+        Ok(())
     }
 
     unsafe fn draw_lumina_and_chrominance_texture(&self) -> CoreResult<()> {
@@ -239,12 +227,14 @@ impl Duplicator {
         self.device_context
             .IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-        self.device_context.IASetInputLayout(&self.input_layout);
+        // self.device_context.IASetInputLayout(&self.input_layout);
 
         self.device_context
             .PSSetShaderResources(0, &vec![Some(shader_resouce_view)]);
 
         self.device_context.VSSetShader(&self.vertex_shader, &[]);
+
+        // self.device_context.PSSetSamplers(0, &self.sampler_state);
 
         // draw lumina plane
 
@@ -271,7 +261,7 @@ impl Duplicator {
 
         self.device_context.Draw(VERTICES.len() as u32, 0);
 
-        self.device_context.Flush();
+        // self.device_context.Flush();
 
         Ok(())
     }
@@ -382,10 +372,7 @@ impl Duplicator {
         Ok(())
     }
 
-    unsafe fn draw_mouse(
-        &mut self,
-        desktop_frame_info: &DXGI_OUTDUPL_FRAME_INFO,
-    ) -> CoreResult<()> {
+    unsafe fn draw_mouse(&mut self) -> CoreResult<()> {
         let mut full_desc: D3D11_TEXTURE2D_DESC = std::mem::zeroed();
         self.backend_texture.GetDesc(&mut full_desc);
 
@@ -424,24 +411,23 @@ impl Duplicator {
 
         match DXGI_OUTDUPL_POINTER_SHAPE_TYPE(self.mouse_shape_info.Type as i32) {
             DXGI_OUTDUPL_POINTER_SHAPE_TYPE_COLOR => {
-                tracing::trace!(
+                tracing::info!(
                     "DXGI_OUTDUPL_POINTER_SHAPE_INFO: DXGI_OUTDUPL_POINTER_SHAPE_TYPE_COLOR"
                 );
 
-                pointer_left = desktop_frame_info.PointerPosition.Position.x as i32;
-                pointer_top = desktop_frame_info.PointerPosition.Position.y as i32;
+                pointer_left = self.mouse_position_x;
+                pointer_top = self.mouse_position_y;
                 pointer_width = self.mouse_shape_info.Width as i32;
                 pointer_height = self.mouse_shape_info.Height as i32;
             }
             DXGI_OUTDUPL_POINTER_SHAPE_TYPE_MONOCHROME => {
-                tracing::trace!(
+                tracing::info!(
                     "DXGI_OUTDUPL_POINTER_SHAPE_INFO: DXGI_OUTDUPL_POINTER_SHAPE_TYPE_MONOCHROME"
                 );
 
                 let buffer = self.process_mono_mask(
                     true,
                     &full_desc,
-                    desktop_frame_info,
                     &mut pointer_width,
                     &mut pointer_height,
                     &mut pointer_left,
@@ -452,14 +438,13 @@ impl Duplicator {
                 init_buffer = buffer.as_ptr()
             }
             DXGI_OUTDUPL_POINTER_SHAPE_TYPE_MASKED_COLOR => {
-                tracing::trace!(
+                tracing::info!(
                     "DXGI_OUTDUPL_POINTER_SHAPE_INFO: DXGI_OUTDUPL_POINTER_SHAPE_TYPE_MASKED_COLOR"
                 );
 
                 let buffer = self.process_mono_mask(
                     false,
                     &full_desc,
-                    desktop_frame_info,
                     &mut pointer_width,
                     &mut pointer_height,
                     &mut pointer_left,
@@ -550,7 +535,7 @@ impl Duplicator {
         self.device_context
             .IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-        self.device_context.IASetInputLayout(&self.input_layout);
+        // self.device_context.IASetInputLayout(&self.input_layout);
 
         self.device_context
             .OMSetBlendState(&self.blend_state, blend_factor.as_ptr(), 0xFFFFFFFF);
@@ -571,6 +556,8 @@ impl Duplicator {
 
         self.device_context.Draw(VERTICES.len() as u32, 0);
 
+        // self.device_context.Flush();
+
         Ok(())
     }
 
@@ -578,7 +565,6 @@ impl Duplicator {
         &mut self,
         is_mono: bool,
         full_desc: &D3D11_TEXTURE2D_DESC,
-        frame_info: &DXGI_OUTDUPL_FRAME_INFO,
         pointer_width: &mut i32,
         pointer_height: &mut i32,
         pointer_left: &mut i32,
@@ -588,8 +574,8 @@ impl Duplicator {
         let desktop_width = full_desc.Width as i32;
         let desktop_height = full_desc.Height as i32;
 
-        let given_left = frame_info.PointerPosition.Position.x;
-        let given_top = frame_info.PointerPosition.Position.y;
+        let given_left = self.mouse_position_x;
+        let given_top = self.mouse_position_y;
 
         if given_left < 0 {
             *pointer_width = given_left + self.mouse_shape_info.Width as i32;
@@ -883,8 +869,6 @@ unsafe fn init_backend_resources(
     texture_desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
     texture_desc.Usage = D3D11_USAGE_STAGING;
     texture_desc.BindFlags = D3D11_BIND_FLAG::default();
-
-    let backend_staging_texture = HRESULT!(device.CreateTexture2D(&texture_desc, std::ptr::null()));
 
     let rtv = HRESULT!(device.CreateRenderTargetView(&texture, std::ptr::null()));
 

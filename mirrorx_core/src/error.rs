@@ -5,7 +5,7 @@ pub type CoreResult<T> = Result<T, CoreError>;
 
 #[derive(Error, Debug)]
 pub enum CoreError {
-    #[error("other error (message={message:?}, file=\"{file}\", line={line})")]
+    #[error("other error (message={message:?}, file = \"{file}\", line = {line})")]
     Other {
         message: String,
         file: String,
@@ -56,4 +56,12 @@ pub enum CoreError {
 
     #[error("key exchange reply error ({0:?})")]
     KeyExchangeReplyError(signaling_proto::message::KeyExchangeReplyError),
+
+    #[cfg(target_os = "windows")]
+    #[error("windows api hresult error ({error:?}, file = \"{file}\", line = {line})")]
+    HResultError {
+        error: windows::core::Error,
+        file: String,
+        line: String,
+    },
 }
