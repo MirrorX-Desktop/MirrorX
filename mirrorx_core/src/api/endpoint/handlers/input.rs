@@ -1,9 +1,9 @@
 use crate::{
     api::endpoint::{
-        message::{EndPointInput, EndPointMessage, InputEvent},
-        ENDPOINTS, SEND_MESSAGE_TIMEOUT,
+        message::{EndPointInput, EndPointMessage, InputEvent, KeyboardEvent, MouseEvent},
+        ENDPOINTS, ENDPOINTS_MONITOR_ID, SEND_MESSAGE_TIMEOUT,
     },
-    core_error,
+    component, core_error,
     error::{CoreError, CoreResult},
 };
 
@@ -33,22 +33,40 @@ pub async fn input(req: InputRequest) -> CoreResult<()> {
 }
 
 pub async fn handle_input(active_device_id: i64, passive_device_id: i64, input: EndPointInput) {
-    // match input.event {
-    //     InputEvent::Mouse(event) => {
-    //         if let Some(monitor) = endpoint.monitor() {
-    //             match event {
-    //                 MouseUp(key, x, y) => processor::input::mouse_up(monitor, key, x, y),
-    //                 MouseDown(key, x, y) => processor::input::mouse_down(monitor, key, x, y),
-    //                 MouseMove(key, x, y) => processor::input::mouse_move(monitor, key, x, y),
-    //                 MouseScrollWheel(delta) => processor::input::mouse_scroll_wheel(monitor, delta),
-    //             }
-    //         } else {
-    //             Err(core_error!("no associate monitor with current session"))
-    //         }
-    //     }
-    //     InputEvent::Keyboard(event) => match event {
-    //         KeyboardEvent::KeyUp(key) => processor::input::keyboard_up(key),
-    //         KeyboardEvent::KeyDown(key) => processor::input::keyboard_down(key),
-    //     },
-    // }
+    match input.event {
+        InputEvent::Mouse(event) => {
+            if let Some(monitor_id) =
+                ENDPOINTS_MONITOR_ID.get(&(active_device_id, passive_device_id))
+            {
+                match event {
+                    MouseEvent::MouseUp(key, x, y) => {
+                        component::input::mouse_up(&monitor_id, key, x, y);
+                    }
+                    MouseEvent::MouseDown(key, x, y) => {
+                        component::input::mouse_down(&monitor_id, key, x, y);
+                    }
+                    MouseEvent::MouseMove(key, x, y) => {
+                        component::input::mouse_move(&monitor_id, key, x, y);
+                    }
+                    MouseEvent::MouseScrollWheel(delta) => {
+                        component::input::mouse_scroll_wheel(&monitor_id, delta);
+                    }
+                }
+            } else {
+                tracing::warn!(
+                    ?active_device_id,
+                    ?passive_device_id,
+                    "monitor id is not exists"
+                )
+            };
+        }
+        InputEvent::Keyboard(event) => match event {
+            KeyboardEvent::KeyUp(key) => {
+                component::input::keyboard_up(key);
+            }
+            KeyboardEvent::KeyDown(key) => {
+                component::input::keyboard_down(key);
+            }
+        },
+    };
 }

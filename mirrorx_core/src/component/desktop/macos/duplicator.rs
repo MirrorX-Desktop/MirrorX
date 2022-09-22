@@ -19,7 +19,7 @@ impl Duplicator {
     pub fn new(
         monitor_id: Option<core_graphics::display::CGDirectDisplayID>,
         capture_frame_tx: crossbeam::channel::Sender<DesktopEncodeFrame>,
-    ) -> CoreResult<Self> {
+    ) -> CoreResult<(Self, String)> {
         unsafe {
             let screens = NSScreen::screens()?;
             if screens.is_empty() {
@@ -76,7 +76,10 @@ impl Duplicator {
                 block.deref(),
             );
 
-            Ok(Duplicator { display_stream })
+            Ok((
+                Duplicator { display_stream },
+                screen.screenNumber().to_string(),
+            ))
         }
     }
 

@@ -113,11 +113,11 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
       fit: widget.fit,
       child: Listener(
         behavior: HitTestBehavior.opaque,
-        // onPointerDown: _handlePointerDown,
-        // onPointerUp: _handlePointerUp,
-        // onPointerHover: _handlePointerHover,
-        // onPointerMove: _handlePointerMove,
-        // onPointerSignal: _handlePointerSignal,
+        onPointerDown: _handlePointerDown,
+        onPointerUp: _handlePointerUp,
+        onPointerHover: _handlePointerHover,
+        onPointerMove: _handlePointerMove,
+        onPointerSignal: _handlePointerSignal,
         child: RepaintBoundary(
           child: SizedBox(
             width: desktopInfo.monitorWidth.floorToDouble(),

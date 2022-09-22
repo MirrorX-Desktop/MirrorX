@@ -74,6 +74,8 @@ fn spawn_desktop_capture_and_encode_process(
     passive_device_id: i64,
     message_tx: Sender<EndPointMessage>,
 ) {
+    use crate::api::endpoint::ENDPOINTS_MONITOR_ID;
+
     let (capture_frame_tx, capture_frame_rx) = crossbeam::channel::bounded(180);
 
     TOKIO_RUNTIME.spawn_blocking(move || {
@@ -107,7 +109,7 @@ fn spawn_desktop_capture_and_encode_process(
             }
         };
 
-        let duplicator = match Duplicator::new(Some(monitor_id), capture_frame_tx) {
+        let (duplicator, monitor_id) = match Duplicator::new(Some(monitor_id), capture_frame_tx) {
             Ok(duplicator) => duplicator,
             Err(err) => {
                 tracing::error!(
@@ -119,6 +121,10 @@ fn spawn_desktop_capture_and_encode_process(
                 return;
             }
         };
+
+        ENDPOINTS_MONITOR_ID
+            .blocking()
+            .insert((active_device_id, passive_device_id), monitor_id);
 
         if let Err(err) = duplicator.start() {
             tracing::error!(
