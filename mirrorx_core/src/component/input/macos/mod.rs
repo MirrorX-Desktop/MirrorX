@@ -35,15 +35,12 @@ pub fn mouse_up(monitor: &Monitor, key: MouseKey, x: f32, y: f32) -> CoreResult<
             let event = CGEvent::new_mouse_event(event_source, event_type, point, mouse_button)
                 .map_err(|_| core_error!("create mouse CGEvent failed"))?;
 
-            match event_type {
-                CGEventType::OtherMouseUp => {
-                    if key == MouseKey::SideForward {
-                        event.set_integer_value_field(EventField::MOUSE_EVENT_BUTTON_NUMBER, 0x08);
-                    } else if key == MouseKey::SideBack {
-                        event.set_integer_value_field(EventField::MOUSE_EVENT_BUTTON_NUMBER, 0x16);
-                    }
+            if let CGEventType::OtherMouseUp = event_type {
+                if key == MouseKey::SideForward {
+                    event.set_integer_value_field(EventField::MOUSE_EVENT_BUTTON_NUMBER, 0x08);
+                } else if key == MouseKey::SideBack {
+                    event.set_integer_value_field(EventField::MOUSE_EVENT_BUTTON_NUMBER, 0x16);
                 }
-                _ => {}
             }
 
             Ok(event)
@@ -68,15 +65,12 @@ pub fn mouse_down(monitor: &Monitor, key: MouseKey, x: f32, y: f32) -> CoreResul
             let event = CGEvent::new_mouse_event(event_source, event_type, point, mouse_button)
                 .map_err(|_| core_error!("create mouse CGEvent failed"))?;
 
-            match event_type {
-                CGEventType::OtherMouseDown => {
-                    if key == MouseKey::SideForward {
-                        event.set_integer_value_field(EventField::MOUSE_EVENT_BUTTON_NUMBER, 0x08);
-                    } else if key == MouseKey::SideBack {
-                        event.set_integer_value_field(EventField::MOUSE_EVENT_BUTTON_NUMBER, 0x16);
-                    }
+            if let CGEventType::OtherMouseDown = event_type {
+                if key == MouseKey::SideForward {
+                    event.set_integer_value_field(EventField::MOUSE_EVENT_BUTTON_NUMBER, 0x08);
+                } else if key == MouseKey::SideBack {
+                    event.set_integer_value_field(EventField::MOUSE_EVENT_BUTTON_NUMBER, 0x16);
                 }
-                _ => {}
             }
 
             Ok(event)
@@ -101,15 +95,12 @@ pub fn mouse_move(monitor: &Monitor, key: MouseKey, x: f32, y: f32) -> CoreResul
             let event = CGEvent::new_mouse_event(event_source, event_type, point, mouse_button)
                 .map_err(|_| core_error!("create mouse CGEvent failed"))?;
 
-            match event_type {
-                CGEventType::OtherMouseDragged => {
-                    if key == MouseKey::SideForward {
-                        event.set_integer_value_field(EventField::MOUSE_EVENT_BUTTON_NUMBER, 0x08);
-                    } else if key == MouseKey::SideBack {
-                        event.set_integer_value_field(EventField::MOUSE_EVENT_BUTTON_NUMBER, 0x16);
-                    }
+            if let CGEventType::OtherMouseDragged = event_type {
+                if key == MouseKey::SideForward {
+                    event.set_integer_value_field(EventField::MOUSE_EVENT_BUTTON_NUMBER, 0x08);
+                } else if key == MouseKey::SideBack {
+                    event.set_integer_value_field(EventField::MOUSE_EVENT_BUTTON_NUMBER, 0x16);
                 }
-                _ => {}
             }
 
             Ok(event)
@@ -154,7 +145,7 @@ unsafe fn post_mouse_event(
         if let Ok(event_source) = CGEventSource::new(CGEventSourceStateID::HIDSystemState) {
             let point = CGPoint::new(x as f64, y as f64);
 
-            if let Ok(event) = event_create_fn(event_source, point.clone()) {
+            if let Ok(event) = event_create_fn(event_source, point) {
                 event.post(CGEventTapLocation::HID);
                 let _ = CGDisplayMoveCursorToPoint(display_id, point);
             }

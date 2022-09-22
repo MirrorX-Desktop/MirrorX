@@ -14,7 +14,7 @@
  *    keycode.
  */
 
-#![allow(non_upper_case_globals)]
+#![allow(non_upper_case_globals, unused)]
 use core_graphics::event::CGKeyCode;
 
 pub const kVK_ANSI_A: CGKeyCode = 0x00;
