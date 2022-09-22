@@ -3,7 +3,7 @@ use crate::{
     api::endpoint::{
         flutter_message::FlutterMediaMessage,
         message::{EndPointMessage, EndPointNegotiateFinishedRequest},
-        ENDPOINTS, SEND_MESSAGE_TIMEOUT,
+        ENDPOINTS, ENDPOINTS_MONITOR, SEND_MESSAGE_TIMEOUT,
     },
     component::{
         desktop::{monitor::get_primary_monitor_params, Duplicator},
@@ -74,8 +74,6 @@ fn spawn_desktop_capture_and_encode_process(
     passive_device_id: i64,
     message_tx: Sender<EndPointMessage>,
 ) {
-    use crate::api::endpoint::ENDPOINTS_MONITOR_ID;
-
     let (capture_frame_tx, capture_frame_rx) = crossbeam::channel::bounded(180);
 
     TOKIO_RUNTIME.spawn_blocking(move || {
@@ -122,7 +120,7 @@ fn spawn_desktop_capture_and_encode_process(
             }
         };
 
-        ENDPOINTS_MONITOR_ID
+        ENDPOINTS_MONITOR
             .blocking()
             .insert((active_device_id, passive_device_id), monitor_id);
 
@@ -173,14 +171,16 @@ fn spawn_desktop_capture_and_encode_process(
     passive_device_id: i64,
     message_tx: Sender<EndPointMessage>,
 ) {
-    let (monitor_id, monitor_height, monitor_width) = match get_primary_monitor_params() {
+    use crate::component::desktop::monitor::get_active_monitors;
+
+    let monitors = match get_active_monitors(false) {
         Ok(params) => params,
         Err(err) => {
             tracing::error!(
                 ?active_device_id,
                 ?passive_device_id,
                 ?err,
-                "get_primary_monitor_params failed"
+                "get_active_monitors failed"
             );
             return;
         }
@@ -193,18 +193,40 @@ fn spawn_desktop_capture_and_encode_process(
             tracing::info!(?active_device_id, ?passive_device_id, "desktop capture process exit");
         }
 
-        let mut duplicator = match Duplicator::new(Some(monitor_id)) {
-            Ok(duplicator) => duplicator,
-            Err(err) => {
+        let primary_monitor = monitors.iter().find(|monitor| monitor.is_primary);
+
+        let (mut duplicator, monitor_id) =
+            match Duplicator::new(primary_monitor.map(|monitor| monitor.id.to_owned())) {
+                Ok(duplicator) => duplicator,
+                Err(err) => {
+                    tracing::error!(
+                        ?active_device_id,
+                        ?passive_device_id,
+                        ?err,
+                        "initialize encoder failed"
+                    );
+                    return;
+                }
+            };
+
+        let select_monitor = match monitors
+            .into_iter()
+            .find(|monitor| monitor.id == monitor_id)
+        {
+            Some(monitor) => monitor,
+            None => {
                 tracing::error!(
                     ?active_device_id,
                     ?passive_device_id,
-                    ?err,
-                    "initialize encoder failed"
+                    "can't find selected monitor"
                 );
                 return;
             }
         };
+
+        ENDPOINTS_MONITOR
+            .blocking()
+            .insert((active_device_id, passive_device_id), select_monitor);
 
         loop {
             match duplicator.capture() {

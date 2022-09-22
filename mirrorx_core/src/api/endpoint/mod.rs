@@ -18,6 +18,7 @@ use crate::{
         },
         video_frame::handle_video_frame,
     },
+    component::desktop::monitor::Monitor,
     error::CoreResult,
     utility::{nonce_value::NonceValue, runtime::TOKIO_RUNTIME, serializer::BINCODE_SERIALIZER},
 };
@@ -45,7 +46,7 @@ pub static RESERVE_STREAMS: Lazy<DashMap<(i64, i64), Framed<TcpStream, LengthDel
 pub static ENDPOINTS: Lazy<Cache<(i64, i64), tokio::sync::mpsc::Sender<EndPointMessage>>> =
     Lazy::new(|| Cache::builder().initial_capacity(1).build());
 
-pub static ENDPOINTS_MONITOR_ID: Lazy<Cache<(i64, i64), String>> =
+pub static ENDPOINTS_MONITOR: Lazy<Cache<(i64, i64), Monitor>> =
     Lazy::new(|| Cache::builder().initial_capacity(1).build());
 
 pub fn serve_reader(
@@ -121,7 +122,7 @@ pub fn serve_reader(
             .invalidate(&(local_device_id, remote_device_id))
             .await;
 
-        ENDPOINTS_MONITOR_ID
+        ENDPOINTS_MONITOR
             .invalidate(&(local_device_id, remote_device_id))
             .await;
 
@@ -197,7 +198,7 @@ pub fn serve_writer(
             .invalidate(&(local_device_id, remote_device_id))
             .await;
 
-        ENDPOINTS_MONITOR_ID
+        ENDPOINTS_MONITOR
             .invalidate(&(local_device_id, remote_device_id))
             .await;
 

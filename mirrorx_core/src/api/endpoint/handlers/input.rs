@@ -1,7 +1,7 @@
 use crate::{
     api::endpoint::{
         message::{EndPointInput, EndPointMessage, InputEvent, KeyboardEvent, MouseEvent},
-        ENDPOINTS, ENDPOINTS_MONITOR_ID, SEND_MESSAGE_TIMEOUT,
+        ENDPOINTS, ENDPOINTS_MONITOR, SEND_MESSAGE_TIMEOUT,
     },
     component, core_error,
     error::{CoreError, CoreResult},
@@ -35,8 +35,7 @@ pub async fn input(req: InputRequest) -> CoreResult<()> {
 pub async fn handle_input(active_device_id: i64, passive_device_id: i64, input: EndPointInput) {
     match input.event {
         InputEvent::Mouse(event) => {
-            if let Some(monitor_id) =
-                ENDPOINTS_MONITOR_ID.get(&(active_device_id, passive_device_id))
+            if let Some(monitor_id) = ENDPOINTS_MONITOR.get(&(active_device_id, passive_device_id))
             {
                 match event {
                     MouseEvent::MouseUp(key, x, y) => {

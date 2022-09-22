@@ -71,7 +71,7 @@ pub struct Duplicator {
 unsafe impl Send for Duplicator {}
 
 impl Duplicator {
-    pub fn new(monitor_id: Option<String>) -> CoreResult<Duplicator> {
+    pub fn new(monitor_id: Option<String>) -> CoreResult<(Duplicator, String)> {
         unsafe {
             prepare_desktop()?;
 
@@ -85,7 +85,7 @@ impl Duplicator {
                 pixel_shader_chrominance,
             ) = init_shaders(&device)?;
 
-            let duplication = init_output_duplication(&device, monitor_id)?;
+            let (duplication, monitor_id) = init_output_duplication(&device, monitor_id)?;
 
             let mut dxgi_outdupl_desc = std::mem::zeroed();
             duplication.GetDesc(&mut dxgi_outdupl_desc);
@@ -111,36 +111,39 @@ impl Duplicator {
 
             device_context.IASetInputLayout(input_layout);
 
-            Ok(Duplicator {
-                device,
-                device_context,
-                vertex_shader,
-                vertex_buffer: Some(vertex_buffer),
-                pixel_shader,
-                pixel_shader_luminance: pixel_shader_lumina,
-                pixel_shader_chrominance,
-                duplication,
-                dxgi_outdupl_desc,
-                backend_texture,
-                backend_viewport: [backend_viewport],
-                backend_rtv: [Some(backend_rtv)],
-                luminance_render_texture: lumina_render_texture,
-                luminance_staging_texture: lumina_staging_texture,
-                luminance_viewport: [lumina_viewport],
-                luminance_rtv: [Some(lumina_rtv)],
-                chrominance_render_texture,
-                chrominance_staging_texture,
-                chrominance_viewport: [chrominance_viewport],
-                chrominance_rtv: [Some(chrominance_rtv)],
-                sampler_state: [Some(sampler_state)],
-                blend_state,
-                mouse_position_x: 0,
-                mouse_position_y: 0,
-                mouse_last_timestamp: 0,
-                mouse_visible: false,
-                mouse_shape_buffer: Vec::new(),
-                mouse_shape_info: std::mem::zeroed(),
-            })
+            Ok((
+                Duplicator {
+                    device,
+                    device_context,
+                    vertex_shader,
+                    vertex_buffer: Some(vertex_buffer),
+                    pixel_shader,
+                    pixel_shader_luminance: pixel_shader_lumina,
+                    pixel_shader_chrominance,
+                    duplication,
+                    dxgi_outdupl_desc,
+                    backend_texture,
+                    backend_viewport: [backend_viewport],
+                    backend_rtv: [Some(backend_rtv)],
+                    luminance_render_texture: lumina_render_texture,
+                    luminance_staging_texture: lumina_staging_texture,
+                    luminance_viewport: [lumina_viewport],
+                    luminance_rtv: [Some(lumina_rtv)],
+                    chrominance_render_texture,
+                    chrominance_staging_texture,
+                    chrominance_viewport: [chrominance_viewport],
+                    chrominance_rtv: [Some(chrominance_rtv)],
+                    sampler_state: [Some(sampler_state)],
+                    blend_state,
+                    mouse_position_x: 0,
+                    mouse_position_y: 0,
+                    mouse_last_timestamp: 0,
+                    mouse_visible: false,
+                    mouse_shape_buffer: Vec::new(),
+                    mouse_shape_info: std::mem::zeroed(),
+                },
+                monitor_id,
+            ))
         }
     }
 
@@ -731,7 +734,7 @@ impl Duplicator {
 unsafe fn init_output_duplication(
     device: &ID3D11Device,
     monitor_id: Option<String>,
-) -> CoreResult<IDXGIOutputDuplication> {
+) -> CoreResult<(IDXGIOutputDuplication, String)> {
     let dxgi_device: IDXGIDevice = HRESULT!(device.cast());
 
     let dxgi_adapter = HRESULT!(dxgi_device.GetParent::<IDXGIAdapter>());
@@ -794,7 +797,7 @@ unsafe fn init_output_duplication(
 
                 let dxgi_output_duplication = HRESULT!(dxgi_output1.DuplicateOutput(device));
 
-                return Ok(dxgi_output_duplication);
+                return Ok((dxgi_output_duplication, device_id));
             }
         }
     }
@@ -1027,21 +1030,4 @@ unsafe fn init_input_layout(device: &ID3D11Device) -> CoreResult<ID3D11InputLayo
         HRESULT!(device.CreateInputLayout(&input_element_desc_array, shader::VERTEX_SHADER_BYTES));
 
     Ok(input_layout)
-}
-
-#[test]
-fn test_duplicator() {
-    tracing_subscriber::fmt::init();
-
-    let mut duplicator = Duplicator::new(None).unwrap();
-
-    tracing::info!("begin capture frame");
-
-    let capture_frame = duplicator.capture().unwrap();
-
-    tracing::info!(
-        width = capture_frame.width,
-        height = capture_frame.height,
-        "captured frame"
-    );
 }
