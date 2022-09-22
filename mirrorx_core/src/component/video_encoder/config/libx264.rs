@@ -21,7 +21,7 @@ impl Libx264Config {
 
 impl EncoderConfig for Libx264Config {
     fn apply_option(&self, codec_ctx: *mut AVCodecContext) -> CoreResult<()> {
-        set_codec_ctx_option(codec_ctx, "profile", "high", 0)?;
+        set_codec_ctx_option(codec_ctx, "profile", "baseline", 0)?;
         set_codec_ctx_option(codec_ctx, "level", "5.0", 0)?;
         set_codec_ctx_option(codec_ctx, "preset", "ultrafast", 0)?;
         set_codec_ctx_option(codec_ctx, "tune", "zerolatency", 0)?;
