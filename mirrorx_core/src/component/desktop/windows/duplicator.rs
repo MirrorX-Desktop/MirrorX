@@ -411,7 +411,7 @@ impl Duplicator {
 
         match DXGI_OUTDUPL_POINTER_SHAPE_TYPE(self.mouse_shape_info.Type as i32) {
             DXGI_OUTDUPL_POINTER_SHAPE_TYPE_COLOR => {
-                tracing::info!(
+                tracing::trace!(
                     "DXGI_OUTDUPL_POINTER_SHAPE_INFO: DXGI_OUTDUPL_POINTER_SHAPE_TYPE_COLOR"
                 );
 
@@ -421,7 +421,7 @@ impl Duplicator {
                 pointer_height = self.mouse_shape_info.Height as i32;
             }
             DXGI_OUTDUPL_POINTER_SHAPE_TYPE_MONOCHROME => {
-                tracing::info!(
+                tracing::trace!(
                     "DXGI_OUTDUPL_POINTER_SHAPE_INFO: DXGI_OUTDUPL_POINTER_SHAPE_TYPE_MONOCHROME"
                 );
 
@@ -438,7 +438,7 @@ impl Duplicator {
                 init_buffer = buffer.as_ptr()
             }
             DXGI_OUTDUPL_POINTER_SHAPE_TYPE_MASKED_COLOR => {
-                tracing::info!(
+                tracing::trace!(
                     "DXGI_OUTDUPL_POINTER_SHAPE_INFO: DXGI_OUTDUPL_POINTER_SHAPE_TYPE_MASKED_COLOR"
                 );
 
