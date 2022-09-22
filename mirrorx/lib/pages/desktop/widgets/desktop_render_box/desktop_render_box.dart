@@ -32,12 +32,12 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
   @override
   void initState() {
     super.initState();
-    // HardwareKeyboard.instance.addHandler(_handleKeyboardEvent);
+    HardwareKeyboard.instance.addHandler(_handleKeyboardEvent);
   }
 
   @override
   void dispose() {
-    // HardwareKeyboard.instance.removeHandler(_handleKeyboardEvent);
+    HardwareKeyboard.instance.removeHandler(_handleKeyboardEvent);
     super.dispose();
   }
 
@@ -171,7 +171,7 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
   }
 
   void _handlePointerUp(PointerUpEvent event) {
-    log("pointer up ${event.buttons} ${event.pointer}");
+    // log("pointer up ${event.buttons} ${event.pointer}");
 
     final button = _downButtons.remove(event.pointer);
     if (button == null) {
@@ -205,7 +205,7 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
   }
 
   void _handlePointerMove(PointerMoveEvent event) {
-    log("pointer move ${event.buttons} ${event.localPosition}");
+    // log("pointer move ${event.buttons} ${event.localPosition}");
 
     var mouseKey = MouseKey.None;
 
@@ -237,7 +237,7 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
   }
 
   void _handlePointerHover(PointerHoverEvent event) {
-    log("pointer hover ${event.buttons} ${event.localPosition}");
+    // log("pointer hover ${event.buttons} ${event.localPosition}");
 
     context.read<DesktopManagerCubit>().deviceInput(
           widget.localDeviceId,
