@@ -6,7 +6,7 @@ use crate::{
     error::{CoreError, CoreResult},
     ffi::ffmpeg::{avcodec::*, avutil::*},
 };
-use tokio::sync::mpsc::Sender;
+use tokio::sync::mpsc::{error::TrySendError, Sender};
 
 pub struct VideoEncoder {
     encode_config: Box<dyn EncoderConfig>,
@@ -119,8 +119,19 @@ impl VideoEncoder {
                     buffer,
                 });
 
-                if self.tx.blocking_send(packet).is_err() {
-                    return Err(core_error!("channel closed"));
+                // if self.tx.blocking_send(packet).is_err() {
+                //     return Err(core_error!("channel closed"));
+                // }
+                if let Err(err) = self.tx.try_send(packet) {
+                    if let TrySendError::Full(_) = err {
+                        tracing::warn!(
+                            "video encoder send EndPointMessage failed, channel is full!"
+                        );
+                    } else {
+                        return Err(core_error!(
+                            "video encoder send EndPointMessage failed, channel is closed"
+                        ));
+                    }
                 }
             }
         }

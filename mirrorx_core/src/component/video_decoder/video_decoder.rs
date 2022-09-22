@@ -209,7 +209,7 @@ impl DecodeContext {
             (*decode_ctx.codec_ctx).color_primaries = AVCOL_PRI_BT709;
             (*decode_ctx.codec_ctx).color_trc = AVCOL_TRC_BT709;
             (*decode_ctx.codec_ctx).colorspace = AVCOL_SPC_BT709;
-            (*decode_ctx.codec_ctx).flags2 |= AV_CODEC_FLAG2_LOCAL_HEADER;
+            // (*decode_ctx.codec_ctx).flags2 |= AV_CODEC_FLAG2_LOCAL_HEADER;
 
             let mut hw_device_type = av_hwdevice_find_type_by_name(
                 CString::new(if cfg!(target_os = "windows") {
