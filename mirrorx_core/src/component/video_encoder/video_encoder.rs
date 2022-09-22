@@ -119,15 +119,8 @@ impl VideoEncoder {
                     buffer,
                 });
 
-                if let Err(err) = self.tx.try_send(packet) {
-                    match err {
-                        tokio::sync::mpsc::error::TrySendError::Full(_) => {
-                            tracing::warn!("EndPointMessage channel is full")
-                        }
-                        tokio::sync::mpsc::error::TrySendError::Closed(_) => {
-                            return Err(core_error!("channel closed"));
-                        }
-                    }
+                if self.tx.blocking_send(packet).is_err() {
+                    return Err(core_error!("channel closed"));
                 }
             }
         }
