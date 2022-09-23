@@ -41,24 +41,24 @@ fn test_duplicator() -> anyhow::Result<()> {
     use bytes::Buf;
 
     tracing_subscriber::fmt::init();
-    unsafe {
-        let (monitor_id, _, _) = crate::component::desktop::monitor::get_primary_monitor_params()?;
 
-        let mut duplicator = crate::component::desktop::Duplicator::new(Some(monitor_id))?;
+    let (monitor_id, _, _) = crate::component::desktop::monitor::get_primary_monitor_params()?;
 
-        let capture_frame = duplicator.capture()?;
+    let (mut duplicator, _) = crate::component::desktop::Duplicator::new(Some(monitor_id))?;
 
-        let dump_path = std::env::temp_dir().join("first_image");
-        tracing::info!(?dump_path, "dump path");
-        std::fs::write(
-            dump_path,
-            bytes::Bytes::copy_from_slice(&capture_frame.luminance_bytes)
-                .chain(bytes::Bytes::copy_from_slice(
-                    &capture_frame.chrominance_bytes,
-                ))
-                .chunk(),
-        );
+    let capture_frame = duplicator.capture()?;
 
-        Ok(())
-    }
+    let dump_path = std::env::temp_dir().join("first_image");
+    tracing::info!(?dump_path, "dump path");
+    std::fs::write(
+        dump_path,
+        bytes::Bytes::copy_from_slice(&capture_frame.luminance_bytes)
+            .chain(bytes::Bytes::copy_from_slice(
+                &capture_frame.chrominance_bytes,
+            ))
+            .chunk(),
+    )
+    .unwrap();
+
+    Ok(())
 }
