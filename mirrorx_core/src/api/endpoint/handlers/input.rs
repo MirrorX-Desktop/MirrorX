@@ -1,7 +1,7 @@
 use crate::{
     api::endpoint::{
         message::{EndPointInput, EndPointMessage, InputEvent, KeyboardEvent, MouseEvent},
-        ENDPOINTS, ENDPOINTS_MONITOR, SEND_MESSAGE_TIMEOUT,
+        ENDPOINTS, ENDPOINTS_MONITOR,
     },
     component, core_error,
     error::{CoreError, CoreResult},

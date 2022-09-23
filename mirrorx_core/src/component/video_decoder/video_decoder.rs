@@ -4,7 +4,7 @@ use crate::{
     error::{CoreError, CoreResult},
     ffi::ffmpeg::{avcodec::*, avutil::*},
 };
-use bytes::{Buf, BufMut};
+use bytes::BufMut;
 use flutter_rust_bridge::{StreamSink, ZeroCopyBuffer};
 use std::ffi::{CStr, CString};
 

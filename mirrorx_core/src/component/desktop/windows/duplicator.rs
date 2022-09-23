@@ -10,14 +10,13 @@ use crate::{
     },
     core_error,
     error::{CoreError, CoreResult},
-    utility::wide_char::FromWide,
     HRESULT,
 };
 use scopeguard::defer;
-use std::{ffi::OsString, os::raw::c_void};
+use std::os::raw::c_void;
 use tracing::info;
 use windows::{
-    core::{Interface, PCSTR},
+    core::{Interface, PCSTR, PCWSTR},
     Win32::{
         Graphics::{
             Direct3D::*,
@@ -109,7 +108,7 @@ impl Duplicator {
 
             let input_layout = init_input_layout(&device)?;
 
-            device_context.IASetInputLayout(input_layout);
+            device_context.IASetInputLayout(&input_layout);
 
             Ok((
                 Duplicator {
@@ -194,7 +193,7 @@ impl Duplicator {
             let desktop_texture: ID3D11Texture2D = HRESULT!(resource.cast());
 
             self.device_context
-                .CopyResource(&self.backend_texture, desktop_texture);
+                .CopyResource(&self.backend_texture, &desktop_texture);
 
             // if self.mouse_visible {
             //     self.draw_mouse()?;
@@ -222,10 +221,15 @@ impl Duplicator {
 
         let shader_resouce_view = HRESULT!(self
             .device
-            .CreateShaderResourceView(&self.backend_texture, &shader_resouce_view_desc));
+            .CreateShaderResourceView(&self.backend_texture, Some(&shader_resouce_view_desc)));
 
-        self.device_context
-            .IASetVertexBuffers(0, 1, &self.vertex_buffer, &VERTEX_STRIDES, &0);
+        self.device_context.IASetVertexBuffers(
+            0,
+            1,
+            Some(&self.vertex_buffer),
+            Some(&VERTEX_STRIDES),
+            Some(&0),
+        );
 
         self.device_context
             .IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -233,34 +237,35 @@ impl Duplicator {
         // self.device_context.IASetInputLayout(&self.input_layout);
 
         self.device_context
-            .PSSetShaderResources(0, &vec![Some(shader_resouce_view)]);
+            .PSSetShaderResources(0, Some(&[Some(shader_resouce_view)]));
 
-        self.device_context.VSSetShader(&self.vertex_shader, &[]);
+        self.device_context.VSSetShader(&self.vertex_shader, None);
 
         // self.device_context.PSSetSamplers(0, &self.sampler_state);
 
         // draw lumina plane
 
         self.device_context
-            .OMSetRenderTargets(&self.luminance_rtv, None);
+            .OMSetRenderTargets(Some(&self.luminance_rtv), None);
 
         self.device_context
-            .PSSetShader(&self.pixel_shader_luminance, &[]);
+            .PSSetShader(&self.pixel_shader_luminance, None);
 
-        self.device_context.RSSetViewports(&self.luminance_viewport);
+        self.device_context
+            .RSSetViewports(Some(&self.luminance_viewport));
 
         self.device_context.Draw(VERTICES.len() as u32, 0);
 
         // draw chrominance plane
 
         self.device_context
-            .OMSetRenderTargets(&self.chrominance_rtv, None);
+            .OMSetRenderTargets(Some(&self.chrominance_rtv), None);
 
         self.device_context
-            .PSSetShader(&self.pixel_shader_chrominance, &[]);
+            .PSSetShader(&self.pixel_shader_chrominance, None);
 
         self.device_context
-            .RSSetViewports(&self.chrominance_viewport);
+            .RSSetViewports(Some(&self.chrominance_viewport));
 
         self.device_context.Draw(VERTICES.len() as u32, 0);
 
@@ -512,50 +517,64 @@ impl Duplicator {
 
         let pointer_texture = HRESULT!(self
             .device
-            .CreateTexture2D(&pointer_texture_desc, &init_data));
+            .CreateTexture2D(&pointer_texture_desc, Some(&init_data)));
 
         let shader_res = HRESULT!(self
             .device
-            .CreateShaderResourceView(&pointer_texture, &shader_resource_view_desc));
+            .CreateShaderResourceView(&pointer_texture, Some(&shader_resource_view_desc)));
 
         let mut buffer_desc: D3D11_BUFFER_DESC = std::mem::zeroed();
         buffer_desc.Usage = D3D11_USAGE_DEFAULT;
         buffer_desc.ByteWidth = (std::mem::size_of::<VERTEX>() * VERTICES.len()) as u32;
-        buffer_desc.BindFlags = D3D11_BIND_VERTEX_BUFFER.0;
+        buffer_desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 
         init_data = std::mem::zeroed();
         init_data.pSysMem = vertices.as_ptr() as *const _;
 
-        let vertex_buffer = Some(HRESULT!(self.device.CreateBuffer(&buffer_desc, &init_data)));
+        let vertex_buffer = Some(HRESULT!(self
+            .device
+            .CreateBuffer(&buffer_desc, Some(&init_data))));
 
         let blend_factor = [0f32; 4];
         let stride = std::mem::size_of::<VERTEX>() as u32;
         let offset = 0;
 
-        self.device_context
-            .IASetVertexBuffers(0, 1, [vertex_buffer].as_ptr(), &stride, &offset);
+        self.device_context.IASetVertexBuffers(
+            0,
+            1,
+            Some(&vertex_buffer),
+            Some(&stride),
+            Some(&offset),
+        );
 
         self.device_context
             .IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
         // self.device_context.IASetInputLayout(&self.input_layout);
 
-        self.device_context
-            .OMSetBlendState(&self.blend_state, blend_factor.as_ptr(), 0xFFFFFFFF);
+        self.device_context.OMSetBlendState(
+            &self.blend_state,
+            Some(blend_factor.as_ptr()),
+            0xFFFFFFFF,
+        );
 
         self.device_context
-            .OMSetRenderTargets(&self.backend_rtv, None);
-
-        self.device_context.VSSetShader(&self.vertex_shader, &[]);
-
-        self.device_context.PSSetShader(&self.pixel_shader, &[]);
+            .OMSetRenderTargets(Some(&self.backend_rtv), None);
 
         self.device_context
-            .PSSetShaderResources(0, &[Some(shader_res)]);
+            .VSSetShader(Some(&self.vertex_shader), None);
 
-        self.device_context.PSSetSamplers(0, &self.sampler_state);
+        self.device_context
+            .PSSetShader(Some(&self.pixel_shader), None);
 
-        self.device_context.RSSetViewports(&self.backend_viewport);
+        self.device_context
+            .PSSetShaderResources(0, Some(&[Some(shader_res)]));
+
+        self.device_context
+            .PSSetSamplers(0, Some(&self.sampler_state));
+
+        self.device_context
+            .RSSetViewports(Some(&self.backend_viewport));
 
         self.device_context.Draw(VERTICES.len() as u32, 0);
 
@@ -620,9 +639,7 @@ impl Duplicator {
         copy_buffer_desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
         copy_buffer_desc.MiscFlags = D3D11_RESOURCE_MISC_FLAG::default();
 
-        let copy_buffer = HRESULT!(self
-            .device
-            .CreateTexture2D(&copy_buffer_desc, std::ptr::null()));
+        let copy_buffer = HRESULT!(self.device.CreateTexture2D(&copy_buffer_desc, None));
 
         (*pointer_box).left = *pointer_left as u32;
         (*pointer_box).top = *pointer_top as u32;
@@ -637,7 +654,7 @@ impl Duplicator {
             0,
             &self.backend_texture,
             0,
-            pointer_box,
+            Some(pointer_box),
         );
 
         let copy_surface: IDXGISurface = HRESULT!(copy_buffer.cast());
@@ -742,7 +759,7 @@ unsafe fn init_output_duplication(
     let adapter_desc = HRESULT!(dxgi_adapter.GetDesc());
 
     info!(
-        name = ?OsString::from_wide_null(&adapter_desc.Description),
+        name = ?String::from_utf16(&adapter_desc.Description)?,
         "DXGI Adapter",
     );
 
@@ -759,13 +776,13 @@ unsafe fn init_output_duplication(
 
         let mut dev_index = 0u32;
         loop {
-            let origin_device_name = OsString::from_wide_null(&dxgi_output_desc.DeviceName);
+            let origin_device_name = PCWSTR::from_raw(dxgi_output_desc.DeviceName.as_ptr());
 
             let mut display_device: DISPLAY_DEVICEW = std::mem::zeroed();
             display_device.cb = std::mem::size_of::<DISPLAY_DEVICEW>() as u32;
 
             let success = EnumDisplayDevicesW(
-                &*origin_device_name,
+                origin_device_name,
                 dev_index,
                 &mut display_device as *mut _,
                 EDD_GET_DEVICE_INTERFACE_NAME,
@@ -779,13 +796,7 @@ unsafe fn init_output_duplication(
             }
 
             if (display_device.StateFlags & DISPLAY_DEVICE_ATTACHED_TO_DESKTOP) != 0 {
-                let device_id = OsString::from_wide_null(&display_device.DeviceID)
-                    .into_string()
-                    .map_err(|_| CoreError::Other {
-                        message: String::from("convert OsString to String failed"),
-                        file: file!().to_string(),
-                        line: line!().to_string(),
-                    })?;
+                let device_id = String::from_utf16(&display_device.DeviceID)?;
 
                 if let Some(ref id) = monitor_id {
                     if *id != device_id {
@@ -821,9 +832,9 @@ unsafe fn init_shaders(
     let vertex_buffer_desc = D3D11_BUFFER_DESC {
         ByteWidth: VERTEX_STRIDES * VERTICES.len() as u32,
         Usage: D3D11_USAGE_DEFAULT,
-        BindFlags: D3D11_BIND_VERTEX_BUFFER.0,
-        CPUAccessFlags: 0,
-        MiscFlags: 0,
+        BindFlags: D3D11_BIND_VERTEX_BUFFER,
+        CPUAccessFlags: D3D11_CPU_ACCESS_FLAG::default(),
+        MiscFlags: D3D11_RESOURCE_MISC_FLAG::default(),
         StructureByteStride: 0,
     };
 
@@ -833,7 +844,7 @@ unsafe fn init_shaders(
         SysMemSlicePitch: 0,
     };
 
-    let vertex_buffer = HRESULT!(device.CreateBuffer(&vertex_buffer_desc, &subresource_data));
+    let vertex_buffer = HRESULT!(device.CreateBuffer(&vertex_buffer_desc, Some(&subresource_data)));
 
     let pixel_shader = HRESULT!(device.CreatePixelShader(shader::PIXEL_SHADER_BYTES, None));
 
@@ -867,13 +878,13 @@ unsafe fn init_backend_resources(
     texture_desc.Usage = D3D11_USAGE_DEFAULT;
     texture_desc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
 
-    let texture = HRESULT!(device.CreateTexture2D(&texture_desc, std::ptr::null()));
+    let texture = HRESULT!(device.CreateTexture2D(&texture_desc, None));
 
     texture_desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
     texture_desc.Usage = D3D11_USAGE_STAGING;
     texture_desc.BindFlags = D3D11_BIND_FLAG::default();
 
-    let rtv = HRESULT!(device.CreateRenderTargetView(&texture, std::ptr::null()));
+    let rtv = HRESULT!(device.CreateRenderTargetView(&texture, None));
 
     let viewport = D3D11_VIEWPORT {
         TopLeftX: 0.0,
@@ -907,13 +918,13 @@ unsafe fn init_lumina_resources(
     texture_desc.Usage = D3D11_USAGE_DEFAULT;
     texture_desc.BindFlags = D3D11_BIND_RENDER_TARGET;
 
-    let render_texture = HRESULT!(device.CreateTexture2D(&texture_desc, std::ptr::null()));
+    let render_texture = HRESULT!(device.CreateTexture2D(&texture_desc, None));
 
     texture_desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
     texture_desc.Usage = D3D11_USAGE_STAGING;
     texture_desc.BindFlags = D3D11_BIND_FLAG::default();
 
-    let staging_texture = HRESULT!(device.CreateTexture2D(&texture_desc, std::ptr::null()));
+    let staging_texture = HRESULT!(device.CreateTexture2D(&texture_desc, None));
 
     let viewport = D3D11_VIEWPORT {
         TopLeftX: 0.0,
@@ -924,7 +935,7 @@ unsafe fn init_lumina_resources(
         MaxDepth: 1.0,
     };
 
-    let rtv = HRESULT!(device.CreateRenderTargetView(&render_texture, std::ptr::null()));
+    let rtv = HRESULT!(device.CreateRenderTargetView(&render_texture, None));
 
     Ok((render_texture, staging_texture, viewport, rtv))
 }
@@ -949,13 +960,13 @@ unsafe fn init_chrominance_resources(
     texture_desc.Usage = D3D11_USAGE_DEFAULT;
     texture_desc.BindFlags = D3D11_BIND_RENDER_TARGET;
 
-    let render_texture = HRESULT!(device.CreateTexture2D(&texture_desc, std::ptr::null()));
+    let render_texture = HRESULT!(device.CreateTexture2D(&texture_desc, None));
 
     texture_desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
     texture_desc.Usage = D3D11_USAGE_STAGING;
     texture_desc.BindFlags = D3D11_BIND_FLAG::default();
 
-    let staging_texture = HRESULT!(device.CreateTexture2D(&texture_desc, std::ptr::null()));
+    let staging_texture = HRESULT!(device.CreateTexture2D(&texture_desc, None));
 
     let viewport = D3D11_VIEWPORT {
         TopLeftX: 0.0,
@@ -966,7 +977,7 @@ unsafe fn init_chrominance_resources(
         MaxDepth: 1.0,
     };
 
-    let rtv = HRESULT!(device.CreateRenderTargetView(&render_texture, std::ptr::null()));
+    let rtv = HRESULT!(device.CreateRenderTargetView(&render_texture, None));
 
     Ok((render_texture, staging_texture, viewport, rtv))
 }

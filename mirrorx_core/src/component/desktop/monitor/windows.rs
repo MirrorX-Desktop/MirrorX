@@ -2,14 +2,13 @@ use crate::{
     component::desktop::monitor::Monitor,
     core_error,
     error::{CoreError, CoreResult},
-    utility::wide_char::FromWide,
     HRESULT,
 };
 use image::ColorType;
 use scopeguard::defer;
-use std::{collections::HashMap, ffi::OsString, io::Cursor, os::raw::c_void};
+use std::{collections::HashMap, io::Cursor, os::raw::c_void};
 use windows::{
-    core::Interface,
+    core::{Interface, PCWSTR},
     Win32::{
         Devices::Display::*,
         Foundation::ERROR_SUCCESS,
@@ -53,7 +52,7 @@ unsafe fn enum_dxgi_outputs(
     let adapter_desc = HRESULT!(dxgi_adapter.GetDesc());
 
     tracing::info!(
-        adapter_name = ?OsString::from_wide_null(&adapter_desc.Description),
+        adapter_name = String::from_utf16(&adapter_desc.Description)?,
         "DXGI OUTPUTS ADAPTER"
     );
 
@@ -83,13 +82,13 @@ unsafe fn enum_dxgi_outputs(
 
         let mut dev_index = 0u32;
         loop {
-            let origin_device_name = OsString::from_wide_null(&output_desc.DeviceName);
+            let origin_device_name = PCWSTR::from_raw(output_desc.DeviceName.as_ptr());
 
             let mut display_device: DISPLAY_DEVICEW = std::mem::zeroed();
             display_device.cb = std::mem::size_of::<DISPLAY_DEVICEW>() as u32;
 
             let success = EnumDisplayDevicesW(
-                &*origin_device_name,
+                origin_device_name,
                 dev_index,
                 &mut display_device as *mut _,
                 EDD_GET_DEVICE_INTERFACE_NAME,
@@ -113,7 +112,7 @@ unsafe fn enum_dxgi_outputs(
             let mut monitor_resolution_height = 0;
 
             if EnumDisplaySettingsW(
-                &*origin_device_name,
+                origin_device_name,
                 ENUM_CURRENT_SETTINGS,
                 &mut display_mode as *mut _,
             )
@@ -127,7 +126,7 @@ unsafe fn enum_dxgi_outputs(
             if (display_device.StateFlags & DISPLAY_DEVICE_ATTACHED_TO_DESKTOP) != 0 {
                 let screent_shot_buffer = if need_screen_shot {
                     Some(take_screen_shot(
-                        origin_device_name,
+                        &origin_device_name,
                         monitor_info.rcMonitor.left,
                         monitor_info.rcMonitor.top,
                         monitor_resolution_width,
@@ -137,11 +136,7 @@ unsafe fn enum_dxgi_outputs(
                     None
                 };
 
-                let device_id = OsString::from_wide_null(&display_device.DeviceID)
-                    .into_string()
-                    .map_err(|_| {
-                        core_error!("convert display device id from OsString to String failed")
-                    })?;
+                let device_id = PCWSTR::from_raw(display_device.DeviceID.as_ptr()).to_string()?;
 
                 let name = all_monitors
                     .get(&device_id)
@@ -228,20 +223,11 @@ unsafe fn enum_all_monitors_path_and_name() -> CoreResult<HashMap<String, String
                 ));
             }
 
-            let device_path = OsString::from_wide_null(device_name.monitorDevicePath.as_ref())
-                .into_string()
-                .map_err(|_| {
-                    core_error!("convert monitorDevicePath from OsString to String failed")
-                })?;
+            let device_path =
+                PCWSTR::from_raw(device_name.monitorDevicePath.as_ptr()).to_string()?;
 
             let device_friendly_name =
-                OsString::from_wide_null(device_name.monitorFriendlyDeviceName.as_ref())
-                    .into_string()
-                    .map_err(|_| {
-                        core_error!(
-                            "convert monitorFriendlyDeviceName from OsString to String failed"
-                        )
-                    })?;
+                PCWSTR::from_raw(device_name.monitorFriendlyDeviceName.as_ptr()).to_string()?;
 
             all_monitors_path_and_name.insert(device_path, device_friendly_name);
         }
@@ -251,13 +237,13 @@ unsafe fn enum_all_monitors_path_and_name() -> CoreResult<HashMap<String, String
 }
 
 unsafe fn take_screen_shot(
-    device_name: OsString,
+    device_name: &PCWSTR,
     monitor_coord_x: i32,
     monitor_coord_y: i32,
     monitor_resolution_width: u32,
     monitor_resolution_height: u32,
 ) -> CoreResult<Vec<u8>> {
-    let src_dc = CreateDCW("", device_name, "", std::ptr::null());
+    let src_dc = CreateDCW(None, *device_name, None, None);
     if src_dc.is_invalid() {
         return Err(core_error!("CreateDCW returns invalid dc"));
     }
@@ -308,7 +294,7 @@ unsafe fn take_screen_shot(
     if GetObjectW(
         src_bitmap,
         std::mem::size_of::<BITMAP>() as i32,
-        &mut bitmap as *mut _ as *mut c_void,
+        Some(&mut bitmap as *mut _ as *mut c_void),
     ) == 0
     {
         return Err(core_error!("GetObjectW failed"));

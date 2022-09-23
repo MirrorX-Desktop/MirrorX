@@ -7,13 +7,19 @@ use scopeguard::defer;
 use windows::Win32::{
     Graphics::{Direct3D::*, Direct3D11::*},
     System::{
-        StationsAndDesktops::{CloseDesktop, OpenInputDesktop, SetThreadDesktop},
+        StationsAndDesktops::{
+            CloseDesktop, OpenInputDesktop, SetThreadDesktop, DESKTOP_CONTROL_FLAGS,
+        },
         SystemServices::GENERIC_ALL,
     },
 };
 
 pub unsafe fn prepare_desktop() -> CoreResult<()> {
-    let current_desktop = HRESULT!(OpenInputDesktop(0, false, GENERIC_ALL));
+    let current_desktop = HRESULT!(OpenInputDesktop(
+        DESKTOP_CONTROL_FLAGS::default(),
+        false,
+        GENERIC_ALL
+    ));
 
     defer! {
         let _ = CloseDesktop(current_desktop);
@@ -43,11 +49,11 @@ pub unsafe fn init_directx() -> CoreResult<(ID3D11Device, ID3D11DeviceContext)> 
             driver_type,
             None,
             D3D11_CREATE_DEVICE_BGRA_SUPPORT | D3D11_CREATE_DEVICE_DEBUG,
-            &[],
+            None,
             D3D11_SDK_VERSION,
-            &mut device,
-            &mut feature_level,
-            &mut device_context,
+            Some(&mut device),
+            Some(&mut feature_level),
+            Some(&mut device_context),
         ) {
             Ok(_) => {
                 let driver_type_name = match driver_type {

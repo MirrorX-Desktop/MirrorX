@@ -1,4 +1,4 @@
-use std::io;
+use std::{io, string::FromUtf16Error};
 use thiserror::Error;
 
 pub type CoreResult<T> = Result<T, CoreError>;
@@ -64,4 +64,7 @@ pub enum CoreError {
         file: String,
         line: String,
     },
+
+    #[error("parse utf-16 string to rust string failed")]
+    FromUTF16Error(#[from] FromUtf16Error),
 }

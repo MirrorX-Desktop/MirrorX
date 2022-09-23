@@ -6,16 +6,21 @@ use crate::{
 };
 use scopeguard::defer;
 use windows::Win32::{
+    Devices::FunctionDiscovery::PKEY_Device_FriendlyName,
     Media::Audio::{
         eCapture, eConsole, eRender, EDataFlow, IAudioCaptureClient, IAudioClient,
         IAudioRenderClient, IMMDeviceEnumerator, MMDeviceEnumerator, AUDCLNT_BUFFERFLAGS_SILENT,
-        AUDCLNT_SHAREMODE_SHARED, AUDCLNT_STREAMFLAGS_LOOPBACK,
+        AUDCLNT_SHAREMODE_SHARED, AUDCLNT_STREAMFLAGS_LOOPBACK, DEVICE_STATE_ACTIVE, WAVEFORMATEX,
+        WAVEFORMATEXTENSIBLE, WAVEFORMATEXTENSIBLE_0,
     },
-    System::Com::{CoCreateInstance, CoInitialize, CoTaskMemFree, CLSCTX_ALL},
+    System::Com::{
+        CoCreateInstance, CoInitialize, CoTaskMemFree, StructuredStorage::PropVariantClear,
+        CLSCTX_ALL, STGM_READ,
+    },
 };
 
 unsafe fn capture() -> CoreResult<()> {
-    HRESULT!(CoInitialize(std::ptr::null()));
+    HRESULT!(CoInitialize(None));
 
     let p_enumerator: IMMDeviceEnumerator = HRESULT!(CoCreateInstance(
         &MMDeviceEnumerator as *const _,
@@ -23,66 +28,114 @@ unsafe fn capture() -> CoreResult<()> {
         CLSCTX_ALL
     ));
 
-    let p_device = HRESULT!(p_enumerator.GetDefaultAudioEndpoint(eRender, eConsole));
+    let collection = HRESULT!(p_enumerator.EnumAudioEndpoints(eRender, DEVICE_STATE_ACTIVE));
+    let device_count = HRESULT!(collection.GetCount());
+    for i in 0..device_count {
+        let device = HRESULT!(collection.Item(i));
 
-    let p_audio_client: IAudioClient = HRESULT!(p_device.Activate(CLSCTX_ALL, std::ptr::null()));
+        let device_id = HRESULT!(device.GetId());
+        let device_id_str = device_id.to_string()?;
 
-    let mix_format = HRESULT!(p_audio_client.GetMixFormat());
-    defer! {
-        CoTaskMemFree(mix_format as *const _ as *const c_void);
+        let prop = HRESULT!(device.OpenPropertyStore(STGM_READ));
+        let mut friendly_name = HRESULT!(prop.GetValue(&PKEY_Device_FriendlyName));
+        let friendly_name_str = friendly_name
+            .Anonymous
+            .Anonymous
+            .Anonymous
+            .pwszVal
+            .to_string()?;
+
+        tracing::info!("device: id: {} name: {}", device_id_str, friendly_name_str);
+
+        CoTaskMemFree(Some(device_id.as_ptr() as *const _ as *const c_void));
+        HRESULT!(PropVariantClear(&mut friendly_name));
     }
 
-    HRESULT!(p_audio_client.Initialize(
-        AUDCLNT_SHAREMODE_SHARED,
-        AUDCLNT_STREAMFLAGS_LOOPBACK,
-        10000000,
-        0,
-        mix_format,
-        std::ptr::null(),
-    ));
+    // let p_device = HRESULT!(p_enumerator.GetDefaultAudioEndpoint(eRender, eConsole));
 
-    let p_capture_client: IAudioCaptureClient = HRESULT!(p_audio_client.GetService());
+    // let p_audio_client: IAudioClient = HRESULT!(p_device.Activate(CLSCTX_ALL, None));
 
-    HRESULT!(p_audio_client.Start());
+    // let mix_format = HRESULT!(p_audio_client.GetMixFormat());
+    // defer! {
+    //     CoTaskMemFree(Some(mix_format as *const _ as *const c_void));
+    // }
 
-    let mut packet_length = 0;
-    loop {
-        packet_length = HRESULT!(p_capture_client.GetNextPacketSize());
-        while packet_length != 0 {
-            let mut p_data = std::ptr::null_mut();
-            let mut num_frames_available = 0;
-            let mut flags = 0;
+    // let mix_format_format_tag_addr = std::ptr::addr_of!((*mix_format).wFormatTag);
+    // let mix_format_foramt_tag = std::ptr::read_unaligned(mix_format_format_tag_addr);
 
-            HRESULT!(p_capture_client.GetBuffer(
-                &mut p_data,
-                &mut num_frames_available,
-                &mut flags,
-                std::ptr::null_mut(),
-                std::ptr::null_mut(),
-            ));
+    // let mix_format_channels_addr = std::ptr::addr_of!((*mix_format).nChannels);
+    // let mix_format_channels = std::ptr::read_unaligned(mix_format_channels_addr);
 
-            if flags & (AUDCLNT_BUFFERFLAGS_SILENT.0 as u32) != 0 {
-                // todo: tell stream it's slient
-                p_data = std::ptr::null_mut();
-            }
+    // let mix_format_samples_per_sec_addr = std::ptr::addr_of!((*mix_format).nSamplesPerSec);
+    // let mix_format_samples_per_sec = std::ptr::read_unaligned(mix_format_samples_per_sec_addr);
 
-            // todo: copy buffer
-            if !p_data.is_null() {
-                tracing::info!(?num_frames_available, "available frames");
-            }
+    // let mix_format_average_bytes_addr = std::ptr::addr_of!((*mix_format).nAvgBytesPerSec);
+    // let mix_format_average_bytes = std::ptr::read_unaligned(mix_format_average_bytes_addr);
 
-            HRESULT!(p_capture_client.ReleaseBuffer(num_frames_available));
+    // let mix_format_block_align_addr = std::ptr::addr_of!((*mix_format).nBlockAlign);
+    // let mix_format_block_align = std::ptr::read_unaligned(mix_format_block_align_addr);
 
-            packet_length = HRESULT!(p_capture_client.GetNextPacketSize());
-        }
-    }
+    // let mix_format_bits_per_sample_addr = std::ptr::addr_of!((*mix_format).wBitsPerSample);
+    // let mix_format_bits_per_sample = std::ptr::read_unaligned(mix_format_bits_per_sample_addr);
 
-    HRESULT!(p_audio_client.Stop());
+    // tracing::info!("format: {}", mix_format_foramt_tag);
+    // tracing::info!("channels: {}", mix_format_channels);
+    // tracing::info!("sample_per_sec: {}", mix_format_samples_per_sec); // sample rate
+    // tracing::info!("avg_bytes: {}", mix_format_average_bytes);
+    // tracing::info!("block_align: {}", mix_format_block_align);
+    // tracing::info!("bits_per_sample: {}", mix_format_bits_per_sample); // 16bit or 32bit
+
+    // HRESULT!(p_audio_client.Initialize(
+    //     AUDCLNT_SHAREMODE_SHARED,
+    //     AUDCLNT_STREAMFLAGS_LOOPBACK,
+    //     10000000,
+    //     0,
+    //     mix_format,
+    //     None,
+    // ));
+
+    // let p_capture_client: IAudioCaptureClient = HRESULT!(p_audio_client.GetService());
+
+    // HRESULT!(p_audio_client.Start());
+
+    // let mut packet_length = 0;
+    // loop {
+    //     packet_length = HRESULT!(p_capture_client.GetNextPacketSize());
+    //     while packet_length != 0 {
+    //         let mut p_data = std::ptr::null_mut();
+    //         let mut num_frames_available = 0;
+    //         let mut flags = 0;
+
+    //         HRESULT!(p_capture_client.GetBuffer(
+    //             &mut p_data,
+    //             &mut num_frames_available,
+    //             &mut flags,
+    //             None,
+    //             None,
+    //         ));
+
+    //         if flags & (AUDCLNT_BUFFERFLAGS_SILENT.0 as u32) != 0 {
+    //             // todo: tell stream it's slient
+    //             p_data = std::ptr::null_mut();
+    //         }
+
+    //         // todo: copy buffer
+    //         if !p_data.is_null() {
+    //             tracing::info!(?num_frames_available, "available frames");
+    //         }
+
+    //         HRESULT!(p_capture_client.ReleaseBuffer(num_frames_available));
+
+    //         packet_length = HRESULT!(p_capture_client.GetNextPacketSize());
+    //     }
+    // }
+
+    // HRESULT!(p_audio_client.Stop());
     Ok(())
 }
 
 unsafe fn render() -> CoreResult<()> {
-    HRESULT!(CoInitialize(std::ptr::null()));
+    HRESULT!(CoInitialize(None));
 
     let p_enumerator: IMMDeviceEnumerator = HRESULT!(CoCreateInstance(
         &MMDeviceEnumerator as *const _,
@@ -92,21 +145,14 @@ unsafe fn render() -> CoreResult<()> {
 
     let p_device = HRESULT!(p_enumerator.GetDefaultAudioEndpoint(eRender, eConsole));
 
-    let p_audio_client: IAudioClient = HRESULT!(p_device.Activate(CLSCTX_ALL, std::ptr::null()));
+    let p_audio_client: IAudioClient = HRESULT!(p_device.Activate(CLSCTX_ALL, None));
 
     let mix_format = HRESULT!(p_audio_client.GetMixFormat());
     defer! {
-        CoTaskMemFree(mix_format as *const _ as *const c_void);
+        CoTaskMemFree(Some(mix_format as *const _ as *const c_void));
     }
 
-    HRESULT!(p_audio_client.Initialize(
-        AUDCLNT_SHAREMODE_SHARED,
-        0,
-        10000000,
-        0,
-        mix_format,
-        std::ptr::null(),
-    ));
+    HRESULT!(p_audio_client.Initialize(AUDCLNT_SHAREMODE_SHARED, 0, 10000000, 0, mix_format, None,));
 
     // todo: set format
 
@@ -114,7 +160,7 @@ unsafe fn render() -> CoreResult<()> {
 
     let p_render_client: IAudioRenderClient = HRESULT!(p_audio_client.GetService());
 
-    let mut p_data = HRESULT!(p_render_client.GetBuffer(buffer_frame_count));
+    let p_data = HRESULT!(p_render_client.GetBuffer(buffer_frame_count));
 
     // todo: source load data
 

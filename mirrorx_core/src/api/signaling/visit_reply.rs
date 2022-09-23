@@ -9,7 +9,7 @@ pub struct VisitReplyRequest {
 }
 
 pub async fn visit_reply(req: VisitReplyRequest) -> CoreResult<()> {
-    let resp = SignalingClientManager::get_client()
+    let _ = SignalingClientManager::get_client()
         .await?
         .visit_reply(signaling_proto::message::VisitReplyRequest {
             domain: req.domain,
