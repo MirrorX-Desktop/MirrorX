@@ -171,7 +171,7 @@ impl EncodeContext {
 
             (*encoder_context.codec_ctx).width = width;
             (*encoder_context.codec_ctx).height = height;
-            (*encoder_context.codec_ctx).framerate = AVRational { num: 60, den: 1 };
+            (*encoder_context.codec_ctx).framerate = AVRational { num: 1, den: 1 };
             (*encoder_context.codec_ctx).time_base = AVRational { num: 1, den: 1 };
             (*encoder_context.codec_ctx).gop_size = 60 * 2;
             (*encoder_context.codec_ctx).bit_rate = 4000 * 1000;

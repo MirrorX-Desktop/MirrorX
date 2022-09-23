@@ -70,8 +70,8 @@ impl VideoDecoder {
             } else {
                 (*(*self.decode_context).packet).data = video_frame.buffer.as_mut_ptr();
                 (*(*self.decode_context).packet).size = video_frame.buffer.len() as i32;
-                (*(*self.decode_context).packet).pts = AV_NOPTS_VALUE;
-                (*(*self.decode_context).packet).dts = AV_NOPTS_VALUE;
+                // (*(*self.decode_context).packet).pts = AV_NOPTS_VALUE;
+                // (*(*self.decode_context).packet).dts = AV_NOPTS_VALUE;
             }
 
             // av_packet_rescale_ts(self.packet, AV_TIME_BASE_Q, (*self.codec_ctx).pkt_timebase);
