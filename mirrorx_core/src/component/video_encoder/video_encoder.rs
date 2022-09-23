@@ -119,9 +119,6 @@ impl VideoEncoder {
                     buffer,
                 });
 
-                // if self.tx.blocking_send(packet).is_err() {
-                //     return Err(core_error!("channel closed"));
-                // }
                 if let Err(err) = self.tx.try_send(packet) {
                     if let TrySendError::Full(_) = err {
                         tracing::warn!(
@@ -133,6 +130,16 @@ impl VideoEncoder {
                         ));
                     }
                 }
+            }
+        }
+    }
+}
+
+impl Drop for VideoEncoder {
+    fn drop(&mut self) {
+        if !self.encode_context.is_null() {
+            unsafe {
+                let _ = Box::from_raw(self.encode_context);
             }
         }
     }

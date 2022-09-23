@@ -178,6 +178,16 @@ impl VideoDecoder {
     }
 }
 
+impl Drop for VideoDecoder {
+    fn drop(&mut self) {
+        if !self.decode_context.is_null() {
+            unsafe {
+                let _ = Box::from_raw(self.decode_context);
+            }
+        }
+    }
+}
+
 struct DecodeContext {
     codec_ctx: *mut AVCodecContext,
     parser_ctx: *mut AVCodecParserContext,
