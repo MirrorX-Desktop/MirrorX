@@ -696,7 +696,7 @@ impl support::IntoDart for VideoCodec {
     fn into_dart(self) -> support::DartAbi {
         match self {
             Self::H264 => 0,
-            Self::HEVC => 1,
+            Self::Hevc => 1,
             Self::VP8 => 2,
             Self::VP9 => 3,
         }

@@ -187,12 +187,29 @@ unsafe fn post_keyboard_event(key: KeyboardKey, press: bool) -> CoreResult<()> {
 }
 
 const fn is_extend_key(key: VIRTUAL_KEY) -> bool {
-    match key {
-        VK_MENU | VK_LMENU | VK_RMENU | VK_CONTROL | VK_LCONTROL | VK_RCONTROL | VK_INSERT
-        | VK_DELETE | VK_HOME | VK_END | VK_PRIOR | VK_NEXT | VK_LEFT | VK_RIGHT | VK_UP
-        | VK_DOWN | VK_NUMLOCK | VK_CANCEL | VK_SNAPSHOT | VK_DIVIDE => true,
-        _ => false,
-    }
+    matches!(
+        key,
+        VK_MENU
+            | VK_LMENU
+            | VK_RMENU
+            | VK_CONTROL
+            | VK_LCONTROL
+            | VK_RCONTROL
+            | VK_INSERT
+            | VK_DELETE
+            | VK_HOME
+            | VK_END
+            | VK_PRIOR
+            | VK_NEXT
+            | VK_LEFT
+            | VK_RIGHT
+            | VK_UP
+            | VK_DOWN
+            | VK_NUMLOCK
+            | VK_CANCEL
+            | VK_SNAPSHOT
+            | VK_DIVIDE
+    )
 }
 
 const fn map_key_code(key: KeyboardKey) -> VIRTUAL_KEY {

@@ -22,3 +22,11 @@ pub struct DesktopDecodeFrame {
 }
 
 unsafe impl Send for DesktopDecodeFrame {}
+
+pub struct AudioEncodeFrame {
+    pub format_f32: bool,
+    #[cfg(any(target_os = "windows", target_os = "macos"))]
+    pub bytes: Vec<f32>,
+}
+
+unsafe impl Send for AudioEncodeFrame {}

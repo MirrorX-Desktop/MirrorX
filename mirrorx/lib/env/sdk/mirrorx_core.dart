@@ -400,24 +400,24 @@ class MonitorDescription {
 
 @freezed
 class MouseEvent with _$MouseEvent {
-  const factory MouseEvent.mouseUp(
+  const factory MouseEvent.up(
     MouseKey field0,
     double field1,
     double field2,
-  ) = MouseEvent_MouseUp;
-  const factory MouseEvent.mouseDown(
+  ) = MouseEvent_Up;
+  const factory MouseEvent.down(
     MouseKey field0,
     double field1,
     double field2,
-  ) = MouseEvent_MouseDown;
-  const factory MouseEvent.mouseMove(
+  ) = MouseEvent_Down;
+  const factory MouseEvent.move(
     MouseKey field0,
     double field1,
     double field2,
-  ) = MouseEvent_MouseMove;
-  const factory MouseEvent.mouseScrollWheel(
+  ) = MouseEvent_Move;
+  const factory MouseEvent.scrollWheel(
     double field0,
-  ) = MouseEvent_MouseScrollWheel;
+  ) = MouseEvent_ScrollWheel;
 }
 
 enum MouseKey {
@@ -546,7 +546,7 @@ class SubscribeRequest {
 
 enum VideoCodec {
   H264,
-  HEVC,
+  Hevc,
   VP8,
   VP9,
 }
@@ -1540,35 +1540,34 @@ class MirrorXCorePlatform extends FlutterRustBridgeBase<MirrorXCoreWire> {
 
   void _api_fill_to_wire_mouse_event(
       MouseEvent apiObj, wire_MouseEvent wireObj) {
-    if (apiObj is MouseEvent_MouseUp) {
+    if (apiObj is MouseEvent_Up) {
       wireObj.tag = 0;
-      wireObj.kind = inner.inflate_MouseEvent_MouseUp();
-      wireObj.kind.ref.MouseUp.ref.field0 = api2wire_mouse_key(apiObj.field0);
-      wireObj.kind.ref.MouseUp.ref.field1 = api2wire_f32(apiObj.field1);
-      wireObj.kind.ref.MouseUp.ref.field2 = api2wire_f32(apiObj.field2);
+      wireObj.kind = inner.inflate_MouseEvent_Up();
+      wireObj.kind.ref.Up.ref.field0 = api2wire_mouse_key(apiObj.field0);
+      wireObj.kind.ref.Up.ref.field1 = api2wire_f32(apiObj.field1);
+      wireObj.kind.ref.Up.ref.field2 = api2wire_f32(apiObj.field2);
       return;
     }
-    if (apiObj is MouseEvent_MouseDown) {
+    if (apiObj is MouseEvent_Down) {
       wireObj.tag = 1;
-      wireObj.kind = inner.inflate_MouseEvent_MouseDown();
-      wireObj.kind.ref.MouseDown.ref.field0 = api2wire_mouse_key(apiObj.field0);
-      wireObj.kind.ref.MouseDown.ref.field1 = api2wire_f32(apiObj.field1);
-      wireObj.kind.ref.MouseDown.ref.field2 = api2wire_f32(apiObj.field2);
+      wireObj.kind = inner.inflate_MouseEvent_Down();
+      wireObj.kind.ref.Down.ref.field0 = api2wire_mouse_key(apiObj.field0);
+      wireObj.kind.ref.Down.ref.field1 = api2wire_f32(apiObj.field1);
+      wireObj.kind.ref.Down.ref.field2 = api2wire_f32(apiObj.field2);
       return;
     }
-    if (apiObj is MouseEvent_MouseMove) {
+    if (apiObj is MouseEvent_Move) {
       wireObj.tag = 2;
-      wireObj.kind = inner.inflate_MouseEvent_MouseMove();
-      wireObj.kind.ref.MouseMove.ref.field0 = api2wire_mouse_key(apiObj.field0);
-      wireObj.kind.ref.MouseMove.ref.field1 = api2wire_f32(apiObj.field1);
-      wireObj.kind.ref.MouseMove.ref.field2 = api2wire_f32(apiObj.field2);
+      wireObj.kind = inner.inflate_MouseEvent_Move();
+      wireObj.kind.ref.Move.ref.field0 = api2wire_mouse_key(apiObj.field0);
+      wireObj.kind.ref.Move.ref.field1 = api2wire_f32(apiObj.field1);
+      wireObj.kind.ref.Move.ref.field2 = api2wire_f32(apiObj.field2);
       return;
     }
-    if (apiObj is MouseEvent_MouseScrollWheel) {
+    if (apiObj is MouseEvent_ScrollWheel) {
       wireObj.tag = 3;
-      wireObj.kind = inner.inflate_MouseEvent_MouseScrollWheel();
-      wireObj.kind.ref.MouseScrollWheel.ref.field0 =
-          api2wire_f32(apiObj.field0);
+      wireObj.kind = inner.inflate_MouseEvent_ScrollWheel();
+      wireObj.kind.ref.ScrollWheel.ref.field0 = api2wire_f32(apiObj.field0);
       return;
     }
   }
@@ -2266,45 +2265,45 @@ class MirrorXCoreWire implements FlutterRustBridgeWireBase {
   late final _inflate_KeyboardEvent_KeyDown = _inflate_KeyboardEvent_KeyDownPtr
       .asFunction<ffi.Pointer<KeyboardEventKind> Function()>();
 
-  ffi.Pointer<MouseEventKind> inflate_MouseEvent_MouseUp() {
-    return _inflate_MouseEvent_MouseUp();
+  ffi.Pointer<MouseEventKind> inflate_MouseEvent_Up() {
+    return _inflate_MouseEvent_Up();
   }
 
-  late final _inflate_MouseEvent_MouseUpPtr =
+  late final _inflate_MouseEvent_UpPtr =
       _lookup<ffi.NativeFunction<ffi.Pointer<MouseEventKind> Function()>>(
-          'inflate_MouseEvent_MouseUp');
-  late final _inflate_MouseEvent_MouseUp = _inflate_MouseEvent_MouseUpPtr
+          'inflate_MouseEvent_Up');
+  late final _inflate_MouseEvent_Up = _inflate_MouseEvent_UpPtr
       .asFunction<ffi.Pointer<MouseEventKind> Function()>();
 
-  ffi.Pointer<MouseEventKind> inflate_MouseEvent_MouseDown() {
-    return _inflate_MouseEvent_MouseDown();
+  ffi.Pointer<MouseEventKind> inflate_MouseEvent_Down() {
+    return _inflate_MouseEvent_Down();
   }
 
-  late final _inflate_MouseEvent_MouseDownPtr =
+  late final _inflate_MouseEvent_DownPtr =
       _lookup<ffi.NativeFunction<ffi.Pointer<MouseEventKind> Function()>>(
-          'inflate_MouseEvent_MouseDown');
-  late final _inflate_MouseEvent_MouseDown = _inflate_MouseEvent_MouseDownPtr
+          'inflate_MouseEvent_Down');
+  late final _inflate_MouseEvent_Down = _inflate_MouseEvent_DownPtr
       .asFunction<ffi.Pointer<MouseEventKind> Function()>();
 
-  ffi.Pointer<MouseEventKind> inflate_MouseEvent_MouseMove() {
-    return _inflate_MouseEvent_MouseMove();
+  ffi.Pointer<MouseEventKind> inflate_MouseEvent_Move() {
+    return _inflate_MouseEvent_Move();
   }
 
-  late final _inflate_MouseEvent_MouseMovePtr =
+  late final _inflate_MouseEvent_MovePtr =
       _lookup<ffi.NativeFunction<ffi.Pointer<MouseEventKind> Function()>>(
-          'inflate_MouseEvent_MouseMove');
-  late final _inflate_MouseEvent_MouseMove = _inflate_MouseEvent_MouseMovePtr
+          'inflate_MouseEvent_Move');
+  late final _inflate_MouseEvent_Move = _inflate_MouseEvent_MovePtr
       .asFunction<ffi.Pointer<MouseEventKind> Function()>();
 
-  ffi.Pointer<MouseEventKind> inflate_MouseEvent_MouseScrollWheel() {
-    return _inflate_MouseEvent_MouseScrollWheel();
+  ffi.Pointer<MouseEventKind> inflate_MouseEvent_ScrollWheel() {
+    return _inflate_MouseEvent_ScrollWheel();
   }
 
-  late final _inflate_MouseEvent_MouseScrollWheelPtr =
+  late final _inflate_MouseEvent_ScrollWheelPtr =
       _lookup<ffi.NativeFunction<ffi.Pointer<MouseEventKind> Function()>>(
-          'inflate_MouseEvent_MouseScrollWheel');
-  late final _inflate_MouseEvent_MouseScrollWheel =
-      _inflate_MouseEvent_MouseScrollWheelPtr
+          'inflate_MouseEvent_ScrollWheel');
+  late final _inflate_MouseEvent_ScrollWheel =
+      _inflate_MouseEvent_ScrollWheelPtr
           .asFunction<ffi.Pointer<MouseEventKind> Function()>();
 
   void free_WireSyncReturnStruct(
@@ -2463,7 +2462,7 @@ class wire_NegotiateFinishedRequest extends ffi.Struct {
   external int texture_id;
 }
 
-class wire_MouseEvent_MouseUp extends ffi.Struct {
+class wire_MouseEvent_Up extends ffi.Struct {
   @ffi.Int32()
   external int field0;
 
@@ -2474,7 +2473,7 @@ class wire_MouseEvent_MouseUp extends ffi.Struct {
   external double field2;
 }
 
-class wire_MouseEvent_MouseDown extends ffi.Struct {
+class wire_MouseEvent_Down extends ffi.Struct {
   @ffi.Int32()
   external int field0;
 
@@ -2485,7 +2484,7 @@ class wire_MouseEvent_MouseDown extends ffi.Struct {
   external double field2;
 }
 
-class wire_MouseEvent_MouseMove extends ffi.Struct {
+class wire_MouseEvent_Move extends ffi.Struct {
   @ffi.Int32()
   external int field0;
 
@@ -2496,19 +2495,19 @@ class wire_MouseEvent_MouseMove extends ffi.Struct {
   external double field2;
 }
 
-class wire_MouseEvent_MouseScrollWheel extends ffi.Struct {
+class wire_MouseEvent_ScrollWheel extends ffi.Struct {
   @ffi.Float()
   external double field0;
 }
 
 class MouseEventKind extends ffi.Union {
-  external ffi.Pointer<wire_MouseEvent_MouseUp> MouseUp;
+  external ffi.Pointer<wire_MouseEvent_Up> Up;
 
-  external ffi.Pointer<wire_MouseEvent_MouseDown> MouseDown;
+  external ffi.Pointer<wire_MouseEvent_Down> Down;
 
-  external ffi.Pointer<wire_MouseEvent_MouseMove> MouseMove;
+  external ffi.Pointer<wire_MouseEvent_Move> Move;
 
-  external ffi.Pointer<wire_MouseEvent_MouseScrollWheel> MouseScrollWheel;
+  external ffi.Pointer<wire_MouseEvent_ScrollWheel> ScrollWheel;
 }
 
 class wire_MouseEvent extends ffi.Struct {

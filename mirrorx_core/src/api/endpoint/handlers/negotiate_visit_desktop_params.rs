@@ -150,7 +150,7 @@ fn negotiate_media_params(
 
     match get_primary_monitor_params() {
         Ok((monitor_id, monitor_width, monitor_height)) => {
-            params.monitor_id = monitor_id.to_string();
+            params.monitor_id = monitor_id;
             params.monitor_width = monitor_width;
             params.monitor_height = monitor_height;
         }

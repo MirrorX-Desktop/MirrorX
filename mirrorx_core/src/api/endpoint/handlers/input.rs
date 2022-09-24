@@ -37,16 +37,16 @@ pub async fn handle_input(active_device_id: i64, passive_device_id: i64, input: 
         InputEvent::Mouse(event) => {
             if let Some(monitor) = ENDPOINTS_MONITOR.get(&(active_device_id, passive_device_id)) {
                 match event {
-                    MouseEvent::MouseUp(key, x, y) => {
+                    MouseEvent::Up(key, x, y) => {
                         let _ = component::input::mouse_up(&monitor, key, x, y);
                     }
-                    MouseEvent::MouseDown(key, x, y) => {
+                    MouseEvent::Down(key, x, y) => {
                         let _ = component::input::mouse_down(&monitor, key, x, y);
                     }
-                    MouseEvent::MouseMove(key, x, y) => {
+                    MouseEvent::Move(key, x, y) => {
                         let _ = component::input::mouse_move(&monitor, key, x, y);
                     }
-                    MouseEvent::MouseScrollWheel(delta) => {
+                    MouseEvent::ScrollWheel(delta) => {
                         let _ = component::input::mouse_scroll_wheel(&monitor, delta);
                     }
                 }

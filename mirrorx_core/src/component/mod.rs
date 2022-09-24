@@ -1,9 +1,6 @@
 #![allow(non_snake_case)]
 
-#[cfg(target_os = "windows")]
 pub mod audio;
-pub mod audio_decoder;
-pub mod audio_encoder;
 pub mod desktop;
 pub mod frame;
 pub mod input;

@@ -1,13 +1,13 @@
 use crate::component::input::key::{KeyboardKey, MouseKey};
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub struct EndPointHandshakeRequest {
     pub visit_credentials: String,
     pub device_id: i64,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub struct EndPointHandshakeResponse {
     pub remote_device_id: i64,
 }
@@ -20,27 +20,26 @@ pub enum EndPointMessage {
     NegotiateSelectMonitorRequest(EndPointNegotiateSelectMonitorRequest),
     NegotiateSelectMonitorResponse(EndPointNegotiateSelectMonitorResponse),
     NegotiateFinishedRequest(EndPointNegotiateFinishedRequest),
-    // NegotiateFinishedResponse(EndPointNegotiateFinishedResponse),
     VideoFrame(EndPointVideoFrame),
     AudioFrame(EndPointAudioFrame),
     Input(EndPointInput),
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub enum VideoCodec {
     H264,
-    HEVC,
+    Hevc,
     VP8,
     VP9,
 }
 
 impl Default for VideoCodec {
     fn default() -> Self {
-        return VideoCodec::H264;
+        VideoCodec::H264
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub enum AudioSampleRate {
     HZ8000,
     HZ12000,
@@ -51,11 +50,11 @@ pub enum AudioSampleRate {
 
 impl Default for AudioSampleRate {
     fn default() -> Self {
-        return AudioSampleRate::HZ8000;
+        AudioSampleRate::HZ8000
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub enum AudioSampleFormat {
     I16,
     U16,
@@ -64,11 +63,11 @@ pub enum AudioSampleFormat {
 
 impl Default for AudioSampleFormat {
     fn default() -> Self {
-        return AudioSampleFormat::I16;
+        AudioSampleFormat::I16
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub struct EndPointNegotiateVisitDesktopParamsRequest {
     pub video_codecs: Vec<VideoCodec>,
     pub audio_max_sample_rate: AudioSampleRate,
@@ -76,13 +75,13 @@ pub struct EndPointNegotiateVisitDesktopParamsRequest {
     pub audio_dual_channel: bool,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub enum EndPointNegotiateVisitDesktopParamsResponse {
     Error,
     Params(EndPointNegotiateVisitDesktopParams),
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Default)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Default)]
 pub struct EndPointNegotiateVisitDesktopParams {
     pub video_codec: VideoCodec,
     pub audio_sample_rate: AudioSampleRate,
@@ -95,10 +94,10 @@ pub struct EndPointNegotiateVisitDesktopParams {
     pub monitor_height: u16,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub struct EndPointNegotiateSelectMonitorRequest {}
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub struct MonitorDescription {
     pub id: String,
     pub name: String,
@@ -110,21 +109,18 @@ pub struct MonitorDescription {
     pub screen_shot: Option<Vec<u8>>,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub struct EndPointNegotiateSelectMonitorResponse {
     pub monitor_descriptions: Vec<MonitorDescription>,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub struct EndPointNegotiateFinishedRequest {
     // pub selected_monitor_id: String,
     pub expected_frame_rate: u8,
 }
 
-// #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-// pub struct EndPointNegotiateFinishedResponse {}
-
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub struct EndPointVideoFrame {
     pub width: i32,
     pub height: i32,
@@ -133,10 +129,7 @@ pub struct EndPointVideoFrame {
     pub buffer: Vec<u8>,
 }
 
-// unsafe impl Send for EndPointVideoFrame {}
-// unsafe impl Sync for EndPointVideoFrame {}
-
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub struct EndPointAudioFrame {
     #[serde(with = "serde_bytes")]
     pub buffer: Vec<u8>,
@@ -146,13 +139,13 @@ pub struct EndPointAudioFrame {
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub enum MouseEvent {
-    MouseUp(MouseKey, f32, f32),
-    MouseDown(MouseKey, f32, f32),
-    MouseMove(MouseKey, f32, f32),
-    MouseScrollWheel(f32),
+    Up(MouseKey, f32, f32),
+    Down(MouseKey, f32, f32),
+    Move(MouseKey, f32, f32),
+    ScrollWheel(f32),
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub enum KeyboardEvent {
     KeyUp(KeyboardKey),
     KeyDown(KeyboardKey),

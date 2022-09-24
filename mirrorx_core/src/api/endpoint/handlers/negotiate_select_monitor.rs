@@ -15,7 +15,7 @@ use tokio::sync::{mpsc, oneshot};
 
 static RESPONSE_CHANNELS: Lazy<
     DashMap<(i64, i64), oneshot::Sender<EndPointNegotiateSelectMonitorResponse>>,
-> = Lazy::new(|| DashMap::new());
+> = Lazy::new(DashMap::new);
 
 pub struct NegotiateSelectMonitorRequest {
     pub active_device_id: i64,

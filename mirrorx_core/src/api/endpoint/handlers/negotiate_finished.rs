@@ -6,7 +6,7 @@ use crate::{
         ENDPOINTS, ENDPOINTS_MONITOR, SEND_MESSAGE_TIMEOUT,
     },
     component::{
-        desktop::Duplicator,
+        desktop::{monitor::get_active_monitors, Duplicator},
         video_encoder::{config::EncoderType, video_encoder::VideoEncoder},
     },
     core_error,
@@ -65,7 +65,13 @@ pub async fn handle_negotiate_finished_request(
     _: EndPointNegotiateFinishedRequest,
     message_tx: Sender<EndPointMessage>,
 ) {
-    spawn_desktop_capture_and_encode_process(active_device_id, passive_device_id, message_tx);
+    spawn_desktop_capture_and_encode_process(
+        active_device_id,
+        passive_device_id,
+        message_tx.clone(),
+    );
+
+    spawn_audio_capture_and_encode_process(active_device_id, passive_device_id, message_tx);
 }
 
 #[cfg(target_os = "macos")]
@@ -74,8 +80,6 @@ fn spawn_desktop_capture_and_encode_process(
     passive_device_id: i64,
     message_tx: Sender<EndPointMessage>,
 ) {
-    use crate::component::desktop::monitor::get_active_monitors;
-
     let (capture_frame_tx, capture_frame_rx) = crossbeam::channel::bounded(180);
 
     TOKIO_RUNTIME.spawn_blocking(move || {
@@ -193,8 +197,6 @@ fn spawn_desktop_capture_and_encode_process(
     passive_device_id: i64,
     message_tx: Sender<EndPointMessage>,
 ) {
-    use crate::component::desktop::monitor::get_active_monitors;
-
     let monitors = match get_active_monitors(false) {
         Ok(params) => params,
         Err(err) => {
@@ -254,8 +256,10 @@ fn spawn_desktop_capture_and_encode_process(
             match duplicator.capture() {
                 Ok(capture_frame) => {
                     if let Err(err) = capture_frame_tx.try_send(capture_frame) {
-                        if err.is_disconnected() {
-                            tracing::error!("capture frame tx closed, capture process will exit");
+                        if err.is_full() {
+                            tracing::warn!("capture frame tx is full!");
+                        } else {
+                            tracing::info!("capture frame tx closed, capture process will exit");
                             break;
                         }
                     }
@@ -265,7 +269,7 @@ fn spawn_desktop_capture_and_encode_process(
                         ?active_device_id,
                         ?passive_device_id,
                         ?err,
-                        "capture frame failed"
+                        "dekstop duplicator capture loop exit"
                     );
                     break;
                 }
@@ -275,7 +279,7 @@ fn spawn_desktop_capture_and_encode_process(
 
     TOKIO_RUNTIME.spawn_blocking(move || {
         defer! {
-            tracing::info!(?active_device_id, ?passive_device_id, "encode process exit");
+            tracing::info!(?active_device_id, ?passive_device_id, "video encode process exit");
         }
 
         let mut encoder = match VideoEncoder::new(EncoderType::Libx264, message_tx) {
@@ -285,7 +289,7 @@ fn spawn_desktop_capture_and_encode_process(
                     ?active_device_id,
                     ?passive_device_id,
                     ?err,
-                    "initialize encoder failed"
+                    "video encoder initialize failed"
                 );
                 return;
             }
@@ -310,6 +314,135 @@ fn spawn_desktop_capture_and_encode_process(
                         ?passive_device_id,
                         ?err,
                         "capture frame rx recv error"
+                    );
+                    break;
+                }
+            }
+        }
+    });
+}
+
+#[cfg(target_os = "windows")]
+fn spawn_audio_capture_and_encode_process(
+    active_device_id: i64,
+    passive_device_id: i64,
+    message_tx: Sender<EndPointMessage>,
+) {
+    TOKIO_RUNTIME.spawn_blocking(move || {
+        defer! {
+            tracing::info!(?active_device_id, ?passive_device_id, "audio capture process exit");
+        }
+
+        let (audio_frame_tx, audio_frame_rx) = crossbeam::channel::bounded(12000);
+
+        let duplicator = match crate::component::audio::duplicator::Duplicator::new(None) {
+            Ok(duplicator) => duplicator,
+            Err(err) => {
+                tracing::error!(
+                    ?active_device_id,
+                    ?passive_device_id,
+                    ?err,
+                    "audio duplicator initialize failed"
+                );
+                return;
+            }
+        };
+
+        let sample_rate = duplicator.sample_rate();
+        let channels = duplicator.channels();
+
+        TOKIO_RUNTIME.spawn_blocking(move || {
+            defer! {
+                tracing::info!(?active_device_id, ?passive_device_id, "audio encode process exit");
+            }
+
+            let mut audio_encoder = match crate::component::audio::encoder::AudioEncoder::new(
+                sample_rate,
+                channels,
+                message_tx,
+            ) {
+                Ok(audio_encoder) => audio_encoder,
+                Err(err) => {
+                    tracing::error!(
+                        ?active_device_id,
+                        ?passive_device_id,
+                        ?err,
+                        "audio encoder initialize failed"
+                    );
+                    return;
+                }
+            };
+
+            loop {
+                match audio_frame_rx.recv() {
+                    Ok(audio_encode_frame) => {
+                        if let Err(err) = audio_encoder.encode(audio_encode_frame) {
+                            tracing::error!(
+                                ?active_device_id,
+                                ?passive_device_id,
+                                ?err,
+                                "audio encode failed"
+                            );
+                            break;
+                        }
+                    }
+                    Err(err) => {
+                        tracing::error!(
+                            ?active_device_id,
+                            ?passive_device_id,
+                            ?err,
+                            "audio frame rx recv error"
+                        );
+                        break;
+                    }
+                }
+            }
+        });
+
+        if let Err(err) = duplicator.start() {
+            tracing::error!(
+                ?active_device_id,
+                ?passive_device_id,
+                ?err,
+                "audio duplicator start capture failed"
+            );
+            return;
+        }
+
+        defer! {
+            if let Err(err) = duplicator.stop() {
+                tracing::error!(
+                    ?active_device_id,
+                    ?passive_device_id,
+                    ?err,
+                    "audio duplicator capture stop failed"
+                );
+            }
+        }
+
+        let should_sleep_duration = duplicator.should_sleep_duration();
+        loop {
+            std::thread::sleep(should_sleep_duration);
+
+            match duplicator.capture() {
+                Ok(frames) => {
+                    for frame in frames {
+                        if let Err(err) = audio_frame_tx.try_send(frame) {
+                            if err.is_full() {
+                                tracing::warn!("audio encode tx is full!");
+                            } else {
+                                tracing::info!("audio encode tx closed, capture process will exit");
+                                break;
+                            }
+                        }
+                    }
+                }
+                Err(err) => {
+                    tracing::error!(
+                        ?active_device_id,
+                        ?passive_device_id,
+                        ?err,
+                        "audio duplicator capture loop exit"
                     );
                     break;
                 }

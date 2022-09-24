@@ -442,8 +442,8 @@ impl Wire2Api<MouseEvent> for wire_MouseEvent {
         match self.tag {
             0 => unsafe {
                 let ans = support::box_from_leak_ptr(self.kind);
-                let ans = support::box_from_leak_ptr(ans.MouseUp);
-                MouseEvent::MouseUp(
+                let ans = support::box_from_leak_ptr(ans.Up);
+                MouseEvent::Up(
                     ans.field0.wire2api(),
                     ans.field1.wire2api(),
                     ans.field2.wire2api(),
@@ -451,8 +451,8 @@ impl Wire2Api<MouseEvent> for wire_MouseEvent {
             },
             1 => unsafe {
                 let ans = support::box_from_leak_ptr(self.kind);
-                let ans = support::box_from_leak_ptr(ans.MouseDown);
-                MouseEvent::MouseDown(
+                let ans = support::box_from_leak_ptr(ans.Down);
+                MouseEvent::Down(
                     ans.field0.wire2api(),
                     ans.field1.wire2api(),
                     ans.field2.wire2api(),
@@ -460,8 +460,8 @@ impl Wire2Api<MouseEvent> for wire_MouseEvent {
             },
             2 => unsafe {
                 let ans = support::box_from_leak_ptr(self.kind);
-                let ans = support::box_from_leak_ptr(ans.MouseMove);
-                MouseEvent::MouseMove(
+                let ans = support::box_from_leak_ptr(ans.Move);
+                MouseEvent::Move(
                     ans.field0.wire2api(),
                     ans.field1.wire2api(),
                     ans.field2.wire2api(),
@@ -469,8 +469,8 @@ impl Wire2Api<MouseEvent> for wire_MouseEvent {
             },
             3 => unsafe {
                 let ans = support::box_from_leak_ptr(self.kind);
-                let ans = support::box_from_leak_ptr(ans.MouseScrollWheel);
-                MouseEvent::MouseScrollWheel(ans.field0.wire2api())
+                let ans = support::box_from_leak_ptr(ans.ScrollWheel);
+                MouseEvent::ScrollWheel(ans.field0.wire2api())
             },
             _ => unreachable!(),
         }
@@ -734,15 +734,15 @@ pub struct wire_MouseEvent {
 
 #[repr(C)]
 pub union MouseEventKind {
-    MouseUp: *mut wire_MouseEvent_MouseUp,
-    MouseDown: *mut wire_MouseEvent_MouseDown,
-    MouseMove: *mut wire_MouseEvent_MouseMove,
-    MouseScrollWheel: *mut wire_MouseEvent_MouseScrollWheel,
+    Up: *mut wire_MouseEvent_Up,
+    Down: *mut wire_MouseEvent_Down,
+    Move: *mut wire_MouseEvent_Move,
+    ScrollWheel: *mut wire_MouseEvent_ScrollWheel,
 }
 
 #[repr(C)]
 #[derive(Clone)]
-pub struct wire_MouseEvent_MouseUp {
+pub struct wire_MouseEvent_Up {
     field0: i32,
     field1: f32,
     field2: f32,
@@ -750,7 +750,7 @@ pub struct wire_MouseEvent_MouseUp {
 
 #[repr(C)]
 #[derive(Clone)]
-pub struct wire_MouseEvent_MouseDown {
+pub struct wire_MouseEvent_Down {
     field0: i32,
     field1: f32,
     field2: f32,
@@ -758,7 +758,7 @@ pub struct wire_MouseEvent_MouseDown {
 
 #[repr(C)]
 #[derive(Clone)]
-pub struct wire_MouseEvent_MouseMove {
+pub struct wire_MouseEvent_Move {
     field0: i32,
     field1: f32,
     field2: f32,
@@ -766,7 +766,7 @@ pub struct wire_MouseEvent_MouseMove {
 
 #[repr(C)]
 #[derive(Clone)]
-pub struct wire_MouseEvent_MouseScrollWheel {
+pub struct wire_MouseEvent_ScrollWheel {
     field0: f32,
 }
 
@@ -919,9 +919,9 @@ impl NewWithNullPtr for wire_MouseEvent {
 }
 
 #[no_mangle]
-pub extern "C" fn inflate_MouseEvent_MouseUp() -> *mut MouseEventKind {
+pub extern "C" fn inflate_MouseEvent_Up() -> *mut MouseEventKind {
     support::new_leak_box_ptr(MouseEventKind {
-        MouseUp: support::new_leak_box_ptr(wire_MouseEvent_MouseUp {
+        Up: support::new_leak_box_ptr(wire_MouseEvent_Up {
             field0: Default::default(),
             field1: Default::default(),
             field2: Default::default(),
@@ -930,9 +930,9 @@ pub extern "C" fn inflate_MouseEvent_MouseUp() -> *mut MouseEventKind {
 }
 
 #[no_mangle]
-pub extern "C" fn inflate_MouseEvent_MouseDown() -> *mut MouseEventKind {
+pub extern "C" fn inflate_MouseEvent_Down() -> *mut MouseEventKind {
     support::new_leak_box_ptr(MouseEventKind {
-        MouseDown: support::new_leak_box_ptr(wire_MouseEvent_MouseDown {
+        Down: support::new_leak_box_ptr(wire_MouseEvent_Down {
             field0: Default::default(),
             field1: Default::default(),
             field2: Default::default(),
@@ -941,9 +941,9 @@ pub extern "C" fn inflate_MouseEvent_MouseDown() -> *mut MouseEventKind {
 }
 
 #[no_mangle]
-pub extern "C" fn inflate_MouseEvent_MouseMove() -> *mut MouseEventKind {
+pub extern "C" fn inflate_MouseEvent_Move() -> *mut MouseEventKind {
     support::new_leak_box_ptr(MouseEventKind {
-        MouseMove: support::new_leak_box_ptr(wire_MouseEvent_MouseMove {
+        Move: support::new_leak_box_ptr(wire_MouseEvent_Move {
             field0: Default::default(),
             field1: Default::default(),
             field2: Default::default(),
@@ -952,9 +952,9 @@ pub extern "C" fn inflate_MouseEvent_MouseMove() -> *mut MouseEventKind {
 }
 
 #[no_mangle]
-pub extern "C" fn inflate_MouseEvent_MouseScrollWheel() -> *mut MouseEventKind {
+pub extern "C" fn inflate_MouseEvent_ScrollWheel() -> *mut MouseEventKind {
     support::new_leak_box_ptr(MouseEventKind {
-        MouseScrollWheel: support::new_leak_box_ptr(wire_MouseEvent_MouseScrollWheel {
+        ScrollWheel: support::new_leak_box_ptr(wire_MouseEvent_ScrollWheel {
             field0: Default::default(),
         }),
     })
