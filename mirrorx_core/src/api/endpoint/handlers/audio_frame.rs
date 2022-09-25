@@ -44,12 +44,12 @@ pub fn serve_audio_decode(active_device_id: i64, passive_device_id: i64) {
             }
 
             let mut current_decoder: OnceCell<AudioDecoder> = OnceCell::new();
-            let mut current_render_exit_tx: OnceCell<Sender<()>> = OnceCell::new();
+            let mut current_render_process_should_exit_tx: OnceCell<Sender<()>> = OnceCell::new();
             let mut current_audio_sample_tx: OnceCell<Producer<f32>> = OnceCell::new();
-            let (audio_render_process_exit_tx, audio_render_process_exit_rx) = bounded(0);
+            let (render_process_has_exit_tx, render_process_has_exit_rx) = bounded(0);
 
             loop {
-                match audio_render_process_exit_rx.try_recv() {
+                match render_process_has_exit_rx.try_recv() {
                     Ok(_) => return,
                     Err(err) => {
                         if err.is_disconnected() {
@@ -70,7 +70,7 @@ pub fn serve_audio_decode(active_device_id: i64, passive_device_id: i64) {
                             let (audio_sample_tx, audio_sample_rx) = rtrb::RingBuffer::new(180);
 
                             let _ = current_decoder.take();
-                            let _ = current_render_exit_tx.take();
+                            let _ = current_render_process_should_exit_tx.take();
                             let _ = current_audio_sample_tx.take();
 
                             let new_decoder =
@@ -109,10 +109,10 @@ pub fn serve_audio_decode(active_device_id: i64, passive_device_id: i64) {
                                 (audio_frame.buffer.len() / 4 / (channels as usize)) as u32,
                             );
 
-                            let tx = serve_audio_render_process(
+                            let render_process_should_exit_tx = serve_audio_render_process(
                                 device,
                                 stream_config,
-                                audio_render_process_exit_tx.clone(),
+                                render_process_has_exit_tx.clone(),
                                 audio_sample_rx,
                             );
 
@@ -121,7 +121,7 @@ pub fn serve_audio_decode(active_device_id: i64, passive_device_id: i64) {
                                 return;
                             }
 
-                            if current_render_exit_tx.set(tx).is_err() {
+                            if current_render_process_should_exit_tx.set(render_process_should_exit_tx).is_err() {
                                 tracing::error!("current render exit tx should be empty!");
                                 return;
                             }
@@ -203,16 +203,16 @@ pub fn serve_audio_decode(active_device_id: i64, passive_device_id: i64) {
 fn serve_audio_render_process(
     device: cpal::Device,
     stream_config: StreamConfig,
-    audio_render_process_exit_tx: Sender<()>,
+    render_process_has_exit_tx: Sender<()>,
     mut audio_sample_rx: Consumer<f32>,
 ) -> Sender<()> {
     let (callback_exit_tx, callback_exit_rx) = crossbeam::channel::bounded(1);
     let err_callback_exit_tx = callback_exit_tx.clone();
-    let process_exit_tx = callback_exit_tx.clone();
+    let render_process_should_exit_tx = callback_exit_tx.clone();
 
     TOKIO_RUNTIME.spawn_blocking(move || {
         defer! {
-            let _ = audio_render_process_exit_tx.send(());
+            let _ = render_process_has_exit_tx.send(());
         }
 
         let input_callback =
@@ -256,5 +256,5 @@ fn serve_audio_render_process(
         let _ = callback_exit_rx.recv();
     });
 
-    process_exit_tx
+    render_process_should_exit_tx
 }
