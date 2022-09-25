@@ -1,8 +1,8 @@
-use super::video_frame::serve_decoder;
+use super::{audio_frame::serve_audio_decode, video_frame::serve_video_decode};
 use crate::{
     api::endpoint::{
         flutter_message::FlutterMediaMessage,
-        message::{EndPointMessage, EndPointNegotiateFinishedRequest},
+        message::{AudioSampleFormat, EndPointMessage, EndPointNegotiateFinishedRequest},
         ENDPOINTS, ENDPOINTS_MONITOR, SEND_MESSAGE_TIMEOUT,
     },
     component::{
@@ -22,8 +22,9 @@ pub struct NegotiateFinishedRequest {
     pub passive_device_id: i64,
     pub expect_frame_rate: u8,
     pub texture_id: i64,
-    // pub video_texture_pointer: i64,
-    // pub update_frame_callback_pointer: i64,
+    pub audio_sample_rate: u32,
+    pub audio_sample_format: AudioSampleFormat,
+    pub audio_channels: u8,
 }
 
 pub async fn negotiate_finished(
@@ -49,12 +50,14 @@ pub async fn negotiate_finished(
         ));
     }
 
-    serve_decoder(
+    serve_video_decode(
         req.active_device_id,
         req.passive_device_id,
         req.texture_id,
         stream,
     );
+
+    serve_audio_decode(req.active_device_id, req.passive_device_id);
 
     Ok(())
 }
@@ -320,6 +323,14 @@ fn spawn_desktop_capture_and_encode_process(
             }
         }
     });
+}
+
+#[cfg(target_os = "macos")]
+fn spawn_audio_capture_and_encode_process(
+    active_device_id: i64,
+    passive_device_id: i64,
+    message_tx: Sender<EndPointMessage>,
+) {
 }
 
 #[cfg(target_os = "windows")]

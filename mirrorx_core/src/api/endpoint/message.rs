@@ -40,21 +40,6 @@ impl Default for VideoCodec {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
-pub enum AudioSampleRate {
-    HZ8000,
-    HZ12000,
-    HZ160000,
-    HZ240000,
-    HZ480000,
-}
-
-impl Default for AudioSampleRate {
-    fn default() -> Self {
-        AudioSampleRate::HZ8000
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub enum AudioSampleFormat {
     I16,
     U16,
@@ -70,9 +55,6 @@ impl Default for AudioSampleFormat {
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub struct EndPointNegotiateVisitDesktopParamsRequest {
     pub video_codecs: Vec<VideoCodec>,
-    pub audio_max_sample_rate: AudioSampleRate,
-    pub audio_sample_formats: Vec<AudioSampleFormat>,
-    pub audio_dual_channel: bool,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
@@ -84,9 +66,9 @@ pub enum EndPointNegotiateVisitDesktopParamsResponse {
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Default)]
 pub struct EndPointNegotiateVisitDesktopParams {
     pub video_codec: VideoCodec,
-    pub audio_sample_rate: AudioSampleRate,
+    pub audio_sample_rate: u32,
     pub audio_sample_format: AudioSampleFormat,
-    pub audio_dual_channel: bool,
+    pub audio_channels: u8,
     pub os_type: String,
     pub os_version: String,
     pub monitor_id: String,
@@ -131,10 +113,10 @@ pub struct EndPointVideoFrame {
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub struct EndPointAudioFrame {
+    pub re_init_data: Option<(u32, AudioSampleFormat, u8)>, // sample_rate, sample_format, channels
+
     #[serde(with = "serde_bytes")]
     pub buffer: Vec<u8>,
-    pub frame_size_per_channel: u16,
-    pub elapsed: u128,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]

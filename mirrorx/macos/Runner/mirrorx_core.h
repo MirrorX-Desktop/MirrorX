@@ -90,35 +90,38 @@ typedef struct wire_NegotiateFinishedRequest {
   int64_t passive_device_id;
   uint8_t expect_frame_rate;
   int64_t texture_id;
+  uint32_t audio_sample_rate;
+  int32_t audio_sample_format;
+  uint8_t audio_channels;
 } wire_NegotiateFinishedRequest;
 
-typedef struct wire_MouseEvent_MouseUp {
+typedef struct wire_MouseEvent_Up {
   int32_t field0;
   float field1;
   float field2;
-} wire_MouseEvent_MouseUp;
+} wire_MouseEvent_Up;
 
-typedef struct wire_MouseEvent_MouseDown {
+typedef struct wire_MouseEvent_Down {
   int32_t field0;
   float field1;
   float field2;
-} wire_MouseEvent_MouseDown;
+} wire_MouseEvent_Down;
 
-typedef struct wire_MouseEvent_MouseMove {
+typedef struct wire_MouseEvent_Move {
   int32_t field0;
   float field1;
   float field2;
-} wire_MouseEvent_MouseMove;
+} wire_MouseEvent_Move;
 
-typedef struct wire_MouseEvent_MouseScrollWheel {
+typedef struct wire_MouseEvent_ScrollWheel {
   float field0;
-} wire_MouseEvent_MouseScrollWheel;
+} wire_MouseEvent_ScrollWheel;
 
 typedef union MouseEventKind {
-  struct wire_MouseEvent_MouseUp *MouseUp;
-  struct wire_MouseEvent_MouseDown *MouseDown;
-  struct wire_MouseEvent_MouseMove *MouseMove;
-  struct wire_MouseEvent_MouseScrollWheel *MouseScrollWheel;
+  struct wire_MouseEvent_Up *Up;
+  struct wire_MouseEvent_Down *Down;
+  struct wire_MouseEvent_Move *Move;
+  struct wire_MouseEvent_ScrollWheel *ScrollWheel;
 } MouseEventKind;
 
 typedef struct wire_MouseEvent {
@@ -269,13 +272,13 @@ union KeyboardEventKind *inflate_KeyboardEvent_KeyUp(void);
 
 union KeyboardEventKind *inflate_KeyboardEvent_KeyDown(void);
 
-union MouseEventKind *inflate_MouseEvent_MouseUp(void);
+union MouseEventKind *inflate_MouseEvent_Up(void);
 
-union MouseEventKind *inflate_MouseEvent_MouseDown(void);
+union MouseEventKind *inflate_MouseEvent_Down(void);
 
-union MouseEventKind *inflate_MouseEvent_MouseMove(void);
+union MouseEventKind *inflate_MouseEvent_Move(void);
 
-union MouseEventKind *inflate_MouseEvent_MouseScrollWheel(void);
+union MouseEventKind *inflate_MouseEvent_ScrollWheel(void);
 
 void free_WireSyncReturnStruct(struct WireSyncReturnStruct val);
 
@@ -323,10 +326,10 @@ static int64_t dummy_method_to_enforce_bundling(void) {
     dummy_var ^= ((int64_t) (void*) inflate_InputEvent_Keyboard);
     dummy_var ^= ((int64_t) (void*) inflate_KeyboardEvent_KeyUp);
     dummy_var ^= ((int64_t) (void*) inflate_KeyboardEvent_KeyDown);
-    dummy_var ^= ((int64_t) (void*) inflate_MouseEvent_MouseUp);
-    dummy_var ^= ((int64_t) (void*) inflate_MouseEvent_MouseDown);
-    dummy_var ^= ((int64_t) (void*) inflate_MouseEvent_MouseMove);
-    dummy_var ^= ((int64_t) (void*) inflate_MouseEvent_MouseScrollWheel);
+    dummy_var ^= ((int64_t) (void*) inflate_MouseEvent_Up);
+    dummy_var ^= ((int64_t) (void*) inflate_MouseEvent_Down);
+    dummy_var ^= ((int64_t) (void*) inflate_MouseEvent_Move);
+    dummy_var ^= ((int64_t) (void*) inflate_MouseEvent_ScrollWheel);
     dummy_var ^= ((int64_t) (void*) free_WireSyncReturnStruct);
     dummy_var ^= ((int64_t) (void*) store_dart_post_cobject);
     return dummy_var;

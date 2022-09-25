@@ -1,5 +1,5 @@
 use crate::{
-    api::endpoint::message::{EndPointAudioFrame, EndPointMessage},
+    api::endpoint::message::{AudioSampleFormat, EndPointAudioFrame, EndPointMessage},
     component::frame::AudioEncodeFrame,
     core_error,
     error::{CoreError, CoreResult},
@@ -8,6 +8,7 @@ use crate::{
         OPUS_APPLICATION_RESTRICTED_LOWDELAY,
     },
 };
+
 use tokio::sync::mpsc::{error::TrySendError, Sender};
 
 pub struct AudioEncoder {
@@ -15,6 +16,7 @@ pub struct AudioEncoder {
     enc_buffer: [u8; 11520],
     channels: u8,
     tx: Sender<EndPointMessage>,
+    initial_data: once_cell::unsync::OnceCell<(u32, AudioSampleFormat, u8)>,
 }
 
 impl AudioEncoder {
@@ -44,6 +46,11 @@ impl AudioEncoder {
                 enc_buffer: [0u8; 11520],
                 channels,
                 tx,
+                initial_data: once_cell::unsync::OnceCell::with_value((
+                    sample_rate,
+                    AudioSampleFormat::F32,
+                    channels,
+                )),
             })
         }
     }
@@ -68,9 +75,8 @@ impl AudioEncoder {
             let buffer = self.enc_buffer[0..ret as usize].to_vec();
 
             let packet = EndPointMessage::AudioFrame(EndPointAudioFrame {
+                re_init_data: self.initial_data.take(),
                 buffer,
-                frame_size_per_channel: frame_size as u16,
-                elapsed: 0,
             });
 
             if let Err(err) = self.tx.try_send(packet) {

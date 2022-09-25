@@ -1,8 +1,8 @@
 use crate::{
     api::endpoint::{
         message::{
-            AudioSampleFormat, AudioSampleRate, EndPointMessage,
-            EndPointNegotiateVisitDesktopParams, EndPointNegotiateVisitDesktopParamsRequest,
+            AudioSampleFormat, EndPointMessage, EndPointNegotiateVisitDesktopParams,
+            EndPointNegotiateVisitDesktopParamsRequest,
             EndPointNegotiateVisitDesktopParamsResponse, VideoCodec,
         },
         ENDPOINTS, RECV_MESSAGE_TIMEOUT, SEND_MESSAGE_TIMEOUT,
@@ -11,6 +11,7 @@ use crate::{
     core_error,
     error::{CoreError, CoreResult},
 };
+use cpal::traits::{DeviceTrait, HostTrait};
 use dashmap::DashMap;
 use once_cell::sync::Lazy;
 use tokio::sync::{mpsc, oneshot};
@@ -26,9 +27,9 @@ pub struct NegotiateVisitDesktopParamsRequest {
 
 pub struct NegotiateVisitDesktopParamsResponse {
     pub video_codec: VideoCodec,
-    pub audio_sample_rate: AudioSampleRate,
+    pub audio_sample_rate: u32,
     pub audio_sample_format: AudioSampleFormat,
-    pub audio_dual_channel: bool,
+    pub audio_channels: u8,
     pub os_type: String,
     pub os_version: String,
     pub monitor_id: String,
@@ -50,9 +51,6 @@ pub async fn negotiate_visit_desktop_params(
     let negotiate_req = EndPointMessage::NegotiateVisitDesktopParamsRequest(
         EndPointNegotiateVisitDesktopParamsRequest {
             video_codecs: vec![VideoCodec::H264],
-            audio_max_sample_rate: AudioSampleRate::HZ480000,
-            audio_sample_formats: vec![AudioSampleFormat::F32],
-            audio_dual_channel: true,
         },
     );
 
@@ -87,7 +85,7 @@ pub async fn negotiate_visit_desktop_params(
                 video_codec: params.video_codec,
                 audio_sample_rate: params.audio_sample_rate,
                 audio_sample_format: params.audio_sample_format,
-                audio_dual_channel: params.audio_dual_channel,
+                audio_channels: params.audio_channels,
                 os_type: params.os_type,
                 os_version: params.os_version,
                 monitor_id: params.monitor_id,
@@ -138,15 +136,40 @@ fn negotiate_media_params(
 ) -> EndPointNegotiateVisitDesktopParamsResponse {
     let mut params = EndPointNegotiateVisitDesktopParams {
         video_codec: VideoCodec::H264,
-        audio_sample_rate: req.audio_max_sample_rate,
-        audio_sample_format: AudioSampleFormat::F32,
-        audio_dual_channel: req.audio_dual_channel,
         os_type: String::from(""),
         os_version: String::from(""),
         ..Default::default()
     };
 
     // todo: check support video and audio properties
+
+    let host = cpal::default_host();
+    let device = match host.default_output_device() {
+        Some(device) => {
+            tracing::info!(name = ?device.name(), "select default audio device");
+            device
+        }
+        None => {
+            tracing::error!("get default audio output device failed");
+            return EndPointNegotiateVisitDesktopParamsResponse::Error;
+        }
+    };
+
+    let default_output_config = match device.default_output_config() {
+        Ok(config) => config,
+        Err(err) => {
+            tracing::error!(?err, "get default audio output config failed");
+            return EndPointNegotiateVisitDesktopParamsResponse::Error;
+        }
+    };
+
+    params.audio_sample_rate = default_output_config.sample_rate().0;
+    params.audio_sample_format = match default_output_config.sample_format() {
+        cpal::SampleFormat::I16 => AudioSampleFormat::I16,
+        cpal::SampleFormat::U16 => AudioSampleFormat::U16,
+        cpal::SampleFormat::F32 => AudioSampleFormat::F32,
+    };
+    params.audio_channels = default_output_config.channels() as u8;
 
     match get_primary_monitor_params() {
         Ok((monitor_id, monitor_width, monitor_height)) => {

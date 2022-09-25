@@ -114,14 +114,6 @@ enum AudioSampleFormat {
   F32,
 }
 
-enum AudioSampleRate {
-  HZ8000,
-  HZ12000,
-  HZ160000,
-  HZ240000,
-  HZ480000,
-}
-
 class ConnectRequest {
   final int localDeviceId;
   final int remoteDeviceId;
@@ -434,12 +426,18 @@ class NegotiateFinishedRequest {
   final int passiveDeviceId;
   final int expectFrameRate;
   final int textureId;
+  final int audioSampleRate;
+  final AudioSampleFormat audioSampleFormat;
+  final int audioChannels;
 
   NegotiateFinishedRequest({
     required this.activeDeviceId,
     required this.passiveDeviceId,
     required this.expectFrameRate,
     required this.textureId,
+    required this.audioSampleRate,
+    required this.audioSampleFormat,
+    required this.audioChannels,
   });
 }
 
@@ -473,9 +471,9 @@ class NegotiateVisitDesktopParamsRequest {
 
 class NegotiateVisitDesktopParamsResponse {
   final VideoCodec videoCodec;
-  final AudioSampleRate audioSampleRate;
+  final int audioSampleRate;
   final AudioSampleFormat audioSampleFormat;
-  final bool audioDualChannel;
+  final int audioChannels;
   final String osType;
   final String osVersion;
   final String monitorId;
@@ -486,7 +484,7 @@ class NegotiateVisitDesktopParamsResponse {
     required this.videoCodec,
     required this.audioSampleRate,
     required this.audioSampleFormat,
-    required this.audioDualChannel,
+    required this.audioChannels,
     required this.osType,
     required this.osVersion,
     required this.monitorId,
@@ -932,6 +930,11 @@ class MirrorXCoreImpl implements MirrorXCore {
 // Section: api2wire
 
 @protected
+int api2wire_audio_sample_format(AudioSampleFormat raw) {
+  return api2wire_i32(raw.index);
+}
+
+@protected
 bool api2wire_bool(bool raw) {
   return raw;
 }
@@ -983,10 +986,6 @@ Uint8List _wire2api_ZeroCopyBuffer_Uint8List(dynamic raw) {
 
 AudioSampleFormat _wire2api_audio_sample_format(dynamic raw) {
   return AudioSampleFormat.values[raw];
-}
-
-AudioSampleRate _wire2api_audio_sample_rate(dynamic raw) {
-  return AudioSampleRate.values[raw];
 }
 
 bool _wire2api_bool(dynamic raw) {
@@ -1097,9 +1096,9 @@ NegotiateVisitDesktopParamsResponse
     throw Exception('unexpected arr length: expect 9 but see ${arr.length}');
   return NegotiateVisitDesktopParamsResponse(
     videoCodec: _wire2api_video_codec(arr[0]),
-    audioSampleRate: _wire2api_audio_sample_rate(arr[1]),
+    audioSampleRate: _wire2api_u32(arr[1]),
     audioSampleFormat: _wire2api_audio_sample_format(arr[2]),
-    audioDualChannel: _wire2api_bool(arr[3]),
+    audioChannels: _wire2api_u8(arr[3]),
     osType: _wire2api_String(arr[4]),
     osVersion: _wire2api_String(arr[5]),
     monitorId: _wire2api_String(arr[6]),
@@ -1578,6 +1577,10 @@ class MirrorXCorePlatform extends FlutterRustBridgeBase<MirrorXCoreWire> {
     wireObj.passive_device_id = api2wire_i64(apiObj.passiveDeviceId);
     wireObj.expect_frame_rate = api2wire_u8(apiObj.expectFrameRate);
     wireObj.texture_id = api2wire_i64(apiObj.textureId);
+    wireObj.audio_sample_rate = api2wire_u32(apiObj.audioSampleRate);
+    wireObj.audio_sample_format =
+        api2wire_audio_sample_format(apiObj.audioSampleFormat);
+    wireObj.audio_channels = api2wire_u8(apiObj.audioChannels);
   }
 
   void _api_fill_to_wire_negotiate_select_monitor_request(
@@ -2460,6 +2463,15 @@ class wire_NegotiateFinishedRequest extends ffi.Struct {
 
   @ffi.Int64()
   external int texture_id;
+
+  @ffi.Uint32()
+  external int audio_sample_rate;
+
+  @ffi.Int32()
+  external int audio_sample_format;
+
+  @ffi.Uint8()
+  external int audio_channels;
 }
 
 class wire_MouseEvent_Up extends ffi.Struct {

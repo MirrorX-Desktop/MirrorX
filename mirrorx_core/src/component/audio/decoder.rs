@@ -41,14 +41,14 @@ impl AudioDecoder {
         }
     }
 
-    pub fn decode(&mut self, data: &[u8], frame_size_per_channel: u16) -> CoreResult<Vec<f32>> {
+    pub fn decode(&mut self, data: &[u8]) -> CoreResult<&[f32]> {
         unsafe {
             let ret = opus_decode_float(
                 self.dec,
                 data.as_ptr(),
                 data.len() as i32,
                 self.dec_buffer.as_mut_ptr(),
-                frame_size_per_channel as isize,
+                (data.len() / 4 / (self.channels as usize)) as isize,
                 0,
             );
 
@@ -56,11 +56,7 @@ impl AudioDecoder {
                 return Err(core_error!("opus_decode_float returns error code: {}", ret));
             }
 
-            let data = self.dec_buffer
-                [0..(frame_size_per_channel as usize) * (self.channels as usize)]
-                .to_vec();
-
-            Ok(data)
+            Ok(&self.dec_buffer[0..(ret as usize)])
         }
     }
 }

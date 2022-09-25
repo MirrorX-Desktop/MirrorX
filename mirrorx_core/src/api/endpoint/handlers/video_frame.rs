@@ -27,7 +27,7 @@ pub async fn handle_video_frame(
     }
 }
 
-pub fn serve_decoder(
+pub fn serve_video_decode(
     active_device_id: i64,
     passive_device_id: i64,
     texture_id: i64,

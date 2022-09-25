@@ -28,7 +28,6 @@ use crate::api::endpoint::handlers::negotiate_select_monitor::NegotiateSelectMon
 use crate::api::endpoint::handlers::negotiate_visit_desktop_params::NegotiateVisitDesktopParamsRequest;
 use crate::api::endpoint::handlers::negotiate_visit_desktop_params::NegotiateVisitDesktopParamsResponse;
 use crate::api::endpoint::message::AudioSampleFormat;
-use crate::api::endpoint::message::AudioSampleRate;
 use crate::api::endpoint::message::InputEvent;
 use crate::api::endpoint::message::KeyboardEvent;
 use crate::api::endpoint::message::MonitorDescription;
@@ -358,6 +357,16 @@ where
     }
 }
 
+impl Wire2Api<AudioSampleFormat> for i32 {
+    fn wire2api(self) -> AudioSampleFormat {
+        match self {
+            0 => AudioSampleFormat::I16,
+            1 => AudioSampleFormat::U16,
+            2 => AudioSampleFormat::F32,
+            _ => unreachable!("Invalid variant for AudioSampleFormat: {}", self),
+        }
+    }
+}
 impl Wire2Api<bool> for bool {
     fn wire2api(self) -> bool {
         self
@@ -547,18 +556,6 @@ impl support::IntoDart for AudioSampleFormat {
         .into_dart()
     }
 }
-impl support::IntoDart for AudioSampleRate {
-    fn into_dart(self) -> support::DartAbi {
-        match self {
-            Self::HZ8000 => 0,
-            Self::HZ12000 => 1,
-            Self::HZ160000 => 2,
-            Self::HZ240000 => 3,
-            Self::HZ480000 => 4,
-        }
-        .into_dart()
-    }
-}
 
 impl support::IntoDart for DomainConfig {
     fn into_dart(self) -> support::DartAbi {
@@ -639,7 +636,7 @@ impl support::IntoDart for NegotiateVisitDesktopParamsResponse {
             self.video_codec.into_dart(),
             self.audio_sample_rate.into_dart(),
             self.audio_sample_format.into_dart(),
-            self.audio_dual_channel.into_dart(),
+            self.audio_channels.into_dart(),
             self.os_type.into_dart(),
             self.os_version.into_dart(),
             self.monitor_id.into_dart(),
