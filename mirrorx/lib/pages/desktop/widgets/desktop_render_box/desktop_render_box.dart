@@ -159,7 +159,7 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
           widget.localDeviceId,
           widget.remoteDeviceId,
           InputEvent.mouse(
-            MouseEvent.mouseDown(
+            MouseEvent.down(
               mouseKey,
               event.localPosition.dx,
               event.localPosition.dy,
@@ -195,7 +195,7 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
           widget.localDeviceId,
           widget.remoteDeviceId,
           InputEvent.mouse(
-            MouseEvent.mouseUp(
+            MouseEvent.up(
               mouseKey,
               event.localPosition.dx,
               event.localPosition.dy,
@@ -227,7 +227,7 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
           widget.localDeviceId,
           widget.remoteDeviceId,
           InputEvent.mouse(
-            MouseEvent.mouseMove(
+            MouseEvent.move(
               mouseKey,
               event.localPosition.dx,
               event.localPosition.dy,
@@ -243,7 +243,7 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
           widget.localDeviceId,
           widget.remoteDeviceId,
           InputEvent.mouse(
-            MouseEvent.mouseMove(
+            MouseEvent.move(
               MouseKey.None,
               event.localPosition.dx,
               event.localPosition.dy,
@@ -258,7 +258,7 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
             widget.localDeviceId,
             widget.remoteDeviceId,
             InputEvent.mouse(
-              MouseEvent.mouseScrollWheel(event.scrollDelta.dy),
+              MouseEvent.scrollWheel(event.scrollDelta.dy),
             ),
           );
     }

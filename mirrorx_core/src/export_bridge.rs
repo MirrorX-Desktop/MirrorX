@@ -357,16 +357,6 @@ where
     }
 }
 
-impl Wire2Api<AudioSampleFormat> for i32 {
-    fn wire2api(self) -> AudioSampleFormat {
-        match self {
-            0 => AudioSampleFormat::I16,
-            1 => AudioSampleFormat::U16,
-            2 => AudioSampleFormat::F32,
-            _ => unreachable!("Invalid variant for AudioSampleFormat: {}", self),
-        }
-    }
-}
 impl Wire2Api<bool> for bool {
     fn wire2api(self) -> bool {
         self

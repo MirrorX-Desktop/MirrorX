@@ -484,9 +484,6 @@ impl Wire2Api<NegotiateFinishedRequest> for wire_NegotiateFinishedRequest {
             passive_device_id: self.passive_device_id.wire2api(),
             expect_frame_rate: self.expect_frame_rate.wire2api(),
             texture_id: self.texture_id.wire2api(),
-            audio_sample_rate: self.audio_sample_rate.wire2api(),
-            audio_sample_format: self.audio_sample_format.wire2api(),
-            audio_channels: self.audio_channels.wire2api(),
         }
     }
 }
@@ -622,9 +619,6 @@ pub struct wire_NegotiateFinishedRequest {
     passive_device_id: i64,
     expect_frame_rate: u8,
     texture_id: i64,
-    audio_sample_rate: u32,
-    audio_sample_format: i32,
-    audio_channels: u8,
 }
 
 #[repr(C)]
@@ -973,9 +967,6 @@ impl NewWithNullPtr for wire_NegotiateFinishedRequest {
             passive_device_id: Default::default(),
             expect_frame_rate: Default::default(),
             texture_id: Default::default(),
-            audio_sample_rate: Default::default(),
-            audio_sample_format: Default::default(),
-            audio_channels: Default::default(),
         }
     }
 }

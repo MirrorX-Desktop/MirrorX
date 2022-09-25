@@ -90,9 +90,6 @@ typedef struct wire_NegotiateFinishedRequest {
   int64_t passive_device_id;
   uint8_t expect_frame_rate;
   int64_t texture_id;
-  uint32_t audio_sample_rate;
-  int32_t audio_sample_format;
-  uint8_t audio_channels;
 } wire_NegotiateFinishedRequest;
 
 typedef struct wire_MouseEvent_Up {

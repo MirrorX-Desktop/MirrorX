@@ -426,18 +426,12 @@ class NegotiateFinishedRequest {
   final int passiveDeviceId;
   final int expectFrameRate;
   final int textureId;
-  final int audioSampleRate;
-  final AudioSampleFormat audioSampleFormat;
-  final int audioChannels;
 
   NegotiateFinishedRequest({
     required this.activeDeviceId,
     required this.passiveDeviceId,
     required this.expectFrameRate,
     required this.textureId,
-    required this.audioSampleRate,
-    required this.audioSampleFormat,
-    required this.audioChannels,
   });
 }
 
@@ -928,11 +922,6 @@ class MirrorXCoreImpl implements MirrorXCore {
 }
 
 // Section: api2wire
-
-@protected
-int api2wire_audio_sample_format(AudioSampleFormat raw) {
-  return api2wire_i32(raw.index);
-}
 
 @protected
 bool api2wire_bool(bool raw) {
@@ -1577,10 +1566,6 @@ class MirrorXCorePlatform extends FlutterRustBridgeBase<MirrorXCoreWire> {
     wireObj.passive_device_id = api2wire_i64(apiObj.passiveDeviceId);
     wireObj.expect_frame_rate = api2wire_u8(apiObj.expectFrameRate);
     wireObj.texture_id = api2wire_i64(apiObj.textureId);
-    wireObj.audio_sample_rate = api2wire_u32(apiObj.audioSampleRate);
-    wireObj.audio_sample_format =
-        api2wire_audio_sample_format(apiObj.audioSampleFormat);
-    wireObj.audio_channels = api2wire_u8(apiObj.audioChannels);
   }
 
   void _api_fill_to_wire_negotiate_select_monitor_request(
@@ -2463,15 +2448,6 @@ class wire_NegotiateFinishedRequest extends ffi.Struct {
 
   @ffi.Int64()
   external int texture_id;
-
-  @ffi.Uint32()
-  external int audio_sample_rate;
-
-  @ffi.Int32()
-  external int audio_sample_format;
-
-  @ffi.Uint8()
-  external int audio_channels;
 }
 
 class wire_MouseEvent_Up extends ffi.Struct {

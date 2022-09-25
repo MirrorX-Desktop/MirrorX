@@ -22,9 +22,6 @@ pub struct NegotiateFinishedRequest {
     pub passive_device_id: i64,
     pub expect_frame_rate: u8,
     pub texture_id: i64,
-    pub audio_sample_rate: u32,
-    pub audio_sample_format: AudioSampleFormat,
-    pub audio_channels: u8,
 }
 
 pub async fn negotiate_finished(
