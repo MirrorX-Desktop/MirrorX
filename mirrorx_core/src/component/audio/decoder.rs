@@ -42,7 +42,7 @@ impl AudioPlayer {
 
             let decode_context = DecodeContext::new(sample_rate, channels, frame_size)?;
             let playback_context =
-                PlaybackContext::new(sample_rate, channels, self.frame_size as usize)?;
+                PlaybackContext::new(sample_rate, channels, frame_size as usize)?;
 
             self.sample_rate = sample_rate;
             self.channels = channels;
@@ -81,6 +81,7 @@ impl AudioPlayer {
 struct DecodeContext {
     dec: *mut OpusDecoder,
     dec_buffer: Vec<f32>,
+    channels: u8,
     frame_size: u16,
 }
 
@@ -108,6 +109,7 @@ impl DecodeContext {
             Ok(Self {
                 dec,
                 dec_buffer,
+                channels,
                 frame_size,
             })
         }
@@ -128,9 +130,7 @@ impl DecodeContext {
                 return Err(core_error!("opus_decode_float returns error code: {}", ret));
             }
 
-            tracing::info!("decode ret: {}", ret);
-
-            Ok(&self.dec_buffer[0..(ret as usize)])
+            Ok(&self.dec_buffer[0..((ret as usize) * (self.channels as usize))])
         }
     }
 }
@@ -152,7 +152,7 @@ struct PlaybackContext {
 }
 
 impl PlaybackContext {
-    pub fn new(sample_rate: u32, channels: u8, buffer_size: usize) -> CoreResult<Self> {
+    pub fn new(sample_rate: u32, channels: u8, frame_size: usize) -> CoreResult<Self> {
         let host = cpal::default_host();
 
         let device = match host.default_output_device() {
@@ -167,27 +167,51 @@ impl PlaybackContext {
         let stream_config = cpal::StreamConfig {
             channels: channels as u16,
             sample_rate: SampleRate(sample_rate),
-            buffer_size: BufferSize::Fixed(buffer_size as u32),
+            // actual buffer_size will be frame_size * channels, and stream config has specified channels so
+            // here we just give it frame_size
+            buffer_size: BufferSize::Fixed(frame_size as u32),
         };
+        tracing::info!(?stream_config, "select audio stream config");
 
-        let (audio_sample_tx, mut audio_sample_rx) = rtrb::RingBuffer::new(180);
+        let (audio_sample_tx, mut audio_sample_rx) = rtrb::RingBuffer::new(64 * 960);
         let (callback_exit_tx, callback_exit_rx) = tokio::sync::mpsc::channel(1);
         let err_callback_exit_tx = callback_exit_tx.clone();
 
-        let input_callback =
-            move |data: &mut [f32], info: &OutputCallbackInfo| match audio_sample_rx
-                .read_chunk(data.len().min(audio_sample_rx.slots()))
-            {
+        let input_callback = move |data: &mut [f32], info: &OutputCallbackInfo| {
+            // tracing::info!("decode capacity: {}", data.len());
+            match audio_sample_rx.read_chunk(data.len().min(audio_sample_rx.slots())) {
                 Ok(chunk) => {
-                    for (i, v) in chunk.into_iter().enumerate() {
-                        data[i] = v;
+                    let (c1, c2) = chunk.as_slices();
+                    let c1_copy_length = c1.len().min(data.len());
+                    unsafe {
+                        std::ptr::copy_nonoverlapping(
+                            c1.as_ptr(),
+                            data.as_mut_ptr(),
+                            c1_copy_length,
+                        );
                     }
+
+                    let remaining = data.len() - c1_copy_length;
+                    let mut c2_copy_length = 0;
+                    if remaining > 0 && !c2.is_empty() {
+                        c2_copy_length = remaining.min(c2.len());
+                        unsafe {
+                            std::ptr::copy_nonoverlapping(
+                                c2.as_ptr(),
+                                data[c1_copy_length..].as_mut_ptr(),
+                                c2_copy_length,
+                            );
+                        }
+                    }
+
+                    chunk.commit(c1_copy_length + c2_copy_length)
                 }
                 Err(err) => {
                     tracing::error!(?err, "audio sample rx required invalid slots capacity");
                     let _ = callback_exit_tx.send(());
                 }
             };
+        };
 
         let err_callback = move |err| {
             tracing::error!(?err, "error occurred on the output audio stream");
@@ -220,34 +244,55 @@ impl PlaybackContext {
                 .write_chunk_uninit(buffer.len().min(self.audio_sample_tx.slots()))
             {
                 Ok(mut chunk) => {
-                    let (slice1, slice2) = chunk.as_mut_slices();
+                    let (c1, c2) = chunk.as_mut_slices();
 
-                    let mut total_copy_length = 0;
-                    let mut copy_length = slice1.len().min(buffer.len());
-                    unsafe {
-                        std::ptr::copy_nonoverlapping(
-                            buffer.as_ptr(),
-                            slice1.as_mut_ptr() as *mut f32,
-                            copy_length,
-                        );
-                    }
-                    total_copy_length += copy_length;
-                    buffer = &buffer[copy_length..];
-
-                    if !buffer.is_empty() && !slice2.is_empty() {
-                        copy_length = slice2.len().min(buffer.len());
-                        unsafe {
-                            std::ptr::copy_nonoverlapping(
-                                buffer.as_ptr(),
-                                slice2.as_mut_ptr() as *mut f32,
-                                copy_length,
-                            );
+                    let mut it = buffer.iter();
+                    let mut iterated = 0;
+                    'outer: for &(ptr, len) in &[
+                        (c1.as_mut_ptr() as *mut f32, c1.len()),
+                        (c2.as_mut_ptr() as *mut f32, c2.len()),
+                    ] {
+                        for i in 0..len {
+                            match it.next() {
+                                Some(item) => {
+                                    unsafe {
+                                        ptr.add(i).write(*item);
+                                    }
+                                    iterated += 1;
+                                }
+                                None => break 'outer,
+                            }
                         }
-                        total_copy_length += copy_length;
-                        buffer = &buffer[copy_length..];
                     }
 
-                    unsafe { chunk.commit(total_copy_length) };
+                    unsafe { chunk.commit(iterated) }
+                    buffer = &buffer[iterated..];
+                    // let mut total_copy_length = 0;
+                    // let mut copy_length = slice1.len().min(buffer.len());
+                    // unsafe {
+                    //     std::ptr::copy_nonoverlapping(
+                    //         buffer.as_ptr(),
+                    //         slice1.as_mut_ptr() as *mut f32,
+                    //         copy_length,
+                    //     );
+                    // }
+                    // total_copy_length += copy_length;
+                    // buffer = &buffer[copy_length..];
+
+                    // if !buffer.is_empty() && !slice2.is_empty() {
+                    //     copy_length = slice2.len().min(buffer.len());
+                    //     unsafe {
+                    //         std::ptr::copy_nonoverlapping(
+                    //             buffer.as_ptr(),
+                    //             slice2.as_mut_ptr() as *mut f32,
+                    //             copy_length,
+                    //         );
+                    //     }
+                    //     total_copy_length += copy_length;
+                    //     buffer = &buffer[copy_length..];
+                    // }
+
+                    // unsafe { chunk.commit(total_copy_length) };
                 }
                 Err(err) => {
                     tracing::error!(?err, "audio sample tx required invalid slots capacity");
