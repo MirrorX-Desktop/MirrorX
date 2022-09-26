@@ -203,7 +203,7 @@ fn spawn_desktop_capture_and_encode_process(
 fn spawn_desktop_capture_and_encode_process(
     active_device_id: i64,
     passive_device_id: i64,
-    message_tx: Sender<EndPointMessage>,
+    message_tx: Sender<Option<EndPointMessage>>,
 ) {
     let monitors = match get_active_monitors(false) {
         Ok(params) => params,
