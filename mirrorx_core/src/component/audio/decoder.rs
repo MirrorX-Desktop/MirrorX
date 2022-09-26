@@ -8,7 +8,7 @@ use crate::{
 
 pub struct AudioDecoder {
     dec: *mut OpusDecoder,
-    dec_buffer: [f32; 2880],
+    dec_buffer: [f32; 5760],
     sample_rate: i32,
     channels: isize,
 }
@@ -34,7 +34,7 @@ impl AudioDecoder {
 
             Ok(Self {
                 dec,
-                dec_buffer: [0f32; 2880],
+                dec_buffer: [0f32; 5760],
                 sample_rate,
                 channels,
             })
@@ -56,7 +56,7 @@ impl AudioDecoder {
                 return Err(core_error!("opus_decode_float returns error code: {}", ret));
             }
 
-            Ok(&self.dec_buffer[0..(ret as usize)])
+            Ok(&self.dec_buffer[0..((ret * self.channels) as usize)])
         }
     }
 }

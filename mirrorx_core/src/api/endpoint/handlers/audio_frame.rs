@@ -67,6 +67,9 @@ pub fn serve_audio_decode(active_device_id: i64, passive_device_id: i64) {
                         if let Some((sample_rate, sample_format, channels)) =
                             audio_frame.re_init_data
                         {
+                            tracing::info!( "buffer length: {}",audio_frame.buffer.len());
+                            tracing::info!("sample rate channels: {} {}",sample_rate,channels);
+
                             let (audio_sample_tx, audio_sample_rx) = rtrb::RingBuffer::new(180);
 
                             let _ = current_decoder.take();
