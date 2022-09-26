@@ -33,6 +33,13 @@ impl AudioPlayer {
 
     pub fn play_samples(&mut self, audio_frame: EndPointAudioFrame) -> CoreResult<()> {
         if let Some((sample_rate, sample_format, channels, frame_size)) = audio_frame.params {
+            tracing::info!(
+                "sample_rate: {}, channels: {}, frame_size:{}",
+                sample_rate,
+                channels,
+                frame_size
+            );
+
             let decode_context = DecodeContext::new(sample_rate, channels, frame_size)?;
             let playback_context =
                 PlaybackContext::new(sample_rate, channels, self.frame_size as usize)?;
@@ -120,6 +127,8 @@ impl DecodeContext {
             if ret < 0 {
                 return Err(core_error!("opus_decode_float returns error code: {}", ret));
             }
+
+            tracing::info!("decode ret: {}", ret);
 
             Ok(&self.dec_buffer[0..(ret as usize)])
         }
