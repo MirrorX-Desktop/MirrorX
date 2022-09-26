@@ -22,12 +22,20 @@ pub async fn handle_audio_frame(
     audio_frame: EndPointAudioFrame,
 ) {
     if let Some(tx) = DECODERS.get(&(active_device_id, passive_device_id)) {
-        if tx.try_send(audio_frame).is_err() {
-            tracing::error!(
-                ?active_device_id,
-                ?passive_device_id,
-                "send audio frame failed"
-            );
+        if let Err(err) = tx.try_send(audio_frame) {
+            if err.is_full() {
+                tracing::warn!(
+                    ?active_device_id,
+                    ?passive_device_id,
+                    "audio frame decode tx is full!"
+                );
+            } else if err.is_disconnected() {
+                tracing::info!(
+                    ?active_device_id,
+                    ?passive_device_id,
+                    "audio frame decode tx is closed"
+                );
+            }
         }
     }
 }

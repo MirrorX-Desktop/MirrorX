@@ -378,6 +378,8 @@ fn spawn_audio_capture_and_encode_process(
         ));
 
         let input_callback = move |data: &[f32], info: &InputCallbackInfo| {
+            tracing::info!("data len: {}",data.len());
+            
             let audio_encode_frame = AudioEncodeFrame {
                 initial_encoder_params: initial_encoder_params.take(),
                 bytes: data.to_vec(),

@@ -70,4 +70,10 @@ pub enum CoreError {
 
     #[error("enum audio devices failed ({0:?})")]
     AudioDevicesError(#[from] cpal::DevicesError),
+
+    #[error("audio device build stream failed ({0:?})")]
+    AudioDeviceBuildStreamError(#[from] cpal::BuildStreamError),
+
+    #[error("audio device play stream failed ({0:?})")]
+    AudioDevicePlayStreamError(#[from] cpal::PlayStreamError),
 }

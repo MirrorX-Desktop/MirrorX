@@ -34,7 +34,8 @@ impl AudioPlayer {
     pub fn play_samples(&mut self, audio_frame: EndPointAudioFrame) -> CoreResult<()> {
         if let Some((sample_rate, sample_format, channels, frame_size)) = audio_frame.params {
             let decode_context = DecodeContext::new(sample_rate, channels, frame_size)?;
-            let playback_context = PlaybackContext::new(sample_rate, channels, frame_size)?;
+            let playback_context =
+                PlaybackContext::new(sample_rate, channels, self.frame_size as usize)?;
 
             self.sample_rate = sample_rate;
             self.channels = channels;
@@ -57,7 +58,7 @@ impl AudioPlayer {
 
         if !success {
             let mut playback_context =
-                PlaybackContext::new(self.sample_rate, self.channels, self.frame_size)?;
+                PlaybackContext::new(self.sample_rate, self.channels, self.frame_size as usize)?;
 
             if !playback_context.enqueue_samples(decoded_buffer) {
                 return Err(core_error!("too many playback context initialize failures"));
@@ -112,7 +113,7 @@ impl DecodeContext {
                 buffer.as_ptr(),
                 buffer.len() as i32,
                 self.dec_buffer.as_mut_ptr(),
-                self.frame_size as isize,
+                (self.frame_size) as isize,
                 0,
             );
 
@@ -142,7 +143,7 @@ struct PlaybackContext {
 }
 
 impl PlaybackContext {
-    pub fn new(sample_rate: u32, channels: u8, frame_size: u16) -> CoreResult<Self> {
+    pub fn new(sample_rate: u32, channels: u8, buffer_size: usize) -> CoreResult<Self> {
         let host = cpal::default_host();
 
         let device = match host.default_output_device() {
@@ -157,7 +158,7 @@ impl PlaybackContext {
         let stream_config = cpal::StreamConfig {
             channels: channels as u16,
             sample_rate: SampleRate(sample_rate),
-            buffer_size: BufferSize::Fixed(frame_size.into()),
+            buffer_size: BufferSize::Fixed(buffer_size as u32),
         };
 
         let (audio_sample_tx, mut audio_sample_rx) = rtrb::RingBuffer::new(180);
@@ -184,13 +185,8 @@ impl PlaybackContext {
             let _ = err_callback_exit_tx.send(());
         };
 
-        let stream = match device.build_output_stream(&stream_config, input_callback, err_callback)
-        {
-            Ok(stream) => stream,
-            Err(err) => {
-                return Err(core_error!("build audio output stream failed ({})", err));
-            }
-        };
+        let stream = device.build_output_stream(&stream_config, input_callback, err_callback)?;
+        stream.play()?;
 
         Ok(PlaybackContext {
             stream,
