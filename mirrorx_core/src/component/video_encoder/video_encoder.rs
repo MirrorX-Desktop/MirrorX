@@ -22,8 +22,8 @@ impl VideoEncoder {
         let encode_config = encoder_type.create_config();
 
         unsafe {
-            av_log_set_level(AV_LOG_TRACE);
-            av_log_set_flags(AV_LOG_SKIP_REPEATED);
+            // av_log_set_level(AV_LOG_TRACE);
+            // av_log_set_flags(AV_LOG_SKIP_REPEATED);
 
             Ok(VideoEncoder {
                 encode_config,

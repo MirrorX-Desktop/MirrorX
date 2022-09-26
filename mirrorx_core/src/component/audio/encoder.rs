@@ -20,7 +20,6 @@ impl AudioEncoder {
     pub fn new(tx: Sender<Option<EndPointMessage>>) -> CoreResult<Self> {
         Ok(AudioEncoder {
             encode_context: None,
-
             tx,
         })
     }

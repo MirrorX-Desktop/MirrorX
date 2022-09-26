@@ -17,8 +17,8 @@ pub struct VideoDecoder {
 impl VideoDecoder {
     pub fn new(texture_id: i64, stream: StreamSink<FlutterMediaMessage>) -> VideoDecoder {
         unsafe {
-            av_log_set_level(AV_LOG_TRACE);
-            av_log_set_flags(AV_LOG_SKIP_REPEATED);
+            // av_log_set_level(AV_LOG_TRACE);
+            // av_log_set_flags(AV_LOG_SKIP_REPEATED);
 
             VideoDecoder {
                 decode_context: std::ptr::null_mut(),
