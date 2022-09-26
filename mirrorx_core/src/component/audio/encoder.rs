@@ -26,11 +26,8 @@ impl AudioEncoder {
 
     pub fn encode(&mut self, audio_frame: AudioEncodeFrame) -> CoreResult<()> {
         if let Some((sample_rate, channels)) = audio_frame.initial_encoder_params {
-            let encode_context = EncodeContext::new(
-                sample_rate,
-                channels,
-                (audio_frame.bytes.len() / (channels as usize)) as u16,
-            )?;
+            let encode_context =
+                EncodeContext::new(sample_rate, channels, (audio_frame.bytes.len()) as u16)?;
 
             self.encode_context = Some(encode_context);
         }
