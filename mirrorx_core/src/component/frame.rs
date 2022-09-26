@@ -24,8 +24,7 @@ pub struct DesktopDecodeFrame {
 unsafe impl Send for DesktopDecodeFrame {}
 
 pub struct AudioEncodeFrame {
-    pub format_f32: bool,
-    #[cfg(any(target_os = "windows", target_os = "macos"))]
+    pub init_data: Option<(u32, u8)>, // sample_rate, channels
     pub bytes: Vec<f32>,
 }
 

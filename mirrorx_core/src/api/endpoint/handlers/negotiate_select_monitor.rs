@@ -46,7 +46,7 @@ pub async fn negotiate_select_monitor(
     );
 
     if let Err(err) = message_tx
-        .send_timeout(negotiate_req, SEND_MESSAGE_TIMEOUT)
+        .send_timeout(Some(negotiate_req), SEND_MESSAGE_TIMEOUT)
         .await
     {
         RESPONSE_CHANNELS.remove(&(req.active_device_id, req.passive_device_id));
@@ -67,7 +67,7 @@ pub async fn handle_negotiate_select_monitor_request(
     active_device_id: i64,
     passive_device_id: i64,
     _: EndPointNegotiateSelectMonitorRequest,
-    message_tx: mpsc::Sender<EndPointMessage>,
+    message_tx: mpsc::Sender<Option<EndPointMessage>>,
 ) {
     let resp = match crate::component::desktop::monitor::get_active_monitors(true) {
         Ok(monitors) => {
@@ -97,7 +97,10 @@ pub async fn handle_negotiate_select_monitor_request(
         }
     };
 
-    if let Err(err) = message_tx.send_timeout(resp, SEND_MESSAGE_TIMEOUT).await {
+    if let Err(err) = message_tx
+        .send_timeout(Some(resp), SEND_MESSAGE_TIMEOUT)
+        .await
+    {
         tracing::error!(
             ?active_device_id,
             ?passive_device_id,

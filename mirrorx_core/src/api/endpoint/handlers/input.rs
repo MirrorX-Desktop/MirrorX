@@ -22,7 +22,7 @@ pub fn input(req: InputRequest) -> CoreResult<()> {
 
     let req = EndPointMessage::Input(EndPointInput { event: *req.event });
 
-    if let Err(err) = message_tx.blocking_send(req) {
+    if let Err(err) = message_tx.blocking_send(Some(req)) {
         return Err(core_error!(
             "negotiate_finished: message send failed ({})",
             err

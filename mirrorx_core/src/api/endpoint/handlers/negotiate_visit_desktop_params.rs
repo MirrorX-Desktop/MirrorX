@@ -64,7 +64,7 @@ pub async fn negotiate_visit_desktop_params(
     );
 
     if let Err(err) = message_tx
-        .send_timeout(negotiate_req, SEND_MESSAGE_TIMEOUT)
+        .send_timeout(Some(negotiate_req), SEND_MESSAGE_TIMEOUT)
         .await
     {
         RESPONSE_CHANNELS.remove(&(req.active_device_id, req.passive_device_id));
@@ -100,13 +100,13 @@ pub async fn handle_negotiate_visit_desktop_params_request(
     active_device_id: i64,
     passive_device_id: i64,
     req: EndPointNegotiateVisitDesktopParamsRequest,
-    message_tx: mpsc::Sender<EndPointMessage>,
+    message_tx: mpsc::Sender<Option<EndPointMessage>>,
 ) {
     let resp = negotiate_media_params(req);
 
     if let Err(err) = message_tx
         .send_timeout(
-            EndPointMessage::NegotiateVisitDesktopParamsResponse(resp),
+            Some(EndPointMessage::NegotiateVisitDesktopParamsResponse(resp)),
             SEND_MESSAGE_TIMEOUT,
         )
         .await

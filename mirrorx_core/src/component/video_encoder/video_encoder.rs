@@ -11,11 +11,14 @@ use tokio::sync::mpsc::{error::TrySendError, Sender};
 pub struct VideoEncoder {
     encode_config: Box<dyn EncoderConfig>,
     encode_context: *mut EncodeContext,
-    tx: Sender<EndPointMessage>,
+    tx: Sender<Option<EndPointMessage>>,
 }
 
 impl VideoEncoder {
-    pub fn new(encoder_type: EncoderType, tx: Sender<EndPointMessage>) -> CoreResult<VideoEncoder> {
+    pub fn new(
+        encoder_type: EncoderType,
+        tx: Sender<Option<EndPointMessage>>,
+    ) -> CoreResult<VideoEncoder> {
         let encode_config = encoder_type.create_config();
 
         unsafe {
@@ -119,7 +122,7 @@ impl VideoEncoder {
                     buffer,
                 });
 
-                if let Err(err) = self.tx.try_send(packet) {
+                if let Err(err) = self.tx.try_send(Some(packet)) {
                     if let TrySendError::Full(_) = err {
                         tracing::warn!(
                             "video encoder send EndPointMessage failed, channel is full!"

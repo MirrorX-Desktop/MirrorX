@@ -8,19 +8,23 @@ use crate::{
         OPUS_APPLICATION_RESTRICTED_LOWDELAY,
     },
 };
-
 use tokio::sync::mpsc::{error::TrySendError, Sender};
 
 pub struct AudioEncoder {
     enc: *mut OpusEncoder,
     enc_buffer: [u8; 11520],
+    sample_rate: u32,
     channels: u8,
-    tx: Sender<EndPointMessage>,
+    tx: Sender<Option<EndPointMessage>>,
     initial_data: once_cell::unsync::OnceCell<(u32, AudioSampleFormat, u8)>,
 }
 
 impl AudioEncoder {
-    pub fn new(sample_rate: u32, channels: u8, tx: Sender<EndPointMessage>) -> CoreResult<Self> {
+    pub fn new(
+        sample_rate: u32,
+        channels: u8,
+        tx: Sender<Option<EndPointMessage>>,
+    ) -> CoreResult<Self> {
         unsafe {
             let mut error_code = 0;
             let enc = opus_encoder_create(
@@ -44,6 +48,7 @@ impl AudioEncoder {
             Ok(Self {
                 enc,
                 enc_buffer: [0u8; 11520],
+                sample_rate,
                 channels,
                 tx,
                 initial_data: once_cell::unsync::OnceCell::with_value((
@@ -53,6 +58,14 @@ impl AudioEncoder {
                 )),
             })
         }
+    }
+
+    pub fn sample_rate(&self) -> u32 {
+        self.sample_rate
+    }
+
+    pub fn channels(&self) -> u8 {
+        self.channels
     }
 
     pub fn encode(&mut self, audio_frame: AudioEncodeFrame) -> CoreResult<()> {
@@ -79,7 +92,7 @@ impl AudioEncoder {
                 buffer,
             });
 
-            if let Err(err) = self.tx.try_send(packet) {
+            if let Err(err) = self.tx.try_send(Some(packet)) {
                 if let TrySendError::Full(_) = err {
                     tracing::warn!("audio encoder send EndPointMessage failed, channel is full!");
                 } else {

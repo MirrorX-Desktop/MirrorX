@@ -43,7 +43,7 @@ const RECV_MESSAGE_TIMEOUT: Duration = Duration::from_secs(30);
 pub static RESERVE_STREAMS: Lazy<DashMap<(i64, i64), Framed<TcpStream, LengthDelimitedCodec>>> =
     Lazy::new(DashMap::new);
 
-pub static ENDPOINTS: Lazy<Cache<(i64, i64), tokio::sync::mpsc::Sender<EndPointMessage>>> =
+pub static ENDPOINTS: Lazy<Cache<(i64, i64), tokio::sync::mpsc::Sender<Option<EndPointMessage>>>> =
     Lazy::new(|| Cache::builder().initial_capacity(1).build());
 
 pub static ENDPOINTS_MONITOR: Lazy<Cache<(i64, i64), Monitor>> =
@@ -56,7 +56,7 @@ pub fn serve_reader(
     mut exit_rx: async_broadcast::Receiver<()>,
     mut stream: SplitStream<Framed<TcpStream, LengthDelimitedCodec>>,
     mut opening_key: OpeningKey<NonceValue>,
-    message_tx: tokio::sync::mpsc::Sender<EndPointMessage>,
+    message_tx: tokio::sync::mpsc::Sender<Option<EndPointMessage>>,
 ) {
     TOKIO_RUNTIME.spawn(async move {
         loop {
@@ -137,7 +137,7 @@ pub fn serve_writer(
     mut exit_rx: async_broadcast::Receiver<()>,
     mut sink: SplitSink<Framed<TcpStream, LengthDelimitedCodec>, Bytes>,
     mut sealing_key: SealingKey<NonceValue>,
-    mut message_rx: tokio::sync::mpsc::Receiver<EndPointMessage>,
+    mut message_rx: tokio::sync::mpsc::Receiver<Option<EndPointMessage>>,
 ) {
     TOKIO_RUNTIME.spawn(async move {
         loop {
@@ -161,30 +161,40 @@ pub fn serve_writer(
             }
 
             match message_rx.recv().await {
-                Some(message) => {
-                    let buffer = match seal_packet(&mut sealing_key, &message) {
-                        Ok(buffer) => buffer,
-                        Err(err) => {
+                Some(message) => match message {
+                    Some(message) => {
+                        let buffer = match seal_packet(&mut sealing_key, &message) {
+                            Ok(buffer) => buffer,
+                            Err(err) => {
+                                tracing::error!(
+                                    ?local_device_id,
+                                    ?remote_device_id,
+                                    ?err,
+                                    "seal packet failed"
+                                );
+                                continue;
+                            }
+                        };
+
+                        if let Err(err) = sink.send(buffer).await {
                             tracing::error!(
                                 ?local_device_id,
                                 ?remote_device_id,
                                 ?err,
-                                "seal packet failed"
+                                "write to stream failed"
                             );
-                            continue;
+                            break;
                         }
-                    };
-
-                    if let Err(err) = sink.send(buffer).await {
-                        tracing::error!(
+                    }
+                    None => {
+                        tracing::info!(
                             ?local_device_id,
                             ?remote_device_id,
-                            ?err,
-                            "write to stream failed"
+                            "internal process require exit"
                         );
                         break;
                     }
-                }
+                },
                 None => {
                     tracing::info!(?local_device_id, ?remote_device_id, "writer tx closed");
                     break;
@@ -211,7 +221,7 @@ fn open_packet(
     passive_device_id: i64,
     opening_key: &mut OpeningKey<NonceValue>,
     buffer: &mut BytesMut,
-    message_tx: tokio::sync::mpsc::Sender<EndPointMessage>,
+    message_tx: tokio::sync::mpsc::Sender<Option<EndPointMessage>>,
 ) -> CoreResult<()> {
     let opened_buffer = opening_key.open_in_place(ring::aead::Aad::empty(), buffer)?;
     let message = BINCODE_SERIALIZER.deserialize::<EndPointMessage>(opened_buffer)?;
@@ -236,7 +246,7 @@ async fn handle_message(
     active_device_id: i64,
     passive_device_id: i64,
     message: EndPointMessage,
-    message_tx: tokio::sync::mpsc::Sender<EndPointMessage>,
+    message_tx: tokio::sync::mpsc::Sender<Option<EndPointMessage>>,
 ) {
     match message {
         EndPointMessage::Error => handle_error(active_device_id, passive_device_id).await,

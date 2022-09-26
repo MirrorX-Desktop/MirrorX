@@ -67,4 +67,7 @@ pub enum CoreError {
 
     #[error("parse utf-16 string to rust string failed")]
     FromUTF16Error(#[from] FromUtf16Error),
+
+    #[error("enum audio devices failed ({0:?})")]
+    AudioDevicesError(#[from] cpal::DevicesError),
 }
