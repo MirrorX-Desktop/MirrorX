@@ -759,7 +759,7 @@ unsafe fn init_output_duplication(
     let adapter_desc = HRESULT!(dxgi_adapter.GetDesc());
 
     info!(
-        name = ?String::from_utf16(&adapter_desc.Description)?,
+        name = ?PCWSTR::from_raw(adapter_desc.Description.as_ptr()).to_string()?,
         "DXGI Adapter",
     );
 
@@ -796,7 +796,7 @@ unsafe fn init_output_duplication(
             }
 
             if (display_device.StateFlags & DISPLAY_DEVICE_ATTACHED_TO_DESKTOP) != 0 {
-                let device_id = String::from_utf16(&display_device.DeviceID)?;
+                let device_id = PCWSTR::from_raw(display_device.DeviceID.as_ptr()).to_string()?;
 
                 if let Some(ref id) = monitor_id {
                     if *id != device_id {

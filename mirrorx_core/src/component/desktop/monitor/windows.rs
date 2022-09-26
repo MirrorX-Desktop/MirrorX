@@ -18,16 +18,14 @@ use windows::{
 };
 
 pub fn get_primary_monitor_params() -> CoreResult<(String, u16, u16)> {
-    unsafe {
-        let monitors = get_active_monitors(false)?;
-        for monitor in monitors {
-            if monitor.is_primary {
-                return Ok((monitor.id, monitor.width, monitor.height));
-            }
+    let monitors = get_active_monitors(false)?;
+    for monitor in monitors {
+        if monitor.is_primary {
+            return Ok((monitor.id, monitor.width, monitor.height));
         }
-
-        Err(core_error!("no primary display"))
     }
+
+    Err(core_error!("no primary display"))
 }
 
 pub fn get_active_monitors(take_screen_shot: bool) -> CoreResult<Vec<Monitor>> {
@@ -52,7 +50,7 @@ unsafe fn enum_dxgi_outputs(
     let adapter_desc = HRESULT!(dxgi_adapter.GetDesc());
 
     tracing::info!(
-        adapter_name = String::from_utf16(&adapter_desc.Description)?,
+        adapter_name = ?PCWSTR::from_raw(adapter_desc.Description.as_ptr()).to_string()?,
         "DXGI OUTPUTS ADAPTER"
     );
 
