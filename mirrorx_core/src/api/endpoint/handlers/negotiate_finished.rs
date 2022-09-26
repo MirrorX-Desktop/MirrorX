@@ -372,14 +372,14 @@ fn spawn_audio_capture_and_encode_process(
             }
         };
 
-        let mut init_data = once_cell::unsync::OnceCell::with_value((
+        let mut initial_encoder_params = once_cell::unsync::OnceCell::with_value((
             output_config.sample_rate.0,
             output_config.channels as u8,
         ));
 
         let input_callback = move |data: &[f32], info: &InputCallbackInfo| {
             let audio_encode_frame = AudioEncodeFrame {
-                init_data: init_data.take(),
+                initial_encoder_params: initial_encoder_params.take(),
                 bytes: data.to_vec(),
             };
 
@@ -425,7 +425,13 @@ fn spawn_audio_capture_and_encode_process(
             let _ = capture_process_should_exit_tx.try_send(());
         }
 
-        let mut current_audio_encoder = once_cell::unsync::OnceCell::new();
+        let mut audio_encoder = match AudioEncoder::new(message_tx.clone()) {
+            Ok(encoder) => encoder,
+            Err(err) => {
+                tracing::error!(?err, "audio encoder initialize failed");
+                return;
+            }
+        };
 
         loop {
             match capture_process_has_exit_rx.try_recv() {
@@ -439,48 +445,12 @@ fn spawn_audio_capture_and_encode_process(
 
             match audio_encode_frame_rx.recv_timeout(Duration::from_secs(1)) {
                 Ok(audio_encode_frame) => {
-                    if let Some((sample_rate, channels)) = audio_encode_frame.init_data {
-                        let _ = current_audio_encoder.take();
-
-                        let new_encoder =
-                            match AudioEncoder::new(sample_rate, channels, message_tx.clone()) {
-                                Ok(encoder) => encoder,
-                                Err(err) => {
-                                    tracing::error!(
-                                        ?active_device_id,
-                                        ?passive_device_id,
-                                        ?err,
-                                        "audio encoder initialize failed"
-                                    );
-                                    return;
-                                }
-                            };
-
-                        if current_audio_encoder.set(new_encoder).is_err() {
-                            tracing::error!(
-                                ?active_device_id,
-                                ?passive_device_id,
-                                "current encoder should be empty!"
-                            );
-                            return;
-                        }
-                    }
-
-                    if let Some(encoder) = current_audio_encoder.get_mut() {
-                        if let Err(err) = encoder.encode(audio_encode_frame) {
-                            tracing::error!(
-                                ?active_device_id,
-                                ?passive_device_id,
-                                ?err,
-                                "audio encoder encode failed"
-                            );
-                            return;
-                        }
-                    } else {
+                    if let Err(err) = audio_encoder.encode(audio_encode_frame) {
                         tracing::error!(
                             ?active_device_id,
                             ?passive_device_id,
-                            "audio encode not initialized"
+                            ?err,
+                            "audio encoder encode failed"
                         );
                         return;
                     }

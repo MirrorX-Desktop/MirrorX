@@ -24,7 +24,7 @@ pub struct DesktopDecodeFrame {
 unsafe impl Send for DesktopDecodeFrame {}
 
 pub struct AudioEncodeFrame {
-    pub init_data: Option<(u32, u8)>, // sample_rate, channels
+    pub initial_encoder_params: Option<(u32, u8)>, // sample_rate, channels
     pub bytes: Vec<f32>,
 }
 

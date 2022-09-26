@@ -8,23 +8,69 @@ use crate::{
         OPUS_APPLICATION_RESTRICTED_LOWDELAY,
     },
 };
+use once_cell::sync::OnceCell;
 use tokio::sync::mpsc::{error::TrySendError, Sender};
 
 pub struct AudioEncoder {
-    enc: *mut OpusEncoder,
-    enc_buffer: [u8; 11520],
-    sample_rate: u32,
-    channels: u8,
+    encode_context: Option<EncodeContext>,
     tx: Sender<Option<EndPointMessage>>,
-    initial_data: once_cell::unsync::OnceCell<(u32, AudioSampleFormat, u8)>,
 }
 
 impl AudioEncoder {
-    pub fn new(
-        sample_rate: u32,
-        channels: u8,
-        tx: Sender<Option<EndPointMessage>>,
-    ) -> CoreResult<Self> {
+    pub fn new(tx: Sender<Option<EndPointMessage>>) -> CoreResult<Self> {
+        Ok(AudioEncoder {
+            encode_context: None,
+
+            tx,
+        })
+    }
+
+    pub fn encode(&mut self, audio_frame: AudioEncodeFrame) -> CoreResult<()> {
+        if let Some((sample_rate, channels)) = audio_frame.initial_encoder_params {
+            let encode_context = EncodeContext::new(
+                sample_rate,
+                channels,
+                (audio_frame.bytes.len() / (channels as usize)) as u16,
+            )?;
+
+            self.encode_context = Some(encode_context);
+        }
+
+        if let Some(encode_context) = &mut self.encode_context {
+            let params = encode_context.initial_params.take();
+            let buffer = encode_context.encode(&audio_frame.bytes)?;
+
+            let packet = EndPointMessage::AudioFrame(EndPointAudioFrame {
+                params,
+                buffer: buffer.to_vec(),
+            });
+
+            if let Err(err) = self.tx.try_send(Some(packet)) {
+                if let TrySendError::Full(_) = err {
+                    tracing::warn!("audio encoder send EndPointMessage failed, channel is full!");
+                } else {
+                    return Err(core_error!(
+                        "video encoder send EndPointMessage failed, channel is closed"
+                    ));
+                }
+            };
+
+            Ok(())
+        } else {
+            Err(core_error!("audio encode context not initialized"))
+        }
+    }
+}
+
+struct EncodeContext {
+    enc: *mut OpusEncoder,
+    enc_buffer: Vec<u8>,
+    frame_size: u16,
+    initial_params: OnceCell<(u32, AudioSampleFormat, u8, u16)>, // sample_rate, sample_format, channels, frame_size
+}
+
+impl EncodeContext {
+    pub fn new(sample_rate: u32, channels: u8, frame_size: u16) -> CoreResult<Self> {
         unsafe {
             let mut error_code = 0;
             let enc = opus_encoder_create(
@@ -45,36 +91,30 @@ impl AudioEncoder {
                 ));
             }
 
-            Ok(Self {
+            let buffer_size = frame_size * (channels as u16) * 4; // todo: 4
+            let mut enc_buffer = Vec::new();
+            enc_buffer.resize(buffer_size as usize, 0);
+
+            Ok(EncodeContext {
                 enc,
-                enc_buffer: [0u8; 11520],
-                sample_rate,
-                channels,
-                tx,
-                initial_data: once_cell::unsync::OnceCell::with_value((
+                enc_buffer,
+                frame_size,
+                initial_params: OnceCell::with_value((
                     sample_rate,
                     AudioSampleFormat::F32,
                     channels,
+                    frame_size,
                 )),
             })
         }
     }
 
-    pub fn sample_rate(&self) -> u32 {
-        self.sample_rate
-    }
-
-    pub fn channels(&self) -> u8 {
-        self.channels
-    }
-
-    pub fn encode(&mut self, audio_frame: AudioEncodeFrame) -> CoreResult<()> {
-        // todo: split f32 and i16 or u16 encode
+    pub fn encode(&mut self, buffer: &[f32]) -> CoreResult<&[u8]> {
         unsafe {
             let ret = opus_encode_float(
                 self.enc,
-                audio_frame.bytes.as_ptr(),
-                (audio_frame.bytes.len() as isize) / (self.channels as isize),
+                buffer.as_ptr(),
+                self.frame_size as isize,
                 self.enc_buffer.as_mut_ptr(),
                 self.enc_buffer.len() as i32,
             );
@@ -83,29 +123,14 @@ impl AudioEncoder {
                 return Err(core_error!("opus_encode_float returns error code: {}", ret));
             }
 
-            let buffer = self.enc_buffer[0..ret as usize].to_vec();
+            let buffer = self.enc_buffer.as_slice();
 
-            let packet = EndPointMessage::AudioFrame(EndPointAudioFrame {
-                re_init_data: self.initial_data.take(),
-                buffer,
-            });
-
-            if let Err(err) = self.tx.try_send(Some(packet)) {
-                if let TrySendError::Full(_) = err {
-                    tracing::warn!("audio encoder send EndPointMessage failed, channel is full!");
-                } else {
-                    return Err(core_error!(
-                        "video encoder send EndPointMessage failed, channel is closed"
-                    ));
-                }
-            };
-
-            Ok(())
+            Ok(&buffer[0..(ret as usize)])
         }
     }
 }
 
-impl Drop for AudioEncoder {
+impl Drop for EncodeContext {
     fn drop(&mut self) {
         if !self.enc.is_null() {
             unsafe {
