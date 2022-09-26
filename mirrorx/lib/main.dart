@@ -9,13 +9,24 @@ import 'package:mirrorx/state/desktop_manager/desktop_manager_cubit.dart';
 import 'package:mirrorx/state/page_manager/page_manager_cubit.dart';
 import 'package:mirrorx/state/signaling_manager/signaling_manager_cubit.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final supportDirectory = await getApplicationSupportDirectory();
   final configPath = "${supportDirectory.path}/mirrorx.db";
   log("config path: $configPath");
-  runApp(App(configPath: configPath));
+
+  await SentryFlutter.init(
+    (options) {
+      options.dsn =
+          'https://fae16ec81609482791c27bb9b6707004@o1427956.ingest.sentry.io/6777701';
+      // Set tracesSampleRate to 1.0 to capture 100% of transactions for performance monitoring.
+      // We recommend adjusting this value in production.
+      options.tracesSampleRate = 1.0;
+    },
+    appRunner: () => runApp(App(configPath: configPath)),
+  );
 }
 
 class App extends StatelessWidget {

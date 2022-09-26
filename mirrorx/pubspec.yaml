@@ -55,7 +55,9 @@ dependencies:
   freezed_annotation: ^2.0.3
   marquee: ^2.2.3
   tuple: ^2.0.0
-  
+  sentry_flutter: ^6.11.0
+
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
