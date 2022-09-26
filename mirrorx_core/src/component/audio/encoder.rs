@@ -71,7 +71,7 @@ impl AudioEncoder {
     pub fn encode(&mut self, audio_frame: AudioEncodeFrame) -> CoreResult<()> {
         // todo: split f32 and i16 or u16 encode
         unsafe {
-            let frame_size = (audio_frame.bytes.len() as isize) / (self.channels as isize);
+            let frame_size = (audio_frame.bytes.len() as isize) / 4 / (self.channels as isize);
 
             let ret = opus_encode_float(
                 self.enc,
