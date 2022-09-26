@@ -364,7 +364,7 @@ fn spawn_audio_capture_and_encode_process(
 
         tracing::info!(?active_device_id, ?passive_device_id, name = ?device.name(), "select default audio output device");
 
-        let input_config = match device.default_input_config() {
+        let output_config = match device.default_output_config() {
             Ok(config) => config.config(),
             Err(err) => {
                 tracing::error!(?active_device_id, ?passive_device_id, ?err, "get audio device default input config failed");
@@ -373,8 +373,8 @@ fn spawn_audio_capture_and_encode_process(
         };
 
         let mut init_data = once_cell::unsync::OnceCell::with_value((
-            input_config.sample_rate.0,
-            input_config.channels as u8,
+            output_config.sample_rate.0,
+            output_config.channels as u8,
         ));
 
         let input_callback = move |data: &[f32], info: &InputCallbackInfo| {
@@ -398,7 +398,7 @@ fn spawn_audio_capture_and_encode_process(
         };
 
         let loopback_stream =
-            match device.build_input_stream(&input_config, input_callback, err_callback) {
+            match device.build_input_stream(&output_config, input_callback, err_callback) {
                 Ok(stream) => stream,
                 Err(err) => {
                     tracing::error!(?active_device_id, ?passive_device_id, ?err, "audio device build input stream failed");
