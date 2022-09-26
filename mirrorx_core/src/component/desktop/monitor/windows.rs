@@ -81,6 +81,7 @@ unsafe fn enum_dxgi_outputs(
         let mut dev_index = 0u32;
         loop {
             let origin_device_name = PCWSTR::from_raw(output_desc.DeviceName.as_ptr());
+            tracing::info!("origin device name {}", origin_device_name.to_string()?);
 
             let mut display_device: DISPLAY_DEVICEW = std::mem::zeroed();
             display_device.cb = std::mem::size_of::<DISPLAY_DEVICEW>() as u32;
@@ -144,8 +145,8 @@ unsafe fn enum_dxgi_outputs(
                     id: device_id,
                     name,
                     refresh_rate: (refresh_rate.min(u8::MAX as u32) as u8),
-                    width: monitor_resolution_width as u16,
-                    height: monitor_resolution_height as u16,
+                    width: (monitor_info.rcMonitor.right - monitor_info.rcMonitor.left) as u16,
+                    height: (monitor_info.rcMonitor.bottom - monitor_info.rcMonitor.top) as u16,
                     is_primary: monitor_is_primary,
                     screen_shot: screent_shot_buffer,
                     left: monitor_info.rcMonitor.left as u16,
@@ -343,4 +344,13 @@ unsafe fn take_screen_shot(
     }
 
     Ok(png_bytes)
+}
+
+#[test]
+fn test_active() {
+    tracing_subscriber::fmt::init();
+
+    let monitors = unsafe { enum_all_monitors_path_and_name().unwrap() };
+    let a = unsafe { enum_dxgi_outputs(monitors, false).unwrap() };
+    println!("{:?}", a)
 }

@@ -102,7 +102,7 @@ async fn inner_handshake(
     }
 
     let (exit_tx, exit_rx) = async_broadcast::broadcast(16);
-    let (send_message_tx, send_message_rx) = tokio::sync::mpsc::channel(1);
+    let (send_message_tx, send_message_rx) = tokio::sync::mpsc::channel(180);
     let (sink, stream) = stream.split();
 
     super::super::serve_reader(
