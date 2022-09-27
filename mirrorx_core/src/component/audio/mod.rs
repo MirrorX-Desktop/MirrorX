@@ -1,5 +1,5 @@
-pub mod decoder;
-pub mod encoder;
+pub mod duplicator;
+pub mod player;
 
 use crate::error::CoreResult;
 use cpal::traits::{DeviceTrait, HostTrait};

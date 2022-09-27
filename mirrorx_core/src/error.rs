@@ -76,4 +76,7 @@ pub enum CoreError {
 
     #[error("audio device play stream failed ({0:?})")]
     AudioDevicePlayStreamError(#[from] cpal::PlayStreamError),
+
+    #[error("audio device get default config failed ({0:?})")]
+    AudioDeviceDefaultConfigError(#[from] cpal::DefaultStreamConfigError),
 }

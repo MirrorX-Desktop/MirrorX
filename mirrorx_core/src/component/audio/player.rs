@@ -54,13 +54,13 @@ impl AudioPlayer {
         let decoded_buffer = if let Some(decode_context) = self.decode_context.as_mut() {
             decode_context.decode(&audio_frame.buffer)
         } else {
-            Err(core_error!("audio decode context not initialized"))
+            Err(core_error!("audio player decode context not initialized"))
         }?;
 
         let success = if let Some(playback_context) = self.playback_context.as_mut() {
             Ok(playback_context.enqueue_samples(decoded_buffer))
         } else {
-            Err(core_error!("audio playback context not initialized"))
+            Err(core_error!("audio player playback context not initialized"))
         }?;
 
         if !success {
@@ -178,7 +178,6 @@ impl PlaybackContext {
         let err_callback_exit_tx = callback_exit_tx.clone();
 
         let input_callback = move |data: &mut [f32], info: &OutputCallbackInfo| {
-            // tracing::info!("decode capacity: {}", data.len());
             match audio_sample_rx.read_chunk(data.len().min(audio_sample_rx.slots())) {
                 Ok(chunk) => {
                     let (c1, c2) = chunk.as_slices();
@@ -267,32 +266,6 @@ impl PlaybackContext {
 
                     unsafe { chunk.commit(iterated) }
                     buffer = &buffer[iterated..];
-                    // let mut total_copy_length = 0;
-                    // let mut copy_length = slice1.len().min(buffer.len());
-                    // unsafe {
-                    //     std::ptr::copy_nonoverlapping(
-                    //         buffer.as_ptr(),
-                    //         slice1.as_mut_ptr() as *mut f32,
-                    //         copy_length,
-                    //     );
-                    // }
-                    // total_copy_length += copy_length;
-                    // buffer = &buffer[copy_length..];
-
-                    // if !buffer.is_empty() && !slice2.is_empty() {
-                    //     copy_length = slice2.len().min(buffer.len());
-                    //     unsafe {
-                    //         std::ptr::copy_nonoverlapping(
-                    //             buffer.as_ptr(),
-                    //             slice2.as_mut_ptr() as *mut f32,
-                    //             copy_length,
-                    //         );
-                    //     }
-                    //     total_copy_length += copy_length;
-                    //     buffer = &buffer[copy_length..];
-                    // }
-
-                    // unsafe { chunk.commit(total_copy_length) };
                 }
                 Err(err) => {
                     tracing::error!(?err, "audio sample tx required invalid slots capacity");

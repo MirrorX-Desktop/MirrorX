@@ -1,5 +1,5 @@
 use crate::{
-    api::endpoint::message::EndPointAudioFrame, component::audio::decoder::AudioPlayer,
+    api::endpoint::message::EndPointAudioFrame, component::audio::player::AudioPlayer,
     utility::runtime::TOKIO_RUNTIME,
 };
 use cpal::{

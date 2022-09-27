@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use super::{audio_frame::serve_audio_decode, video_frame::serve_video_decode};
 use crate::{
     api::endpoint::{
@@ -8,7 +6,7 @@ use crate::{
         ENDPOINTS, ENDPOINTS_MONITOR, SEND_MESSAGE_TIMEOUT,
     },
     component::{
-        audio::encoder::AudioEncoder,
+        audio::duplicator::AudioDuplicator,
         desktop::{monitor::get_active_monitors, Duplicator},
         frame::AudioEncodeFrame,
         video_encoder::{config::EncoderType, video_encoder::VideoEncoder},
@@ -23,6 +21,7 @@ use cpal::{
 };
 use flutter_rust_bridge::StreamSink;
 use scopeguard::defer;
+use std::time::Duration;
 use tokio::sync::mpsc::Sender;
 
 pub struct NegotiateFinishedRequest {
@@ -335,132 +334,29 @@ fn spawn_audio_capture_and_encode_process(
     passive_device_id: i64,
     message_tx: Sender<Option<EndPointMessage>>,
 ) {
-    let (audio_encode_frame_tx, audio_encode_frame_rx) = crossbeam::channel::bounded(180);
-    let (capture_process_has_exit_tx, capture_process_has_exit_rx) = crossbeam::channel::bounded(1);
-    let (capture_process_should_exit_tx, capture_process_should_exit_rx) =
-        crossbeam::channel::bounded(1);
-    let input_callback_exit_tx = capture_process_should_exit_tx.clone();
-    let err_callback_exit_tx = capture_process_should_exit_tx.clone();
-
     TOKIO_RUNTIME.spawn_blocking(move || {
-        defer! {
-            tracing::info!(?active_device_id, ?passive_device_id, "audio capture process has exit");
-            let _ = capture_process_has_exit_tx.try_send(());
-        }
-
-        let host = cpal::default_host();
-
-        let device = match host.default_output_device() {
-            Some(device) => device,
-            None => {
+        let mut audio_duplicator = match AudioDuplicator::new(message_tx.clone()) {
+            Ok(duplicator) => duplicator,
+            Err(err) => {
                 tracing::error!(
                     ?active_device_id,
                     ?passive_device_id,
-                    "host default audio output device not exist"
+                    ?err,
+                    "audio duplicator initialize failed"
                 );
+                let _ = message_tx.try_send(None);
                 return;
             }
         };
 
-        tracing::info!(?active_device_id, ?passive_device_id, name = ?device.name(), "select default audio output device");
-
-        let output_config = match device.default_output_config() {
-            Ok(config) => config.config(),
-            Err(err) => {
-                tracing::error!(?active_device_id, ?passive_device_id, ?err, "get audio device default input config failed");
-                return;
-            }
-        };
-
-        let mut initial_encoder_params = once_cell::unsync::OnceCell::with_value((
-            output_config.sample_rate.0,
-            output_config.channels as u8,
-        ));
-
-        let input_callback = move |data: &[f32], info: &InputCallbackInfo| {
-            let audio_encode_frame = AudioEncodeFrame {
-                initial_encoder_params: initial_encoder_params.take(),
-                bytes: data.to_vec(),
-            };
-
-            if let Err(err) = audio_encode_frame_tx.try_send(audio_encode_frame) {
-                if err.is_full() {
-                    tracing::warn!(?active_device_id, ?passive_device_id, "audio sample tx is full!");
-                } else {
-                    let _ = input_callback_exit_tx.try_send(());
-                }
-            }
-        };
-
-        let err_callback = move |err| {
-            tracing::error!(?active_device_id, ?passive_device_id, ?err, "error occurred on the output input stream");
-            let _ = err_callback_exit_tx.try_send(());
-        };
-
-        let loopback_stream =
-            match device.build_input_stream(&output_config, input_callback, err_callback) {
-                Ok(stream) => stream,
-                Err(err) => {
-                    tracing::error!(?active_device_id, ?passive_device_id, ?err, "audio device build input stream failed");
-                    return;
-                }
-            };
-
-        if let Err(err) = loopback_stream.play() {
-            tracing::error!(?active_device_id, ?passive_device_id, ?err, "loop back stream play failed");
-            return;
-        }
-
-        defer! {
-            let _ = loopback_stream.pause();
-        }
-
-        let _ = capture_process_should_exit_rx.recv();
-    });
-
-    TOKIO_RUNTIME.spawn_blocking(move || loop {
-        defer! {
-            tracing::info!(?active_device_id, ?passive_device_id, "audio encode process has exit");
+        if let Err(err) = audio_duplicator.capture_samples() {
+            tracing::error!(
+                ?active_device_id,
+                ?passive_device_id,
+                ?err,
+                "audio duplicator capture sample failed"
+            );
             let _ = message_tx.try_send(None);
-            let _ = capture_process_should_exit_tx.try_send(());
-        }
-
-        let mut audio_encoder = match AudioEncoder::new(message_tx.clone()) {
-            Ok(encoder) => encoder,
-            Err(err) => {
-                tracing::error!(?err, "audio encoder initialize failed");
-                return;
-            }
-        };
-
-        loop {
-            match capture_process_has_exit_rx.try_recv() {
-                Ok(_) => return,
-                Err(err) => {
-                    if err.is_disconnected() {
-                        return;
-                    }
-                }
-            }
-
-            match audio_encode_frame_rx.recv_timeout(Duration::from_secs(1)) {
-                Ok(audio_encode_frame) => {
-                    if let Err(err) = audio_encoder.encode(audio_encode_frame) {
-                        tracing::error!(
-                            ?active_device_id,
-                            ?passive_device_id,
-                            ?err,
-                            "audio encoder encode failed"
-                        );
-                        return;
-                    }
-                }
-                Err(err) => {
-                    if err.is_disconnected() {
-                        return;
-                    }
-                }
-            }
         }
     });
 }

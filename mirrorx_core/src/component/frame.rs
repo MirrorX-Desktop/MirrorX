@@ -25,7 +25,7 @@ unsafe impl Send for DesktopDecodeFrame {}
 
 pub struct AudioEncodeFrame {
     pub initial_encoder_params: Option<(u32, u8)>, // sample_rate, channels
-    pub bytes: Vec<f32>,
+    pub buffer: Vec<f32>,
 }
 
 unsafe impl Send for AudioEncodeFrame {}
