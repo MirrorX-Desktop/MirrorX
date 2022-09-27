@@ -7,22 +7,33 @@ use dashmap::DashMap;
 use flutter_rust_bridge::StreamSink;
 use once_cell::sync::Lazy;
 use scopeguard::defer;
+use tokio::sync::mpsc::error::TrySendError;
 use tokio::sync::mpsc::Sender;
 
 static DECODERS: Lazy<DashMap<(i64, i64), Sender<EndPointVideoFrame>>> = Lazy::new(DashMap::new);
 
-pub async fn handle_video_frame(
+pub fn handle_video_frame(
     active_device_id: i64,
     passive_device_id: i64,
     video_frame: EndPointVideoFrame,
 ) {
     if let Some(tx) = DECODERS.get(&(active_device_id, passive_device_id)) {
-        if tx.send(video_frame).await.is_err() {
-            tracing::error!(
-                ?active_device_id,
-                ?passive_device_id,
-                "send video frame failed"
-            );
+        if let Err(err) = tx.try_send(video_frame) {
+            match err {
+                TrySendError::Full(_) => tracing::warn!(
+                    ?active_device_id,
+                    ?passive_device_id,
+                    "video frame decode tx is full!"
+                ),
+                TrySendError::Closed(_) => {
+                    tracing::info!(
+                        ?active_device_id,
+                        ?passive_device_id,
+                        "video frame decode tx has closed"
+                    );
+                    return;
+                }
+            };
         }
     }
 }

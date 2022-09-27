@@ -213,7 +213,7 @@ impl DecodeContext {
 
             (*decode_ctx.codec_ctx).width = width;
             (*decode_ctx.codec_ctx).height = height;
-            (*decode_ctx.codec_ctx).framerate = AVRational { num: 1, den: 1 };
+            (*decode_ctx.codec_ctx).framerate = AVRational { num: 60, den: 1 };
             (*decode_ctx.codec_ctx).pix_fmt = AV_PIX_FMT_NV12;
             (*decode_ctx.codec_ctx).color_range = AVCOL_RANGE_JPEG;
             (*decode_ctx.codec_ctx).color_primaries = AVCOL_PRI_BT709;

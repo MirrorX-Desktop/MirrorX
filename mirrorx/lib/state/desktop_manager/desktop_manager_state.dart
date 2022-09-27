@@ -1,17 +1,39 @@
 part of 'desktop_manager_cubit.dart';
 
+class DesktopId {
+  final int localDeviceId;
+  final int remoteDeviceId;
+
+  const DesktopId(this.localDeviceId, this.remoteDeviceId);
+
+  @override
+  bool operator ==(Object other) {
+    return other is DesktopId &&
+        localDeviceId == other.localDeviceId &&
+        remoteDeviceId == other.remoteDeviceId;
+  }
+
+  @override
+  int get hashCode => 0;
+
+  @override
+  String toString() {
+    return "$localDeviceId@$remoteDeviceId";
+  }
+}
+
 class DesktopManagerState extends Equatable {
   const DesktopManagerState({
     this.desktopPrepareInfoLists = const [],
-    this.desktopInfoLists = const [],
+    this.desktopInfoLists = const <DesktopId, DesktopInfo>{},
   });
 
   final List<DesktopPrepareInfo> desktopPrepareInfoLists;
-  final List<DesktopInfo> desktopInfoLists;
+  final Map<DesktopId, DesktopInfo> desktopInfoLists;
 
   DesktopManagerState copyWith({
     List<DesktopPrepareInfo>? desktopPrepareInfoLists,
-    List<DesktopInfo>? desktopInfoLists,
+    Map<DesktopId, DesktopInfo>? desktopInfoLists,
   }) =>
       DesktopManagerState(
         desktopPrepareInfoLists:
@@ -31,6 +53,7 @@ class DesktopPrepareInfo {
   final Uint8List openingNonceBytes;
   final Uint8List sealingKeyBytes;
   final Uint8List sealingNonceBytes;
+
   // final OperatingSystemType osType;
   // final int monitorWidth;
   // final int monitorHeight;
@@ -50,20 +73,41 @@ class DesktopPrepareInfo {
   );
 }
 
-class DesktopInfo {
+class DesktopInfo extends Equatable {
   final int localDeviceId;
   final int remoteDeviceId;
   final String monitorId;
   final int monitorWidth;
   final int monitorHeight;
   final int textureId;
+  final BoxFit boxFit;
 
-  DesktopInfo(
+  const DesktopInfo(
     this.localDeviceId,
     this.remoteDeviceId,
     this.monitorId,
     this.monitorWidth,
     this.monitorHeight,
     this.textureId,
+    this.boxFit,
   );
+
+  DesktopInfo copyWith({
+    String? monitorId,
+    int? monitorWidth,
+    int? monitorHeight,
+    BoxFit? boxFit,
+  }) =>
+      DesktopInfo(
+        localDeviceId,
+        remoteDeviceId,
+        monitorId ?? this.monitorId,
+        monitorWidth ?? this.monitorWidth,
+        monitorHeight ?? this.monitorHeight,
+        textureId,
+        boxFit ?? this.boxFit,
+      );
+
+  @override
+  List<Object?> get props => [monitorId, monitorWidth, monitorHeight, boxFit];
 }

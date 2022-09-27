@@ -26,27 +26,31 @@ public class TextureRenderPlugin: NSObject, FlutterPlugin {
         
         super.init()
         
-        self.videoBufferChannel.setMessageHandler{message,reply in
-            reply(nil)
+        self.videoBufferChannel.setMessageHandler{ message, reply in
+            guard let message = message else {
+                return
+            }
+            
             guard let buffer = message as? Data else {
                 return
             }
 
             self.handleVideoBuffer(buffer)
+            
+            reply(nil)
         }
     }
     
     public static func register(with registrar: FlutterPluginRegistrar) {
-        let instance = TextureRenderPlugin(textureRegistry: registrar.textures,binaryMessager: registrar.messenger)
+        let instance = TextureRenderPlugin(textureRegistry: registrar.textures, binaryMessager: registrar.messenger)
         let channel = FlutterMethodChannel(name: "texture_render_method_channel", binaryMessenger: registrar.messenger)
         registrar.addMethodCallDelegate(instance, channel: channel)
     }
     
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-        let args = call.arguments as? NSDictionary
-        
         switch call.method {
         case "register_texture":
+            print("texture render plugin: register_texture")
             guard let videoTexture = VideoTexture.init(self.textureRegistry) else {
                 result("create texture failed")
                 return
@@ -58,15 +62,11 @@ public class TextureRenderPlugin: NSObject, FlutterPlugin {
             self.videoTextures[textureId]=videoTexture
             pthread_rwlock_unlock(&self.videoTexturesRWLock)
             
-            var res = Dictionary<String, Int64>.init()
-            res["texture_id"] = textureId
-//            res["video_texture_ptr"] = videoTexturePointer
-//            res["update_frame_callback_ptr"] = updateFrameCallbackPointer
-            
-            result(res)
+            result(textureId)
         case "deregister_texture":
-            guard let textureId = args?["texture_id"] as? Int64 else{
-                result(Void.self)
+            print("texture render plugin: deregister_texture")
+            guard let textureId = call.arguments as? Int64 else{
+                result(false.self)
                 return
             }
             
@@ -74,7 +74,7 @@ public class TextureRenderPlugin: NSObject, FlutterPlugin {
             self.videoTextures.removeValue(forKey: textureId)
             pthread_rwlock_unlock(&self.videoTexturesRWLock)
             
-            result(Void.self)
+            result(true.self)
         default:
             result(FlutterMethodNotImplemented)
         }

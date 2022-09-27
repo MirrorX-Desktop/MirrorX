@@ -6,7 +6,7 @@ use cpal::{
     traits::{DeviceTrait, HostTrait, StreamTrait},
     BufferSize, OutputCallbackInfo, StreamConfig,
 };
-use crossbeam::channel::{bounded, Sender};
+use crossbeam::channel::{bounded, Sender, TrySendError};
 use dashmap::DashMap;
 use once_cell::{sync::Lazy, unsync::OnceCell};
 use rtrb::{Consumer, Producer};
@@ -16,25 +16,27 @@ use std::time::Duration;
 static DECODERS: Lazy<DashMap<(i64, i64), crossbeam::channel::Sender<EndPointAudioFrame>>> =
     Lazy::new(DashMap::new);
 
-pub async fn handle_audio_frame(
+pub fn handle_audio_frame(
     active_device_id: i64,
     passive_device_id: i64,
     audio_frame: EndPointAudioFrame,
 ) {
     if let Some(tx) = DECODERS.get(&(active_device_id, passive_device_id)) {
         if let Err(err) = tx.try_send(audio_frame) {
-            if err.is_full() {
-                tracing::warn!(
+            match err {
+                TrySendError::Full(_) => tracing::warn!(
                     ?active_device_id,
                     ?passive_device_id,
                     "audio frame decode tx is full!"
-                );
-            } else if err.is_disconnected() {
-                tracing::info!(
-                    ?active_device_id,
-                    ?passive_device_id,
-                    "audio frame decode tx is closed"
-                );
+                ),
+                TrySendError::Disconnected(_) => {
+                    tracing::info!(
+                        ?active_device_id,
+                        ?passive_device_id,
+                        "audio frame decode tx has closed"
+                    );
+                    return;
+                }
             }
         }
     }

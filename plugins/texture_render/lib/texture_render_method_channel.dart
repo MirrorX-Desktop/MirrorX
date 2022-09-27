@@ -1,9 +1,6 @@
-import 'dart:typed_data';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
-import 'model.dart';
 import 'texture_render_platform_interface.dart';
 
 /// An implementation of [TextureRenderPlatform] that uses method channels.
@@ -17,18 +14,13 @@ class MethodChannelTextureRender extends TextureRenderPlatform {
       const BasicMessageChannel('texture_render_binary_channel', BinaryCodec());
 
   @override
-  Future<RegisterTextureResponse> registerTexture() async {
-    Map? result = await methodChannel.invokeMethod<Map>('register_texture');
-    if (result == null) {
-      return Future.error("registerTexture: method call returns null");
-    }
-    return RegisterTextureResponse.fromMap(result);
+  Future<int?> registerTexture() async {
+    return await methodChannel.invokeMethod<int>('register_texture');
   }
 
   @override
   Future<void> deregisterTexture(int textureId) async {
-    await methodChannel.invokeMethod(
-        'deregister_texture', DeregisterTextureRequest(textureId).toMap());
+    await methodChannel.invokeMethod('deregister_texture', textureId);
   }
 
   @override

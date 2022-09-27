@@ -1,4 +1,5 @@
 import 'dart:developer';
+
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -9,16 +10,12 @@ import 'package:mirrorx/pages/desktop/widgets/desktop_render_box/desktop_render_
 import 'package:mirrorx/state/desktop_manager/desktop_manager_cubit.dart';
 
 class DesktopRenderBox extends StatefulWidget {
-  const DesktopRenderBox({
+  const DesktopRenderBox(
+    this.desktopId, {
     Key? key,
-    required this.localDeviceId,
-    required this.remoteDeviceId,
-    required this.fit,
   }) : super(key: key);
 
-  final int localDeviceId;
-  final int remoteDeviceId;
-  final BoxFit fit;
+  final DesktopId desktopId;
 
   @override
   _DesktopRenderBoxState createState() => _DesktopRenderBoxState();
@@ -45,19 +42,12 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
   Widget build(BuildContext context) {
     return BlocBuilder<DesktopManagerCubit, DesktopManagerState>(
       builder: (context, state) {
-        final desktopInfoIndex = state.desktopInfoLists.indexWhere((element) =>
-            element.localDeviceId == widget.localDeviceId &&
-            element.remoteDeviceId == widget.remoteDeviceId);
-
-        if (desktopInfoIndex == -1) {
-          return const Center(
-            child: Text("Internal Render Error"),
-          );
+        final desktopInfo = state.desktopInfoLists[widget.desktopId];
+        if (desktopInfo == null) {
+          return const Center(child: Text("DesktopInfo not exists"));
         }
 
-        final desktopInfo = state.desktopInfoLists[desktopInfoIndex];
-
-        return widget.fit == BoxFit.none
+        return desktopInfo.boxFit == BoxFit.none
             ? _buildWithFitBox(desktopInfo)
             : _buildWithoutFitBox(desktopInfo);
       },
@@ -110,7 +100,7 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
 
   Widget _buildWithoutFitBox(DesktopInfo desktopInfo) {
     return FittedBox(
-      fit: widget.fit,
+      fit: desktopInfo.boxFit,
       child: Listener(
         behavior: HitTestBehavior.opaque,
         onPointerDown: _handlePointerDown,
@@ -156,16 +146,12 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
     }
 
     context.read<DesktopManagerCubit>().deviceInput(
-          widget.localDeviceId,
-          widget.remoteDeviceId,
-          InputEvent.mouse(
-            MouseEvent.down(
-              mouseKey,
-              event.localPosition.dx,
-              event.localPosition.dy,
-            ),
-          ),
-        );
+        widget.desktopId,
+        InputEvent.mouse(MouseEvent.down(
+          mouseKey,
+          event.localPosition.dx,
+          event.localPosition.dy,
+        )));
 
     _downButtons[event.pointer] = event.buttons;
   }
@@ -192,16 +178,12 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
     }
 
     context.read<DesktopManagerCubit>().deviceInput(
-          widget.localDeviceId,
-          widget.remoteDeviceId,
-          InputEvent.mouse(
-            MouseEvent.up(
-              mouseKey,
-              event.localPosition.dx,
-              event.localPosition.dy,
-            ),
-          ),
-        );
+        widget.desktopId,
+        InputEvent.mouse(MouseEvent.up(
+          mouseKey,
+          event.localPosition.dx,
+          event.localPosition.dy,
+        )));
   }
 
   void _handlePointerMove(PointerMoveEvent event) {
@@ -224,43 +206,30 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
     }
 
     context.read<DesktopManagerCubit>().deviceInput(
-          widget.localDeviceId,
-          widget.remoteDeviceId,
-          InputEvent.mouse(
-            MouseEvent.move(
-              mouseKey,
-              event.localPosition.dx,
-              event.localPosition.dy,
-            ),
-          ),
-        );
+        widget.desktopId,
+        InputEvent.mouse(MouseEvent.move(
+          mouseKey,
+          event.localPosition.dx,
+          event.localPosition.dy,
+        )));
   }
 
   void _handlePointerHover(PointerHoverEvent event) {
     // log("pointer hover ${event.buttons} ${event.localPosition}");
 
     context.read<DesktopManagerCubit>().deviceInput(
-          widget.localDeviceId,
-          widget.remoteDeviceId,
-          InputEvent.mouse(
-            MouseEvent.move(
-              MouseKey.None,
-              event.localPosition.dx,
-              event.localPosition.dy,
-            ),
-          ),
-        );
+        widget.desktopId,
+        InputEvent.mouse(MouseEvent.move(
+          MouseKey.None,
+          event.localPosition.dx,
+          event.localPosition.dy,
+        )));
   }
 
   void _handlePointerSignal(PointerSignalEvent event) {
     if (event is PointerScrollEvent) {
-      context.read<DesktopManagerCubit>().deviceInput(
-            widget.localDeviceId,
-            widget.remoteDeviceId,
-            InputEvent.mouse(
-              MouseEvent.scrollWheel(event.scrollDelta.dy),
-            ),
-          );
+      context.read<DesktopManagerCubit>().deviceInput(widget.desktopId,
+          InputEvent.mouse(MouseEvent.scrollWheel(event.scrollDelta.dy)));
     }
   }
 
@@ -288,8 +257,9 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
 
     log("press $keyboardEvent");
 
-    context.read<DesktopManagerCubit>().deviceInput(widget.localDeviceId,
-        widget.remoteDeviceId, InputEvent.keyboard(keyboardEvent));
+    context
+        .read<DesktopManagerCubit>()
+        .deviceInput(widget.desktopId, InputEvent.keyboard(keyboardEvent));
 
     return true;
   }

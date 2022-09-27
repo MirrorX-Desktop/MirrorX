@@ -3,9 +3,9 @@ import 'dart:typed_data';
 
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
+import 'package:flutter/material.dart';
 import 'package:mirrorx/env/sdk/mirrorx_core.dart';
 import 'package:mirrorx/env/sdk/mirrorx_core_sdk.dart';
-import 'package:texture_render/model.dart';
 import 'package:texture_render/texture_render.dart';
 
 part 'desktop_manager_state.dart';
@@ -38,7 +38,7 @@ class DesktopManagerCubit extends Cubit<DesktopManagerState> {
   }
 
   Future connectAndNegotiate(DesktopPrepareInfo prepareInfo) async {
-    RegisterTextureResponse? registerTextureResponse;
+    int? textureId;
 
     try {
       await MirrorXCoreSDK.instance.endpointConnect(
@@ -69,17 +69,17 @@ class DesktopManagerCubit extends Cubit<DesktopManagerState> {
         ),
       );
 
-      registerTextureResponse = await TextureRender.instance.registerTexture();
+      textureId = await TextureRender.instance.registerTexture();
+      if (textureId == null) {
+        return Future.error("register textureId failed");
+      }
 
       final mediaStream = MirrorXCoreSDK.instance.endpointNegotiateFinished(
         req: NegotiateFinishedRequest(
           activeDeviceId: prepareInfo.localDeviceId,
           passiveDeviceId: prepareInfo.remoteDeviceId,
           expectFrameRate: 60,
-          textureId: registerTextureResponse.textureId,
-          // videoTexturePointer: registerTextureResponse.videoTexturePointer,
-          // updateFrameCallbackPointer:
-          //     registerTextureResponse.updateFrameCallbackPointer,
+          textureId: textureId,
         ),
       );
 
@@ -89,28 +89,32 @@ class DesktopManagerCubit extends Cubit<DesktopManagerState> {
         onDone: () => onMediaStreamDone(prepareInfo.remoteDeviceId),
       );
 
-      emit(
-        state.copyWith(
-          desktopInfoLists: List.from(state.desktopInfoLists)
-            ..add(
-              DesktopInfo(
-                prepareInfo.localDeviceId,
-                prepareInfo.remoteDeviceId,
-                negotiateVisitDesktopParamsResponse.monitorId,
-                negotiateVisitDesktopParamsResponse.monitorWidth,
-                negotiateVisitDesktopParamsResponse.monitorHeight,
-                registerTextureResponse.textureId,
-              ),
-            ),
-        ),
+      final desktopId =
+          DesktopId(prepareInfo.localDeviceId, prepareInfo.remoteDeviceId);
+
+      final desktopInfo = DesktopInfo(
+        prepareInfo.localDeviceId,
+        prepareInfo.remoteDeviceId,
+        negotiateVisitDesktopParamsResponse.monitorId,
+        negotiateVisitDesktopParamsResponse.monitorWidth,
+        negotiateVisitDesktopParamsResponse.monitorHeight,
+        textureId,
+        BoxFit.scaleDown,
       );
+
+      final newDesktopInfos =
+          Map<DesktopId, DesktopInfo>.from(state.desktopInfoLists)
+            ..[desktopId] = desktopInfo;
+
+      emit(state.copyWith(desktopInfoLists: newDesktopInfos));
+
+      log("${state.desktopInfoLists}");
     } catch (err) {
-      log("negotiate $err");
-      if (registerTextureResponse != null) {
-        await TextureRender.instance.deregisterTexture(
-          registerTextureResponse.textureId,
-        );
+      if (textureId != null) {
+        await TextureRender.instance.deregisterTexture(textureId);
       }
+
+      return Future.error(err);
     }
   }
 
@@ -131,18 +135,32 @@ class DesktopManagerCubit extends Cubit<DesktopManagerState> {
     return prepareInfo;
   }
 
-  void deviceInput(
-    int localDeviceId,
-    int remoteDeviceId,
-    InputEvent event,
-  ) async {
+  void deviceInput(DesktopId desktopId, InputEvent event) async {
     await MirrorXCoreSDK.instance.endpointInput(
       req: InputRequest(
-        activeDeviceId: localDeviceId,
-        passiveDeviceId: remoteDeviceId,
+        activeDeviceId: desktopId.localDeviceId,
+        passiveDeviceId: desktopId.remoteDeviceId,
         event: event,
       ),
     );
+  }
+
+  void switchBoxFit(DesktopId desktopId) {
+    final oldDesktopInfo = state.desktopInfoLists[desktopId];
+
+    if (oldDesktopInfo != null) {
+      log("old: ${oldDesktopInfo.boxFit}");
+      final newDesktopInfo = oldDesktopInfo.copyWith(
+          boxFit: oldDesktopInfo.boxFit == BoxFit.none
+              ? BoxFit.scaleDown
+              : BoxFit.none);
+
+      final newDesktopInfos =
+          Map<DesktopId, DesktopInfo>.from(state.desktopInfoLists)
+            ..[desktopId] = newDesktopInfo;
+
+      emit(state.copyWith(desktopInfoLists: newDesktopInfos));
+    }
   }
 
   void onMediaStreamData(int remoteDeviceId, FlutterMediaMessage message) {

@@ -16,7 +16,11 @@ class VideoTexture: NSObject, FlutterTexture {
     init?(_ registry: FlutterTextureRegistry) {
         self.registry = registry
         super.init()
-        self.textureId = self.registry.register(self)
+        let textureId = self.registry.register(self)
+        if textureId == 0 {
+            return nil
+        }
+        self.textureId = textureId
     }
     
     deinit {
@@ -68,7 +72,7 @@ class VideoTexture: NSObject, FlutterTexture {
         })
         
         CVPixelBufferUnlockBaseAddress(pixelBuffer, CVPixelBufferLockFlags.init(rawValue: 0))
-       
+        
         self.nextPixelBuffer = pixelBuffer
         self.registry.textureFrameAvailable(self.textureId)
     }
@@ -80,7 +84,7 @@ class VideoTexture: NSObject, FlutterTexture {
         }
         
         self.renderPixelBuffer = self.nextPixelBuffer
-       
+        
         guard let pixelBuffer = self.renderPixelBuffer else {
             print("copy nil pixelbuffer")
             return nil

@@ -1,6 +1,5 @@
 import 'package:flutter/foundation.dart';
 
-import 'model.dart';
 import 'texture_render_platform_interface.dart';
 
 class TextureRender {
@@ -8,12 +7,12 @@ class TextureRender {
 
   static TextureRender get instance => _instance;
 
-  Future<RegisterTextureResponse> registerTexture() {
+  Future<int?> registerTexture() {
     return TextureRenderPlatform.instance.registerTexture();
   }
 
-  Future<void> deregisterTexture(int textureID) {
-    return TextureRenderPlatform.instance.deregisterTexture(textureID);
+  Future<void> deregisterTexture(int textureId) {
+    return TextureRenderPlatform.instance.deregisterTexture(textureId);
   }
 
   void sendVideoFrameBuffer(Uint8List videoFrameBuffer) {

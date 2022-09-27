@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
-import 'model.dart';
 import 'texture_render_method_channel.dart';
 
 abstract class TextureRenderPlatform extends PlatformInterface {
@@ -25,7 +24,7 @@ abstract class TextureRenderPlatform extends PlatformInterface {
     _instance = instance;
   }
 
-  Future<RegisterTextureResponse> registerTexture() {
+  Future<int?> registerTexture() {
     throw UnimplementedError(
         'registerVideoTexture() has not been implemented.');
   }
