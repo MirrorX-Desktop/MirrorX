@@ -3,13 +3,6 @@ import FlutterMacOS
 import NIOCore
 import NIOFoundationCompat
 
-//let update_frame_callback:
-//@convention(c) (UnsafeRawPointer, UnsafeRawPointer) -> Void = {
-//    (videoTexturePointer, pixelBufferPointer) in
-//    let videoTexture = Unmanaged<VideoTexture>.fromOpaque(videoTexturePointer).takeUnretainedValue()
-//    videoTexture.updateFrame(pixelBufferPointer: pixelBufferPointer)
-//}
-
 public class TextureRenderPlugin: NSObject, FlutterPlugin {
     var textureRegistry: FlutterTextureRegistry
     var videoTextures:[Int64:VideoTexture]
@@ -44,6 +37,7 @@ public class TextureRenderPlugin: NSObject, FlutterPlugin {
     public static func register(with registrar: FlutterPluginRegistrar) {
         let instance = TextureRenderPlugin(textureRegistry: registrar.textures, binaryMessager: registrar.messenger)
         let channel = FlutterMethodChannel(name: "texture_render_method_channel", binaryMessenger: registrar.messenger)
+        
         registrar.addMethodCallDelegate(instance, channel: channel)
     }
     

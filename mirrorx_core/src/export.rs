@@ -1,39 +1,29 @@
-use crate::{
-    api::{
-        config::DomainConfig,
-        endpoint::{
-            flutter_message::FlutterMediaMessage,
-            handlers::{
-                connect::*, handshake::*, input::*, negotiate_finished::*,
-                negotiate_select_monitor::*, negotiate_visit_desktop_params::*,
-            },
-        },
-        signaling::{
-            dial::{dial, DialRequest},
-            disconnect::disconnect,
-            heartbeat::{heartbeat, HeartbeatRequest, HeartbeatResponse},
-            key_exchange::{key_exchange, KeyExchangeRequest, KeyExchangeResponse},
-            register::{register, RegisterRequest, RegisterResponse},
-            subscribe::{subscribe, PublishMessage, SubscribeRequest},
-            visit::{visit, VisitRequest, VisitResponse},
-            visit_reply::{visit_reply, VisitReplyRequest},
+use crate::api::{
+    config::DomainConfig,
+    endpoint::{
+        flutter_message::FlutterMediaMessage,
+        handlers::{
+            connect::*, handshake::*, input::*, negotiate_finished::*, negotiate_select_monitor::*,
+            negotiate_visit_desktop_params::*,
         },
     },
-    utility::runtime::TOKIO_RUNTIME,
+    signaling::{
+        dial::{dial, DialRequest},
+        disconnect::disconnect,
+        heartbeat::{heartbeat, HeartbeatRequest, HeartbeatResponse},
+        key_exchange::{key_exchange, KeyExchangeRequest, KeyExchangeResponse},
+        register::{register, RegisterRequest, RegisterResponse},
+        subscribe::{subscribe, PublishMessage, SubscribeRequest},
+        visit::{visit, VisitRequest, VisitResponse},
+        visit_reply::{visit_reply, VisitReplyRequest},
+    },
 };
+use crate::utility::runtime::TOKIO_RUNTIME;
 use flutter_rust_bridge::StreamSink;
 
 macro_rules! async_block_on {
     ($future:expr) => {{
-        let (tx, rx) = crossbeam::channel::bounded(1);
-
-        TOKIO_RUNTIME.spawn(async move { tx.try_send($future.await) });
-
-        let message = rx
-            .recv()
-            .map_err(|err| anyhow::anyhow!("receive call result failed ({})", err))??;
-
-        Ok(message)
+        TOKIO_RUNTIME.block_on(async move { $future.await.map_err(|err| anyhow::anyhow!(err)) })
     }};
 }
 
