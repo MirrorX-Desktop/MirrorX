@@ -100,6 +100,7 @@ class DesktopManagerCubit extends Cubit<DesktopManagerState> {
         negotiateVisitDesktopParamsResponse.monitorHeight,
         textureId,
         BoxFit.scaleDown,
+        FilterQuality.low,
       );
 
       final newDesktopInfos =
@@ -145,15 +146,31 @@ class DesktopManagerCubit extends Cubit<DesktopManagerState> {
     );
   }
 
-  void switchBoxFit(DesktopId desktopId) {
+  void updateBoxFit(DesktopId desktopId) {
     final oldDesktopInfo = state.desktopInfoLists[desktopId];
 
     if (oldDesktopInfo != null) {
-      log("old: ${oldDesktopInfo.boxFit}");
       final newDesktopInfo = oldDesktopInfo.copyWith(
           boxFit: oldDesktopInfo.boxFit == BoxFit.none
               ? BoxFit.scaleDown
               : BoxFit.none);
+
+      final newDesktopInfos =
+          Map<DesktopId, DesktopInfo>.from(state.desktopInfoLists)
+            ..[desktopId] = newDesktopInfo;
+
+      emit(state.copyWith(desktopInfoLists: newDesktopInfos));
+    }
+  }
+
+  void updateFilterQuality(
+      DesktopId desktopId, FilterQuality newFilterQuality) {
+    final oldDesktopInfo = state.desktopInfoLists[desktopId];
+
+    if (oldDesktopInfo != null &&
+        oldDesktopInfo.filterQuality != newFilterQuality) {
+      final newDesktopInfo =
+          oldDesktopInfo.copyWith(filterQuality: newFilterQuality);
 
       final newDesktopInfos =
           Map<DesktopId, DesktopInfo>.from(state.desktopInfoLists)

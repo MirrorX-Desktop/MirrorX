@@ -10,44 +10,105 @@ class DesktopToolbar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<DesktopManagerCubit, DesktopManagerState>(
-      builder: (context, state) {
-        final desktopInfo = state.desktopInfoLists[desktopId];
-        return Row(
-          children: [
-            Text(desktopId.remoteDeviceId.toString()),
-            const VerticalDivider(),
-            Tooltip(
-              message: desktopInfo?.boxFit == BoxFit.none
-                  ? AppLocalizations.of(context)!
-                      .desktopPageToolbarButtonTooltipScale
-                  : AppLocalizations.of(context)!
-                      .desktopPageToolbarButtonTooltipNoneScale,
-              child: Container(
-                width: 36,
-                height: 36,
-                padding: const EdgeInsets.all(3.0),
-                child: TextButton(
-                  onPressed: () {
-                    context.read<DesktopManagerCubit>().switchBoxFit(desktopId);
-                  },
-                  style: ButtonStyle(
-                    shape: MaterialStateProperty.all(
-                      RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(4.0)),
+    return SizedBox(
+      height: 40,
+      child: BlocBuilder<DesktopManagerCubit, DesktopManagerState>(
+        builder: (context, state) {
+          final desktopInfo = state.desktopInfoLists[desktopId];
+          return Row(
+            children: [
+              Text(desktopId.remoteDeviceId.toString()),
+              const VerticalDivider(
+                thickness: 1.5,
+                indent: 8,
+                endIndent: 8,
+              ),
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(vertical: 6.0, horizontal: 8.0),
+                child: Tooltip(
+                  message: desktopInfo?.boxFit == BoxFit.none
+                      ? AppLocalizations.of(context)!
+                          .desktopPageToolbarButtonTooltipScale
+                      : AppLocalizations.of(context)!
+                          .desktopPageToolbarButtonTooltipNoneScale,
+                  child: TextButton(
+                    onPressed: () {
+                      context
+                          .read<DesktopManagerCubit>()
+                          .updateBoxFit(desktopId);
+                    },
+                    style: ButtonStyle(
+                      shape: MaterialStateProperty.all(
+                        RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(4.0)),
+                      ),
+                      padding: MaterialStateProperty.all(EdgeInsets.zero),
+                      foregroundColor: MaterialStateProperty.all(Colors.black),
                     ),
-                    padding: MaterialStateProperty.all(EdgeInsets.zero),
-                    foregroundColor: MaterialStateProperty.all(Colors.black),
+                    child: desktopInfo?.boxFit == BoxFit.none
+                        ? const Icon(Icons.fit_screen)
+                        : const Icon(Icons.aspect_ratio),
                   ),
-                  child: desktopInfo?.boxFit == BoxFit.none
-                      ? const Icon(Icons.aspect_ratio)
-                      : const Icon(Icons.fit_screen),
                 ),
               ),
-            ),
-          ],
-        );
-      },
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(vertical: 6.0, horizontal: 8.0),
+                child: Tooltip(
+                  message: "Scale Quality",
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<FilterQuality>(
+                      elevation: 1,
+                      // alignment: AlignmentDirectional.center,
+                      // dropdownColor: Colors.white,
+                      borderRadius: const BorderRadius.all(Radius.circular(5)),
+                      value: desktopInfo?.filterQuality,
+                      items: const [
+                        DropdownMenuItem(
+                          value: FilterQuality.none,
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 6),
+                            child: Text("较差"),
+                          ),
+                        ),
+                        DropdownMenuItem(
+                          value: FilterQuality.low,
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 6),
+                            child: Text("一般"),
+                          ),
+                        ),
+                        DropdownMenuItem(
+                          value: FilterQuality.medium,
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 6),
+                            child: Text("较好"),
+                          ),
+                        ),
+                        DropdownMenuItem(
+                          value: FilterQuality.high,
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 6),
+                            child: Text("极质"),
+                          ),
+                        )
+                      ],
+                      onChanged: (FilterQuality? value) {
+                        if (value != null) {
+                          context
+                              .read<DesktopManagerCubit>()
+                              .updateFilterQuality(desktopId, value);
+                        }
+                      },
+                    ),
+                  ),
+                ),
+              )
+            ],
+          );
+        },
+      ),
     );
   }
 }

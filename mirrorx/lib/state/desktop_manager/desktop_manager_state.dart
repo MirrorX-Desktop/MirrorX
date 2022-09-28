@@ -81,6 +81,7 @@ class DesktopInfo extends Equatable {
   final int monitorHeight;
   final int textureId;
   final BoxFit boxFit;
+  final FilterQuality filterQuality;
 
   const DesktopInfo(
     this.localDeviceId,
@@ -90,6 +91,7 @@ class DesktopInfo extends Equatable {
     this.monitorHeight,
     this.textureId,
     this.boxFit,
+    this.filterQuality,
   );
 
   DesktopInfo copyWith({
@@ -97,6 +99,7 @@ class DesktopInfo extends Equatable {
     int? monitorWidth,
     int? monitorHeight,
     BoxFit? boxFit,
+    FilterQuality? filterQuality,
   }) =>
       DesktopInfo(
         localDeviceId,
@@ -106,8 +109,10 @@ class DesktopInfo extends Equatable {
         monitorHeight ?? this.monitorHeight,
         textureId,
         boxFit ?? this.boxFit,
+        filterQuality ?? this.filterQuality,
       );
 
   @override
-  List<Object?> get props => [monitorId, monitorWidth, monitorHeight, boxFit];
+  List<Object?> get props =>
+      [monitorId, monitorWidth, monitorHeight, boxFit, filterQuality];
 }

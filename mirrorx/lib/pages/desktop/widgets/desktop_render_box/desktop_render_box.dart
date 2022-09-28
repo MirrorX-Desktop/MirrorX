@@ -119,7 +119,7 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
                 child: Texture(
                   textureId: desktopInfo.textureId,
                   freeze: true,
-                  filterQuality: FilterQuality.medium,
+                  filterQuality: desktopInfo.filterQuality,
                 ),
               ),
             ),
