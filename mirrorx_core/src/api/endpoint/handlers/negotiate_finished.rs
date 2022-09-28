@@ -253,9 +253,7 @@ fn spawn_desktop_capture_and_encode_process(
             }
         };
 
-        ENDPOINTS_MONITOR
-            .blocking()
-            .insert((active_device_id, passive_device_id), select_monitor);
+        ENDPOINTS_MONITOR.insert((active_device_id, passive_device_id), select_monitor);
 
         loop {
             match duplicator.capture() {
