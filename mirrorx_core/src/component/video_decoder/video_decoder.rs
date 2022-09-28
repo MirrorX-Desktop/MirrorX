@@ -9,10 +9,12 @@ use flutter_rust_bridge::{StreamSink, ZeroCopyBuffer};
 use std::ffi::{CStr, CString};
 
 pub struct VideoDecoder {
-    decode_context: *mut DecodeContext,
+    decode_context: Option<DecodeContext>,
     texture_id: i64,
     stream: StreamSink<FlutterMediaMessage>,
 }
+
+unsafe impl Send for VideoDecoder {}
 
 impl VideoDecoder {
     pub fn new(texture_id: i64, stream: StreamSink<FlutterMediaMessage>) -> VideoDecoder {
@@ -21,42 +23,43 @@ impl VideoDecoder {
             // av_log_set_flags(AV_LOG_SKIP_REPEATED);
 
             VideoDecoder {
-                decode_context: std::ptr::null_mut(),
+                decode_context: None,
                 texture_id,
                 stream,
             }
         }
     }
 
-    pub fn decode(
+    pub async fn decode(
         &mut self,
         mut video_frame: crate::api::endpoint::message::EndPointVideoFrame,
     ) -> CoreResult<()> {
         unsafe {
-            if self.decode_context.is_null()
-                || (*(*self.decode_context).codec_ctx).width != video_frame.width
-                || (*(*self.decode_context).codec_ctx).height != video_frame.height
-            {
-                if !self.decode_context.is_null() {
-                    let _ = Box::from_raw(self.decode_context);
+            if let Some(decode_context) = self.decode_context.as_ref() {
+                if (*decode_context.codec_ctx).width != video_frame.width
+                    || (*decode_context.codec_ctx).height != video_frame.height
+                {
+                    self.decode_context = None;
                 }
-
-                self.decode_context = Box::into_raw(Box::new(DecodeContext::new(
-                    video_frame.width,
-                    video_frame.height,
-                )?));
             }
 
-            if self.decode_context.is_null() {
+            if self.decode_context.is_none() {
+                self.decode_context =
+                    Some(DecodeContext::new(video_frame.width, video_frame.height)?);
+            }
+
+            let decode_context = if let Some(decode_context) = self.decode_context.as_ref() {
+                decode_context
+            } else {
                 return Err(core_error!("decode context is null"));
-            }
+            };
 
-            if !(*self.decode_context).parser_ctx.is_null() {
+            if !decode_context.parser_ctx.is_null() {
                 let ret = av_parser_parse2(
-                    (*self.decode_context).parser_ctx,
-                    (*self.decode_context).codec_ctx,
-                    &mut (*(*self.decode_context).packet).data,
-                    &mut (*(*self.decode_context).packet).size,
+                    (decode_context).parser_ctx,
+                    (decode_context).codec_ctx,
+                    &mut (*(decode_context).packet).data,
+                    &mut (*(decode_context).packet).size,
                     video_frame.buffer.as_ptr(),
                     video_frame.buffer.len() as i32,
                     AV_NOPTS_VALUE,
@@ -68,18 +71,15 @@ impl VideoDecoder {
                     return Err(core_error!("av_parser_parse2 returns error code: {}", ret));
                 }
             } else {
-                (*(*self.decode_context).packet).data = video_frame.buffer.as_mut_ptr();
-                (*(*self.decode_context).packet).size = video_frame.buffer.len() as i32;
+                (*(decode_context).packet).data = video_frame.buffer.as_mut_ptr();
+                (*(decode_context).packet).size = video_frame.buffer.len() as i32;
                 // (*(*self.decode_context).packet).pts = AV_NOPTS_VALUE;
                 // (*(*self.decode_context).packet).dts = AV_NOPTS_VALUE;
             }
 
             // av_packet_rescale_ts(self.packet, AV_TIME_BASE_Q, (*self.codec_ctx).pkt_timebase);
 
-            let mut ret = avcodec_send_packet(
-                (*self.decode_context).codec_ctx,
-                (*self.decode_context).packet,
-            );
+            let mut ret = avcodec_send_packet((decode_context).codec_ctx, (decode_context).packet);
 
             if ret == AVERROR(libc::EAGAIN) {
                 return Err(core_error!("avcodec_send_packet returns EAGAIN"));
@@ -94,8 +94,8 @@ impl VideoDecoder {
 
             loop {
                 ret = avcodec_receive_frame(
-                    (*self.decode_context).codec_ctx,
-                    (*self.decode_context).decode_frame,
+                    (decode_context).codec_ctx,
+                    (decode_context).decode_frame,
                 );
                 if ret == AVERROR(libc::EAGAIN) || ret == AVERROR_EOF {
                     return Ok(());
@@ -106,12 +106,12 @@ impl VideoDecoder {
                     ));
                 }
 
-                let tmp_frame = if !(*self.decode_context).parser_ctx.is_null() {
-                    (*self.decode_context).decode_frame
+                let tmp_frame = if !(decode_context).parser_ctx.is_null() {
+                    (decode_context).decode_frame
                 } else {
                     let ret = av_hwframe_transfer_data(
-                        (*self.decode_context).hw_decode_frame,
-                        (*self.decode_context).decode_frame,
+                        (decode_context).hw_decode_frame,
+                        (decode_context).decode_frame,
                         0,
                     );
                     if ret < 0 {
@@ -121,7 +121,7 @@ impl VideoDecoder {
                         ));
                     }
 
-                    (*self.decode_context).hw_decode_frame
+                    (decode_context).hw_decode_frame
                 };
 
                 // 8: id
@@ -180,11 +180,11 @@ impl VideoDecoder {
 
 impl Drop for VideoDecoder {
     fn drop(&mut self) {
-        if !self.decode_context.is_null() {
-            unsafe {
-                let _ = Box::from_raw(self.decode_context);
-            }
-        }
+        // if !self.decode_context.is_null() {
+        //     unsafe {
+        //         let _ = Box::from_raw(self.decode_context);
+        //     }
+        // }
     }
 }
 

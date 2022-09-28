@@ -31,7 +31,6 @@ pub fn handle_video_frame(
                         ?passive_device_id,
                         "video frame decode tx has closed"
                     );
-                    return;
                 }
             };
         }
@@ -48,7 +47,7 @@ pub fn serve_video_decode(
         let (tx, mut rx) = tokio::sync::mpsc::channel(180);
         DECODERS.insert((active_device_id, passive_device_id), tx);
 
-        TOKIO_RUNTIME.spawn_blocking(move || {
+        TOKIO_RUNTIME.spawn(async move {
             defer! {
                 tracing::info!(?active_device_id, ?passive_device_id, "decode video frame process exit");
                 DECODERS.remove(&(active_device_id, passive_device_id));
@@ -56,8 +55,8 @@ pub fn serve_video_decode(
 
             let mut decoder = VideoDecoder::new(texture_id, stream);
 
-            while let Some(video_frame) = rx.blocking_recv() {
-                if let Err(err) = decoder.decode(video_frame) {
+            while let Some(video_frame) = rx.recv().await {
+                if let Err(err) = decoder.decode(video_frame).await {
                     tracing::error!(
                         ?active_device_id,
                         ?passive_device_id,
