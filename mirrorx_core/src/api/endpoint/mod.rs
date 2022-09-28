@@ -30,7 +30,6 @@ use futures::{
     stream::{SplitSink, SplitStream},
     SinkExt, StreamExt,
 };
-use moka::future::Cache;
 use once_cell::sync::Lazy;
 use ring::aead::{OpeningKey, SealingKey};
 use std::time::Duration;
@@ -43,11 +42,11 @@ const RECV_MESSAGE_TIMEOUT: Duration = Duration::from_secs(30);
 pub static RESERVE_STREAMS: Lazy<DashMap<(i64, i64), Framed<TcpStream, LengthDelimitedCodec>>> =
     Lazy::new(DashMap::new);
 
-pub static ENDPOINTS: Lazy<Cache<(i64, i64), tokio::sync::mpsc::Sender<Option<EndPointMessage>>>> =
-    Lazy::new(|| Cache::builder().initial_capacity(1).build());
+pub static ENDPOINTS: Lazy<
+    DashMap<(i64, i64), tokio::sync::mpsc::Sender<Option<EndPointMessage>>>,
+> = Lazy::new(DashMap::new);
 
-pub static ENDPOINTS_MONITOR: Lazy<Cache<(i64, i64), Monitor>> =
-    Lazy::new(|| Cache::builder().initial_capacity(1).build());
+pub static ENDPOINTS_MONITOR: Lazy<DashMap<(i64, i64), Monitor>> = Lazy::new(DashMap::new);
 
 pub fn serve_reader(
     local_device_id: i64,
@@ -118,13 +117,8 @@ pub fn serve_reader(
 
         let _ = exit_tx.broadcast(()).await;
 
-        ENDPOINTS
-            .invalidate(&(local_device_id, remote_device_id))
-            .await;
-
-        ENDPOINTS_MONITOR
-            .invalidate(&(local_device_id, remote_device_id))
-            .await;
+        ENDPOINTS.remove(&(local_device_id, remote_device_id));
+        ENDPOINTS_MONITOR.remove(&(local_device_id, remote_device_id));
 
         tracing::info!(?local_device_id, ?remote_device_id, "read process exit");
     });
@@ -204,13 +198,8 @@ pub fn serve_writer(
 
         let _ = exit_tx.broadcast(()).await;
 
-        ENDPOINTS
-            .invalidate(&(local_device_id, remote_device_id))
-            .await;
-
-        ENDPOINTS_MONITOR
-            .invalidate(&(local_device_id, remote_device_id))
-            .await;
+        ENDPOINTS.remove(&(local_device_id, remote_device_id));
+        ENDPOINTS_MONITOR.remove(&(local_device_id, remote_device_id));
 
         tracing::info!(?local_device_id, ?remote_device_id, "write process exit");
     });

@@ -125,9 +125,7 @@ async fn inner_handshake(
         send_message_rx,
     );
 
-    ENDPOINTS
-        .insert((local_device_id, remote_device_id), send_message_tx)
-        .await;
+    ENDPOINTS.insert((local_device_id, remote_device_id), send_message_tx);
 
     Ok(())
 }
