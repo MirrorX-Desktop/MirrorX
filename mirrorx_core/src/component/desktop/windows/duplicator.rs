@@ -65,6 +65,8 @@ pub struct Duplicator {
     mouse_visible: bool,
     mouse_shape_buffer: Vec<u8>,
     mouse_shape_info: DXGI_OUTDUPL_POINTER_SHAPE_INFO,
+
+    epoch: once_cell::unsync::OnceCell<std::time::Instant>,
 }
 
 unsafe impl Send for Duplicator {}
@@ -140,6 +142,7 @@ impl Duplicator {
                     mouse_visible: false,
                     mouse_shape_buffer: Vec::new(),
                     mouse_shape_info: std::mem::zeroed(),
+                    epoch: once_cell::unsync::OnceCell::new(),
                 },
                 monitor_id,
             ))
@@ -321,7 +324,15 @@ impl Duplicator {
         self.device_context
             .Unmap(&self.chrominance_staging_texture, 0);
 
+        let capture_time = if let Some(instant) = self.epoch.get() {
+            instant.elapsed()
+        } else {
+            let _ = self.epoch.set(std::time::Instant::now());
+            std::time::Duration::ZERO
+        };
+
         Ok(DesktopEncodeFrame {
+            capture_time,
             width: self.dxgi_outdupl_desc.ModeDesc.Width as i32,
             height: self.dxgi_outdupl_desc.ModeDesc.Height as i32,
             luminance_bytes,
