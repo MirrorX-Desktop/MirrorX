@@ -354,6 +354,7 @@ fn spawn_audio_capture_and_encode_process(
                     "audio duplicator capture sample failed"
                 );
                 let _ = message_tx.try_send(None);
+                return;
             }
         }
     });
