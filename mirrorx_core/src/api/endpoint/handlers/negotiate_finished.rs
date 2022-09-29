@@ -330,7 +330,7 @@ fn spawn_audio_capture_and_encode_process(
     passive_device_id: i64,
     message_tx: Sender<Option<EndPointMessage>>,
 ) {
-    TOKIO_RUNTIME.spawn_blocking(move || {
+    TOKIO_RUNTIME.spawn(async move {
         let mut audio_duplicator = match AudioDuplicator::new(message_tx.clone()) {
             Ok(duplicator) => duplicator,
             Err(err) => {
@@ -345,14 +345,16 @@ fn spawn_audio_capture_and_encode_process(
             }
         };
 
-        if let Err(err) = audio_duplicator.capture_samples() {
-            tracing::error!(
-                ?active_device_id,
-                ?passive_device_id,
-                ?err,
-                "audio duplicator capture sample failed"
-            );
-            let _ = message_tx.try_send(None);
+        loop {
+            if let Err(err) = audio_duplicator.capture_samples().await {
+                tracing::error!(
+                    ?active_device_id,
+                    ?passive_device_id,
+                    ?err,
+                    "audio duplicator capture sample failed"
+                );
+                let _ = message_tx.try_send(None);
+            }
         }
     });
 }

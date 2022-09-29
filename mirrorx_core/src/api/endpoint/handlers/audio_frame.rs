@@ -6,15 +6,14 @@ use cpal::{
     traits::{DeviceTrait, HostTrait, StreamTrait},
     BufferSize, OutputCallbackInfo, StreamConfig,
 };
-use crossbeam::channel::{bounded, Sender, TrySendError};
 use dashmap::DashMap;
 use once_cell::{sync::Lazy, unsync::OnceCell};
 use rtrb::{Consumer, Producer};
 use scopeguard::defer;
 use std::time::Duration;
+use tokio::sync::mpsc::{error::TrySendError, Sender};
 
-static DECODERS: Lazy<DashMap<(i64, i64), crossbeam::channel::Sender<EndPointAudioFrame>>> =
-    Lazy::new(DashMap::new);
+static DECODERS: Lazy<DashMap<(i64, i64), Sender<EndPointAudioFrame>>> = Lazy::new(DashMap::new);
 
 pub fn handle_audio_frame(
     active_device_id: i64,
@@ -29,13 +28,12 @@ pub fn handle_audio_frame(
                     ?passive_device_id,
                     "audio frame decode tx is full!"
                 ),
-                TrySendError::Disconnected(_) => {
+                TrySendError::Closed(_) => {
                     tracing::info!(
                         ?active_device_id,
                         ?passive_device_id,
                         "audio frame decode tx has closed"
                     );
-                    return;
                 }
             }
         }
@@ -44,24 +42,22 @@ pub fn handle_audio_frame(
 
 pub fn serve_audio_decode(active_device_id: i64, passive_device_id: i64) {
     if !DECODERS.contains_key(&(active_device_id, passive_device_id)) {
-        let (audio_frame_tx, audio_frame_rx) = bounded(1024);
+        let (audio_frame_tx, mut audio_frame_rx) = tokio::sync::mpsc::channel(64);
         DECODERS.insert((active_device_id, passive_device_id), audio_frame_tx);
 
-        TOKIO_RUNTIME.spawn_blocking(move || {
+        TOKIO_RUNTIME.spawn(async move {
             let mut audio_decoder = AudioPlayer::new();
 
             loop {
-                match audio_frame_rx.recv_timeout(Duration::from_secs(1)) {
-                    Ok(audio_frame) => {
+                match audio_frame_rx.recv().await {
+                    Some(audio_frame) => {
                         if let Err(err) = audio_decoder.play_samples(audio_frame) {
                             tracing::error!(?err, "audio decoder decode failed");
                             return;
                         }
                     }
-                    Err(err) => {
-                        if err.is_disconnected() {
-                            return;
-                        }
+                    None => {
+                        return;
                     }
                 }
             }

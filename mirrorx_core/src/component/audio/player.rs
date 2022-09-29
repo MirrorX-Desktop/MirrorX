@@ -10,7 +10,10 @@ use cpal::{
     traits::{DeviceTrait, HostTrait, StreamTrait},
     BufferSize, OutputCallbackInfo, SampleRate,
 };
-use tokio::sync::mpsc::{error::TryRecvError, Receiver};
+use tokio::sync::mpsc::{
+    error::{TryRecvError, TrySendError},
+    Receiver, Sender,
+};
 
 pub struct AudioPlayer {
     sample_rate: u32,
@@ -19,6 +22,8 @@ pub struct AudioPlayer {
     decode_context: Option<DecodeContext>,
     playback_context: Option<PlaybackContext>,
 }
+
+unsafe impl Send for AudioPlayer {}
 
 impl AudioPlayer {
     pub fn new() -> Self {
@@ -147,7 +152,7 @@ impl Drop for DecodeContext {
 
 struct PlaybackContext {
     stream: cpal::Stream,
-    audio_sample_tx: rtrb::Producer<f32>,
+    audio_sample_tx: Sender<Vec<f32>>,
     callback_exit_rx: Receiver<()>,
 }
 
@@ -173,43 +178,52 @@ impl PlaybackContext {
         };
         tracing::info!(?stream_config, "select audio stream config");
 
-        let (audio_sample_tx, mut audio_sample_rx) = rtrb::RingBuffer::new(64 * 960);
+        let (audio_sample_tx, mut audio_sample_rx) = tokio::sync::mpsc::channel::<Vec<f32>>(64);
         let (callback_exit_tx, callback_exit_rx) = tokio::sync::mpsc::channel(1);
         let err_callback_exit_tx = callback_exit_tx.clone();
 
         let input_callback = move |data: &mut [f32], info: &OutputCallbackInfo| {
-            match audio_sample_rx.read_chunk(data.len().min(audio_sample_rx.slots())) {
-                Ok(chunk) => {
-                    let (c1, c2) = chunk.as_slices();
-                    let c1_copy_length = c1.len().min(data.len());
-                    unsafe {
-                        std::ptr::copy_nonoverlapping(
-                            c1.as_ptr(),
-                            data.as_mut_ptr(),
-                            c1_copy_length,
-                        );
-                    }
-
-                    let remaining = data.len() - c1_copy_length;
-                    let mut c2_copy_length = 0;
-                    if remaining > 0 && !c2.is_empty() {
-                        c2_copy_length = remaining.min(c2.len());
-                        unsafe {
-                            std::ptr::copy_nonoverlapping(
-                                c2.as_ptr(),
-                                data[c1_copy_length..].as_mut_ptr(),
-                                c2_copy_length,
-                            );
-                        }
-                    }
-
-                    chunk.commit(c1_copy_length + c2_copy_length)
+            if let Ok(samples) = audio_sample_rx.try_recv() {
+                unsafe {
+                    std::ptr::copy_nonoverlapping(
+                        samples.as_ptr(),
+                        data.as_mut_ptr(),
+                        samples.len().min(data.len()),
+                    )
                 }
-                Err(err) => {
-                    tracing::error!(?err, "audio sample rx required invalid slots capacity");
-                    let _ = callback_exit_tx.send(());
-                }
-            };
+            }
+            // match audio_sample_rx.read_chunk(data.len().min(audio_sample_rx.slots())) {
+            //     Ok(chunk) => {
+            //         let (c1, c2) = chunk.as_slices();
+            //         let c1_copy_length = c1.len().min(data.len());
+            //         unsafe {
+            //             std::ptr::copy_nonoverlapping(
+            //                 c1.as_ptr(),
+            //                 data.as_mut_ptr(),
+            //                 c1_copy_length,
+            //             );
+            //         }
+
+            //         let remaining = data.len() - c1_copy_length;
+            //         let mut c2_copy_length = 0;
+            //         if remaining > 0 && !c2.is_empty() {
+            //             c2_copy_length = remaining.min(c2.len());
+            //             unsafe {
+            //                 std::ptr::copy_nonoverlapping(
+            //                     c2.as_ptr(),
+            //                     data[c1_copy_length..].as_mut_ptr(),
+            //                     c2_copy_length,
+            //                 );
+            //             }
+            //         }
+
+            //         chunk.commit(c1_copy_length + c2_copy_length)
+            //     }
+            //     Err(err) => {
+            //         tracing::error!(?err, "audio sample rx required invalid slots capacity");
+            //         let _ = callback_exit_tx.send(());
+            //     }
+            // };
         };
 
         let err_callback = move |err| {
@@ -237,42 +251,46 @@ impl PlaybackContext {
             }
         };
 
-        while !(buffer).is_empty() {
-            match self
-                .audio_sample_tx
-                .write_chunk_uninit(buffer.len().min(self.audio_sample_tx.slots()))
-            {
-                Ok(mut chunk) => {
-                    let (c1, c2) = chunk.as_mut_slices();
-
-                    let mut it = buffer.iter();
-                    let mut iterated = 0;
-                    'outer: for &(ptr, len) in &[
-                        (c1.as_mut_ptr() as *mut f32, c1.len()),
-                        (c2.as_mut_ptr() as *mut f32, c2.len()),
-                    ] {
-                        for i in 0..len {
-                            match it.next() {
-                                Some(item) => {
-                                    unsafe {
-                                        ptr.add(i).write(*item);
-                                    }
-                                    iterated += 1;
-                                }
-                                None => break 'outer,
-                            }
-                        }
-                    }
-
-                    unsafe { chunk.commit(iterated) }
-                    buffer = &buffer[iterated..];
-                }
-                Err(err) => {
-                    tracing::error!(?err, "audio sample tx required invalid slots capacity");
-                    return false;
-                }
-            }
+        if let Err(TrySendError::Closed(_)) = self.audio_sample_tx.try_send(buffer.to_vec()) {
+            return false;
         }
+
+        // while !(buffer).is_empty() {
+        //     match self
+        //         .audio_sample_tx
+        //         .write_chunk_uninit(buffer.len().min(self.audio_sample_tx.slots()))
+        //     {
+        //         Ok(mut chunk) => {
+        //             let (c1, c2) = chunk.as_mut_slices();
+
+        //             let mut it = buffer.iter();
+        //             let mut iterated = 0;
+        //             'outer: for &(ptr, len) in &[
+        //                 (c1.as_mut_ptr() as *mut f32, c1.len()),
+        //                 (c2.as_mut_ptr() as *mut f32, c2.len()),
+        //             ] {
+        //                 for i in 0..len {
+        //                     match it.next() {
+        //                         Some(item) => {
+        //                             unsafe {
+        //                                 ptr.add(i).write(*item);
+        //                             }
+        //                             iterated += 1;
+        //                         }
+        //                         None => break 'outer,
+        //                     }
+        //                 }
+        //             }
+
+        //             unsafe { chunk.commit(iterated) }
+        //             buffer = &buffer[iterated..];
+        //         }
+        //         Err(err) => {
+        //             tracing::error!(?err, "audio sample tx required invalid slots capacity");
+        //             return false;
+        //         }
+        //     }
+        // }
 
         true
     }
