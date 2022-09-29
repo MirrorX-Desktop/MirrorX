@@ -1,10 +1,12 @@
+use std::time::Duration;
+
 use crate::{
     api::endpoint::{flutter_message::FlutterMediaMessage, message::EndPointVideoFrame},
     component::video_decoder::video_decoder::VideoDecoder,
     utility::runtime::TOKIO_RUNTIME,
 };
 use dashmap::DashMap;
-use flutter_rust_bridge::StreamSink;
+use flutter_rust_bridge::{StreamSink, ZeroCopyBuffer};
 use once_cell::sync::Lazy;
 use scopeguard::defer;
 use tokio::sync::mpsc::error::TrySendError;
@@ -47,13 +49,38 @@ pub fn serve_video_decode(
         let (tx, mut rx) = tokio::sync::mpsc::channel(180);
         DECODERS.insert((active_device_id, passive_device_id), tx);
 
+        let (render_frame_tx, mut render_frame_rx) =
+            tokio::sync::mpsc::channel::<(Duration, Vec<u8>)>(180);
+
+        TOKIO_RUNTIME.spawn(async move {
+            let mut render_cost_time = Duration::ZERO;
+
+            loop {
+                let (frame_duration, frame_buffer) = match render_frame_rx.recv().await {
+                    Some(data) => data,
+                    None => return,
+                };
+
+                if let Some(remaining_wait_time) = frame_duration.checked_sub(render_cost_time) {
+                    tokio::time::sleep(remaining_wait_time).await;
+                }
+
+                let render_begin_instant = std::time::Instant::now();
+                if !stream.add(FlutterMediaMessage::Video(ZeroCopyBuffer(frame_buffer))) {
+                    tracing::error!("post frame_buffer to flutter side failed");
+                    return;
+                }
+                render_cost_time = render_begin_instant.elapsed();
+            }
+        });
+
         TOKIO_RUNTIME.spawn(async move {
             defer! {
                 tracing::info!(?active_device_id, ?passive_device_id, "decode video frame process exit");
                 DECODERS.remove(&(active_device_id, passive_device_id));
             }
 
-            let mut decoder = VideoDecoder::new(texture_id, stream);
+            let mut decoder = VideoDecoder::new(texture_id, render_frame_tx);
 
             while let Some(video_frame) = rx.recv().await {
                 if let Err(err) = decoder.decode(video_frame).await {

@@ -352,7 +352,7 @@ extern "C" {
     pub fn avcodec_open2(
         avctx: *mut AVCodecContext,
         codec: *const AVCodec,
-        options: *const c_void,
+        options: *mut *mut AVDictionary,
     ) -> i32;
     pub fn avcodec_free_context(avctx: *mut *mut AVCodecContext);
     pub fn av_parser_init(codec_id: i32) -> *mut AVCodecParserContext;

@@ -78,9 +78,6 @@ impl VideoEncoder {
                 * ((*(*self.encode_context).codec_ctx).time_base.den as f64))
                 as i64;
 
-            tracing::info!("original pts: {}", capture_frame.capture_time.as_secs_f64());
-            tracing::info!("original pts: {}", (*(*self.encode_context).frame).pts);
-
             ret = avcodec_send_frame(
                 (*self.encode_context).codec_ctx,
                 (*self.encode_context).frame,
@@ -118,12 +115,6 @@ impl VideoEncoder {
                     (*(*self.encode_context).packet).size as usize,
                 )
                 .to_vec();
-
-                tracing::info!(
-                    "pts and dts: {}, {}",
-                    (*(*self.encode_context).packet).pts,
-                    (*(*self.encode_context).packet).dts
-                );
 
                 let packet = EndPointMessage::VideoFrame(EndPointVideoFrame {
                     width: (*(*self.encode_context).codec_ctx).width,

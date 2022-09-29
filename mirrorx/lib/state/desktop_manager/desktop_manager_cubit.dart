@@ -184,8 +184,8 @@ class DesktopManagerCubit extends Cubit<DesktopManagerState> {
 
   void onMediaStreamData(int remoteDeviceId, FlutterMediaMessage message) {
     message.when(
-        video: (videoFrameBuffer) {
-          TextureRender.instance.sendVideoFrameBuffer(videoFrameBuffer);
+        video: (videoFrameBuffer) async {
+          await TextureRender.instance.sendVideoFrameBuffer(videoFrameBuffer);
         },
         audio: (a, b, audioBuffer) {});
   }
