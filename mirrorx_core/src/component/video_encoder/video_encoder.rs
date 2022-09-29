@@ -120,9 +120,9 @@ impl VideoEncoder {
                 .to_vec();
 
                 tracing::info!(
-                    "pts and duration: {}, {}",
+                    "pts and dts: {}, {}",
                     (*(*self.encode_context).packet).pts,
-                    (*(*self.encode_context).packet).duration
+                    (*(*self.encode_context).packet).dts
                 );
 
                 let packet = EndPointMessage::VideoFrame(EndPointVideoFrame {
