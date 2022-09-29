@@ -25,6 +25,7 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
   double _offsetY = 0.0;
   double _offsetX = 0.0;
   final Map<int, int> _downButtons = {};
+  int _lastMouseHoverTimestamp = 0;
 
   @override
   void initState() {
@@ -215,15 +216,18 @@ class _DesktopRenderBoxState extends State<DesktopRenderBox> {
   }
 
   void _handlePointerHover(PointerHoverEvent event) {
-    // log("pointer hover ${event.buttons} ${event.localPosition}");
-
-    context.read<DesktopManagerCubit>().deviceInput(
-        widget.desktopId,
-        InputEvent.mouse(MouseEvent.move(
-          MouseKey.None,
-          event.localPosition.dx,
-          event.localPosition.dy,
-        )));
+    final now = DateTime.now().millisecondsSinceEpoch;
+    // todo: maybe the mouse move debounce time should match the remote fresh rate
+    if (now - _lastMouseHoverTimestamp >= 10) {
+      _lastMouseHoverTimestamp = now;
+      context.read<DesktopManagerCubit>().deviceInput(
+          widget.desktopId,
+          InputEvent.mouse(MouseEvent.move(
+            MouseKey.None,
+            event.localPosition.dx,
+            event.localPosition.dy,
+          )));
+    }
   }
 
   void _handlePointerSignal(PointerSignalEvent event) {

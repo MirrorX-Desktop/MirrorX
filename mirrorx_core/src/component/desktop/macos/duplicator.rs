@@ -2,12 +2,13 @@ use crate::{
     component::{desktop::monitor::NSScreen, frame::DesktopEncodeFrame},
     core_error,
     error::{CoreError, CoreResult},
-    ffi::os::macos::{core_graphics::*, core_media::*, core_video::*, io_surface::*},
+    ffi::os::macos::{core_graphics::*, core_video::*, io_surface::*},
 };
 use block::ConcreteBlock;
 use dispatch::ffi::{dispatch_queue_create, dispatch_release, DISPATCH_QUEUE_SERIAL};
+use once_cell::unsync::OnceCell;
 use scopeguard::defer;
-use std::{cell::Cell, ffi::CString, ops::Deref, rc::Rc};
+use std::{ffi::CString, ops::Deref, time::Duration};
 
 pub struct Duplicator {
     display_stream: CGDisplayStreamRef,
@@ -47,17 +48,24 @@ impl Duplicator {
 
             let screen_size = screen.frame().size;
 
-            let start_time: Rc<Cell<Option<std::time::Instant>>> = Rc::new(Cell::new(None));
-
             let capture_frame_tx_ptr = Box::into_raw(Box::new(capture_frame_tx));
+
+            let epoch: OnceCell<std::time::Instant> = OnceCell::new();
 
             let block = ConcreteBlock::new(
                 move |status: CGDisplayStreamFrameStatus,
                       display_time: u64,
                       frame_surface: IOSurfaceRef,
                       update_ref: CGDisplayStreamUpdateRef| {
+                    let capture_time = if let Some(instant) = epoch.get() {
+                        instant.elapsed()
+                    } else {
+                        let _ = epoch.set(std::time::Instant::now());
+                        Duration::ZERO
+                    };
+
                     frame_available_handler(
-                        start_time.clone(),
+                        capture_time,
                         capture_frame_tx_ptr,
                         status,
                         display_time,
@@ -116,10 +124,10 @@ impl Duplicator {
 }
 
 unsafe fn frame_available_handler(
-    start_time: Rc<Cell<Option<std::time::Instant>>>,
+    capture_time: Duration,
     capture_frame_tx: *mut crossbeam::channel::Sender<DesktopEncodeFrame>,
     status: CGDisplayStreamFrameStatus,
-    display_time: u64,
+    _display_time: u64,
     frame_surface: IOSurfaceRef,
     update_ref: CGDisplayStreamUpdateRef,
 ) {
@@ -131,14 +139,6 @@ unsafe fn frame_available_handler(
     if capture_frame_tx.is_null() {
         return;
     }
-
-    let elapsed_time = match start_time.get() {
-        Some(epoch) => epoch.elapsed().as_secs_f64(),
-        None => {
-            start_time.replace(Some(std::time::Instant::now()));
-            0f64
-        }
-    };
 
     let mut pixel_buffer = std::ptr::null_mut();
     let ret = CVPixelBufferCreateWithIOSurface(
@@ -180,9 +180,8 @@ unsafe fn frame_available_handler(
 
     CVPixelBufferUnlockBaseAddress(pixel_buffer, 1);
 
-    let pts = CMTimeMakeWithSeconds(elapsed_time, 1000);
-
     let capture_frame = DesktopEncodeFrame {
+        capture_time,
         width: width as i32,
         height: height as i32,
         luminance_bytes,

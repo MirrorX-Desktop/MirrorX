@@ -74,7 +74,10 @@ impl VideoEncoder {
 
             (*(*self.encode_context).frame).linesize[1] = capture_frame.chrominance_stride;
 
-            // (*(*self.encode_context).frame).pts = chrono::Utc::now().timestamp_millis();
+            (*(*self.encode_context).frame).pts = (capture_frame.capture_time.as_secs_f64()
+                * ((*(*self.encode_context).codec_ctx).time_base.num as f64)
+                / ((*(*self.encode_context).codec_ctx).time_base.den as f64))
+                as i64;
 
             ret = avcodec_send_frame(
                 (*self.encode_context).codec_ctx,
@@ -119,6 +122,7 @@ impl VideoEncoder {
                 let packet = EndPointMessage::VideoFrame(EndPointVideoFrame {
                     width: (*(*self.encode_context).codec_ctx).width,
                     height: (*(*self.encode_context).codec_ctx).height,
+                    pts: (*(*self.encode_context).packet).pts,
                     buffer,
                 });
 
@@ -182,7 +186,10 @@ impl EncodeContext {
             (*encoder_context.codec_ctx).width = width;
             (*encoder_context.codec_ctx).height = height;
             (*encoder_context.codec_ctx).framerate = AVRational { num: 60, den: 1 };
-            (*encoder_context.codec_ctx).time_base = AVRational { num: 1, den: 1 };
+            (*encoder_context.codec_ctx).time_base = AVRational {
+                num: 1,
+                den: 1000000,
+            };
             (*encoder_context.codec_ctx).gop_size = 4000;
             (*encoder_context.codec_ctx).bit_rate = 4000 * 1000;
             (*encoder_context.codec_ctx).rc_max_rate = 4000 * 1000;

@@ -106,6 +106,7 @@ pub struct EndPointNegotiateFinishedRequest {
 pub struct EndPointVideoFrame {
     pub width: i32,
     pub height: i32,
+    pub pts: i64,
 
     #[serde(with = "serde_bytes")]
     pub buffer: Vec<u8>,

@@ -1,6 +1,9 @@
+use std::time::Duration;
+
 use flutter_rust_bridge::ZeroCopyBuffer;
 
 pub struct DesktopEncodeFrame {
+    pub capture_time: Duration,
     pub width: i32,
     pub height: i32,
     pub luminance_bytes: Vec<u8>,

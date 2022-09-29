@@ -73,11 +73,8 @@ impl VideoDecoder {
             } else {
                 (*(decode_context).packet).data = video_frame.buffer.as_mut_ptr();
                 (*(decode_context).packet).size = video_frame.buffer.len() as i32;
-                // (*(*self.decode_context).packet).pts = AV_NOPTS_VALUE;
-                // (*(*self.decode_context).packet).dts = AV_NOPTS_VALUE;
+                (*(decode_context).packet).pts = video_frame.pts;
             }
-
-            // av_packet_rescale_ts(self.packet, AV_TIME_BASE_Q, (*self.codec_ctx).pkt_timebase);
 
             let mut ret = avcodec_send_packet((decode_context).codec_ctx, (decode_context).packet);
 
@@ -123,6 +120,8 @@ impl VideoDecoder {
 
                     (decode_context).hw_decode_frame
                 };
+
+                tracing::info!("frame pts: {}", (*tmp_frame).pts);
 
                 // 8: id
                 // 4: width
@@ -214,12 +213,15 @@ impl DecodeContext {
             (*decode_ctx.codec_ctx).width = width;
             (*decode_ctx.codec_ctx).height = height;
             (*decode_ctx.codec_ctx).framerate = AVRational { num: 60, den: 1 };
+            (*decode_ctx.codec_ctx).time_base = AVRational {
+                num: 1,
+                den: 1000000,
+            };
             (*decode_ctx.codec_ctx).pix_fmt = AV_PIX_FMT_NV12;
             (*decode_ctx.codec_ctx).color_range = AVCOL_RANGE_JPEG;
             (*decode_ctx.codec_ctx).color_primaries = AVCOL_PRI_BT709;
             (*decode_ctx.codec_ctx).color_trc = AVCOL_TRC_BT709;
             (*decode_ctx.codec_ctx).colorspace = AVCOL_SPC_BT709;
-            // (*decode_ctx.codec_ctx).flags2 |= AV_CODEC_FLAG2_LOCAL_HEADER;
 
             let mut hw_device_type = av_hwdevice_find_type_by_name(
                 CString::new(if cfg!(target_os = "windows") {
