@@ -73,6 +73,7 @@ impl VideoDecoder {
             } else {
                 (*(decode_context).packet).data = video_frame.buffer.as_mut_ptr();
                 (*(decode_context).packet).size = video_frame.buffer.len() as i32;
+                tracing::info!("packet.pts: {}", video_frame.pts);
                 (*(decode_context).packet).pts = video_frame.pts;
             }
 
@@ -213,10 +214,7 @@ impl DecodeContext {
             (*decode_ctx.codec_ctx).width = width;
             (*decode_ctx.codec_ctx).height = height;
             (*decode_ctx.codec_ctx).framerate = AVRational { num: 60, den: 1 };
-            (*decode_ctx.codec_ctx).time_base = AVRational {
-                num: 1,
-                den: 1000000,
-            };
+            (*decode_ctx.codec_ctx).time_base = AVRational { num: 1, den: 60 };
             (*decode_ctx.codec_ctx).pix_fmt = AV_PIX_FMT_NV12;
             (*decode_ctx.codec_ctx).color_range = AVCOL_RANGE_JPEG;
             (*decode_ctx.codec_ctx).color_primaries = AVCOL_PRI_BT709;
