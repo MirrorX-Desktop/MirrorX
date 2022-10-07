@@ -6,21 +6,24 @@ use crate::{
 use bytes::BufMut;
 use std::{
     ffi::{CStr, CString},
-    time::Duration,
+    time::{Duration, Instant},
 };
 use tokio::sync::mpsc::{error::TrySendError, Sender};
 
 pub struct VideoDecoder {
     decode_context: Option<DecodeContext>,
     texture_id: i64,
-    render_frame_tx: Sender<(Duration, Vec<u8>)>,
+    render_frame_tx: Sender<(Duration, Instant, Vec<u8>)>,
     last_pts: i64,
 }
 
 unsafe impl Send for VideoDecoder {}
 
 impl VideoDecoder {
-    pub fn new(texture_id: i64, render_frame_tx: Sender<(Duration, Vec<u8>)>) -> VideoDecoder {
+    pub fn new(
+        texture_id: i64,
+        render_frame_tx: Sender<(Duration, Instant, Vec<u8>)>,
+    ) -> VideoDecoder {
         unsafe {
             // av_log_set_level(AV_LOG_TRACE);
             // av_log_set_flags(AV_LOG_SKIP_REPEATED);
@@ -109,6 +112,8 @@ impl VideoDecoder {
                     ));
                 }
 
+                let begin = std::time::Instant::now();
+
                 let expect_time_base = av_inv_q((*decode_context.codec_ctx).framerate);
 
                 let actual_pts = av_rescale_q(
@@ -127,16 +132,16 @@ impl VideoDecoder {
                 let tmp_frame = if !(decode_context).parser_ctx.is_null() {
                     (decode_context).decode_frame
                 } else {
-                    let transfer_instant = std::time::Instant::now();
+                    // let transfer_instant = std::time::Instant::now();
                     let ret = av_hwframe_transfer_data(
                         (decode_context).hw_decode_frame,
                         (decode_context).decode_frame,
                         0,
                     );
-                    let transfer_cost_time = transfer_instant.elapsed();
-                    frame_duration = frame_duration
-                        .checked_sub(transfer_cost_time)
-                        .unwrap_or(Duration::ZERO);
+                    // let transfer_cost_time = transfer_instant.elapsed();
+                    // frame_duration = frame_duration
+                    //     .checked_sub(transfer_cost_time)
+                    //     .unwrap_or(Duration::ZERO);
 
                     if ret < 0 {
                         return Err(core_error!(
@@ -190,9 +195,9 @@ impl VideoDecoder {
                 video_frame_buffer.put_i32_le(chrominance_bytes_length);
                 video_frame_buffer.put_slice(chrominance_bytes);
 
-                if let Err(err) = self
-                    .render_frame_tx
-                    .try_send((frame_duration, video_frame_buffer))
+                if let Err(err) =
+                    self.render_frame_tx
+                        .try_send((frame_duration, begin, video_frame_buffer))
                 {
                     match err {
                         TrySendError::Full(_) => tracing::warn!("video render tx is full!"),

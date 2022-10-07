@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use crate::{
     api::endpoint::{flutter_message::FlutterMediaMessage, message::EndPointVideoFrame},
@@ -50,27 +50,28 @@ pub fn serve_video_decode(
         DECODERS.insert((active_device_id, passive_device_id), tx);
 
         let (render_frame_tx, mut render_frame_rx) =
-            tokio::sync::mpsc::channel::<(Duration, Vec<u8>)>(180);
+            tokio::sync::mpsc::channel::<(Duration, Instant, Vec<u8>)>(180);
 
         TOKIO_RUNTIME.spawn(async move {
-            let mut render_cost_time = Duration::ZERO;
-
             loop {
-                let (frame_duration, frame_buffer) = match render_frame_rx.recv().await {
+                let (frame_duration, begin, frame_buffer) = match render_frame_rx.recv().await {
                     Some(data) => data,
                     None => return,
                 };
-
-                if let Some(remaining_wait_time) = frame_duration.checked_sub(render_cost_time) {
-                    tokio::time::sleep(remaining_wait_time).await;
-                }
 
                 let render_begin_instant = std::time::Instant::now();
                 if !stream.add(FlutterMediaMessage::Video(ZeroCopyBuffer(frame_buffer))) {
                     tracing::error!("post frame_buffer to flutter side failed");
                     return;
                 }
-                render_cost_time = render_begin_instant.elapsed();
+                let render_cost_time = render_begin_instant.elapsed();
+
+                // if let Some(remaining_wait_time) = frame_duration.checked_sub(render_cost_time) {
+                //     if let Some(extra_wait) = remaining_wait_time.checked_sub(begin.elapsed()) {
+                //         tracing::trace!("extra wait: {:?}", extra_wait);
+                //         tokio::time::sleep(extra_wait).await;
+                //     }
+                // }
             }
         });
 
