@@ -1,13 +1,13 @@
+use super::View;
+use eframe::egui::{Rounding, Visuals};
 use eframe::{
     egui::{style::Margin, CentralPanel, Context, FontData, FontDefinitions, Frame, RichText, Ui},
     emath::Align,
     epaint::{Color32, FontFamily, FontId, Stroke, Vec2},
 };
 use egui_extras::{Size, StripBuilder};
+use std::default;
 
-use super::View;
-
-#[derive(Default)]
 pub struct App {
     selected_page_tab: String,
     connect_page: super::connect::ConnectPage,
@@ -17,10 +17,6 @@ pub struct App {
 
 impl App {
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
-        // Customize egui here with cc.egui_ctx.set_fonts and cc.egui_ctx.set_visuals.
-        // Restore app state using cc.storage (requires the "persistence" feature).
-        // Use the cc.gl (a glow::Context) to create graphics shaders and buffers that you can use
-        // for e.g. egui::PaintCallback.
         let mut fonts = FontDefinitions::default();
         fonts.font_data.insert(
             "NotoSans".to_owned(),
@@ -75,7 +71,7 @@ impl App {
             .families
             .insert(FontFamily::Monospace, mono_fonts.clone());
 
-        cc.egui_ctx.set_debug_on_hover(true);
+        // cc.egui_ctx.set_debug_on_hover(true);
         cc.egui_ctx.set_fonts(fonts);
 
         Self::default()
@@ -83,81 +79,105 @@ impl App {
 
     fn build_toggle_tab(&mut self, ui: &mut Ui, display_text: &str, toggle_tab_value: &str) {
         ui.centered_and_justified(|ui| {
-            if ui
-                .toggle_value(
-                    &mut (self.selected_page_tab == toggle_tab_value),
-                    display_text,
-                )
-                .clicked()
-            {
-                toggle_tab_value.clone_into(&mut self.selected_page_tab);
+            ui.visuals_mut().widgets.hovered.expansion = 0.0;
+            ui.visuals_mut().widgets.hovered.bg_stroke = Stroke::none();
+            ui.visuals_mut().widgets.hovered.rounding = Rounding::same(2.0);
+
+            ui.visuals_mut().widgets.inactive.expansion = 0.0;
+            ui.visuals_mut().widgets.inactive.bg_stroke = Stroke::none();
+            ui.visuals_mut().widgets.inactive.rounding = Rounding::same(2.0);
+
+            ui.visuals_mut().widgets.active.expansion = 0.0;
+            ui.visuals_mut().widgets.active.bg_stroke = Stroke::none();
+            ui.visuals_mut().widgets.active.rounding = Rounding::same(2.0);
+
+            let toggle = ui.toggle_value(
+                &mut (self.selected_page_tab == toggle_tab_value),
+                display_text,
+            );
+
+            if toggle.clicked() {
+                self.selected_page_tab = toggle_tab_value.to_string();
             }
         });
     }
 
     fn build_tab_view(&mut self, ui: &mut Ui) {
-        if self.selected_page_tab == "Connect" {
-            self.connect_page.build(ui);
+        match self.selected_page_tab.as_str() {
+            "Connect" => self.connect_page.build(ui),
+            "LAN" => self.lan_page.build(ui),
+            "History" => self.history_page.build(ui),
+            _ => panic!("unknown select page tab"),
         }
+    }
+}
 
-        if self.selected_page_tab == "LAN" {
-            self.lan_page.build(ui);
-        }
-
-        if self.selected_page_tab == "History" {
-            self.history_page.build(ui);
+impl Default for App {
+    fn default() -> Self {
+        Self {
+            selected_page_tab: String::from("Connect"),
+            connect_page: Default::default(),
+            history_page: Default::default(),
+            lan_page: Default::default(),
         }
     }
 }
 
 impl eframe::App for App {
     fn update(&mut self, ctx: &Context, _frame: &mut eframe::Frame) {
-        CentralPanel::default().show(ctx, |ui| {
-            ui.spacing_mut().item_spacing = Vec2::ZERO;
-            StripBuilder::new(ui)
-                .size(Size::relative(0.1))
-                .size(Size::relative(0.06))
-                .size(Size::relative(0.8))
-                .size(Size::remainder())
-                .vertical(|mut strip| {
-                    strip.cell(|ui| {
-                        ui.centered_and_justified(|ui| {
-                            ui.label("Title");
-                        });
-                    });
-                    strip.strip(|builder| {
-                        builder
-                            .sizes(Size::relative(0.333333), 3)
-                            .horizontal(|mut strip| {
-                                strip.cell(|ui| {
-                                    self.build_toggle_tab(ui, "Connect", "Connect");
-                                });
-
-                                strip.cell(|ui| {
-                                    self.build_toggle_tab(ui, "LAN", "LAN");
-                                });
-
-                                strip.cell(|ui| self.build_toggle_tab(ui, "History", "History"));
+        CentralPanel::default()
+            .frame(
+                Frame::default()
+                    .inner_margin(Margin::symmetric(8.0, 0.0))
+                    .fill(ctx.style().visuals.window_fill()),
+            )
+            .show(ctx, |ui| {
+                ui.spacing_mut().item_spacing = Vec2::ZERO;
+                StripBuilder::new(ui)
+                    .size(Size::relative(0.1))
+                    .size(Size::relative(0.06))
+                    .size(Size::relative(0.8))
+                    .size(Size::remainder())
+                    .vertical(|mut strip| {
+                        strip.cell(|ui| {
+                            ui.centered_and_justified(|ui| {
+                                ui.label(RichText::new("MirrorX").font(FontId::proportional(50.0)));
                             });
-                    });
-                    strip.cell(|ui| self.build_tab_view(ui));
-                    strip.cell(|ui| {
-                        ui.painter().line_segment(
-                            [
-                                ui.max_rect().left_top() + Vec2::new(2.0, 0.0),
-                                ui.max_rect().right_top() + Vec2::new(-2.0, 0.0),
-                            ],
-                            Stroke::new(1.0, Color32::GRAY),
-                        );
+                        });
+                        strip.strip(|builder| {
+                            builder
+                                .sizes(Size::relative(1.0 / 3.0), 3)
+                                .horizontal(|mut strip| {
+                                    strip.cell(|ui| {
+                                        self.build_toggle_tab(ui, "Connect", "Connect");
+                                    });
 
-                        ui.centered_and_justified(|ui| {
-                            ui.hyperlink_to(
-                                "MirrorX",
-                                "https://github.com/MirrorX-Desktop/mirrorx",
+                                    strip.cell(|ui| {
+                                        self.build_toggle_tab(ui, "LAN", "LAN");
+                                    });
+
+                                    strip
+                                        .cell(|ui| self.build_toggle_tab(ui, "History", "History"));
+                                });
+                        });
+                        strip.cell(|ui| self.build_tab_view(ui));
+                        strip.cell(|ui| {
+                            ui.painter().line_segment(
+                                [
+                                    ui.max_rect().left_top() + Vec2::new(2.0, 0.0),
+                                    ui.max_rect().right_top() + Vec2::new(-2.0, 0.0),
+                                ],
+                                Stroke::new(1.0, Color32::GRAY),
                             );
+
+                            ui.centered_and_justified(|ui| {
+                                ui.hyperlink_to(
+                                    "MirrorX",
+                                    "https://github.com/MirrorX-Desktop/mirrorx",
+                                );
+                            });
                         });
                     });
-                });
-        });
+            });
     }
 }

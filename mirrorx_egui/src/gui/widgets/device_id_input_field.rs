@@ -1,6 +1,5 @@
 use eframe::{
     egui::{style::Margin, Frame, TextEdit, TextFormat},
-    emath::Align,
     epaint::{
         text::{LayoutSection, TextWrapping},
         Color32, FontId, Rounding, Shape, Stroke, Vec2,

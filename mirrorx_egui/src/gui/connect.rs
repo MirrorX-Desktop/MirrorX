@@ -1,19 +1,16 @@
+use super::{widgets::device_id_input_field::DeviceIDInputField, View};
 use eframe::{
-    egui::{style::Margin, CentralPanel, Frame, Layout, RichText, TextEdit, TextFormat},
+    egui::{style::Margin, Frame, RichText, Rounding, TextEdit, TextFormat, Ui},
     emath::Align,
     epaint::{text::LayoutSection, Color32, FontId, Pos2, Rect, Stroke, Vec2},
 };
 use egui_extras::{Size, StripBuilder};
-
-use super::{widgets::device_id_input_field::DeviceIDInputField, View};
 
 #[derive(Default)]
 pub struct ConnectPage {
     show_password: bool,
     input_device_id: super::widgets::device_id_input_field::DeviceIDInputText,
 }
-
-impl ConnectPage {}
 
 impl View for ConnectPage {
     fn build(&mut self, ui: &mut eframe::egui::Ui) {
@@ -150,12 +147,12 @@ impl View for ConnectPage {
                                                 strip.empty();
                                                 strip.cell(|ui| {
                                                     ui.centered_and_justified(|ui| {
-                                                        if ui.button("A").clicked() {}
+                                                        make_left_connect_button(ui);
                                                     });
                                                 });
                                                 strip.cell(|ui| {
                                                     ui.centered_and_justified(|ui| {
-                                                        if ui.button("b").clicked() {}
+                                                        make_right_connect_button(ui);
                                                     });
                                                 });
                                                 strip.empty();
@@ -167,4 +164,68 @@ impl View for ConnectPage {
                     });
             });
     }
+}
+
+#[inline]
+fn make_left_connect_button(ui: &mut Ui) {
+    ui.visuals_mut().widgets.hovered.expansion = 0.0;
+    ui.visuals_mut().widgets.hovered.bg_stroke = Stroke::none();
+    ui.visuals_mut().widgets.hovered.rounding = Rounding {
+        nw: 2.0,
+        ne: 0.0,
+        sw: 2.0,
+        se: 0.0,
+    };
+
+    ui.visuals_mut().widgets.inactive.expansion = 0.0;
+    ui.visuals_mut().widgets.inactive.bg_stroke = Stroke::none();
+    ui.visuals_mut().widgets.inactive.rounding = Rounding {
+        nw: 2.0,
+        ne: 0.0,
+        sw: 2.0,
+        se: 0.0,
+    };
+
+    ui.visuals_mut().widgets.active.expansion = 0.0;
+    ui.visuals_mut().widgets.active.bg_stroke = Stroke::none();
+    ui.visuals_mut().widgets.active.rounding = Rounding {
+        nw: 2.0,
+        ne: 0.0,
+        sw: 2.0,
+        se: 0.0,
+    };
+
+    if ui.button("Desktop").clicked() {}
+}
+
+#[inline]
+fn make_right_connect_button(ui: &mut Ui) {
+    ui.visuals_mut().widgets.hovered.expansion = 0.0;
+    ui.visuals_mut().widgets.hovered.bg_stroke = Stroke::none();
+    ui.visuals_mut().widgets.hovered.rounding = Rounding {
+        nw: 0.0,
+        ne: 2.0,
+        sw: 0.0,
+        se: 2.0,
+    };
+
+    ui.visuals_mut().widgets.inactive.expansion = 0.0;
+    ui.visuals_mut().widgets.inactive.bg_stroke = Stroke::none();
+    ui.visuals_mut().widgets.inactive.rounding = Rounding {
+        nw: 0.0,
+        ne: 2.0,
+        sw: 0.0,
+        se: 2.0,
+    };
+
+    ui.visuals_mut().widgets.active.expansion = 0.0;
+    ui.visuals_mut().widgets.active.bg_stroke = Stroke::none();
+    ui.visuals_mut().widgets.active.rounding = Rounding {
+        nw: 0.0,
+        ne: 2.0,
+        sw: 0.0,
+        se: 2.0,
+    };
+
+    if ui.button("File Manager").clicked() {}
 }
