@@ -1,8 +1,10 @@
 use crate::error::CoreResult;
 use rusqlite::{params, Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
+use std::path::Path;
+use tokio::sync::Mutex;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct DomainConfig {
     pub uri: String,
     pub device_id: i64,
@@ -10,23 +12,72 @@ pub struct DomainConfig {
     pub device_password: String,
 }
 
-pub fn read_primary_domain(path: &str) -> CoreResult<Option<String>> {
-    read(path, "primary_domain")
+pub struct ConfigManager {
+    conn: Mutex<Connection>,
 }
 
-pub fn save_primary_domain(path: &str, value: &str) -> CoreResult<()> {
-    save(path, "primary_domain", value)
+impl ConfigManager {
+    pub fn new(db_path: &Path) -> CoreResult<ConfigManager> {
+        let conn = Connection::open(db_path)?;
+        ensure_tables(&conn)?;
+        Ok(Self {
+            conn: Mutex::new(conn),
+        })
+    }
+
+    pub async fn domain(&self) -> CoreResult<Option<String>> {
+        self.read("domain").await
+    }
+
+    pub async fn save_domain(&self, value: &str) -> CoreResult<()> {
+        self.save("domain", value).await
+    }
+
+    pub async fn domain_config(&self, domain: &str) -> CoreResult<Option<DomainConfig>> {
+        self.read(&build_key(vec!["domain", domain]))
+            .await?
+            .map_or(Ok(None), |v| Ok(Some(serde_json::from_str(&v)?)))
+    }
+
+    pub async fn save_domain_config(&self, domain: &str, value: &DomainConfig) -> CoreResult<()> {
+        self.save(
+            &build_key(vec!["domain", domain]),
+            &serde_json::to_string(value)?,
+        )
+        .await
+    }
+
+    async fn read(&self, key: &str) -> CoreResult<Option<String>> {
+        match self
+            .conn
+            .lock()
+            .await
+            .query_row(
+                "SELECT value FROM kv WHERE key = ?1 LIMIT 1;",
+                [key],
+                |row| row.get::<_, String>(0),
+            )
+            .optional()?
+        {
+            Some(res) => Ok(Some(res)),
+            None => Ok(None),
+        }
+    }
+
+    async fn save(&self, key: &str, value: &str) -> CoreResult<()> {
+        let conn = self.conn.lock().await;
+        let mut stmt = conn.prepare("INSERT OR REPLACE INTO kv (key, value) VALUES (?1,?2);")?;
+        stmt.execute(params![key, value]).map(|_| ())?;
+
+        Ok(())
+    }
 }
 
-pub fn read_domain_config(path: &str, domain: &str) -> CoreResult<Option<DomainConfig>> {
-    read(path, domain)?.map_or(Ok(None), |v| Ok(Some(serde_json::from_str(&v)?)))
+fn build_key(paths: Vec<&str>) -> String {
+    paths.join(".")
 }
 
-pub fn save_domain_config(path: &str, domain: &str, value: &DomainConfig) -> CoreResult<()> {
-    save(path, domain, &serde_json::to_string(value)?)
-}
-
-fn ensure_db_exist(conn: &Connection) -> CoreResult<()> {
+fn ensure_tables(conn: &Connection) -> CoreResult<()> {
     const SQL_COMMAND: &str = r#"
         CREATE TABLE IF NOT EXISTS kv (
             key TEXT PRIMARY KEY,
@@ -35,54 +86,6 @@ fn ensure_db_exist(conn: &Connection) -> CoreResult<()> {
         "#;
 
     conn.execute(SQL_COMMAND, [])?;
-
-    Ok(())
-}
-
-fn read(path: &str, key: &str) -> CoreResult<Option<String>> {
-    let conn = Connection::open(path)?;
-    ensure_db_exist(&conn)?;
-
-    match conn
-        .query_row(
-            "SELECT value FROM kv WHERE key = ?1 LIMIT 1;",
-            [key],
-            |row| row.get::<_, String>(0),
-        )
-        .optional()?
-    {
-        Some(res) => Ok(Some(res)),
-        None => Ok(None),
-    }
-}
-
-// pub fn read_all(path: &str) -> CoreResult<HashMap<String, String>> {
-//     let conn = Connection::open(path)?;
-//     ensure_db_exist(&conn)?;
-
-//     let mut stmt = conn.prepare("SELECT * FROM kv;")?;
-//     let entry_iter = stmt.query_map([], |row| {
-//         let key = row.get::<_, String>(0)?;
-//         let value = row.get::<_, String>(1)?;
-//         Ok((key, value))
-//     })?;
-
-//     let mut all_config_properties = HashMap::new();
-//     for entry in entry_iter {
-//         let (key, value) = entry?;
-//         let config_properties = serde_json::from_str(&value)?;
-//         all_config_properties.insert(key, config_properties);
-//     }
-
-//     Ok(all_config_properties)
-// }
-
-fn save(path: &str, key: &str, value: &str) -> CoreResult<()> {
-    let conn = Connection::open(path)?;
-    ensure_db_exist(&conn)?;
-
-    let mut stmt = conn.prepare("INSERT OR REPLACE INTO kv (key, value) VALUES (?1,?2);")?;
-    stmt.execute(params![key, value]).map(|_| ())?;
 
     Ok(())
 }

@@ -1,4 +1,3 @@
-use super::SignalingClientManager;
 use crate::{
     core_error,
     error::{CoreError, CoreResult},
@@ -14,6 +13,7 @@ use signaling_proto::message::{
     key_exchange_result::InnerKeyExchangeResult, KeyExchangeActiveDeviceSecret,
     KeyExchangePassiveDeviceSecret, KeyExchangeReplyError,
 };
+use tonic::transport::Channel;
 
 pub struct KeyExchangeRequest {
     pub domain: String,
@@ -31,7 +31,10 @@ pub struct KeyExchangeResponse {
     pub sealing_nonce_bytes: Vec<u8>,
 }
 
-pub async fn key_exchange(req: KeyExchangeRequest) -> CoreResult<KeyExchangeResponse> {
+pub async fn key_exchange(
+    client: &mut signaling_proto::service::signaling_client::SignalingClient<Channel>,
+    req: KeyExchangeRequest,
+) -> CoreResult<KeyExchangeResponse> {
     let secure_random = ring::rand::SystemRandom::new();
 
     // generate key pair for passive device key exchange reply
@@ -90,8 +93,7 @@ pub async fn key_exchange(req: KeyExchangeRequest) -> CoreResult<KeyExchangeResp
         &mut active_device_secret_buffer,
     )?;
 
-    let resp = SignalingClientManager::get_client()
-        .await?
+    let resp = client
         .key_exchange(signaling_proto::message::KeyExchangeRequest {
             domain: req.domain,
             active_device_id: req.local_device_id.to_owned(),

@@ -1,42 +1,58 @@
-pub mod dial;
-pub mod disconnect;
-pub mod heartbeat;
-pub mod key_exchange;
-pub mod register;
-pub mod subscribe;
-pub mod visit;
-pub mod visit_reply;
+mod dial;
+mod heartbeat;
+mod key_exchange;
+mod register;
+mod subscribe;
+mod visit;
+mod visit_reply;
 
-use crate::{
-    core_error,
-    error::{CoreError, CoreResult},
-};
-use once_cell::sync::Lazy;
-use signaling_proto::service::signaling_client::SignalingClient;
-use tokio::sync::RwLock;
+use crate::error::CoreResult;
 use tonic::transport::Channel;
 
-static CURRENT_SIGNALING_CLIENT_MANAGER: Lazy<SignalingClientManager> =
-    Lazy::new(|| SignalingClientManager {
-        client: RwLock::new(None),
-    });
+pub use register::{RegisterRequest, RegisterResponse};
 
-struct SignalingClientManager {
-    client: RwLock<Option<SignalingClient<Channel>>>,
+pub struct SignalingClient {
+    client: signaling_proto::service::signaling_client::SignalingClient<Channel>,
 }
 
-impl SignalingClientManager {
-    pub async fn get_client() -> CoreResult<SignalingClient<Channel>> {
-        let client = CURRENT_SIGNALING_CLIENT_MANAGER.client.read().await;
-        if let Some(client) = client.as_ref() {
-            Ok(client.clone())
-        } else {
-            Err(core_error!("signaling client instance not exists"))
-        }
+impl SignalingClient {
+    pub async fn dial(uri: &str) -> CoreResult<Self> {
+        let client = dial::dial(uri).await?;
+        Ok(Self { client })
     }
 
-    pub async fn set_client(new_client: Option<SignalingClient<Channel>>) {
-        let mut client = CURRENT_SIGNALING_CLIENT_MANAGER.client.write().await;
-        *client = new_client
+    pub async fn heartbeat(&self, device_id: i64, timestamp: u32) -> CoreResult<u32> {
+        heartbeat::heartbeat(&mut self.client.clone(), device_id, timestamp).await
+    }
+
+    pub async fn register(
+        &self,
+        req: register::RegisterRequest,
+    ) -> CoreResult<register::RegisterResponse> {
+        register::register(&mut self.client.clone(), req).await
+    }
+
+    pub async fn visit(&self, req: visit::VisitRequest) -> CoreResult<visit::VisitResponse> {
+        visit::visit(&mut self.client.clone(), req).await
+    }
+
+    pub async fn visit_reply(&self, req: visit_reply::VisitReplyRequest) -> CoreResult<()> {
+        visit_reply::visit_reply(&mut self.client.clone(), req).await
+    }
+
+    pub async fn key_exchange(
+        &self,
+        req: key_exchange::KeyExchangeRequest,
+    ) -> CoreResult<key_exchange::KeyExchangeResponse> {
+        key_exchange::key_exchange(&mut self.client.clone(), req).await
+    }
+
+    pub async fn subscribe(
+        &self,
+        req: subscribe::SubscribeRequest,
+        publish_message_tx: crossbeam::channel::Sender<subscribe::PublishMessage>,
+    ) -> CoreResult<()> {
+        subscribe::subscribe(&mut self.client.clone(), req, publish_message_tx).await?;
+        Ok(())
     }
 }

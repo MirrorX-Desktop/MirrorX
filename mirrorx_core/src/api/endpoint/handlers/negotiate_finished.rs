@@ -33,7 +33,7 @@ pub struct NegotiateFinishedRequest {
 
 pub async fn negotiate_finished(
     req: NegotiateFinishedRequest,
-    stream: StreamSink<FlutterMediaMessage>,
+    // stream: StreamSink<FlutterMediaMessage>,
 ) -> CoreResult<()> {
     let message_tx = ENDPOINTS
         .get(&(req.active_device_id, req.passive_device_id))
@@ -54,12 +54,12 @@ pub async fn negotiate_finished(
         ));
     }
 
-    serve_video_decode(
-        req.active_device_id,
-        req.passive_device_id,
-        req.texture_id,
-        stream,
-    );
+    // serve_video_decode(
+    //     req.active_device_id,
+    //     req.passive_device_id,
+    //     req.texture_id,
+    //     stream,
+    // );
 
     serve_audio_decode(req.active_device_id, req.passive_device_id);
 

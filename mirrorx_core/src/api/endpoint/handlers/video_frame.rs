@@ -43,7 +43,7 @@ pub fn serve_video_decode(
     active_device_id: i64,
     passive_device_id: i64,
     texture_id: i64,
-    stream: StreamSink<FlutterMediaMessage>,
+    // stream: StreamSink<FlutterMediaMessage>,
 ) {
     if !DECODERS.contains_key(&(active_device_id, passive_device_id)) {
         let (tx, mut rx) = tokio::sync::mpsc::channel(180);
@@ -60,10 +60,10 @@ pub fn serve_video_decode(
                 };
 
                 let render_begin_instant = std::time::Instant::now();
-                if !stream.add(FlutterMediaMessage::Video(ZeroCopyBuffer(frame_buffer))) {
-                    tracing::error!("post frame_buffer to flutter side failed");
-                    return;
-                }
+                // if !stream.add(FlutterMediaMessage::Video(ZeroCopyBuffer(frame_buffer))) {
+                //     tracing::error!("post frame_buffer to flutter side failed");
+                //     return;
+                // }
                 let render_cost_time = render_begin_instant.elapsed();
 
                 // if let Some(remaining_wait_time) = frame_duration.checked_sub(render_cost_time) {

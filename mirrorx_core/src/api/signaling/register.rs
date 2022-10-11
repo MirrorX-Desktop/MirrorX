@@ -1,11 +1,11 @@
-use super::SignalingClientManager;
 use crate::error::CoreResult;
 use rand::RngCore;
 use rsa::rand_core::OsRng;
+use tonic::transport::Channel;
 
 pub struct RegisterRequest {
     pub device_id: Option<i64>,
-    pub device_finger_print: Option<String>,
+    pub device_finger_print: String,
 }
 
 pub struct RegisterResponse {
@@ -14,19 +14,16 @@ pub struct RegisterResponse {
     pub device_finger_print: String,
 }
 
-pub async fn register(req: RegisterRequest) -> CoreResult<RegisterResponse> {
+pub async fn register(
+    client: &mut signaling_proto::service::signaling_client::SignalingClient<Channel>,
+    req: RegisterRequest,
+) -> CoreResult<RegisterResponse> {
     let device_id = req.device_id;
-    let device_finger_print = req.device_finger_print.unwrap_or_else(|| {
-        let mut finger_print_buffer = [0u8; 64];
-        OsRng.fill_bytes(&mut finger_print_buffer);
-        hex::encode_upper(finger_print_buffer)
-    });
 
-    let resp = SignalingClientManager::get_client()
-        .await?
+    let resp = client
         .register(signaling_proto::message::RegisterRequest {
             device_id,
-            device_finger_print: device_finger_print.to_owned(),
+            device_finger_print: req.device_finger_print.clone(),
         })
         .await?
         .into_inner();
@@ -34,6 +31,6 @@ pub async fn register(req: RegisterRequest) -> CoreResult<RegisterResponse> {
     Ok(RegisterResponse {
         domain: resp.domain,
         device_id: resp.device_id,
-        device_finger_print,
+        device_finger_print: req.device_finger_print,
     })
 }

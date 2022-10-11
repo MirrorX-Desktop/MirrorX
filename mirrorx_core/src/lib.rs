@@ -1,24 +1,10 @@
-/// cbindgen:ignore
-mod api;
-
-mod export_bridge; /* AUTO INJECTED BY flutter_rust_bridge. This line may not be accurate, and you can change it according to your needs. */
-
-mod export;
-
-/// cbindgen:ignore
 mod component;
-
-/// cbindgen:ignore
 mod constants;
-
-/// cbindgen:ignore
-mod error;
-
-/// cbindgen:ignore
 mod ffi;
-
-/// cbindgen:ignore
-mod utility;
 
 #[cfg(test)]
 mod test;
+
+pub mod api;
+pub mod error;
+pub mod utility;

@@ -6,7 +6,7 @@ use tracing::info;
 
 #[test]
 pub fn test_audio_device() -> anyhow::Result<()> {
-    tracing_subscriber::fmt::init();
+    // tracing_subscriber::fmt::init();
 
     let host = cpal::default_host();
 

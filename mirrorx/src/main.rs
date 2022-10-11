@@ -1,5 +1,7 @@
 mod gui;
 
-fn main() {
-    crate::gui::run_app();
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    tracing_subscriber::fmt::init();
+    crate::gui::run_app()
 }

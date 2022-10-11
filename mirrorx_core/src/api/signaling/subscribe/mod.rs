@@ -1,12 +1,10 @@
 mod key_exchange;
 
-use super::SignalingClientManager;
 use crate::{error::CoreResult, utility::runtime::TOKIO_RUNTIME};
-use flutter_rust_bridge::StreamSink;
-use scopeguard::defer;
+use std::path::PathBuf;
+use tonic::transport::Channel;
 
 pub enum PublishMessage {
-    StreamClosed,
     VisitRequest {
         active_device_id: i64,
         passive_device_id: i64,
@@ -21,11 +19,11 @@ pub struct SubscribeRequest {
 }
 
 pub async fn subscribe(
+    client: &mut signaling_proto::service::signaling_client::SignalingClient<Channel>,
     req: SubscribeRequest,
-    stream: StreamSink<PublishMessage>,
+    publish_message_tx: crossbeam::channel::Sender<PublishMessage>,
 ) -> CoreResult<()> {
-    let mut server_stream = SignalingClientManager::get_client()
-        .await?
+    let mut server_stream = client
         .subscribe(signaling_proto::message::SubscribeRequest {
             device_id: req.local_device_id,
             device_finger_print: req.device_finger_print,
@@ -33,12 +31,9 @@ pub async fn subscribe(
         .await?
         .into_inner();
 
-    TOKIO_RUNTIME.spawn(async move {
-        defer! {
-            stream.add(PublishMessage::StreamClosed);
-            stream.close();
-        }
+    let subscribe_client = client.clone();
 
+    TOKIO_RUNTIME.spawn(async move {
         loop {
             let publish_message = match server_stream.message().await {
                 Ok(message) => {
@@ -46,7 +41,7 @@ pub async fn subscribe(
                         message
                     } else {
                         tracing::error!("subscribe server stream was closed");
-                        let _ = crate::api::signaling::disconnect::disconnect().await;
+                        // let _ = crate::api::signaling::disconnect::disconnect().await;
                         break;
                     }
                 }
@@ -75,14 +70,13 @@ pub async fn subscribe(
                             resource_type,
                         };
 
-                        if !stream.add(publish_message){
-                            tracing::error!(device_id=?req.local_device_id, message_type=stringify!(PublishMessage::VisitRequest), "add message to stream failed");
-                        }
+                        let _ = publish_message_tx.try_send(publish_message);
                     }
                     signaling_proto::message::publish_message::InnerPublishMessage::KeyExchangeRequest( key_exchange_request) => {
-                        let config_path = req.config_path.clone();
-                        TOKIO_RUNTIME.spawn(async move{
-                            key_exchange::handle(&config_path, &key_exchange_request).await
+                        let mut client = subscribe_client.clone();
+                        let config_path = PathBuf::from(req.config_path.clone());
+                        TOKIO_RUNTIME.spawn(async move {
+                            key_exchange::handle(&mut client,&config_path, &key_exchange_request).await
                         });
                     }
                 }
