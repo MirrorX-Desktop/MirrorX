@@ -86,6 +86,7 @@ impl<'a> eframe::egui::Widget for DeviceIDInputField<'a> {
                             let output = TextEdit::singleline(self.text)
                                 .font(FontId::monospace(50.0))
                                 .layouter(&mut layouter)
+                                .margin(Vec2::new(4.0, 4.0))
                                 .frame(false)
                                 .show(ui);
 

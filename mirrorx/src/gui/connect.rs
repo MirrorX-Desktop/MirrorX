@@ -60,7 +60,7 @@ impl View for ConnectPage {
                         strip.cell(|ui| {
                             ui.centered_and_justified(|ui| {
                                 ui.label(
-                                    RichText::new("00-0000-0000").font(FontId::monospace(50.0)),
+                                    RichText::new("00-0000-0000").font(FontId::proportional(50.0)),
                                 );
                             });
                         });
