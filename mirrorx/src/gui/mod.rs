@@ -1,5 +1,3 @@
-use mirrorx_core::api::signaling::SignalingClient;
-
 mod app;
 mod connect;
 mod history;

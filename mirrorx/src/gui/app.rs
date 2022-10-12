@@ -8,7 +8,6 @@ use eframe::{
 };
 use egui_extras::{Size, StripBuilder};
 use mirrorx_core::api::config::ConfigManager;
-use poll_promise::Promise;
 use std::sync::Arc;
 
 pub struct App {
@@ -108,7 +107,7 @@ impl App {
                     .vertical(|mut strip| {
                         strip.cell(|ui| {
                             ui.centered_and_justified(|ui| {
-                                ui.label(RichText::new("MirrorX").font(FontId::proportional(50.0)));
+                                ui.label(RichText::new("MirrorX").font(FontId::proportional(40.0)));
                             });
                         });
                         strip.strip(|builder| {

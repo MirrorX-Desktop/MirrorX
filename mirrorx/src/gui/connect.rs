@@ -19,8 +19,7 @@ use std::sync::Arc;
 
 pub struct ConnectPage {
     config_manager: Arc<ConfigManager>,
-    signaling_client_promise:
-        Option<Promise<CoreResult<mirrorx_core::api::signaling::SignalingClient>>>,
+    signaling_client_promise: Option<Promise<CoreResult<SignalingClient>>>,
     show_password: bool,
     input_device_id: DeviceIDInputText,
     domain_promise: Option<Promise<CoreResult<Option<String>>>>,
