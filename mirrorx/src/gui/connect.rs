@@ -397,5 +397,5 @@ fn make_right_connect_button(ui: &mut Ui) {
         se: 2.0,
     };
 
-    if ui.button("File Manager").clicked() {}
+    ui.add_enabled(false, eframe::egui::widgets::Button::new("File Manager"));
 }
