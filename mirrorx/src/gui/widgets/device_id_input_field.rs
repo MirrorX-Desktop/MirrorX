@@ -1,9 +1,6 @@
 use eframe::{
     egui::{style::Margin, Frame, TextEdit, TextFormat},
-    epaint::{
-        text::{LayoutSection, TextWrapping},
-        Color32, FontId, Rounding, Shape, Stroke, Vec2,
-    },
+    epaint::{text::LayoutSection, Color32, FontId, Rounding, Stroke, Vec2},
 };
 use egui_extras::{Size, StripBuilder};
 

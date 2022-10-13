@@ -1,13 +1,14 @@
 use super::{connect::ConnectPage, history::HistoryPage, View};
 use eframe::{
     egui::{
-        style::Margin, CentralPanel, Context, FontData, FontDefinitions, Frame, RichText, Rounding,
-        Ui,
+        style::Margin, CentralPanel, Context, Direction, FontData, FontDefinitions, Frame, Layout,
+        Response, RichText, Rounding, Sense, Ui,
     },
+    emath::Align,
     epaint::{Color32, FontFamily, FontId, Stroke, Vec2},
 };
 use egui_extras::{Size, StripBuilder};
-use egui_notify::Toasts;
+use egui_toast::{Toast, ToastKind, Toasts};
 use mirrorx_core::api::config::ConfigManager;
 use std::{cell::RefCell, rc::Rc, sync::Arc};
 
@@ -16,6 +17,7 @@ pub struct App {
     connect_page: super::connect::ConnectPage,
     history_page: super::history::HistoryPage,
     lan_page: super::lan::LANPage,
+    toasts: Rc<RefCell<Toasts>>,
     // config_manager: Arc<mirrorx_core::api::config::ConfigManager>,
 }
 
@@ -75,19 +77,26 @@ impl App {
             .families
             .insert(FontFamily::Monospace, mono_fonts.clone());
 
-        cc.egui_ctx.set_debug_on_hover(true);
+        // cc.egui_ctx.set_debug_on_hover(true);
         cc.egui_ctx.set_fonts(fonts);
 
         // initialize some global components
-        let toasts = Rc::new(RefCell::new(Toasts::default()));
+        let toasts = Toasts::new()
+            .anchor((380.0 - 8.0, 8.0)) // top-right corner with same offset
+            .direction(Direction::TopDown)
+            .align_to_end(true)
+            .custom_contents(ToastKind::Custom(0), custom_toast_contents);
+
+        let toasts = Rc::new(RefCell::new(toasts));
         let config_manager = Arc::new(config_manager);
 
         Self {
             selected_page_tab: String::from("Connect"),
-            connect_page: ConnectPage::new(config_manager.clone(), toasts),
+            connect_page: ConnectPage::new(config_manager.clone(), toasts.clone()),
             history_page: HistoryPage::new(config_manager),
             lan_page: Default::default(),
             // config_manager,
+            toasts,
         }
     }
 
@@ -186,5 +195,70 @@ impl App {
 impl eframe::App for App {
     fn update(&mut self, ctx: &Context, frame: &mut eframe::Frame) {
         self.build_panel(ctx, frame);
+        self.toasts.borrow_mut().show(ctx);
     }
+}
+
+fn custom_toast_contents(ui: &mut Ui, toast: &mut Toast) -> Response {
+    eframe::egui::Frame::default()
+        .fill(Color32::BLACK)
+        // .stroke(Stroke::new(1.0, Color32::GRAY))
+        .inner_margin(Margin::same(8.0))
+        .rounding(2.0)
+        .show(ui, |ui| {
+            let text_galley = toast.text.clone().color(Color32::WHITE).into_galley(
+                ui,
+                None,
+                180.0,
+                FontId::proportional(18.0),
+            );
+
+            let text_size = text_galley.size();
+
+            let (rect, response) = ui.allocate_exact_size(
+                Vec2::new(text_galley.size().x.min(180.0), text_size.y),
+                Sense::focusable_noninteractive(),
+            );
+
+            ui.allocate_ui_at_rect(rect, |ui| {
+                ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                    ui.scope(|ui| {
+                        ui.visuals_mut().button_frame = false;
+                        ui.visuals_mut().clip_rect_margin = 0.0;
+                        if ui
+                            .button(
+                                RichText::new("❌")
+                                    .color(Color32::WHITE)
+                                    .font(FontId::proportional(24.0)),
+                            )
+                            .clicked()
+                        {
+                            toast.close();
+                        }
+                    });
+
+                    let (rect, response) = ui
+                        .allocate_exact_size(text_galley.size(), Sense::focusable_noninteractive());
+
+                    ui.painter().add(eframe::epaint::TextShape {
+                        pos: rect.left_top(),
+                        galley: text_galley.galley,
+                        underline: Stroke::none(),
+                        override_text_color: None,
+                        angle: 0.0,
+                    });
+
+                    ui.label(
+                        RichText::new("⛔")
+                            .color(Color32::RED)
+                            .font(FontId::proportional(24.0)),
+                    );
+
+                    response
+                });
+            });
+
+            response
+        })
+        .response
 }
