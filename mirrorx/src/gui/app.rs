@@ -7,8 +7,9 @@ use eframe::{
     epaint::{Color32, FontFamily, FontId, Stroke, Vec2},
 };
 use egui_extras::{Size, StripBuilder};
+use egui_notify::Toasts;
 use mirrorx_core::api::config::ConfigManager;
-use std::sync::Arc;
+use std::{cell::RefCell, rc::Rc, sync::Arc};
 
 pub struct App {
     selected_page_tab: String,
@@ -78,12 +79,12 @@ impl App {
         cc.egui_ctx.set_fonts(fonts);
 
         // initialize some global components
-
+        let toasts = Rc::new(RefCell::new(Toasts::default()));
         let config_manager = Arc::new(config_manager);
 
         Self {
             selected_page_tab: String::from("Connect"),
-            connect_page: ConnectPage::new(config_manager.clone()),
+            connect_page: ConnectPage::new(config_manager.clone(), toasts),
             history_page: HistoryPage::new(config_manager),
             lan_page: Default::default(),
             // config_manager,

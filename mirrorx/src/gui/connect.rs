@@ -3,11 +3,12 @@ use super::{
     View,
 };
 use eframe::{
-    egui::{style::Margin, Frame, ImageButton, Layout, Response, RichText, Rounding, TextEdit, Ui},
+    egui::{style::Margin, Frame, Layout, Response, RichText, Rounding, TextEdit, Ui},
     emath::Align,
-    epaint::{text::LayoutJob, Color32, FontId, Pos2, Rect, Stroke, Vec2},
+    epaint::{Color32, FontId, Pos2, Rect, Stroke, Vec2},
 };
 use egui_extras::{Size, StripBuilder};
+use egui_notify::Toasts;
 use mirrorx_core::{
     api::{
         config::{ConfigManager, DomainConfig},
@@ -15,13 +16,13 @@ use mirrorx_core::{
     },
     error::CoreResult,
 };
-use once_cell::unsync::OnceCell;
 use poll_promise::Promise;
-use std::{cell::Cell, sync::Arc};
+use std::{cell::RefCell, rc::Rc, sync::Arc};
 
 pub struct ConnectPage {
+    signaling_client_promise: Promise<CoreResult<SignalingClient>>,
     config_manager: Arc<ConfigManager>,
-    signaling_client_promise: Option<Promise<CoreResult<SignalingClient>>>,
+    toasts: Rc<RefCell<Toasts>>,
     show_password: bool,
     edit_password: bool,
     edit_password_content: String,
@@ -32,10 +33,11 @@ pub struct ConnectPage {
 }
 
 impl ConnectPage {
-    pub fn new(config_manager: Arc<ConfigManager>) -> Self {
-        let mut page = Self {
+    pub fn new(config_manager: Arc<ConfigManager>, toasts: Rc<RefCell<Toasts>>) -> Self {
+        Self {
+            signaling_client_promise: new_signaling_client_promise(config_manager.clone()),
             config_manager,
-            signaling_client_promise: None,
+            toasts,
             show_password: false,
             edit_password: false,
             edit_password_content: String::from(""),
@@ -43,53 +45,12 @@ impl ConnectPage {
             domain_promise: None,
             domain_config_promise: None,
             save_domain_config_promise: None,
-        };
-
-        page.init_signaling_client();
-
-        page
+        }
     }
 
     fn init_signaling_client(&mut self) {
         let config_manager = self.config_manager.clone();
-        self.signaling_client_promise = Some(Promise::spawn_async(async move {
-            let mut domain = config_manager.domain().await?;
-            let domain = domain.get_or_insert_with(|| String::from("MirrorX.cloud"));
-
-            let mut domain_config = config_manager.domain_config(domain).await?;
-            let mut domain_config = domain_config.get_or_insert_with(|| DomainConfig {
-                uri: String::from("tcp://127.0.0.1:28000"),
-                device_id: 0,
-                device_finger_print: mirrorx_core::utility::rand::generate_device_finger_print(),
-                device_password: mirrorx_core::utility::rand::generate_random_password(),
-            });
-
-            let client =
-                mirrorx_core::api::signaling::SignalingClient::dial(&domain_config.uri).await?;
-
-            let register_response = client
-                .register(mirrorx_core::api::signaling::RegisterRequest {
-                    device_id: if domain_config.device_id != 0 {
-                        Some(domain_config.device_id)
-                    } else {
-                        None
-                    },
-                    device_finger_print: domain_config.device_finger_print.clone(),
-                })
-                .await?;
-
-            domain_config.device_id = register_response.device_id;
-
-            config_manager
-                .save_domain(&register_response.domain)
-                .await?;
-
-            config_manager
-                .save_domain_config(&register_response.domain, domain_config)
-                .await?;
-
-            Ok(client)
-        }));
+        self.signaling_client_promise = new_signaling_client_promise(config_manager);
     }
 
     fn reload_config_domain(&mut self, force: bool) {
@@ -112,210 +73,219 @@ impl ConnectPage {
     }
 
     fn build_domain(&mut self, ui: &mut Ui) {
-        if let Some(Some(Ok(_))) = self.signaling_client_promise.as_ref().map(|p| p.ready()) {
-            let config_manager = self.config_manager.clone();
-            let promise = self.domain_promise.get_or_insert_with(|| {
-                Promise::spawn_async(async move { config_manager.domain().await })
-            });
+        match self.signaling_client_promise.ready() {
+            Some(res) => match res {
+                Ok(_) => {
+                    let config_manager = self.config_manager.clone();
+                    let promise = self.domain_promise.get_or_insert_with(|| {
+                        Promise::spawn_async(async move { config_manager.domain().await })
+                    });
 
-            match promise.ready() {
-                Some(Ok(Some(domain))) => {
-                    ui.label(RichText::new(domain).font(FontId::proportional(40.0)));
+                    match promise.ready() {
+                        Some(res) => match res {
+                            Ok(domain) => match domain {
+                                Some(domain) => {
+                                    ui.label(
+                                        RichText::new(domain).font(FontId::proportional(40.0)),
+                                    );
+                                }
+                                None => {
+                                    self.toasts
+                                        .borrow_mut()
+                                        .error("domain config is empty, please restart app!");
+                                    ui.spinner();
+                                }
+                            },
+                            Err(err) => {
+                                tracing::error!(?err, "read config domain failed");
+                                self.toasts.borrow_mut().error("read config domain failed");
+                                ui.spinner();
+                            }
+                        },
+                        None => {
+                            ui.spinner();
+                        }
+                    }
+                }
+                Err(err) => {
+                    tracing::error!(?err, "signaling connect failed");
+                    self.toasts.borrow_mut().error("signaling connect failed");
+                    ui.spinner();
+                }
+            },
+            None => {
+                ui.spinner();
+            }
+        }
+    }
+
+    fn build_device_id(&mut self, ui: &mut Ui) {
+        match &self.domain_config_promise {
+            Some(promise) => match promise.ready() {
+                Some(Ok(Some(domain_config))) => {
+                    let mut device_id_str = format!("{:0>10}", domain_config.device_id.to_string());
+                    device_id_str.insert(2, '-');
+                    device_id_str.insert(7, '-');
+                    ui.label(RichText::new(device_id_str).font(FontId::proportional(50.0)));
                 }
                 Some(Ok(None)) => {
-                    ui.label(RichText::new("None").font(FontId::proportional(40.0)));
+                    self.toasts
+                        .borrow_mut()
+                        .error("domain config is empty, please restart app!");
+                    ui.spinner();
                 }
                 Some(Err(err)) => {
-                    tracing::error!(?err, "read config domain failed");
-                    ui.label(RichText::new("Error").font(FontId::proportional(40.0)));
+                    tracing::error!(?err, "read domain config failed");
+                    self.toasts.borrow_mut().error("read domain config failed");
+                    ui.spinner();
                 }
                 None => {
                     ui.spinner();
                 }
-            }
-
-            return;
-        }
-
-        ui.spinner();
-    }
-
-    fn build_device_id(&mut self, ui: &mut Ui) {
-        if let Some(Some(Ok(_))) = self.signaling_client_promise.as_ref().map(|p| p.ready()) {
-            self.reload_config_domain(false);
-
-            if let Some(promise) = &self.domain_config_promise {
-                match promise.ready() {
-                    Some(Ok(Some(domain_config))) => {
-                        let mut device_id_str =
-                            format!("{:0>10}", domain_config.device_id.to_string());
-                        device_id_str.insert(2, '-');
-                        device_id_str.insert(7, '-');
-                        ui.label(RichText::new(device_id_str).font(FontId::proportional(50.0)));
-                    }
-                    Some(Ok(None)) => {
-                        ui.label(RichText::new("None").font(FontId::proportional(40.0)));
-                    }
-                    Some(Err(err)) => {
-                        tracing::error!(?err, "read config domain failed");
-                        ui.label(RichText::new("Error").font(FontId::proportional(40.0)));
-                    }
-                    None => {
-                        ui.spinner();
-                    }
-                };
-
-                return;
+            },
+            None => {
+                self.reload_config_domain(false);
+                ui.spinner();
             }
         }
-
-        ui.spinner();
     }
 
     fn build_device_password(&mut self, ui: &mut Ui) {
-        if let Some(Some(Ok(_))) = self.signaling_client_promise.as_ref().map(|p| p.ready()) {
-            self.reload_config_domain(false);
-
-            let domain_config = if let Some(promise) = &self.domain_config_promise {
-                match promise.ready() {
-                    Some(Ok(Some(domain_config))) => domain_config,
-                    Some(Ok(None)) => {
-                        ui.label(RichText::new("None").font(FontId::proportional(40.0)));
-                        return;
-                    }
-                    Some(Err(err)) => {
-                        tracing::error!(?err, "read config domain failed");
-                        ui.label(RichText::new("Error").font(FontId::proportional(40.0)));
-                        return;
-                    }
-                    None => {
-                        ui.spinner();
-                        return;
-                    }
+        let domain_config = if let Some(promise) = &self.domain_config_promise {
+            match promise.ready() {
+                Some(Ok(domain_config)) => domain_config,
+                Some(Err(err)) => {
+                    tracing::error!(?err, "read domain config failed");
+                    self.toasts.borrow_mut().error("read domain config failed");
+                    &None
                 }
-            } else {
+                None => &None,
+            }
+        } else {
+            self.reload_config_domain(false);
+            &None
+        };
+
+        let domain_config = match domain_config {
+            Some(domain_config) => domain_config,
+            None => {
                 ui.spinner();
                 return;
-            };
-
-            // panel content
-            if self.edit_password {
-                let text_edit_size = Vec2::new(ui.available_width() * 0.8, 30.0);
-
-                ui.allocate_ui_at_rect(
-                    Rect::from_min_size(
-                        ui.max_rect().min
-                                    + (ui.available_size() - text_edit_size) / 2.0 // center
-                                    + Vec2::new(0.0, 8.0), // y offset
-                        text_edit_size,
-                    ),
-                    |ui| {
-                        eframe::egui::Frame::default()
-                            .stroke(Stroke::new(1.0, Color32::GRAY))
-                            .rounding(Rounding::same(2.0))
-                            .show(ui, |ui| {
-                                ui.add_sized(
-                                    ui.available_size(),
-                                    TextEdit::singleline(&mut self.edit_password_content)
-                                        .frame(false)
-                                        .font(FontId::monospace(26.0)),
-                                );
-                            })
-                    },
-                );
-            } else {
-                let content = if self.show_password {
-                    domain_config.device_password.as_str()
-                } else {
-                    "＊＊＊＊＊＊＊"
-                };
-
-                let font_size = if self.show_password { 36.0 } else { 50.0 };
-
-                ui.centered_and_justified(|ui| {
-                    ui.label(RichText::new(content).font(FontId::proportional(font_size)));
-                });
             }
+        };
 
-            let tool_bar_size = Vec2::new(80.0, 24.0);
-
+        // panel content
+        if self.edit_password {
+            let text_edit_size = Vec2::new(ui.available_width() * 0.8, 30.0);
             ui.allocate_ui_at_rect(
                 Rect::from_min_size(
-                    ui.max_rect().min + Vec2::new(ui.available_width() - tool_bar_size.x, 0.0),
-                    tool_bar_size,
+                    ui.max_rect().min
+                                    + (ui.available_size() - text_edit_size) / 2.0 // center
+                                    + Vec2::new(0.0, 8.0), // y offset
+                    text_edit_size,
                 ),
                 |ui| {
-                    ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                        ui.style_mut().spacing.item_spacing = Vec2::ZERO;
-
-                        if self.edit_password {
-                            if make_password_editing_toolbar_cancel_button(ui).clicked() {
-                                self.edit_password = false;
-                            }
-
-                            if make_password_editing_toolbar_commit_button(ui).clicked() {
-                                let mut new_domain_config = domain_config.clone();
-                                new_domain_config.device_password =
-                                    self.edit_password_content.clone();
-
-                                if let Some(Some(Ok(Some(domain)))) =
-                                    self.domain_promise.as_ref().map(|p| p.ready())
-                                {
-                                    let domain = domain.clone();
-                                    let config_manager = self.config_manager.clone();
-
-                                    self.save_domain_config_promise =
-                                        Some(Promise::spawn_async(async move {
-                                            config_manager
-                                                .save_domain_config(&domain, &new_domain_config)
-                                                .await
-                                        }));
-                                }
-                            }
-
-                            if make_password_editing_toolbar_regenerate_button(ui).clicked() {
-                                self.edit_password_content =
-                                    mirrorx_core::utility::rand::generate_random_password();
-                            }
-                        } else {
-                            if make_password_toolbar_right_button(ui).clicked() {
-                                self.show_password = !self.show_password;
-                            }
-
-                            self.show_password = self.show_password && ui.ui_contains_pointer();
-
-                            if make_password_toolbar_left_button(ui).clicked() {
-                                self.edit_password = !self.edit_password;
-                                if self.edit_password {
-                                    self.edit_password_content =
-                                        domain_config.device_password.clone();
-                                }
-                            };
-                        }
-                    })
+                    eframe::egui::Frame::default()
+                        .stroke(Stroke::new(1.0, Color32::GRAY))
+                        .rounding(Rounding::same(2.0))
+                        .show(ui, |ui| {
+                            ui.add_sized(
+                                ui.available_size(),
+                                TextEdit::singleline(&mut self.edit_password_content)
+                                    .frame(false)
+                                    .font(FontId::monospace(26.0)),
+                            );
+                        })
                 },
             );
+        } else {
+            let content = if self.show_password {
+                domain_config.device_password.as_str()
+            } else {
+                "＊＊＊＊＊＊＊"
+            };
 
-            if let Some(promise) = &self.save_domain_config_promise {
-                if let Some(res) = promise.ready() {
-                    match res {
-                        Ok(_) => {
-                            self.save_domain_config_promise = None;
-                            self.reload_config_domain(true);
+            let font_size = if self.show_password { 36.0 } else { 50.0 };
+
+            ui.centered_and_justified(|ui| {
+                ui.label(RichText::new(content).font(FontId::proportional(font_size)));
+            });
+        }
+
+        let tool_bar_size = Vec2::new(80.0, 24.0);
+
+        ui.allocate_ui_at_rect(
+            Rect::from_min_size(
+                ui.max_rect().min + Vec2::new(ui.available_width() - tool_bar_size.x, 0.0),
+                tool_bar_size,
+            ),
+            |ui| {
+                ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                    ui.style_mut().spacing.item_spacing = Vec2::ZERO;
+
+                    if self.edit_password {
+                        if make_password_editing_toolbar_cancel_button(ui).clicked() {
                             self.edit_password = false;
                         }
-                        Err(err) => {
-                            // todo: toast update password failed
-                            tracing::error!(?err, "update device password failed");
+
+                        if make_password_editing_toolbar_commit_button(ui).clicked() {
+                            let mut new_domain_config = domain_config.clone();
+                            new_domain_config.device_password = self.edit_password_content.clone();
+
+                            if let Some(Some(Ok(Some(domain)))) =
+                                self.domain_promise.as_ref().map(|p| p.ready())
+                            {
+                                let domain = domain.clone();
+                                let config_manager = self.config_manager.clone();
+
+                                self.save_domain_config_promise =
+                                    Some(Promise::spawn_async(async move {
+                                        config_manager
+                                            .save_domain_config(&domain, &new_domain_config)
+                                            .await
+                                    }));
+                            }
                         }
+
+                        if make_password_editing_toolbar_regenerate_button(ui).clicked() {
+                            self.edit_password_content =
+                                mirrorx_core::utility::rand::generate_random_password();
+                        }
+                    } else {
+                        if make_password_toolbar_right_button(ui).clicked() {
+                            self.show_password = !self.show_password;
+                        }
+
+                        self.show_password = self.show_password && ui.ui_contains_pointer();
+
+                        if make_password_toolbar_left_button(ui).clicked() {
+                            self.edit_password = !self.edit_password;
+                            if self.edit_password {
+                                self.edit_password_content = domain_config.device_password.clone();
+                            }
+                        };
+                    }
+                })
+            },
+        );
+
+        if let Some(promise) = &self.save_domain_config_promise {
+            if let Some(res) = promise.ready() {
+                match res {
+                    Ok(_) => {
+                        self.save_domain_config_promise = None;
+                        self.reload_config_domain(true);
+                        self.edit_password = false;
+                    }
+                    Err(err) => {
+                        self.toasts
+                            .borrow_mut()
+                            .error("Update password failed, please try again!");
+                        tracing::error!(?err, "update device password failed");
                     }
                 }
             }
-
-            return;
         }
-
-        ui.spinner();
     }
 }
 
@@ -642,4 +612,47 @@ fn make_password_toolbar_right_button(ui: &mut Ui) -> Response {
     };
 
     ui.button(RichText::new("👁").font(FontId::proportional(18.0)))
+}
+
+fn new_signaling_client_promise(
+    config_manager: Arc<ConfigManager>,
+) -> Promise<CoreResult<SignalingClient>> {
+    Promise::spawn_async(async move {
+        let mut domain = config_manager.domain().await?;
+        let domain = domain.get_or_insert_with(|| String::from("MirrorX.cloud"));
+
+        let mut domain_config = config_manager.domain_config(domain).await?;
+        let mut domain_config = domain_config.get_or_insert_with(|| DomainConfig {
+            uri: String::from("tcp://127.0.0.1:28000"),
+            device_id: 0,
+            device_finger_print: mirrorx_core::utility::rand::generate_device_finger_print(),
+            device_password: mirrorx_core::utility::rand::generate_random_password(),
+        });
+
+        let client =
+            mirrorx_core::api::signaling::SignalingClient::dial(&domain_config.uri).await?;
+
+        let register_response = client
+            .register(mirrorx_core::api::signaling::RegisterRequest {
+                device_id: if domain_config.device_id != 0 {
+                    Some(domain_config.device_id)
+                } else {
+                    None
+                },
+                device_finger_print: domain_config.device_finger_print.clone(),
+            })
+            .await?;
+
+        domain_config.device_id = register_response.device_id;
+
+        config_manager
+            .save_domain(&register_response.domain)
+            .await?;
+
+        config_manager
+            .save_domain_config(&register_response.domain, domain_config)
+            .await?;
+
+        Ok(client)
+    })
 }
