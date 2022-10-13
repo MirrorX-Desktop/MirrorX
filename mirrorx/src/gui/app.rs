@@ -74,7 +74,7 @@ impl App {
             .families
             .insert(FontFamily::Monospace, mono_fonts.clone());
 
-        // cc.egui_ctx.set_debug_on_hover(true);
+        cc.egui_ctx.set_debug_on_hover(true);
         cc.egui_ctx.set_fonts(fonts);
 
         // initialize some global components

@@ -3,8 +3,9 @@ use super::{
     View,
 };
 use eframe::{
-    egui::{style::Margin, Frame, RichText, Rounding, Ui},
-    epaint::{Color32, FontId, Pos2, Rect, Stroke, Vec2},
+    egui::{style::Margin, Frame, ImageButton, Layout, Response, RichText, Rounding, TextEdit, Ui},
+    emath::Align,
+    epaint::{text::LayoutJob, Color32, FontId, Pos2, Rect, Stroke, Vec2},
 };
 use egui_extras::{Size, StripBuilder};
 use mirrorx_core::{
@@ -14,16 +15,20 @@ use mirrorx_core::{
     },
     error::CoreResult,
 };
+use once_cell::unsync::OnceCell;
 use poll_promise::Promise;
-use std::sync::Arc;
+use std::{cell::Cell, sync::Arc};
 
 pub struct ConnectPage {
     config_manager: Arc<ConfigManager>,
     signaling_client_promise: Option<Promise<CoreResult<SignalingClient>>>,
     show_password: bool,
+    edit_password: bool,
+    edit_password_content: String,
     input_device_id: DeviceIDInputText,
     domain_promise: Option<Promise<CoreResult<Option<String>>>>,
     domain_config_promise: Option<Promise<CoreResult<Option<DomainConfig>>>>,
+    save_domain_config_promise: Option<Promise<CoreResult<()>>>,
 }
 
 impl ConnectPage {
@@ -32,9 +37,12 @@ impl ConnectPage {
             config_manager,
             signaling_client_promise: None,
             show_password: false,
+            edit_password: false,
+            edit_password_content: String::from(""),
             input_device_id: DeviceIDInputText::default(),
             domain_promise: None,
             domain_config_promise: None,
+            save_domain_config_promise: None,
         };
 
         page.init_signaling_client();
@@ -84,6 +92,25 @@ impl ConnectPage {
         }));
     }
 
+    fn reload_config_domain(&mut self, force: bool) {
+        let config_manager = self.config_manager.clone();
+        let promise_fn = || {
+            Promise::spawn_async(async move {
+                if let Some(domain) = config_manager.domain().await? {
+                    Ok(config_manager.domain_config(&domain).await?)
+                } else {
+                    Ok(None)
+                }
+            })
+        };
+
+        if force {
+            self.domain_config_promise = Some(promise_fn());
+        } else {
+            self.domain_config_promise.get_or_insert_with(promise_fn);
+        }
+    }
+
     fn build_domain(&mut self, ui: &mut Ui) {
         if let Some(Some(Ok(_))) = self.signaling_client_promise.as_ref().map(|p| p.ready()) {
             let config_manager = self.config_manager.clone();
@@ -115,37 +142,31 @@ impl ConnectPage {
 
     fn build_device_id(&mut self, ui: &mut Ui) {
         if let Some(Some(Ok(_))) = self.signaling_client_promise.as_ref().map(|p| p.ready()) {
-            let config_manager = self.config_manager.clone();
-            let promise = self.domain_config_promise.get_or_insert_with(|| {
-                Promise::spawn_async(async move {
-                    if let Some(domain) = config_manager.domain().await? {
-                        Ok(config_manager.domain_config(&domain).await?)
-                    } else {
-                        Ok(None)
+            self.reload_config_domain(false);
+
+            if let Some(promise) = &self.domain_config_promise {
+                match promise.ready() {
+                    Some(Ok(Some(domain_config))) => {
+                        let mut device_id_str =
+                            format!("{:0>10}", domain_config.device_id.to_string());
+                        device_id_str.insert(2, '-');
+                        device_id_str.insert(7, '-');
+                        ui.label(RichText::new(device_id_str).font(FontId::proportional(50.0)));
                     }
-                })
-            });
+                    Some(Ok(None)) => {
+                        ui.label(RichText::new("None").font(FontId::proportional(40.0)));
+                    }
+                    Some(Err(err)) => {
+                        tracing::error!(?err, "read config domain failed");
+                        ui.label(RichText::new("Error").font(FontId::proportional(40.0)));
+                    }
+                    None => {
+                        ui.spinner();
+                    }
+                };
 
-            match promise.ready() {
-                Some(Ok(Some(domain_config))) => {
-                    let mut device_id_str = format!("{:0>10}", domain_config.device_id.to_string());
-                    device_id_str.insert(2, '-');
-                    device_id_str.insert(7, '-');
-                    ui.label(RichText::new(device_id_str).font(FontId::proportional(50.0)));
-                }
-                Some(Ok(None)) => {
-                    ui.label(RichText::new("None").font(FontId::proportional(40.0)));
-                }
-                Some(Err(err)) => {
-                    tracing::error!(?err, "read config domain failed");
-                    ui.label(RichText::new("Error").font(FontId::proportional(40.0)));
-                }
-                None => {
-                    ui.spinner();
-                }
+                return;
             }
-
-            return;
         }
 
         ui.spinner();
@@ -153,61 +174,141 @@ impl ConnectPage {
 
     fn build_device_password(&mut self, ui: &mut Ui) {
         if let Some(Some(Ok(_))) = self.signaling_client_promise.as_ref().map(|p| p.ready()) {
-            let config_manager = self.config_manager.clone();
-            let promise = self.domain_config_promise.get_or_insert_with(|| {
-                Promise::spawn_async(async move {
-                    if let Some(domain) = config_manager.domain().await? {
-                        Ok(config_manager.domain_config(&domain).await?)
-                    } else {
-                        Ok(None)
+            self.reload_config_domain(false);
+
+            let domain_config = if let Some(promise) = &self.domain_config_promise {
+                match promise.ready() {
+                    Some(Ok(Some(domain_config))) => domain_config,
+                    Some(Ok(None)) => {
+                        ui.label(RichText::new("None").font(FontId::proportional(40.0)));
+                        return;
                     }
-                })
-            });
+                    Some(Err(err)) => {
+                        tracing::error!(?err, "read config domain failed");
+                        ui.label(RichText::new("Error").font(FontId::proportional(40.0)));
+                        return;
+                    }
+                    None => {
+                        ui.spinner();
+                        return;
+                    }
+                }
+            } else {
+                ui.spinner();
+                return;
+            };
 
-            match promise.ready() {
-                Some(Ok(Some(domain_config))) => {
-                    let content = if self.show_password {
-                        domain_config.device_password.as_str()
-                    } else {
-                        "＊＊＊＊＊＊＊"
-                    };
+            // panel content
+            if self.edit_password {
+                let text_edit_size = Vec2::new(ui.available_width() * 0.8, 30.0);
 
-                    let font_size = if self.show_password { 36.0 } else { 50.0 };
+                ui.allocate_ui_at_rect(
+                    Rect::from_min_size(
+                        ui.max_rect().min
+                                    + (ui.available_size() - text_edit_size) / 2.0 // center
+                                    + Vec2::new(0.0, 8.0), // y offset
+                        text_edit_size,
+                    ),
+                    |ui| {
+                        eframe::egui::Frame::default()
+                            .stroke(Stroke::new(1.0, Color32::GRAY))
+                            .rounding(Rounding::same(2.0))
+                            .show(ui, |ui| {
+                                ui.add_sized(
+                                    ui.available_size(),
+                                    TextEdit::singleline(&mut self.edit_password_content)
+                                        .frame(false)
+                                        .font(FontId::monospace(26.0)),
+                                );
+                            })
+                    },
+                );
+            } else {
+                let content = if self.show_password {
+                    domain_config.device_password.as_str()
+                } else {
+                    "＊＊＊＊＊＊＊"
+                };
 
-                    let password_label =
-                        ui.label(RichText::new(content).font(FontId::proportional(font_size)));
+                let font_size = if self.show_password { 36.0 } else { 50.0 };
 
-                    // put the show password toggle button on the label right-top corner
-                    let password_right_top_pos = password_label.rect.right_top();
-                    let show_password_toggle_pos = Pos2::new(
-                        password_right_top_pos.x - 14.0,
-                        password_right_top_pos.y + 12.0,
-                    );
+                ui.centered_and_justified(|ui| {
+                    ui.label(RichText::new(content).font(FontId::proportional(font_size)));
+                });
+            }
 
-                    ui.allocate_ui_at_rect(
-                        Rect::from_center_size(show_password_toggle_pos, Vec2::new(20.0, 20.0)),
-                        |ui| {
-                            if !ui
-                                .toggle_value(
-                                    &mut self.show_password,
-                                    RichText::new("👁").font(FontId::proportional(18.0)),
-                                )
-                                .hovered()
-                            {
-                                self.show_password = false;
+            let tool_bar_size = Vec2::new(80.0, 24.0);
+
+            ui.allocate_ui_at_rect(
+                Rect::from_min_size(
+                    ui.max_rect().min + Vec2::new(ui.available_width() - tool_bar_size.x, 0.0),
+                    tool_bar_size,
+                ),
+                |ui| {
+                    ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                        ui.style_mut().spacing.item_spacing = Vec2::ZERO;
+
+                        if self.edit_password {
+                            if make_password_editing_toolbar_cancel_button(ui).clicked() {
+                                self.edit_password = false;
+                            }
+
+                            if make_password_editing_toolbar_commit_button(ui).clicked() {
+                                let mut new_domain_config = domain_config.clone();
+                                new_domain_config.device_password =
+                                    self.edit_password_content.clone();
+
+                                if let Some(Some(Ok(Some(domain)))) =
+                                    self.domain_promise.as_ref().map(|p| p.ready())
+                                {
+                                    let domain = domain.clone();
+                                    let config_manager = self.config_manager.clone();
+
+                                    self.save_domain_config_promise =
+                                        Some(Promise::spawn_async(async move {
+                                            config_manager
+                                                .save_domain_config(&domain, &new_domain_config)
+                                                .await
+                                        }));
+                                }
+                            }
+
+                            if make_password_editing_toolbar_regenerate_button(ui).clicked() {
+                                self.edit_password_content =
+                                    mirrorx_core::utility::rand::generate_random_password();
+                            }
+                        } else {
+                            if make_password_toolbar_right_button(ui).clicked() {
+                                self.show_password = !self.show_password;
+                            }
+
+                            self.show_password = self.show_password && ui.ui_contains_pointer();
+
+                            if make_password_toolbar_left_button(ui).clicked() {
+                                self.edit_password = !self.edit_password;
+                                if self.edit_password {
+                                    self.edit_password_content =
+                                        domain_config.device_password.clone();
+                                }
                             };
-                        },
-                    );
-                }
-                Some(Ok(None)) => {
-                    ui.label(RichText::new("None").font(FontId::proportional(40.0)));
-                }
-                Some(Err(err)) => {
-                    tracing::error!(?err, "read config domain failed");
-                    ui.label(RichText::new("Error").font(FontId::proportional(40.0)));
-                }
-                None => {
-                    ui.spinner();
+                        }
+                    })
+                },
+            );
+
+            if let Some(promise) = &self.save_domain_config_promise {
+                if let Some(res) = promise.ready() {
+                    match res {
+                        Ok(_) => {
+                            self.save_domain_config_promise = None;
+                            self.reload_config_domain(true);
+                            self.edit_password = false;
+                        }
+                        Err(err) => {
+                            // todo: toast update password failed
+                            tracing::error!(?err, "update device password failed");
+                        }
+                    }
                 }
             }
 
@@ -269,9 +370,7 @@ impl View for ConnectPage {
 
                         // Password Panel
                         strip.cell(|ui| {
-                            ui.centered_and_justified(|ui| {
-                                self.build_device_password(ui);
-                            });
+                            self.build_device_password(ui);
                         });
 
                         // Connect Remote Title
@@ -317,12 +416,12 @@ impl View for ConnectPage {
                                                 strip.empty();
                                                 strip.cell(|ui| {
                                                     ui.centered_and_justified(|ui| {
-                                                        make_left_connect_button(ui);
+                                                        make_connect_desktop_button(ui);
                                                     });
                                                 });
                                                 strip.cell(|ui| {
                                                     ui.centered_and_justified(|ui| {
-                                                        make_right_connect_button(ui);
+                                                        make_connect_file_manager_button(ui);
                                                     });
                                                 });
                                                 strip.empty();
@@ -337,7 +436,7 @@ impl View for ConnectPage {
 }
 
 #[inline]
-fn make_left_connect_button(ui: &mut Ui) {
+fn make_connect_desktop_button(ui: &mut Ui) {
     ui.visuals_mut().widgets.hovered.expansion = 0.0;
     ui.visuals_mut().widgets.hovered.bg_stroke = Stroke::none();
     ui.visuals_mut().widgets.hovered.rounding = Rounding {
@@ -369,7 +468,7 @@ fn make_left_connect_button(ui: &mut Ui) {
 }
 
 #[inline]
-fn make_right_connect_button(ui: &mut Ui) {
+fn make_connect_file_manager_button(ui: &mut Ui) {
     ui.visuals_mut().widgets.hovered.expansion = 0.0;
     ui.visuals_mut().widgets.hovered.bg_stroke = Stroke::none();
     ui.visuals_mut().widgets.hovered.rounding = Rounding {
@@ -398,4 +497,149 @@ fn make_right_connect_button(ui: &mut Ui) {
     };
 
     ui.add_enabled(false, eframe::egui::widgets::Button::new("File Manager"));
+}
+
+#[inline]
+fn make_password_editing_toolbar_regenerate_button(ui: &mut Ui) -> Response {
+    ui.visuals_mut().widgets.hovered.expansion = 0.0;
+    ui.visuals_mut().widgets.hovered.bg_stroke = Stroke::none();
+    ui.visuals_mut().widgets.hovered.rounding = Rounding {
+        nw: 2.0,
+        ne: 0.0,
+        sw: 2.0,
+        se: 0.0,
+    };
+
+    ui.visuals_mut().widgets.inactive.expansion = 0.0;
+    ui.visuals_mut().widgets.inactive.bg_stroke = Stroke::none();
+    ui.visuals_mut().widgets.inactive.rounding = Rounding {
+        nw: 2.0,
+        ne: 0.0,
+        sw: 2.0,
+        se: 0.0,
+    };
+
+    ui.visuals_mut().widgets.active.expansion = 0.0;
+    ui.visuals_mut().widgets.active.bg_stroke = Stroke::none();
+    ui.visuals_mut().widgets.active.rounding = Rounding {
+        nw: 2.0,
+        ne: 0.0,
+        sw: 2.0,
+        se: 0.0,
+    };
+
+    ui.button(RichText::new("🔄").font(FontId::proportional(18.0)))
+}
+
+#[inline]
+fn make_password_editing_toolbar_commit_button(ui: &mut Ui) -> Response {
+    ui.visuals_mut().widgets.hovered.expansion = 0.0;
+    ui.visuals_mut().widgets.hovered.bg_stroke = Stroke::none();
+    ui.visuals_mut().widgets.hovered.rounding = Rounding::none();
+
+    ui.visuals_mut().widgets.inactive.expansion = 0.0;
+    ui.visuals_mut().widgets.inactive.bg_stroke = Stroke::none();
+    ui.visuals_mut().widgets.inactive.rounding = Rounding::none();
+
+    ui.visuals_mut().widgets.active.expansion = 0.0;
+    ui.visuals_mut().widgets.active.bg_stroke = Stroke::none();
+    ui.visuals_mut().widgets.active.rounding = Rounding::none();
+
+    ui.button(RichText::new("✔").font(FontId::proportional(18.0)))
+}
+
+#[inline]
+fn make_password_editing_toolbar_cancel_button(ui: &mut Ui) -> Response {
+    ui.visuals_mut().widgets.hovered.expansion = 0.0;
+    ui.visuals_mut().widgets.hovered.bg_stroke = Stroke::none();
+    ui.visuals_mut().widgets.hovered.rounding = Rounding {
+        nw: 0.0,
+        ne: 2.0,
+        sw: 0.0,
+        se: 2.0,
+    };
+
+    ui.visuals_mut().widgets.inactive.expansion = 0.0;
+    ui.visuals_mut().widgets.inactive.bg_stroke = Stroke::none();
+    ui.visuals_mut().widgets.inactive.rounding = Rounding {
+        nw: 0.0,
+        ne: 2.0,
+        sw: 0.0,
+        se: 2.0,
+    };
+
+    ui.visuals_mut().widgets.active.expansion = 0.0;
+    ui.visuals_mut().widgets.active.bg_stroke = Stroke::none();
+    ui.visuals_mut().widgets.active.rounding = Rounding {
+        nw: 0.0,
+        ne: 2.0,
+        sw: 0.0,
+        se: 2.0,
+    };
+
+    ui.button(RichText::new("❌").font(FontId::proportional(18.0)))
+}
+
+#[inline]
+fn make_password_toolbar_left_button(ui: &mut Ui) -> Response {
+    ui.visuals_mut().widgets.hovered.expansion = 0.0;
+    ui.visuals_mut().widgets.hovered.bg_stroke = Stroke::none();
+    ui.visuals_mut().widgets.hovered.rounding = Rounding {
+        nw: 2.0,
+        ne: 0.0,
+        sw: 2.0,
+        se: 0.0,
+    };
+
+    ui.visuals_mut().widgets.inactive.expansion = 0.0;
+    ui.visuals_mut().widgets.inactive.bg_stroke = Stroke::none();
+    ui.visuals_mut().widgets.inactive.rounding = Rounding {
+        nw: 2.0,
+        ne: 0.0,
+        sw: 2.0,
+        se: 0.0,
+    };
+
+    ui.visuals_mut().widgets.active.expansion = 0.0;
+    ui.visuals_mut().widgets.active.bg_stroke = Stroke::none();
+    ui.visuals_mut().widgets.active.rounding = Rounding {
+        nw: 2.0,
+        ne: 0.0,
+        sw: 2.0,
+        se: 0.0,
+    };
+
+    ui.button(RichText::new("✏").font(FontId::proportional(18.0)))
+}
+
+#[inline]
+fn make_password_toolbar_right_button(ui: &mut Ui) -> Response {
+    ui.visuals_mut().widgets.hovered.expansion = 0.0;
+    ui.visuals_mut().widgets.hovered.bg_stroke = Stroke::none();
+    ui.visuals_mut().widgets.hovered.rounding = Rounding {
+        nw: 0.0,
+        ne: 2.0,
+        sw: 0.0,
+        se: 2.0,
+    };
+
+    ui.visuals_mut().widgets.inactive.expansion = 0.0;
+    ui.visuals_mut().widgets.inactive.bg_stroke = Stroke::none();
+    ui.visuals_mut().widgets.inactive.rounding = Rounding {
+        nw: 0.0,
+        ne: 2.0,
+        sw: 0.0,
+        se: 2.0,
+    };
+
+    ui.visuals_mut().widgets.active.expansion = 0.0;
+    ui.visuals_mut().widgets.active.bg_stroke = Stroke::none();
+    ui.visuals_mut().widgets.active.rounding = Rounding {
+        nw: 0.0,
+        ne: 2.0,
+        sw: 0.0,
+        se: 2.0,
+    };
+
+    ui.button(RichText::new("👁").font(FontId::proportional(18.0)))
 }
