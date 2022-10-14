@@ -10,7 +10,9 @@ use crate::error::CoreResult;
 use tonic::transport::Channel;
 
 pub use register::{RegisterRequest, RegisterResponse};
+pub use visit::{ResourceType, VisitRequest, VisitResponse};
 
+#[derive(Clone)]
 pub struct SignalingClient {
     client: signaling_proto::service::signaling_client::SignalingClient<Channel>,
 }
@@ -56,3 +58,11 @@ impl SignalingClient {
         Ok(())
     }
 }
+
+// impl Clone for SignalingClient {
+//     fn clone(&self) -> Self {
+//         Self {
+//             client: self.client.clone(),
+//         }
+//     }
+// }

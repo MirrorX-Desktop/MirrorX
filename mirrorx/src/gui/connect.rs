@@ -4,18 +4,18 @@ use super::{
 };
 use eframe::{
     egui::{
-        style::Margin, Frame, Layout, Response, RichText, Rounding, TextBuffer, TextEdit, Ui,
-        WidgetText,
+        style::Margin, Frame, Layout, Response, RichText, Rounding, Sense, Spinner, TextBuffer,
+        TextEdit, Ui, WidgetText,
     },
     emath::Align,
-    epaint::{Color32, FontId, Pos2, Rect, Stroke, Vec2},
+    epaint::{Color32, FontId, Pos2, Rect, Stroke, TextShape, Vec2},
 };
 use egui_extras::{Size, StripBuilder};
 use egui_toast::{Toast, ToastKind, ToastOptions, Toasts};
 use mirrorx_core::{
     api::{
         config::{ConfigManager, DomainConfig},
-        signaling::SignalingClient,
+        signaling::{SignalingClient, VisitResponse},
     },
     error::CoreResult,
 };
@@ -36,6 +36,7 @@ pub struct ConnectPage {
     domain_config_promise: Option<Promise<CoreResult<Option<DomainConfig>>>>,
     show_next_domain_config_promise_error_toast: bool,
     save_domain_config_promise: Option<Promise<CoreResult<()>>>,
+    visit_promise: Option<Promise<CoreResult<VisitResponse>>>,
 }
 
 impl ConnectPage {
@@ -54,6 +55,7 @@ impl ConnectPage {
             domain_config_promise: None,
             show_next_domain_config_promise_error_toast: true,
             save_domain_config_promise: None,
+            visit_promise: None,
         }
     }
 
@@ -302,6 +304,152 @@ impl ConnectPage {
         );
     }
 
+    #[inline]
+    fn build_connect_desktop_button(&mut self, ui: &mut Ui) {
+        ui.visuals_mut().widgets.hovered.expansion = 0.0;
+        ui.visuals_mut().widgets.hovered.bg_stroke = Stroke::none();
+        ui.visuals_mut().widgets.hovered.bg_fill = Color32::from_rgb(0x19, 0x8C, 0xFF);
+        ui.visuals_mut().widgets.hovered.fg_stroke = Stroke::new(1.0, Color32::WHITE);
+        ui.visuals_mut().widgets.hovered.rounding = Rounding {
+            nw: 2.0,
+            ne: 0.0,
+            sw: 2.0,
+            se: 0.0,
+        };
+
+        ui.visuals_mut().widgets.inactive.expansion = 0.0;
+        ui.visuals_mut().widgets.inactive.bg_stroke = Stroke::none();
+        ui.visuals_mut().widgets.inactive.bg_fill = Color32::from_rgb(0x01, 0x6F, 0xFF);
+        ui.visuals_mut().widgets.inactive.fg_stroke = Stroke::new(1.0, Color32::WHITE);
+        ui.visuals_mut().widgets.inactive.rounding = Rounding {
+            nw: 2.0,
+            ne: 0.0,
+            sw: 2.0,
+            se: 0.0,
+        };
+
+        ui.visuals_mut().widgets.active.expansion = 0.0;
+        ui.visuals_mut().widgets.active.bg_stroke = Stroke::none();
+        ui.visuals_mut().widgets.active.bg_fill = Color32::from_rgb(0x00, 0x54, 0xE6);
+        ui.visuals_mut().widgets.active.fg_stroke = Stroke::new(1.0, Color32::WHITE);
+        ui.visuals_mut().widgets.active.rounding = Rounding {
+            nw: 2.0,
+            ne: 0.0,
+            sw: 2.0,
+            se: 0.0,
+        };
+
+        let (rect, response) = ui.allocate_exact_size(ui.available_size(), Sense::click());
+
+        ui.allocate_ui_at_rect(rect, |ui| match self.visit_promise {
+            Some(_) => {
+                ui.painter().rect_filled(
+                    rect,
+                    ui.visuals().widgets.active.rounding,
+                    ui.visuals().widgets.active.bg_fill,
+                );
+                ui.add_enabled(false, Spinner::default());
+            }
+            None => {
+                let visuals = ui.style().interact(&response);
+                ui.painter()
+                    .rect_filled(rect, visuals.rounding, visuals.bg_fill);
+
+                let text = WidgetText::from("桌面")
+                    .color(visuals.fg_stroke.color)
+                    .into_galley(ui, None, ui.available_width(), FontId::proportional(28.0));
+
+                ui.painter().add(TextShape {
+                    pos: rect.left_top() + ((ui.available_size() - text.size()) / 2.0),
+                    galley: text.galley,
+                    underline: Stroke::none(),
+                    override_text_color: None,
+                    angle: 0.0,
+                });
+            }
+        });
+
+        if response.clicked() && self.visit_promise.is_none() {
+            self.connect_desktop();
+        }
+
+        if let Some(promise) = &self.visit_promise {
+            if let Some(res) = promise.ready() {
+                match res {
+                    Ok(resp) => {
+                        if resp.allow {
+                            // todo: popup password window
+                        } else {
+                            self.custom_toast("Remote reject your connect request!");
+                        }
+                    }
+                    Err(err) => {
+                        tracing::error!(?err, "connect remote desktop failed");
+                        self.custom_toast("Connect remote desktop failed! Remote device is offline or request timeout!")
+                    }
+                }
+
+                self.visit_promise = None;
+            }
+        }
+    }
+
+    fn connect_desktop(&mut self) {
+        let input_device_id = self.input_device_id.as_str();
+        if input_device_id.len() != 10 || !input_device_id.chars().all(|c| c.is_ascii_digit()) {
+            self.custom_toast("Invalid connect device id");
+            return;
+        }
+
+        let input_device_id: i64 = match input_device_id.parse() {
+            Ok(v) => v,
+            Err(_) => {
+                self.custom_toast("Invalid connect device id format");
+                return;
+            }
+        };
+
+        let domain = if let Some(Some(Ok(Some(domain)))) =
+            self.domain_promise.as_ref().map(|promise| promise.ready())
+        {
+            domain.clone()
+        } else {
+            self.custom_toast("domain is empty");
+            return;
+        };
+
+        let domain_config = if let Some(Some(Ok(Some(domain_config)))) = self
+            .domain_config_promise
+            .as_ref()
+            .map(|promise| promise.ready())
+        {
+            domain_config.clone()
+        } else {
+            self.custom_toast("domain config is empty");
+            return;
+        };
+
+        let signaling_client =
+            if let Some(Ok(signaling_client)) = self.signaling_client_promise.ready_mut() {
+                signaling_client
+            } else {
+                self.custom_toast("signaling connection is broken");
+                return;
+            };
+
+        let signaling_client = signaling_client.clone();
+        self.visit_promise = Some(Promise::spawn_async(async move {
+            signaling_client
+                .visit(mirrorx_core::api::signaling::VisitRequest {
+                    domain: domain.clone(),
+                    local_device_id: domain_config.device_id,
+                    remote_device_id: input_device_id,
+                    resource_type: mirrorx_core::api::signaling::ResourceType::Desktop,
+                })
+                .await
+        }));
+    }
+
     fn custom_toast(&self, content: impl Into<WidgetText>) {
         self.toasts.borrow_mut().add(Toast {
             kind: ToastKind::Custom(0),
@@ -408,7 +556,7 @@ impl View for ConnectPage {
                                                 strip.empty();
                                                 strip.cell(|ui| {
                                                     ui.centered_and_justified(|ui| {
-                                                        make_connect_desktop_button(ui);
+                                                        self.build_connect_desktop_button(ui);
                                                     });
                                                 });
                                                 strip.cell(|ui| {
@@ -427,38 +575,6 @@ impl View for ConnectPage {
 
         self.check_signaling_status();
     }
-}
-
-#[inline]
-fn make_connect_desktop_button(ui: &mut Ui) {
-    ui.visuals_mut().widgets.hovered.expansion = 0.0;
-    ui.visuals_mut().widgets.hovered.bg_stroke = Stroke::none();
-    ui.visuals_mut().widgets.hovered.rounding = Rounding {
-        nw: 2.0,
-        ne: 0.0,
-        sw: 2.0,
-        se: 0.0,
-    };
-
-    ui.visuals_mut().widgets.inactive.expansion = 0.0;
-    ui.visuals_mut().widgets.inactive.bg_stroke = Stroke::none();
-    ui.visuals_mut().widgets.inactive.rounding = Rounding {
-        nw: 2.0,
-        ne: 0.0,
-        sw: 2.0,
-        se: 0.0,
-    };
-
-    ui.visuals_mut().widgets.active.expansion = 0.0;
-    ui.visuals_mut().widgets.active.bg_stroke = Stroke::none();
-    ui.visuals_mut().widgets.active.rounding = Rounding {
-        nw: 2.0,
-        ne: 0.0,
-        sw: 2.0,
-        se: 0.0,
-    };
-
-    if ui.button("Desktop").clicked() {}
 }
 
 #[inline]
