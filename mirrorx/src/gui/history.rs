@@ -1,14 +1,11 @@
 use super::View;
-use mirrorx_core::api::config::ConfigManager;
 use std::sync::Arc;
 
-pub struct HistoryPage {
-    config_manager: Arc<ConfigManager>,
-}
+pub struct HistoryPage {}
 
 impl HistoryPage {
-    pub fn new(config_manager: Arc<ConfigManager>) -> Self {
-        Self { config_manager }
+    pub fn new() -> Self {
+        Self {}
     }
 }
 

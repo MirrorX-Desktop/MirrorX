@@ -1,80 +1,52 @@
 use crate::error::CoreResult;
 use rusqlite::{params, Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
-use std::path::Path;
-use tokio::sync::Mutex;
+use std::{collections::HashMap, path::Path};
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct Config {
+    pub primary_domain: String,
+    pub domain_configs: HashMap<String, DomainConfig>,
+}
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct DomainConfig {
-    pub uri: String,
+    pub addr: String,
     pub device_id: i64,
     pub device_finger_print: String,
     pub device_password: String,
 }
 
-pub struct ConfigManager {
-    conn: Mutex<Connection>,
-}
+pub fn read(path: &Path) -> CoreResult<Option<Config>> {
+    let conn = Connection::open(path)?;
+    ensure_tables(&conn)?;
 
-impl ConfigManager {
-    pub fn new(db_path: &Path) -> CoreResult<ConfigManager> {
-        let conn = Connection::open(db_path)?;
-        ensure_tables(&conn)?;
-        Ok(Self {
-            conn: Mutex::new(conn),
-        })
-    }
-
-    pub async fn domain(&self) -> CoreResult<Option<String>> {
-        self.read("domain").await
-    }
-
-    pub async fn save_domain(&self, value: &str) -> CoreResult<()> {
-        self.save("domain", value).await
-    }
-
-    pub async fn domain_config(&self, domain: &str) -> CoreResult<Option<DomainConfig>> {
-        self.read(&build_key(vec!["domain", domain]))
-            .await?
-            .map_or(Ok(None), |v| Ok(Some(serde_json::from_str(&v)?)))
-    }
-
-    pub async fn save_domain_config(&self, domain: &str, value: &DomainConfig) -> CoreResult<()> {
-        self.save(
-            &build_key(vec!["domain", domain]),
-            &serde_json::to_string(value)?,
+    match conn
+        .query_row(
+            "SELECT value FROM kv WHERE key = ?1 LIMIT 1;",
+            [b"config"],
+            |row| row.get::<_, String>(0),
         )
-        .await
-    }
-
-    async fn read(&self, key: &str) -> CoreResult<Option<String>> {
-        match self
-            .conn
-            .lock()
-            .await
-            .query_row(
-                "SELECT value FROM kv WHERE key = ?1 LIMIT 1;",
-                [key],
-                |row| row.get::<_, String>(0),
-            )
-            .optional()?
-        {
-            Some(res) => Ok(Some(res)),
-            None => Ok(None),
+        .optional()?
+    {
+        Some(res) => {
+            let config: Config = serde_json::from_str(&res)?;
+            Ok(Some(config))
         }
-    }
-
-    async fn save(&self, key: &str, value: &str) -> CoreResult<()> {
-        let conn = self.conn.lock().await;
-        let mut stmt = conn.prepare("INSERT OR REPLACE INTO kv (key, value) VALUES (?1,?2);")?;
-        stmt.execute(params![key, value]).map(|_| ())?;
-
-        Ok(())
+        None => Ok(None),
     }
 }
 
-fn build_key(paths: Vec<&str>) -> String {
-    paths.join(".")
+pub fn save(path: &Path, config: &Config) -> CoreResult<()> {
+    let value = serde_json::to_string(config)?;
+
+    let conn = Connection::open(path)?;
+    ensure_tables(&conn)?;
+
+    let mut stmt = conn.prepare("INSERT OR REPLACE INTO kv (key, value) VALUES (?1,?2);")?;
+    stmt.execute(params![b"config", value]).map(|_| ())?;
+
+    Ok(())
 }
 
 fn ensure_tables(conn: &Connection) -> CoreResult<()> {

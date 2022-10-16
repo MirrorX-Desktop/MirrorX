@@ -21,19 +21,19 @@ impl<'a> eframe::egui::Widget for DeviceIDInputField<'a> {
                 vec![LayoutSection {
                     leading_space: 0.0,
                     byte_range: 0..text.len(),
-                    format: TextFormat::simple(FontId::monospace(50.0), Color32::BLACK),
+                    format: TextFormat::simple(FontId::monospace(53.0), Color32::BLACK),
                 }]
             } else if text.len() > 2 && text.len() <= 6 {
                 vec![
                     LayoutSection {
                         leading_space: 0.0,
                         byte_range: 0..2,
-                        format: TextFormat::simple(FontId::monospace(50.0), Color32::BLACK),
+                        format: TextFormat::simple(FontId::monospace(53.0), Color32::BLACK),
                     },
                     LayoutSection {
                         leading_space: 18.0,
                         byte_range: 2..text.len(),
-                        format: TextFormat::simple(FontId::monospace(50.0), Color32::BLACK),
+                        format: TextFormat::simple(FontId::monospace(53.0), Color32::BLACK),
                     },
                 ]
             } else {
@@ -41,17 +41,17 @@ impl<'a> eframe::egui::Widget for DeviceIDInputField<'a> {
                     LayoutSection {
                         leading_space: 0.0,
                         byte_range: 0..2,
-                        format: TextFormat::simple(FontId::monospace(50.0), Color32::BLACK),
+                        format: TextFormat::simple(FontId::monospace(53.0), Color32::BLACK),
                     },
                     LayoutSection {
                         leading_space: 18.0,
                         byte_range: 2..6,
-                        format: TextFormat::simple(FontId::monospace(50.0), Color32::BLACK),
+                        format: TextFormat::simple(FontId::monospace(53.0), Color32::BLACK),
                     },
                     LayoutSection {
                         leading_space: 18.0,
                         byte_range: 6..text.len(),
-                        format: TextFormat::simple(FontId::monospace(50.0), Color32::BLACK),
+                        format: TextFormat::simple(FontId::monospace(53.0), Color32::BLACK),
                     },
                 ]
             };
@@ -81,7 +81,6 @@ impl<'a> eframe::egui::Widget for DeviceIDInputField<'a> {
                         .outer_margin(Margin::same(2.0))
                         .show(ui, |ui| {
                             let output = TextEdit::singleline(self.text)
-                                .font(FontId::monospace(50.0))
                                 .layouter(&mut layouter)
                                 .margin(Vec2::new(4.0, 4.0))
                                 .frame(false)
@@ -90,8 +89,8 @@ impl<'a> eframe::egui::Widget for DeviceIDInputField<'a> {
                             // first "-"
                             ui.painter().line_segment(
                                 [
-                                    output.response.rect.left_center() + Vec2::new(54.0, 0.0),
-                                    output.response.rect.left_center() + Vec2::new(61.0, 0.0),
+                                    output.response.rect.left_center() + Vec2::new(57.0, 2.0),
+                                    output.response.rect.left_center() + Vec2::new(64.0, 2.0),
                                 ],
                                 Stroke::new(2.6, Color32::BLACK),
                             );
@@ -99,8 +98,8 @@ impl<'a> eframe::egui::Widget for DeviceIDInputField<'a> {
                             // second "-"
                             ui.painter().line_segment(
                                 [
-                                    output.response.rect.left_center() + Vec2::new(160.0, 0.0),
-                                    output.response.rect.left_center() + Vec2::new(167.0, 0.0),
+                                    output.response.rect.left_center() + Vec2::new(168.0, 2.0),
+                                    output.response.rect.left_center() + Vec2::new(175.0, 2.0),
                                 ],
                                 Stroke::new(2.6, Color32::BLACK),
                             );

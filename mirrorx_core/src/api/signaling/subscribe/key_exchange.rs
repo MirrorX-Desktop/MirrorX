@@ -1,5 +1,6 @@
 use crate::{
-    api::endpoint::handlers::connect::ConnectRequest,
+    api::{config::Config, endpoint::handlers::connect::ConnectRequest},
+    core_error,
     error::{CoreError, CoreResult},
     utility::{nonce_value::NonceValue, runtime::TOKIO_RUNTIME},
 };
@@ -15,12 +16,13 @@ use signaling_proto::message::{
     KeyExchangePassiveDeviceSecret, KeyExchangeReplyError, KeyExchangeReplyRequest,
     KeyExchangeRequest, KeyExchangeResult,
 };
-use std::path::Path;
+use std::{path::PathBuf, sync::Arc};
+use tokio::sync::RwLock;
 use tonic::transport::Channel;
 
 pub async fn handle(
     client: &mut signaling_proto::service::signaling_client::SignalingClient<Channel>,
-    config_path: &Path,
+    config_path: PathBuf,
     req: &KeyExchangeRequest,
 ) {
     let reply = match key_agreement(config_path, req).await {
@@ -65,7 +67,7 @@ pub async fn handle(
 }
 
 async fn key_agreement(
-    config_path: &Path,
+    config_path: PathBuf,
     req: &KeyExchangeRequest,
 ) -> CoreResult<(
     Vec<u8>,
@@ -76,9 +78,19 @@ async fn key_agreement(
     SealingKey<NonceValue>,
     OpeningKey<NonceValue>,
 )> {
-    // let domain_config = crate::api::config::read_domain_config(config_path, &req.domain)?.ok_or(
-    //     CoreError::KeyExchangeReplyError(KeyExchangeReplyError::InvalidArgs),
-    // )?;
+    // let c = config.read().await;
+    // let device_password = if let Some(domain_config) = c.domain_configs.get(&c.primary_domain) {
+    //     domain_config.device_password.clone()
+    // } else {
+    //     return Err(core_error!("read device password failed"));
+    // };
+
+    // drop(c);
+    let config = crate::api::config::read(&config_path)?.ok_or(core_error!("config is empty!"))?;
+    let domain_config = config
+        .domain_configs
+        .get(&config.primary_domain)
+        .ok_or(core_error!("primary domain's config is empty"))?;
 
     if req.secret_nonce.len() != ring::aead::NONCE_LEN {
         return Err(CoreError::KeyExchangeReplyError(
@@ -89,7 +101,7 @@ async fn key_agreement(
     // generate secret opening key with salt
     let mut active_device_secret_opening_key = [0u8; 32];
     pbkdf2::pbkdf2::<Hmac<Sha256>>(
-        "".as_bytes(), //domain_config.device_password.as_bytes(),
+        domain_config.device_password.as_bytes(),
         &req.password_salt,
         10000,
         &mut active_device_secret_opening_key,

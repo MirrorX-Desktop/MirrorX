@@ -1,7 +1,4 @@
-use crate::{
-    core_error,
-    error::{CoreError, CoreResult},
-};
+use crate::{core_error, error::CoreResult};
 use signaling_proto::service::signaling_client::SignalingClient;
 use std::{convert::TryFrom, time::Duration};
 use tonic::{

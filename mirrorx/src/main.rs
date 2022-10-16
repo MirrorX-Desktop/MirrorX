@@ -1,4 +1,5 @@
 mod gui;
+mod utility;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {

@@ -17,6 +17,7 @@ tracing = "0.1.36"
 tracing-subscriber = "0.3.15"
 anyhow = "1.0.65"
 egui-toast = "0.4.0"
+futures = "0.3.24"
 
 # [patch.crates-io]
 

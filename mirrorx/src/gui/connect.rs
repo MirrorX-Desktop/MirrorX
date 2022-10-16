@@ -1,253 +1,100 @@
+use std::path::PathBuf;
+
+use crate::utility::promise_value::{OneWayUpdatePromiseValue, PromiseValue};
+
 use super::{
-    widgets::device_id_input_field::{DeviceIDInputField, DeviceIDInputText},
+    widgets::{
+        custom_toasts::CustomToasts,
+        device_id_input_field::{DeviceIDInputField, DeviceIDInputText},
+    },
     View,
 };
-use eframe::{
-    egui::{
-        style::Margin, Frame, Layout, Response, RichText, Rounding, Sense, Spinner, TextBuffer,
-        TextEdit, Ui, WidgetText,
-    },
-    emath::Align,
-    epaint::{Color32, FontId, Pos2, Rect, Stroke, TextShape, Vec2},
-};
+use eframe::{egui::*, emath::Align, epaint::*};
 use egui_extras::{Size, StripBuilder};
 use egui_toast::{Toast, ToastKind, ToastOptions, Toasts};
 use mirrorx_core::{
     api::{
-        config::{ConfigManager, DomainConfig},
-        signaling::{SignalingClient, VisitResponse},
+        config::{Config, DomainConfig},
+        signaling::{PublishMessage, SignalingClient, VisitResponse},
     },
     error::CoreResult,
 };
-use poll_promise::Promise;
-use std::{cell::RefCell, rc::Rc, sync::Arc};
+use tokio::sync::mpsc::Receiver;
 
-pub struct ConnectPage {
-    config_manager: Arc<ConfigManager>,
-    toasts: Rc<RefCell<Toasts>>,
-    show_password: bool,
-    edit_password: bool,
-    edit_password_content: String,
-    input_device_id: DeviceIDInputText,
-    signaling_client_promise: Promise<CoreResult<SignalingClient>>,
-    show_next_signaling_client_promise_error_toast: bool,
-    domain_promise: Option<Promise<CoreResult<Option<String>>>>,
-    show_next_domain_promise_error_toast: bool,
-    domain_config_promise: Option<Promise<CoreResult<Option<DomainConfig>>>>,
-    show_next_domain_config_promise_error_toast: bool,
-    save_domain_config_promise: Option<Promise<CoreResult<()>>>,
-    visit_promise: Option<Promise<CoreResult<VisitResponse>>>,
+pub struct ConnectPage<'a> {
+    config_and_path: &'a mut OneWayUpdatePromiseValue<(Config, PathBuf)>,
+    signaling_client: &'a mut PromiseValue<(SignalingClient, Receiver<PublishMessage>)>,
+    toasts: &'a mut CustomToasts,
+    show_password: &'a mut bool,
+    edit_password: &'a mut bool,
+    edit_password_content: &'a mut String,
+    device_id_input_text: &'a mut DeviceIDInputText,
+    is_desktop_connecting: &'a mut bool,
+    call_signaling_visit: &'a mut PromiseValue<VisitResponse>,
 }
 
-impl ConnectPage {
-    pub fn new(config_manager: Arc<ConfigManager>, toasts: Rc<RefCell<Toasts>>) -> Self {
+impl<'a> ConnectPage<'a> {
+    pub fn new(
+        config_and_path: &'a mut OneWayUpdatePromiseValue<(Config, PathBuf)>,
+        signaling_client: &'a mut PromiseValue<(SignalingClient, Receiver<PublishMessage>)>,
+        toasts: &'a mut CustomToasts,
+        show_password: &'a mut bool,
+        edit_password: &'a mut bool,
+        edit_password_content: &'a mut String,
+        device_id_input_text: &'a mut DeviceIDInputText,
+        is_desktop_connecting: &'a mut bool,
+        call_signaling_visit: &'a mut PromiseValue<VisitResponse>,
+    ) -> Self {
         Self {
-            config_manager: config_manager.clone(),
+            config_and_path,
+            signaling_client,
             toasts,
-            show_password: false,
-            edit_password: false,
-            edit_password_content: String::from(""),
-            input_device_id: DeviceIDInputText::default(),
-            signaling_client_promise: new_signaling_client_promise(config_manager),
-            show_next_signaling_client_promise_error_toast: true,
-            domain_promise: None,
-            show_next_domain_promise_error_toast: true,
-            domain_config_promise: None,
-            show_next_domain_config_promise_error_toast: true,
-            save_domain_config_promise: None,
-            visit_promise: None,
+            show_password,
+            edit_password,
+            edit_password_content,
+            device_id_input_text,
+            is_desktop_connecting,
+            call_signaling_visit,
         }
     }
 
-    fn init_signaling_client(&mut self) {
-        let config_manager = self.config_manager.clone();
-        self.signaling_client_promise = new_signaling_client_promise(config_manager);
-    }
-
-    fn reload_domain(&mut self, force: bool) {
-        let config_manager = self.config_manager.clone();
-        let promise_fn = || Promise::spawn_async(async move { config_manager.domain().await });
-
-        if force {
-            self.domain_promise = Some(promise_fn());
-        } else {
-            self.domain_promise.get_or_insert_with(promise_fn);
-        }
-    }
-
-    fn reload_domain_config(&mut self, force: bool) {
-        let config_manager = self.config_manager.clone();
-        let promise_fn = || {
-            Promise::spawn_async(async move {
-                if let Some(domain) = config_manager.domain().await? {
-                    Ok(config_manager.domain_config(&domain).await?)
-                } else {
-                    Ok(None)
-                }
-            })
-        };
-
-        if force {
-            self.domain_config_promise = Some(promise_fn());
-        } else {
-            self.domain_config_promise.get_or_insert_with(promise_fn);
-        }
-    }
-
-    fn check_signaling_status(&mut self) {
-        match self.signaling_client_promise.ready() {
-            Some(Ok(_)) => {
-                self.show_next_signaling_client_promise_error_toast = true;
-            }
-            Some(Err(err)) => {
-                if self.show_next_signaling_client_promise_error_toast {
-                    tracing::error!(?err, "signaling client connect failed");
-
-                    self.custom_toast(RichText::new(
-                        "Signaling connect failed! Please try to re-connect by click Domain \"🔄\"",
-                    ));
-
-                    self.show_next_signaling_client_promise_error_toast = false;
-                }
-            }
-            None => {}
-        }
-    }
-
-    fn build_domain(&mut self, ui: &mut Ui) {
-        match &self.domain_promise {
-            Some(promise) => match promise.ready() {
-                Some(Ok(Some(domain))) => {
-                    self.show_next_domain_promise_error_toast = true;
-                    ui.label(RichText::new(domain).font(FontId::proportional(40.0)));
-                }
-                Some(Ok(None)) => {
-                    if self.show_next_domain_promise_error_toast {
-                        self.custom_toast("domain is empty, please restart app!");
-                        self.show_next_domain_promise_error_toast = false;
-                    }
-                    ui.spinner();
-                }
-                Some(Err(err)) => {
-                    if self.show_next_domain_promise_error_toast {
-                        tracing::error!(?err, "read config domain failed");
-                        self.custom_toast("read config domain failed");
-                        self.show_next_domain_promise_error_toast = false;
-                    }
-                    ui.spinner();
-                }
-                None => {
-                    ui.spinner();
-                }
-            },
-            None => {
-                self.reload_domain(false);
-                ui.spinner();
-            }
-        }
-    }
-
+    #[inline]
     fn build_device_id(&mut self, ui: &mut Ui) {
-        match &self.domain_config_promise {
-            Some(promise) => match promise.ready() {
-                Some(Ok(Some(domain_config))) => {
-                    self.show_next_domain_config_promise_error_toast = true;
-                    let mut device_id_str = format!("{:0>10}", domain_config.device_id.to_string());
-                    device_id_str.insert(2, '-');
-                    device_id_str.insert(7, '-');
-                    ui.label(RichText::new(device_id_str).font(FontId::proportional(50.0)));
-                }
-                Some(Ok(None)) => {
-                    if self.show_next_domain_config_promise_error_toast {
-                        self.custom_toast("domain config is empty, please restart app!");
-                        self.show_next_domain_config_promise_error_toast = false;
-                    }
-                    ui.spinner();
-                }
-                Some(Err(err)) => {
-                    if self.show_next_domain_config_promise_error_toast {
-                        tracing::error!(?err, "read domain config failed");
-                        self.custom_toast("read domain config failed");
-                        self.show_next_domain_config_promise_error_toast = false;
-                    }
-                    ui.spinner();
-                }
-                None => {
-                    ui.spinner();
-                }
-            },
-            None => {
-                self.reload_domain_config(false);
-                ui.spinner();
+        if let Some((config, _)) = self.config_and_path.value() {
+            if let Some(domain_config) = config.domain_configs.get(&config.primary_domain) {
+                let mut device_id_str = format!("{:0>10}", domain_config.device_id);
+                device_id_str.insert(2, '-');
+                device_id_str.insert(7, '-');
+                ui.label(RichText::new(device_id_str).font(FontId::proportional(50.0)));
             }
+        } else {
+            ui.spinner();
         }
     }
 
+    #[inline]
     fn build_device_password(&mut self, ui: &mut Ui) {
-        let domain_config = if let Some(promise) = &self.domain_config_promise {
-            match promise.ready() {
-                Some(Ok(Some(domain_config))) => {
-                    self.show_next_domain_config_promise_error_toast = true;
-                    Some(domain_config)
-                }
-                Some(Ok(None)) => {
-                    if self.show_next_domain_config_promise_error_toast {
-                        self.custom_toast("domain config is empty, please restart app!");
-                        self.show_next_domain_config_promise_error_toast = false;
-                    }
-                    None
-                }
-                Some(Err(err)) => {
-                    if self.show_next_domain_config_promise_error_toast {
-                        tracing::error!(?err, "read domain config failed");
-                        self.custom_toast("read domain config failed");
-                        self.show_next_domain_config_promise_error_toast = false;
-                    }
-                    None
-                }
-                None => None,
-            }
-        } else {
-            self.reload_domain_config(false);
-            None
-        };
-
-        let domain_config = match domain_config {
-            Some(domain_config) => domain_config,
-            None => {
+        let domain_config = if let Some((config, _)) = self.config_and_path.value() {
+            if let Some(domain_config) = config.domain_configs.get(&config.primary_domain) {
+                domain_config
+            } else {
                 ui.spinner();
                 return;
             }
+        } else {
+            ui.spinner();
+            return;
         };
 
-        // panel content
-        if self.edit_password {
-            build_device_password_edit(ui, &mut self.edit_password_content);
+        if *self.edit_password {
+            build_device_password_edit(ui, self.edit_password_content);
         } else {
-            build_device_password_label(ui, self.show_password, &domain_config.device_password);
-        }
-
-        self.build_device_password_toolbar(ui, domain_config.clone());
-
-        if let Some(promise) = &self.save_domain_config_promise {
-            if let Some(res) = promise.ready() {
-                match res {
-                    Ok(_) => {
-                        self.reload_domain_config(true);
-                        self.edit_password = false;
-                    }
-                    Err(err) => {
-                        tracing::error!(?err, "update device password failed");
-                        self.custom_toast("Update password failed, please try again!");
-                    }
-                }
-
-                self.save_domain_config_promise = None;
-            }
+            build_device_password_label(ui, *self.show_password, &domain_config.device_password);
         }
     }
 
-    fn build_device_password_toolbar(&mut self, ui: &mut Ui, mut domain_config: DomainConfig) {
+    #[inline]
+    fn build_device_password_toolbar(&mut self, ui: &mut Ui) {
         let tool_bar_size = Vec2::new(80.0, 24.0);
         ui.allocate_ui_at_rect(
             Rect::from_min_size(
@@ -258,44 +105,63 @@ impl ConnectPage {
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                     ui.style_mut().spacing.item_spacing = Vec2::ZERO;
 
-                    if self.edit_password {
+                    if *self.edit_password {
                         if make_password_editing_toolbar_cancel_button(ui).clicked() {
-                            self.edit_password = false;
+                            *self.edit_password = false;
                         }
 
                         if make_password_editing_toolbar_commit_button(ui).clicked() {
-                            domain_config.device_password = self.edit_password_content.clone();
+                            if let Some((old_config, config_path)) = self.config_and_path.value() {
+                                let mut new_config = old_config.clone();
+                                if let Some(domain_config) = new_config
+                                    .domain_configs
+                                    .get_mut(&old_config.primary_domain)
+                                {
+                                    domain_config.device_password =
+                                        self.edit_password_content.clone();
 
-                            if let Some(Some(Ok(Some(domain)))) =
-                                self.domain_promise.as_ref().map(|p| p.ready())
-                            {
-                                let domain = domain.clone();
-                                let config_manager = self.config_manager.clone();
-
-                                self.save_domain_config_promise =
-                                    Some(Promise::spawn_async(async move {
-                                        config_manager
-                                            .save_domain_config(&domain, &domain_config)
-                                            .await
-                                    }));
+                                    match mirrorx_core::api::config::save(config_path, &new_config)
+                                    {
+                                        Ok(_) => {
+                                            self.config_and_path.update();
+                                            *self.edit_password = false;
+                                        }
+                                        Err(err) => {
+                                            tracing::error!(?err, "update device password failed");
+                                            self.toasts.error("Update device password failed, please try again later!");
+                                        }
+                                    }
+                                }
                             }
                         }
 
                         if make_password_editing_toolbar_regenerate_button(ui).clicked() {
-                            self.edit_password_content =
+                            *self.edit_password_content =
                                 mirrorx_core::utility::rand::generate_random_password();
                         }
                     } else {
                         if make_password_toolbar_right_button(ui).clicked() {
-                            self.show_password = !self.show_password;
+                            *self.show_password = !(*self.show_password);
                         }
 
-                        self.show_password = self.show_password && ui.ui_contains_pointer();
+                        *self.show_password = *self.show_password && ui.ui_contains_pointer();
 
                         if make_password_toolbar_left_button(ui).clicked() {
-                            self.edit_password = !self.edit_password;
-                            if self.edit_password {
-                                self.edit_password_content = domain_config.device_password.clone();
+                            *self.edit_password = !(*self.edit_password);
+                            if *self.edit_password {
+                                let current_password = match self.config_and_path.value() {
+                                    Some((config, _)) => {
+                                        match config.domain_configs.get(&config.primary_domain) {
+                                            Some(domain_config) => {
+                                                domain_config.device_password.clone()
+                                            }
+                                            None => String::from(""),
+                                        }
+                                    }
+                                    None => String::from(""),
+                                };
+
+                                *self.edit_password_content = current_password;
                             }
                         };
                     }
@@ -341,16 +207,15 @@ impl ConnectPage {
 
         let (rect, response) = ui.allocate_exact_size(ui.available_size(), Sense::click());
 
-        ui.allocate_ui_at_rect(rect, |ui| match self.visit_promise {
-            Some(_) => {
+        ui.allocate_ui_at_rect(rect, |ui| {
+            if *self.is_desktop_connecting {
                 ui.painter().rect_filled(
                     rect,
                     ui.visuals().widgets.active.rounding,
                     ui.visuals().widgets.active.bg_fill,
                 );
                 ui.add_enabled(false, Spinner::default());
-            }
-            None => {
+            } else {
                 let visuals = ui.style().interact(&response);
                 ui.painter()
                     .rect_filled(rect, visuals.rounding, visuals.bg_fill);
@@ -369,211 +234,145 @@ impl ConnectPage {
             }
         });
 
-        if response.clicked() && self.visit_promise.is_none() {
+        if response.clicked() && !(*self.is_desktop_connecting) {
             self.connect_desktop();
-        }
-
-        if let Some(promise) = &self.visit_promise {
-            if let Some(res) = promise.ready() {
-                match res {
-                    Ok(resp) => {
-                        if resp.allow {
-                            // todo: popup password window
-                        } else {
-                            self.custom_toast("Remote reject your connect request!");
-                        }
-                    }
-                    Err(err) => {
-                        tracing::error!(?err, "connect remote desktop failed");
-                        self.custom_toast("Connect remote desktop failed! Remote device is offline or request timeout!")
-                    }
-                }
-
-                self.visit_promise = None;
-            }
         }
     }
 
     fn connect_desktop(&mut self) {
-        let input_device_id = self.input_device_id.as_str();
+        let input_device_id = self.device_id_input_text.as_str();
         if input_device_id.len() != 10 || !input_device_id.chars().all(|c| c.is_ascii_digit()) {
-            self.custom_toast("Invalid connect device id");
+            self.toasts.error("Invalid connect device id");
             return;
         }
 
         let input_device_id: i64 = match input_device_id.parse() {
             Ok(v) => v,
             Err(_) => {
-                self.custom_toast("Invalid connect device id format");
+                self.toasts.error("Invalid connect device id format");
                 return;
             }
         };
 
-        let domain = if let Some(Some(Ok(Some(domain)))) =
-            self.domain_promise.as_ref().map(|promise| promise.ready())
-        {
-            domain.clone()
-        } else {
-            self.custom_toast("domain is empty");
-            return;
-        };
-
-        let domain_config = if let Some(Some(Ok(Some(domain_config)))) = self
-            .domain_config_promise
-            .as_ref()
-            .map(|promise| promise.ready())
-        {
-            domain_config.clone()
-        } else {
-            self.custom_toast("domain config is empty");
-            return;
-        };
-
-        let signaling_client =
-            if let Some(Ok(signaling_client)) = self.signaling_client_promise.ready_mut() {
-                signaling_client
-            } else {
-                self.custom_toast("signaling connection is broken");
+        let config = match self.config_and_path.value() {
+            Some((config, _)) => config,
+            None => {
+                self.toasts.error("Current config is empty");
                 return;
-            };
+            }
+        };
 
-        let signaling_client = signaling_client.clone();
-        self.visit_promise = Some(Promise::spawn_async(async move {
-            signaling_client
-                .visit(mirrorx_core::api::signaling::VisitRequest {
-                    domain: domain.clone(),
-                    local_device_id: domain_config.device_id,
-                    remote_device_id: input_device_id,
-                    resource_type: mirrorx_core::api::signaling::ResourceType::Desktop,
-                })
-                .await
-        }));
-    }
+        let domain_config = match config.domain_configs.get(&config.primary_domain) {
+            Some(domain_config) => domain_config,
+            None => {
+                self.toasts.error("Current domain config is empty");
+                return;
+            }
+        };
 
-    fn custom_toast(&self, content: impl Into<WidgetText>) {
-        self.toasts.borrow_mut().add(Toast {
-            kind: ToastKind::Custom(0),
-            text: content.into(),
-            options: ToastOptions::default(),
-        });
+        let domain = config.primary_domain.clone();
+        let local_device_id = domain_config.device_id;
+
+        if let Some((signaling_client, _)) = self.signaling_client.value() {
+            *self.is_desktop_connecting = true;
+            let signaling_client = signaling_client.clone();
+            self.call_signaling_visit.spawn_update(async move {
+                signaling_client
+                    .visit(mirrorx_core::api::signaling::VisitRequest {
+                        domain,
+                        local_device_id,
+                        remote_device_id: input_device_id,
+                        resource_type: mirrorx_core::api::signaling::ResourceType::Desktop,
+                    })
+                    .await
+            });
+        } else {
+            // todo: give a resolution
+            self.toasts.error("Signaling connection is broken");
+        }
     }
 }
 
-impl View for ConnectPage {
+impl View for ConnectPage<'_> {
     fn build(&mut self, ui: &mut eframe::egui::Ui) {
-        Frame::default()
-            .inner_margin(Margin::same(8.0))
-            .show(ui, |ui| {
-                StripBuilder::new(ui)
-                    .size(Size::relative(0.09)) // Domain Title
-                    .size(Size::relative(0.16)) // Domain
-                    .size(Size::relative(0.16)) // Device ID Panel
-                    .size(Size::relative(0.16)) // Password Panel
-                    .size(Size::relative(0.12)) // Connect Remote Title
-                    .size(Size::relative(0.13)) // Connect Device ID Panel
-                    .size(Size::relative(0.18)) // Connect Button
-                    .vertical(|mut strip| {
-                        // Domain Title
-                        strip.cell(|ui| {
-                            ui.centered_and_justified(|ui| {
-                                let label_rect = ui
-                                    .label(RichText::new("Domain").font(FontId::proportional(28.0)))
-                                    .rect;
-
-                                let button_pos = Pos2::new(
-                                    label_rect.right_center().x - 14.0,
-                                    label_rect.right_center().y,
-                                );
-
-                                ui.allocate_ui_at_rect(
-                                    Rect::from_center_size(button_pos, Vec2::new(20.0, 20.0)),
-                                    |ui| {
-                                        if ui.button("🔄").clicked() {}
-                                    },
-                                );
-                            });
-                        });
-
-                        // Domain
-                        strip.cell(|ui| {
-                            ui.centered_and_justified(|ui| {
-                                self.build_domain(ui);
-                            });
-                        });
-
-                        // Device ID Panel
-                        strip.cell(|ui| {
-                            ui.centered_and_justified(|ui| {
-                                self.build_device_id(ui);
-                            });
-                        });
-
-                        // Password Panel
-                        strip.cell(|ui| {
-                            self.build_device_password(ui);
-                        });
-
-                        // Connect Remote Title
-                        strip.cell(|ui| {
-                            ui.painter().line_segment(
-                                [
-                                    ui.max_rect().left_top() + Vec2::new(2.0, 0.0),
-                                    ui.max_rect().right_top() + Vec2::new(-2.0, 0.0),
-                                ],
-                                Stroke::new(1.0, Color32::GRAY),
-                            );
-
-                            ui.centered_and_justified(|ui| {
-                                ui.label(
-                                    RichText::new("Connect Remote")
-                                        .font(FontId::proportional(28.0)),
-                                );
-                            });
-                        });
-
-                        // Connect Device ID Panel
-                        strip.cell(|ui| {
-                            ui.centered_and_justified(|ui| {
-                                ui.add(DeviceIDInputField::text(&mut self.input_device_id));
-                            });
-                        });
-
-                        // Connect Button
-                        strip.strip(|strip| {
-                            strip
-                                .size(Size::relative(0.28))
-                                .size(Size::relative(0.54))
-                                .size(Size::relative(0.28))
-                                .vertical(|mut strip| {
-                                    strip.empty();
-                                    strip.strip(|strip| {
-                                        strip
-                                            .size(Size::relative(0.15))
-                                            .size(Size::relative(0.35))
-                                            .size(Size::relative(0.35))
-                                            .size(Size::relative(0.15))
-                                            .horizontal(|mut strip| {
-                                                strip.empty();
-                                                strip.cell(|ui| {
-                                                    ui.centered_and_justified(|ui| {
-                                                        self.build_connect_desktop_button(ui);
-                                                    });
-                                                });
-                                                strip.cell(|ui| {
-                                                    ui.centered_and_justified(|ui| {
-                                                        make_connect_file_manager_button(ui);
-                                                    });
-                                                });
-                                                strip.empty();
-                                            });
-                                    });
-                                    strip.empty();
-                                });
-                        });
+        StripBuilder::new(ui)
+            .size(Size::relative(0.21)) // Device ID Panel
+            .size(Size::relative(0.21)) // Password Panel
+            .size(Size::relative(0.17)) // Connect Remote Title
+            .size(Size::exact(64.0)) // Connect Device ID Panel
+            .size(Size::remainder()) // Connect Button
+            .vertical(|mut strip| {
+                // Device ID Panel
+                strip.cell(|ui| {
+                    ui.centered_and_justified(|ui| {
+                        self.build_device_id(ui);
                     });
-            });
+                });
 
-        self.check_signaling_status();
+                // Password Panel
+                strip.cell(|ui| {
+                    self.build_device_password(ui);
+                    self.build_device_password_toolbar(ui);
+                });
+
+                // Connect Remote Title
+                strip.cell(|ui| {
+                    ui.painter().line_segment(
+                        [
+                            ui.max_rect().left_top() + Vec2::new(2.0, 0.0),
+                            ui.max_rect().right_top() + Vec2::new(-2.0, 0.0),
+                        ],
+                        Stroke::new(1.0, Color32::GRAY),
+                    );
+
+                    ui.centered_and_justified(|ui| {
+                        ui.label(RichText::new("Connect Remote").font(FontId::proportional(28.0)));
+                    });
+                });
+
+                // Connect Device ID Panel
+                strip.cell(|ui| {
+                    ui.centered_and_justified(|ui| {
+                        ui.add_sized(
+                            Vec2::new(0.0, 60.0),
+                            DeviceIDInputField::text(self.device_id_input_text),
+                        );
+                    });
+                });
+
+                // Connect Button
+                strip.strip(|strip| {
+                    strip
+                        .size(Size::relative(0.3))
+                        .size(Size::relative(0.4))
+                        .size(Size::relative(0.3))
+                        .vertical(|mut strip| {
+                            strip.empty();
+                            strip.strip(|strip| {
+                                strip
+                                    .size(Size::relative(0.15))
+                                    .size(Size::relative(0.35))
+                                    .size(Size::relative(0.35))
+                                    .size(Size::relative(0.15))
+                                    .horizontal(|mut strip| {
+                                        strip.empty();
+                                        strip.cell(|ui| {
+                                            ui.centered_and_justified(|ui| {
+                                                self.build_connect_desktop_button(ui);
+                                            });
+                                        });
+                                        strip.cell(|ui| {
+                                            ui.centered_and_justified(|ui| {
+                                                make_connect_file_manager_button(ui);
+                                            });
+                                        });
+                                        strip.empty();
+                                    });
+                            });
+                            strip.empty();
+                        });
+                });
+            });
     }
 }
 
@@ -752,49 +551,6 @@ fn make_password_toolbar_right_button(ui: &mut Ui) -> Response {
     };
 
     ui.button(RichText::new("👁").font(FontId::proportional(18.0)))
-}
-
-fn new_signaling_client_promise(
-    config_manager: Arc<ConfigManager>,
-) -> Promise<CoreResult<SignalingClient>> {
-    Promise::spawn_async(async move {
-        let mut domain = config_manager.domain().await?;
-        let domain = domain.get_or_insert_with(|| String::from("MirrorX.cloud"));
-
-        let mut domain_config = config_manager.domain_config(domain).await?;
-        let mut domain_config = domain_config.get_or_insert_with(|| DomainConfig {
-            uri: String::from("tcp://127.0.0.1:28000"),
-            device_id: 0,
-            device_finger_print: mirrorx_core::utility::rand::generate_device_finger_print(),
-            device_password: mirrorx_core::utility::rand::generate_random_password(),
-        });
-
-        let client =
-            mirrorx_core::api::signaling::SignalingClient::dial(&domain_config.uri).await?;
-
-        let register_response = client
-            .register(mirrorx_core::api::signaling::RegisterRequest {
-                device_id: if domain_config.device_id != 0 {
-                    Some(domain_config.device_id)
-                } else {
-                    None
-                },
-                device_finger_print: domain_config.device_finger_print.clone(),
-            })
-            .await?;
-
-        domain_config.device_id = register_response.device_id;
-
-        config_manager
-            .save_domain(&register_response.domain)
-            .await?;
-
-        config_manager
-            .save_domain_config(&register_response.domain, domain_config)
-            .await?;
-
-        Ok(client)
-    })
 }
 
 #[inline]

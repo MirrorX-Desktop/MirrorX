@@ -2091,6 +2091,7 @@ dependencies = [
  "eframe",
  "egui-toast",
  "egui_extras",
+ "futures",
  "mirrorx_core",
  "once_cell",
  "poll-promise",
@@ -3216,7 +3217,7 @@ dependencies = [
 [[package]]
 name = "signaling_proto"
 version = "0.1.0"
-source = "git+https://github.com/MirrorX-Desktop/signaling.git#0057b6bbca0af3b2648152cdbb4452595671bbf1"
+source = "git+https://github.com/MirrorX-Desktop/signaling.git#ceb631fc101a4c2aa22794ad341281b2ff89da73"
 dependencies = [
  "once_cell",
  "prost",
