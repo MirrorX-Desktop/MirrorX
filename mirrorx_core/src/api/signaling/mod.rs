@@ -18,6 +18,7 @@ use tonic::transport::Channel;
 pub use register::RegisterResponse;
 pub use subscribe::PublishMessage;
 pub use visit::{ResourceType, VisitRequest, VisitResponse};
+pub use visit_reply::VisitReplyRequest;
 
 #[derive(Clone)]
 pub struct SignalingClient {

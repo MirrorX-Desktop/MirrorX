@@ -14,7 +14,7 @@ use egui_extras::{Size, StripBuilder};
 use mirrorx_core::{
     api::{
         config::{Config, DomainConfig},
-        signaling::{PublishMessage, SignalingClient, VisitResponse},
+        signaling::{PublishMessage, SignalingClient, VisitReplyRequest, VisitResponse},
     },
     core_error,
 };
@@ -272,7 +272,7 @@ impl App {
         }
     }
 
-    fn check_config(&mut self) {
+    fn check_and_update_config_status(&mut self, ui: &mut Ui) -> bool {
         self.config_and_path.poll();
 
         if self.config_and_path.value().is_none() {
@@ -282,9 +282,25 @@ impl App {
         if self.update_config_channel.1.try_recv().is_ok() {
             self.config_and_path.update();
         }
+
+        if let Some(err) = self.config_and_path.error() {
+            ui.centered_and_justified(|ui| {
+                ui.label(
+                    RichText::new(format!(
+                        "{:?}\n\nPlease delete the database file and re-open app!",
+                        err
+                    ))
+                    .font(FontId::proportional(18.0)),
+                );
+            });
+
+            return false;
+        }
+
+        true
     }
 
-    fn check_signaling_client(&mut self) {
+    fn check_and_update_signaling_client_status(&mut self, ui: &mut Ui) -> bool {
         self.signaling_client.poll();
 
         if self.signaling_client.value().is_none() {
@@ -305,6 +321,22 @@ impl App {
                 });
             }
         }
+
+        if let Some(err) = self.signaling_client.error() {
+            ui.centered_and_justified(|ui| {
+                ui.label(
+                    RichText::new(format!(
+                        "{:?}\n\nPlease check network and re-open app!",
+                        err
+                    ))
+                    .font(FontId::proportional(18.0)),
+                );
+            });
+
+            return false;
+        }
+
+        true
     }
 
     fn check_signaling_visit(&mut self, ui: &mut Ui) {
@@ -324,7 +356,44 @@ impl App {
             }
 
             // todo: pop password window
-            eframe::egui::Window::new("Visit Password").show(ui.ctx(), |ui| {});
+            eframe::egui::Window::new("Visit Password").show(ui.ctx(), |ui| {
+                ui.label("remote allow your request");
+            });
+        }
+    }
+
+    fn check_signaling_publish_message(&mut self) {
+        if let Some((signaling_client, publish_message_tx)) = self.signaling_client.value_mut() {
+            if let Ok(message) = publish_message_tx.try_recv() {
+                match message {
+                    PublishMessage::VisitRequest {
+                        active_device_id,
+                        passive_device_id,
+                        resource_type,
+                    } => {
+                        if let Some((config, _)) = self.config_and_path.value() {
+                            if let Some(domain_config) =
+                                config.domain_configs.get(&config.primary_domain)
+                            {
+                                if domain_config.device_id == passive_device_id {
+                                    let domain = config.primary_domain.clone();
+                                    let signaling_client = signaling_client.clone();
+                                    tokio::spawn(async move {
+                                        signaling_client
+                                            .visit_reply(VisitReplyRequest {
+                                                domain,
+                                                active_device_id,
+                                                passive_device_id,
+                                                allow: true, // todo : popup window to confirm
+                                            })
+                                            .await
+                                    });
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -336,33 +405,16 @@ impl eframe::App for App {
             .fill(ctx.style().visuals.window_fill());
 
         CentralPanel::default().frame(frame).show(ctx, |ui| {
-            self.check_config();
-            if let Some(err) = self.config_and_path.error() {
-                ui.centered_and_justified(|ui| {
-                    ui.label(
-                        RichText::new(format!(
-                            "{:?}\n\nPlease delete the database file and re-open app!",
-                            err
-                        ))
-                        .font(FontId::proportional(18.0)),
-                    );
-                });
+            if !self.check_and_update_config_status(ui) {
                 return;
             }
 
-            self.check_signaling_client();
-            if let Some(err) = self.signaling_client.error() {
-                ui.centered_and_justified(|ui| {
-                    ui.label(
-                        RichText::new(format!(
-                            "{:?}\n\nPlease check network and re-open app!",
-                            err
-                        ))
-                        .font(FontId::proportional(18.0)),
-                    );
-                });
+            if !self.check_and_update_signaling_client_status(ui) {
                 return;
             }
+
+            self.check_signaling_visit(ui);
+            self.check_signaling_publish_message();
 
             self.build_panel(ui);
             self.toasts.show(ui.ctx());

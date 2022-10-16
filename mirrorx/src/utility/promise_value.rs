@@ -39,12 +39,12 @@ impl<T: Send + 'static> PromiseValue<T> {
         }
     }
 
-    // pub fn update(&mut self, value: T) {
-    //     self.value = Some(value)
-    // }
-
     pub fn value(&self) -> Option<&T> {
         self.value.as_ref()
+    }
+
+    pub fn value_mut(&mut self) -> Option<&mut T> {
+        self.value.as_mut()
     }
 
     pub fn take_value(&mut self) -> Option<T> {
