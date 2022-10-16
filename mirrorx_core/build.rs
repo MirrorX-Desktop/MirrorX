@@ -34,7 +34,7 @@ fn link_ffmpeg() {
 
     #[cfg(target_os = "windows")]
     {
-        println!("cargo:rustc-link-search=../third/dependencies/msvc/lib/x64");
+        println!("cargo:rustc-link-search=./third/dependencies/msvc/lib/x64");
         println!("cargo:rustc-link-lib=libx264");
         println!("cargo:rustc-link-lib=libopus");
         println!("cargo:rustc-link-lib=libmfx");
