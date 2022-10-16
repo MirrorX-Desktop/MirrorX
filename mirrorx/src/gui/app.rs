@@ -112,7 +112,7 @@ impl App {
                             domain_configs.insert(
                                 String::from("MirrorX.cloud"),
                                 DomainConfig {
-                                    addr: String::from("tcp://127.0.0.1:28000"),
+                                    addr: String::from("tcp://192.168.0.101:28000"),
                                     device_id: 0,
                                     device_finger_print:
                                         mirrorx_core::utility::rand::generate_device_finger_print(),
