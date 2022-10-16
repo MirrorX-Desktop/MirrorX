@@ -19,12 +19,13 @@ use mirrorx_core::{
     core_error,
 };
 use std::{collections::HashMap, path::PathBuf};
-use tokio::sync::mpsc::Receiver;
+use tokio::sync::mpsc::{Receiver, Sender};
 
 pub struct App {
     selected_page_tab: String,
     toasts: CustomToasts,
     config_and_path: OneWayUpdatePromiseValue<(Config, PathBuf)>,
+    update_config_channel: (Sender<()>, Receiver<()>),
     signaling_client: PromiseValue<(SignalingClient, Receiver<PublishMessage>)>,
     show_password: bool,
     edit_password: bool,
@@ -143,6 +144,7 @@ impl App {
             selected_page_tab: String::from("Connect"),
             toasts: CustomToasts::new(),
             config_and_path: config_and_path_promise,
+            update_config_channel: tokio::sync::mpsc::channel(1),
             signaling_client: PromiseValue::new(),
             show_password: false,
             edit_password: false,
@@ -276,6 +278,10 @@ impl App {
         if self.config_and_path.value().is_none() {
             self.config_and_path.update();
         }
+
+        if self.update_config_channel.1.try_recv().is_ok() {
+            self.config_and_path.update();
+        }
     }
 
     fn check_signaling_client(&mut self) {
@@ -285,6 +291,7 @@ impl App {
             if let Some((config, config_path)) = self.config_and_path.value() {
                 let config = config.clone();
                 let config_path = config_path.clone();
+                let update_config_tx = self.update_config_channel.0.clone();
                 self.signaling_client.spawn_update(async move {
                     let (signaling_client, config, publish_message_rx) =
                         SignalingClient::new(config, config_path.clone()).await?;
@@ -293,6 +300,7 @@ impl App {
                         mirrorx_core::api::config::save(&config_path, &config)
                     })?;
 
+                    let _ = update_config_tx.try_send(());
                     Ok((signaling_client, publish_message_rx))
                 });
             }

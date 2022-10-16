@@ -62,10 +62,14 @@ impl<'a> ConnectPage<'a> {
     fn build_device_id(&mut self, ui: &mut Ui) {
         if let Some((config, _)) = self.config_and_path.value() {
             if let Some(domain_config) = config.domain_configs.get(&config.primary_domain) {
-                let mut device_id_str = format!("{:0>10}", domain_config.device_id);
-                device_id_str.insert(2, '-');
-                device_id_str.insert(7, '-');
-                ui.label(RichText::new(device_id_str).font(FontId::proportional(50.0)));
+                if domain_config.device_id != 0 {
+                    let mut device_id_str = format!("{:0>10}", domain_config.device_id);
+                    device_id_str.insert(2, '-');
+                    device_id_str.insert(7, '-');
+                    ui.label(RichText::new(device_id_str).font(FontId::proportional(50.0)));
+                } else {
+                    ui.spinner();
+                }
             }
         } else {
             ui.spinner();
