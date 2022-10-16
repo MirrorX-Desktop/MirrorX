@@ -97,12 +97,15 @@ impl App {
         let config_and_path_promise = OneWayUpdatePromiseValue::new(|| {
             Box::pin(async move {
                 tokio::task::block_in_place(|| {
-                    let path = directories_next::BaseDirs::new()
+                    let base_dir_path = directories_next::BaseDirs::new()
                         .ok_or(core_error!("get config base dir failed"))?;
 
-                    let path = path.data_dir().join("MirrorX").join("mirrorx.db");
+                    let dir_path = base_dir_path.data_dir().join("MirrorX");
+                    std::fs::create_dir_all(dir_path.clone())?;
 
-                    let config = match mirrorx_core::api::config::read(path.as_ref())? {
+                    let config_file_path = dir_path.join("mirrorx.db");
+
+                    let config = match mirrorx_core::api::config::read(config_file_path.as_ref())? {
                         Some(config) => config,
                         None => {
                             let mut domain_configs = HashMap::new();
@@ -123,12 +126,15 @@ impl App {
                                 domain_configs,
                             };
 
-                            mirrorx_core::api::config::save(path.as_ref(), &default_config)?;
+                            mirrorx_core::api::config::save(
+                                config_file_path.as_ref(),
+                                &default_config,
+                            )?;
                             default_config
                         }
                     };
 
-                    Ok((config, path))
+                    Ok((config, config_file_path))
                 })
             })
         });
@@ -293,7 +299,7 @@ impl App {
         }
     }
 
-    fn check_signaling_visit(&mut self) {
+    fn check_signaling_visit(&mut self, ui: &mut Ui) {
         self.call_signaling_visit.poll();
 
         if let Some(err) = self.call_signaling_visit.take_error() {
@@ -310,6 +316,7 @@ impl App {
             }
 
             // todo: pop password window
+            eframe::egui::Window::new("Visit Password").show(ui.ctx(), |ui| {});
         }
     }
 }
