@@ -14,7 +14,6 @@ pub fn run_app() -> anyhow::Result<()> {
         maximized: false,
         initial_window_size: Some(eframe::epaint::Vec2::new(380f32, 630f32)),
         resizable: false,
-        renderer: eframe::Renderer::Wgpu,
         follow_system_theme: false,
         default_theme: eframe::Theme::Light,
         // centered: true,

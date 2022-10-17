@@ -8,7 +8,7 @@ use super::{
 use crate::utility::promise_value::{OneWayUpdatePromiseValue, PromiseValue};
 use eframe::{
     egui::{style::Margin, *},
-    epaint::{Color32, FontFamily, FontId, Pos2, Rect, Stroke, Vec2},
+    epaint::{Color32, FontFamily, FontId, Pos2, Rect, Shadow, Stroke, Vec2},
 };
 use egui_extras::{Size, StripBuilder};
 use mirrorx_core::{
@@ -18,7 +18,7 @@ use mirrorx_core::{
     },
     core_error,
 };
-use std::{collections::HashMap, path::PathBuf};
+use std::{collections::HashMap, path::PathBuf, time::Duration};
 use tokio::sync::mpsc::{Receiver, Sender};
 
 pub struct App {
@@ -33,6 +33,8 @@ pub struct App {
     device_id_input_text: DeviceIDInputText,
     is_desktop_connecting: bool,
     call_signaling_visit: PromiseValue<VisitResponse>,
+    show_visit_password_dialog: bool,
+    visit_password_content: String,
 }
 
 impl App {
@@ -91,7 +93,8 @@ impl App {
             .families
             .insert(FontFamily::Monospace, mono_fonts.clone());
 
-        cc.egui_ctx.set_debug_on_hover(true);
+        // cc.egui_ctx.set_debug_on_hover(true);
+        // cc.egui_ctx.request_repaint_after(Duration::from_secs(1));
         cc.egui_ctx.set_fonts(fonts);
 
         // initialize some global components
@@ -152,6 +155,8 @@ impl App {
             device_id_input_text: DeviceIDInputText::default(),
             is_desktop_connecting: false,
             call_signaling_visit: PromiseValue::new(),
+            show_visit_password_dialog: false,
+            visit_password_content: String::from(""),
         }
     }
 
@@ -350,15 +355,12 @@ impl App {
         }
 
         if let Some(res) = self.call_signaling_visit.take_value() {
+            tracing::info!("signaling visit reply: {:?}", res.allow);
+            self.show_visit_password_dialog = res.allow;
+
             if !res.allow {
                 self.toasts.error("Remote reject your visit request");
-                return;
             }
-
-            // todo: pop password window
-            eframe::egui::Window::new("Visit Password").show(ui.ctx(), |ui| {
-                ui.label("remote allow your request");
-            });
         }
     }
 
@@ -396,6 +398,165 @@ impl App {
             }
         }
     }
+
+    fn build_password_input_window(&mut self, ui: &mut Ui) {
+        if !(self.show_visit_password_dialog) {
+            return;
+        }
+
+        let window_size = Vec2::new(280.0, 140.0);
+        eframe::egui::Window::new("MirrorX")
+            .frame(
+                Frame::default()
+                    .inner_margin(Margin {
+                        left: 0.0,
+                        right: 0.0,
+                        top: 4.0,
+                        bottom: 0.0,
+                    })
+                    .stroke(Stroke::new(1.0, Color32::GRAY))
+                    .rounding(Rounding::same(2.0))
+                    .fill(Color32::WHITE)
+                    .shadow(Shadow::small_light()),
+            )
+            .fixed_size(window_size)
+            .fixed_pos(Pos2::new(
+                (380.0 - window_size.x) / 2.0,
+                (630.0 - window_size.y) / 2.0 - 10.0,
+            ))
+            .collapsible(false)
+            .resizable(false)
+            .title_bar(false)
+            .show(ui.ctx(), |ui| {
+                ui.style_mut().spacing.item_spacing = Vec2::ZERO;
+                StripBuilder::new(ui)
+                    .size(Size::relative(0.75))
+                    .size(Size::remainder())
+                    .vertical(|mut strip| {
+                        strip.strip(|builder| {
+                            builder.sizes(Size::relative(0.5), 2).vertical(|mut strip| {
+                                strip.cell(|ui| {
+                                    ui.centered_and_justified(|ui| {
+                                        ui.label(
+                                            RichText::new("Please input remote device password")
+                                                .font(FontId::proportional(18.0)),
+                                        );
+                                    });
+                                });
+                                strip.cell(|ui| {
+                                    ui.centered_and_justified(|ui| {
+                                        ui.visuals_mut().widgets.inactive.bg_stroke =
+                                            ui.visuals_mut().widgets.active.bg_stroke;
+
+                                        Frame::default().outer_margin(Margin::same(12.0)).show(
+                                            ui,
+                                            |ui| {
+                                                TextEdit::singleline(
+                                                    &mut self.visit_password_content,
+                                                )
+                                                .font(FontId::proportional(22.0))
+                                                .password(true)
+                                                .show(ui);
+                                            },
+                                        );
+                                    });
+                                });
+                            });
+                        });
+
+                        strip.strip(|builder| {
+                            builder
+                                .sizes(Size::relative(0.5), 2)
+                                .horizontal(|mut strip| {
+                                    strip.cell(|ui| {
+                                        ui.centered_and_justified(|ui| {
+                                            // ui.visuals_mut().button_frame = false;
+
+                                            ui.visuals_mut().widgets.hovered.expansion = 0.0;
+                                            ui.visuals_mut().widgets.hovered.bg_stroke =
+                                                Stroke::none();
+                                            ui.visuals_mut().widgets.hovered.bg_fill =
+                                                Color32::from_rgb(0x19, 0x8C, 0xFF);
+                                            ui.visuals_mut().widgets.hovered.fg_stroke =
+                                                Stroke::new(1.0, Color32::WHITE);
+                                            ui.visuals_mut().widgets.hovered.rounding = Rounding {
+                                                nw: 0.0,
+                                                ne: 0.0,
+                                                sw: 2.0,
+                                                se: 0.0,
+                                            };
+
+                                            ui.visuals_mut().widgets.inactive.expansion = 0.0;
+                                            ui.visuals_mut().widgets.inactive.bg_stroke =
+                                                Stroke::none();
+                                            ui.visuals_mut().widgets.inactive.bg_fill =
+                                                Color32::from_rgb(0x01, 0x6F, 0xFF);
+                                            ui.visuals_mut().widgets.inactive.fg_stroke =
+                                                Stroke::new(1.0, Color32::WHITE);
+                                            ui.visuals_mut().widgets.inactive.rounding = Rounding {
+                                                nw: 0.0,
+                                                ne: 0.0,
+                                                sw: 2.0,
+                                                se: 0.0,
+                                            };
+
+                                            ui.visuals_mut().widgets.active.expansion = 0.0;
+                                            ui.visuals_mut().widgets.active.bg_stroke =
+                                                Stroke::none();
+                                            ui.visuals_mut().widgets.active.bg_fill =
+                                                Color32::from_rgb(0x00, 0x54, 0xE6);
+                                            ui.visuals_mut().widgets.active.fg_stroke =
+                                                Stroke::new(1.0, Color32::WHITE);
+                                            ui.visuals_mut().widgets.active.rounding = Rounding {
+                                                nw: 0.0,
+                                                ne: 0.0,
+                                                sw: 2.0,
+                                                se: 0.0,
+                                            };
+
+                                            ui.button("Ok");
+                                        });
+                                    });
+                                    strip.cell(|ui| {
+                                        ui.centered_and_justified(|ui| {
+                                            ui.visuals_mut().widgets.hovered.expansion = 0.0;
+                                            ui.visuals_mut().widgets.hovered.bg_stroke =
+                                                Stroke::none();
+                                            ui.visuals_mut().widgets.hovered.rounding = Rounding {
+                                                nw: 0.0,
+                                                ne: 0.0,
+                                                sw: 0.0,
+                                                se: 2.0,
+                                            };
+
+                                            ui.visuals_mut().widgets.inactive.expansion = 0.0;
+                                            ui.visuals_mut().widgets.inactive.bg_stroke =
+                                                Stroke::none();
+                                            ui.visuals_mut().widgets.inactive.rounding = Rounding {
+                                                nw: 0.0,
+                                                ne: 0.0,
+                                                sw: 0.0,
+                                                se: 2.0,
+                                            };
+
+                                            ui.visuals_mut().widgets.active.expansion = 0.0;
+                                            ui.visuals_mut().widgets.active.bg_stroke =
+                                                Stroke::none();
+                                            ui.visuals_mut().widgets.active.rounding = Rounding {
+                                                nw: 0.0,
+                                                ne: 0.0,
+                                                sw: 0.0,
+                                                se: 2.0,
+                                            };
+
+                                            ui.button("Cancel");
+                                        });
+                                    });
+                                });
+                        });
+                    });
+            });
+    }
 }
 
 impl eframe::App for App {
@@ -418,6 +579,7 @@ impl eframe::App for App {
 
             self.build_panel(ui);
             self.toasts.show(ui.ctx());
+            self.build_password_input_window(ui);
         });
     }
 }
