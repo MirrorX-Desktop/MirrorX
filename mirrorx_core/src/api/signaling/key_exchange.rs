@@ -15,6 +15,7 @@ use signaling_proto::message::{
 };
 use tonic::transport::Channel;
 
+#[derive(Clone)]
 pub struct KeyExchangeRequest {
     pub domain: String,
     pub local_device_id: i64,
@@ -22,6 +23,7 @@ pub struct KeyExchangeRequest {
     pub password: String,
 }
 
+#[derive(Debug, Clone)]
 pub struct KeyExchangeResponse {
     pub local_device_id: i64,
     pub visit_credentials: String,

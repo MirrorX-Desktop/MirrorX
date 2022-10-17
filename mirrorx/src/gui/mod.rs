@@ -2,6 +2,7 @@ mod app;
 mod connect;
 mod history;
 mod lan;
+mod state;
 mod widgets;
 
 trait View {

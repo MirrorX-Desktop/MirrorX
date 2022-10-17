@@ -1,11 +1,13 @@
 use crate::error::CoreResult;
 use tonic::transport::Channel;
 
+#[derive(Clone)]
 pub enum ResourceType {
     Desktop,
     Files,
 }
 
+#[derive(Clone)]
 pub struct VisitRequest {
     pub domain: String,
     pub local_device_id: i64,
@@ -13,6 +15,7 @@ pub struct VisitRequest {
     pub resource_type: ResourceType,
 }
 
+#[derive(Debug, Clone)]
 pub struct VisitResponse {
     pub allow: bool,
 }

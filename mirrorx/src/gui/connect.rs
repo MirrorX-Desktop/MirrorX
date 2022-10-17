@@ -1,66 +1,28 @@
-use std::path::PathBuf;
-
-use crate::utility::promise_value::{OneWayUpdatePromiseValue, PromiseValue};
-
 use super::{
-    widgets::{
-        custom_toasts::CustomToasts,
-        device_id_input_field::{DeviceIDInputField, DeviceIDInputText},
-    },
+    state::{State, StateUpdater},
+    widgets::{custom_toasts::CustomToasts, device_id_input_field::DeviceIDInputField},
     View,
 };
 use eframe::{egui::*, emath::Align, epaint::*};
 use egui_extras::{Size, StripBuilder};
-use egui_toast::{Toast, ToastKind, ToastOptions, Toasts};
-use mirrorx_core::{
-    api::{
-        config::{Config, DomainConfig},
-        signaling::{PublishMessage, SignalingClient, VisitResponse},
-    },
-    error::CoreResult,
-};
-use tokio::sync::mpsc::Receiver;
 
 pub struct ConnectPage<'a> {
-    config_and_path: &'a mut OneWayUpdatePromiseValue<(Config, PathBuf)>,
-    signaling_client: &'a mut PromiseValue<(SignalingClient, Receiver<PublishMessage>)>,
-    toasts: &'a mut CustomToasts,
-    show_password: &'a mut bool,
-    edit_password: &'a mut bool,
-    edit_password_content: &'a mut String,
-    device_id_input_text: &'a mut DeviceIDInputText,
-    is_desktop_connecting: &'a mut bool,
-    call_signaling_visit: &'a mut PromiseValue<VisitResponse>,
+    app_state: &'a State,
+    app_state_updater: StateUpdater,
 }
 
 impl<'a> ConnectPage<'a> {
-    pub fn new(
-        config_and_path: &'a mut OneWayUpdatePromiseValue<(Config, PathBuf)>,
-        signaling_client: &'a mut PromiseValue<(SignalingClient, Receiver<PublishMessage>)>,
-        toasts: &'a mut CustomToasts,
-        show_password: &'a mut bool,
-        edit_password: &'a mut bool,
-        edit_password_content: &'a mut String,
-        device_id_input_text: &'a mut DeviceIDInputText,
-        is_desktop_connecting: &'a mut bool,
-        call_signaling_visit: &'a mut PromiseValue<VisitResponse>,
-    ) -> Self {
+    pub fn new(app_state: &'a State) -> Self {
+        let app_state_updater = app_state.new_state_updater();
         Self {
-            config_and_path,
-            signaling_client,
-            toasts,
-            show_password,
-            edit_password,
-            edit_password_content,
-            device_id_input_text,
-            is_desktop_connecting,
-            call_signaling_visit,
+            app_state,
+            app_state_updater,
         }
     }
 
     #[inline]
     fn build_device_id(&mut self, ui: &mut Ui) {
-        if let Some((config, _)) = self.config_and_path.value() {
+        if let Some(config) = self.app_state.config() {
             if let Some(domain_config) = config.domain_configs.get(&config.primary_domain) {
                 if domain_config.device_id != 0 {
                     let mut device_id_str = format!("{:0>10}", domain_config.device_id);
@@ -78,10 +40,8 @@ impl<'a> ConnectPage<'a> {
 
     #[inline]
     fn build_device_password(&mut self, ui: &mut Ui) {
-        let domain_config = if let Some((config, _)) = self.config_and_path.value() {
-            if let Some(domain_config) = config.domain_configs.get(&config.primary_domain) {
-                domain_config
-            } else {
+        if let Some(config) = self.app_state.config() {
+            if config.domain_configs.get(&config.primary_domain).is_none() {
                 ui.spinner();
                 return;
             }
@@ -90,11 +50,86 @@ impl<'a> ConnectPage<'a> {
             return;
         };
 
-        if *self.edit_password {
-            build_device_password_edit(ui, self.edit_password_content);
+        if self.app_state.connect_page_password_editing() {
+            self.build_device_password_edit(ui);
         } else {
-            build_device_password_label(ui, *self.show_password, &domain_config.device_password);
+            self.build_device_password_label(ui);
         }
+    }
+
+    #[inline]
+    fn build_device_password_edit(&mut self, ui: &mut Ui) {
+        let text_edit_size = Vec2::new(ui.available_width() * 0.8, 30.0);
+        ui.allocate_ui_at_rect(
+            Rect::from_min_size(
+                ui.max_rect().min
+                                + (ui.available_size() - text_edit_size) / 2.0 // center
+                                + Vec2::new(0.0, 8.0), // y offset
+                text_edit_size,
+            ),
+            |ui| {
+                eframe::egui::Frame::default()
+                    .stroke(Stroke::new(1.0, Color32::GRAY))
+                    .rounding(Rounding::same(2.0))
+                    .show(ui, |ui| {
+                        let mut text_buffer = self.app_state.connect_page_password().to_string();
+                        if text_buffer.is_empty() {
+                            if let Some(config) = self.app_state.config() {
+                                if let Some(domain_config) =
+                                    config.domain_configs.get(&config.primary_domain)
+                                {
+                                    text_buffer = domain_config.device_password.to_owned();
+                                } else {
+                                    text_buffer = String::new();
+                                }
+                            } else {
+                                text_buffer = String::new();
+                            }
+                        }
+
+                        if ui
+                            .add_sized(
+                                ui.available_size(),
+                                TextEdit::singleline(&mut text_buffer)
+                                    .frame(false)
+                                    .font(FontId::monospace(26.0)),
+                            )
+                            .changed()
+                        {
+                            self.app_state_updater
+                                .update_connect_page_password(text_buffer.as_str());
+                        }
+                    })
+            },
+        );
+    }
+
+    #[inline]
+    fn build_device_password_label(&mut self, ui: &mut Ui) {
+        ui.centered_and_justified(|ui| {
+            let mut content = "";
+            if self.app_state.connect_page_password_visible() {
+                if let Some(config) = self.app_state.config() {
+                    if let Some(domain_config) = config.domain_configs.get(&config.primary_domain) {
+                        content = domain_config.device_password.as_str();
+                    }
+                }
+            } else {
+                content = "＊＊＊＊＊＊＊";
+            };
+
+            if content.is_empty() {
+                ui.spinner();
+            } else {
+                let font_size = if self.app_state.connect_page_password_visible() {
+                    36.0
+                } else {
+                    50.0
+                };
+
+                ui.label(RichText::new(content).font(FontId::proportional(font_size)));
+            }
+        });
     }
 
     #[inline]
@@ -109,64 +144,49 @@ impl<'a> ConnectPage<'a> {
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                     ui.style_mut().spacing.item_spacing = Vec2::ZERO;
 
-                    if *self.edit_password {
+                    if self.app_state.connect_page_password_editing() {
                         if make_password_editing_toolbar_cancel_button(ui).clicked() {
-                            *self.edit_password = false;
+                            self.app_state_updater
+                                .update_connect_page_password_editing(false);
                         }
 
                         if make_password_editing_toolbar_commit_button(ui).clicked() {
-                            if let Some((old_config, config_path)) = self.config_and_path.value() {
+                            if let Some(old_config) = self.app_state.config() {
                                 let mut new_config = old_config.clone();
                                 if let Some(domain_config) = new_config
                                     .domain_configs
                                     .get_mut(&old_config.primary_domain)
                                 {
-                                    domain_config.device_password =
-                                        self.edit_password_content.clone();
+                                    let password =
+                                        self.app_state.connect_page_password().to_string();
+                                    domain_config.device_password = password;
 
-                                    match mirrorx_core::api::config::save(config_path, &new_config)
-                                    {
-                                        Ok(_) => {
-                                            self.config_and_path.update();
-                                            *self.edit_password = false;
-                                        }
-                                        Err(err) => {
-                                            tracing::error!(?err, "update device password failed");
-                                            self.toasts.error("Update device password failed, please try again later!");
-                                        }
-                                    }
+                                    self.app_state_updater.update_config(&new_config);
+                                    self.app_state_updater.update_connect_page_password("");
+                                    self.app_state_updater
+                                        .update_connect_page_password_editing(false);
                                 }
                             }
                         }
 
                         if make_password_editing_toolbar_regenerate_button(ui).clicked() {
-                            *self.edit_password_content =
-                                mirrorx_core::utility::rand::generate_random_password();
+                            self.app_state_updater.update_connect_page_password(
+                                &mirrorx_core::utility::rand::generate_random_password(),
+                            );
                         }
                     } else {
-                        if make_password_toolbar_right_button(ui).clicked() {
-                            *self.show_password = !(*self.show_password);
+                        let mut snapshot_visible = self.app_state.connect_page_password_visible();
+                        if make_password_toolbar_visible_button(ui).clicked() {
+                            snapshot_visible = true;
                         }
 
-                        *self.show_password = *self.show_password && ui.ui_contains_pointer();
+                        self.app_state_updater.update_connect_page_password_visible(
+                            snapshot_visible && ui.ui_contains_pointer(),
+                        );
 
-                        if make_password_toolbar_left_button(ui).clicked() {
-                            *self.edit_password = !(*self.edit_password);
-                            if *self.edit_password {
-                                let current_password = match self.config_and_path.value() {
-                                    Some((config, _)) => {
-                                        match config.domain_configs.get(&config.primary_domain) {
-                                            Some(domain_config) => {
-                                                domain_config.device_password.clone()
-                                            }
-                                            None => String::from(""),
-                                        }
-                                    }
-                                    None => String::from(""),
-                                };
-
-                                *self.edit_password_content = current_password;
-                            }
+                        if make_password_toolbar_edit_button(ui).clicked() {
+                            self.app_state_updater
+                                .update_connect_page_password_editing(true);
                         };
                     }
                 })
@@ -212,7 +232,7 @@ impl<'a> ConnectPage<'a> {
         let (rect, response) = ui.allocate_exact_size(ui.available_size(), Sense::click());
 
         ui.allocate_ui_at_rect(rect, |ui| {
-            if *self.is_desktop_connecting {
+            if self.app_state.connect_page_desktop_connecting() {
                 ui.painter().rect_filled(
                     rect,
                     ui.visuals().widgets.active.rounding,
@@ -238,30 +258,30 @@ impl<'a> ConnectPage<'a> {
             }
         });
 
-        if response.clicked() && !(*self.is_desktop_connecting) {
+        if response.clicked() && !self.app_state.connect_page_desktop_connecting() {
             self.connect_desktop();
         }
     }
 
     fn connect_desktop(&mut self) {
-        let input_device_id = self.device_id_input_text.as_str();
+        let input_device_id = self.app_state.connect_page_visit_device_id().to_string();
         if input_device_id.len() != 10 || !input_device_id.chars().all(|c| c.is_ascii_digit()) {
-            self.toasts.error("Invalid connect device id");
+            // todo: self.toasts.error("Invalid connect device id");
             return;
         }
 
         let input_device_id: i64 = match input_device_id.parse() {
             Ok(v) => v,
             Err(_) => {
-                self.toasts.error("Invalid connect device id format");
+                // todo: self.toasts.error("Invalid connect device id format");
                 return;
             }
         };
 
-        let config = match self.config_and_path.value() {
-            Some((config, _)) => config,
+        let config = match self.app_state.config() {
+            Some(config) => config,
             None => {
-                self.toasts.error("Current config is empty");
+                // todo: self.toasts.error("Current config is empty");
                 return;
             }
         };
@@ -269,7 +289,7 @@ impl<'a> ConnectPage<'a> {
         let domain_config = match config.domain_configs.get(&config.primary_domain) {
             Some(domain_config) => domain_config,
             None => {
-                self.toasts.error("Current domain config is empty");
+                // todo: self.toasts.error("Current domain config is empty");
                 return;
             }
         };
@@ -277,11 +297,14 @@ impl<'a> ConnectPage<'a> {
         let domain = config.primary_domain.clone();
         let local_device_id = domain_config.device_id;
 
-        if let Some((signaling_client, _)) = self.signaling_client.value() {
-            *self.is_desktop_connecting = true;
+        if let Some(signaling_client) = self.app_state.signaling_client() {
+            self.app_state_updater
+                .update_connect_page_desktop_connecting(true);
+
             let signaling_client = signaling_client.clone();
-            self.call_signaling_visit.spawn_update(async move {
-                signaling_client
+            let app_state_updater = self.app_state.new_state_updater();
+            tokio::spawn(async move {
+                match signaling_client
                     .visit(mirrorx_core::api::signaling::VisitRequest {
                         domain,
                         local_device_id,
@@ -289,10 +312,18 @@ impl<'a> ConnectPage<'a> {
                         resource_type: mirrorx_core::api::signaling::ResourceType::Desktop,
                     })
                     .await
+                {
+                    Ok(resp) => app_state_updater.update_signaling_visit_response(&resp),
+                    Err(err) => {
+                        tracing::error!(?err, "signaling visit request failed");
+                        app_state_updater.update_connect_page_desktop_connecting(false);
+                        app_state_updater.update_last_error(err);
+                    }
+                }
             });
         } else {
             // todo: give a resolution
-            self.toasts.error("Signaling connection is broken");
+            // todo: self.toasts.error("Signaling connection is broken");
         }
     }
 }
@@ -337,10 +368,9 @@ impl View for ConnectPage<'_> {
                 // Connect Device ID Panel
                 strip.cell(|ui| {
                     ui.centered_and_justified(|ui| {
-                        ui.add_sized(
-                            Vec2::new(0.0, 60.0),
-                            DeviceIDInputField::text(self.device_id_input_text),
-                        );
+                        let mut input_field =
+                            DeviceIDInputField::new(self.app_state, &mut self.app_state_updater);
+                        ui.add_sized(Vec2::new(0.0, 60.0), &mut input_field);
                     });
                 });
 
@@ -494,7 +524,7 @@ fn make_password_editing_toolbar_cancel_button(ui: &mut Ui) -> Response {
 }
 
 #[inline]
-fn make_password_toolbar_left_button(ui: &mut Ui) -> Response {
+fn make_password_toolbar_edit_button(ui: &mut Ui) -> Response {
     ui.visuals_mut().widgets.hovered.expansion = 0.0;
     ui.visuals_mut().widgets.hovered.bg_stroke = Stroke::none();
     ui.visuals_mut().widgets.hovered.rounding = Rounding {
@@ -526,7 +556,7 @@ fn make_password_toolbar_left_button(ui: &mut Ui) -> Response {
 }
 
 #[inline]
-fn make_password_toolbar_right_button(ui: &mut Ui) -> Response {
+fn make_password_toolbar_visible_button(ui: &mut Ui) -> Response {
     ui.visuals_mut().widgets.hovered.expansion = 0.0;
     ui.visuals_mut().widgets.hovered.bg_stroke = Stroke::none();
     ui.visuals_mut().widgets.hovered.rounding = Rounding {
@@ -555,45 +585,4 @@ fn make_password_toolbar_right_button(ui: &mut Ui) -> Response {
     };
 
     ui.button(RichText::new("👁").font(FontId::proportional(18.0)))
-}
-
-#[inline]
-fn build_device_password_edit(ui: &mut Ui, edit_content: &mut dyn TextBuffer) {
-    let text_edit_size = Vec2::new(ui.available_width() * 0.8, 30.0);
-    ui.allocate_ui_at_rect(
-        Rect::from_min_size(
-            ui.max_rect().min
-                                + (ui.available_size() - text_edit_size) / 2.0 // center
-                                + Vec2::new(0.0, 8.0), // y offset
-            text_edit_size,
-        ),
-        |ui| {
-            eframe::egui::Frame::default()
-                .stroke(Stroke::new(1.0, Color32::GRAY))
-                .rounding(Rounding::same(2.0))
-                .show(ui, |ui| {
-                    ui.add_sized(
-                        ui.available_size(),
-                        TextEdit::singleline(edit_content)
-                            .frame(false)
-                            .font(FontId::monospace(26.0)),
-                    );
-                })
-        },
-    );
-}
-
-#[inline]
-fn build_device_password_label(ui: &mut Ui, show_password: bool, password: &str) {
-    let content = if show_password {
-        password
-    } else {
-        "＊＊＊＊＊＊＊"
-    };
-
-    let font_size = if show_password { 36.0 } else { 50.0 };
-
-    ui.centered_and_justified(|ui| {
-        ui.label(RichText::new(content).font(FontId::proportional(font_size)));
-    });
 }

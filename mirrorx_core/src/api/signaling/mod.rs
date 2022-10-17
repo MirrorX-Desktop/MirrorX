@@ -15,12 +15,13 @@ use tokio::sync::{
 };
 use tonic::transport::Channel;
 
+pub use key_exchange::{KeyExchangeRequest, KeyExchangeResponse};
 pub use register::RegisterResponse;
 pub use subscribe::PublishMessage;
 pub use visit::{ResourceType, VisitRequest, VisitResponse};
 pub use visit_reply::VisitReplyRequest;
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct SignalingClient {
     client: signaling_proto::service::signaling_client::SignalingClient<Channel>,
     _exit_tx: Sender<()>,

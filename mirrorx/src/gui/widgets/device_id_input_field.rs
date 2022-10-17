@@ -1,3 +1,4 @@
+use crate::gui::state::{State, StateUpdater};
 use eframe::{
     egui::{style::Margin, Frame, TextEdit, TextFormat},
     epaint::{text::LayoutSection, Color32, FontId, Rounding, Stroke, Vec2},
@@ -5,16 +6,22 @@ use eframe::{
 use egui_extras::{Size, StripBuilder};
 
 pub struct DeviceIDInputField<'a> {
-    text: &'a mut DeviceIDInputText,
+    text: DeviceIDInputText<'a>,
 }
 
 impl<'a> DeviceIDInputField<'a> {
-    pub fn text(text: &'a mut DeviceIDInputText) -> Self {
-        Self { text }
+    pub fn new(app_state: &'a State, app_state_updater: &'a mut StateUpdater) -> Self {
+        Self {
+            text: DeviceIDInputText {
+                app_state,
+                app_state_updater,
+                snapshot_str: app_state.connect_page_visit_device_id().to_string(),
+            },
+        }
     }
 }
 
-impl<'a> eframe::egui::Widget for DeviceIDInputField<'a> {
+impl<'a> eframe::egui::Widget for &mut DeviceIDInputField<'a> {
     fn ui(self, ui: &mut eframe::egui::Ui) -> eframe::egui::Response {
         let mut layouter = |ui: &eframe::egui::Ui, text: &str, wrap_width: f32| {
             let sections = if text.len() <= 2 {
@@ -80,7 +87,7 @@ impl<'a> eframe::egui::Widget for DeviceIDInputField<'a> {
                         .stroke(Stroke::new(1.0, Color32::GRAY))
                         .outer_margin(Margin::same(2.0))
                         .show(ui, |ui| {
-                            let output = TextEdit::singleline(self.text)
+                            let output = TextEdit::singleline(&mut self.text)
                                 .layouter(&mut layouter)
                                 .margin(Vec2::new(4.0, 4.0))
                                 .frame(false)
@@ -110,20 +117,23 @@ impl<'a> eframe::egui::Widget for DeviceIDInputField<'a> {
     }
 }
 
-#[derive(Default)]
-pub struct DeviceIDInputText(String);
+struct DeviceIDInputText<'a> {
+    app_state: &'a State,
+    app_state_updater: &'a mut StateUpdater,
+    snapshot_str: String,
+}
 
-impl eframe::egui::TextBuffer for DeviceIDInputText {
+impl<'a> eframe::egui::TextBuffer for DeviceIDInputText<'a> {
     fn is_mutable(&self) -> bool {
         false
     }
 
     fn as_str(&self) -> &str {
-        self.0.as_str()
+        &self.snapshot_str
     }
 
     fn insert_text(&mut self, text: &str, char_index: usize) -> usize {
-        if self.0.len() == 10 {
+        if self.app_state.connect_page_visit_device_id().len() == 10 {
             return 0;
         }
 
@@ -131,16 +141,27 @@ impl eframe::egui::TextBuffer for DeviceIDInputText {
             return 0;
         }
 
-        // from original String TextBuffer impl
         let byte_idx = self.byte_index_from_char_index(char_index);
-        self.0.insert_str(byte_idx, text);
+
+        let mut device_id = self.app_state.connect_page_visit_device_id().to_string();
+        device_id.insert_str(byte_idx, text);
+
+        self.snapshot_str = device_id.to_owned();
+        self.app_state_updater
+            .update_connect_page_visit_device_id(&device_id);
+
         text.chars().count()
     }
 
     fn delete_char_range(&mut self, char_range: std::ops::Range<usize>) {
-        // from original String TextBuffer impl
         let byte_start = self.byte_index_from_char_index(char_range.start);
         let byte_end = self.byte_index_from_char_index(char_range.end);
-        self.0.drain(byte_start..byte_end);
+
+        let mut device_id = self.app_state.connect_page_visit_device_id().to_string();
+        device_id.drain(byte_start..byte_end);
+
+        self.snapshot_str = device_id.to_owned();
+        self.app_state_updater
+            .update_connect_page_visit_device_id(&device_id);
     }
 }

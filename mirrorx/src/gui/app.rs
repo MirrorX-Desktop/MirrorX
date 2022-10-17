@@ -2,7 +2,8 @@ use super::{
     connect::ConnectPage,
     history::HistoryPage,
     lan::LANPage,
-    widgets::{custom_toasts::CustomToasts, device_id_input_field::DeviceIDInputText},
+    state::{State, StateUpdater},
+    widgets::custom_toasts::CustomToasts,
     View,
 };
 use crate::utility::promise_value::{OneWayUpdatePromiseValue, PromiseValue};
@@ -14,7 +15,10 @@ use egui_extras::{Size, StripBuilder};
 use mirrorx_core::{
     api::{
         config::{Config, DomainConfig},
-        signaling::{PublishMessage, SignalingClient, VisitReplyRequest, VisitResponse},
+        signaling::{
+            KeyExchangeRequest, KeyExchangeResponse, PublishMessage, SignalingClient,
+            VisitReplyRequest, VisitResponse,
+        },
     },
     core_error,
 };
@@ -22,19 +26,9 @@ use std::{collections::HashMap, path::PathBuf, time::Duration};
 use tokio::sync::mpsc::{Receiver, Sender};
 
 pub struct App {
-    selected_page_tab: String,
-    toasts: CustomToasts,
-    config_and_path: OneWayUpdatePromiseValue<(Config, PathBuf)>,
-    update_config_channel: (Sender<()>, Receiver<()>),
-    signaling_client: PromiseValue<(SignalingClient, Receiver<PublishMessage>)>,
-    show_password: bool,
-    edit_password: bool,
-    edit_password_content: String,
-    device_id_input_text: DeviceIDInputText,
-    is_desktop_connecting: bool,
-    call_signaling_visit: PromiseValue<VisitResponse>,
-    show_visit_password_dialog: bool,
-    visit_password_content: String,
+    state: State,
+    state_updater: StateUpdater,
+    init_once: std::sync::Once,
 }
 
 impl App {
@@ -98,22 +92,49 @@ impl App {
         cc.egui_ctx.set_fonts(fonts);
 
         // initialize some global components
-        let config_and_path_promise = OneWayUpdatePromiseValue::new(|| {
-            Box::pin(async move {
-                tokio::task::block_in_place(|| {
-                    let base_dir_path = directories_next::BaseDirs::new()
-                        .ok_or(core_error!("get config base dir failed"))?;
 
-                    let dir_path = base_dir_path.data_dir().join("MirrorX");
-                    std::fs::create_dir_all(dir_path.clone())?;
+        let state = State::new("Connect");
+        let state_updater = state.new_state_updater();
 
-                    let config_file_path = dir_path.join("mirrorx.db");
+        Self {
+            state,
+            state_updater,
+            init_once: std::sync::Once::new(),
+        }
+    }
 
-                    let config = match mirrorx_core::api::config::read(config_file_path.as_ref())? {
-                        Some(config) => config,
-                        None => {
-                            let mut domain_configs = HashMap::new();
-                            domain_configs.insert(
+    fn init_once(&mut self) {
+        if self.init_once.is_completed() {
+            return;
+        }
+
+        let state_updater = self.state.new_state_updater();
+        self.init_once.call_once(move || {
+            tokio::task::spawn_blocking(move || {
+                let base_dir_path = match directories_next::BaseDirs::new() {
+                    Some(base_dir_path) => base_dir_path,
+                    None => {
+                        state_updater.update_last_error(core_error!("get config base dir failed"));
+                        return;
+                    }
+                };
+
+                let dir_path = base_dir_path.data_dir().join("MirrorX");
+                if let Err(err) = std::fs::create_dir_all(dir_path.clone()) {
+                    state_updater
+                        .update_last_error(core_error!("create config dir failed ({:?})", err));
+                    return;
+                }
+
+                let config_file_path = dir_path.join("mirrorx.db");
+
+                match mirrorx_core::api::config::read(config_file_path.as_ref()) {
+                    Ok(config) => {
+                        let config = match config {
+                            Some(config) => config,
+                            None => {
+                                let mut domain_configs = HashMap::new();
+                                domain_configs.insert(
                                 String::from("MirrorX.cloud"),
                                 DomainConfig {
                                     addr: String::from("tcp://192.168.0.101:28000"),
@@ -125,46 +146,42 @@ impl App {
                                 },
                             );
 
-                            let default_config = Config {
-                                primary_domain: String::from("MirrorX.cloud"),
-                                domain_configs,
-                            };
+                                let default_config = Config {
+                                    primary_domain: String::from("MirrorX.cloud"),
+                                    domain_configs,
+                                };
 
-                            mirrorx_core::api::config::save(
-                                config_file_path.as_ref(),
-                                &default_config,
-                            )?;
-                            default_config
-                        }
-                    };
+                                if let Err(err) = mirrorx_core::api::config::save(
+                                    config_file_path.as_ref(),
+                                    &default_config,
+                                ) {
+                                    state_updater.update_last_error(core_error!(
+                                        "save config failed ({:?})",
+                                        err
+                                    ));
+                                }
 
-                    Ok((config, config_file_path))
-                })
-            })
+                                default_config
+                            }
+                        };
+
+                        state_updater.update_config_path(config_file_path.as_path());
+                        state_updater.update_config(&config);
+                    }
+                    Err(err) => {
+                        state_updater
+                            .update_last_error(core_error!("read config failed ({:?})", err));
+                    }
+                };
+            });
         });
-
-        Self {
-            selected_page_tab: String::from("Connect"),
-            toasts: CustomToasts::new(),
-            config_and_path: config_and_path_promise,
-            update_config_channel: tokio::sync::mpsc::channel(1),
-            signaling_client: PromiseValue::new(),
-            show_password: false,
-            edit_password: false,
-            edit_password_content: String::from(""),
-            device_id_input_text: DeviceIDInputText::default(),
-            is_desktop_connecting: false,
-            call_signaling_visit: PromiseValue::new(),
-            show_visit_password_dialog: false,
-            visit_password_content: String::from(""),
-        }
     }
 
     fn build_panel(&mut self, ui: &mut Ui) {
         ui.spacing_mut().item_spacing = Vec2::ZERO;
         StripBuilder::new(ui)
-            .size(Size::relative(0.05)) // Domain Title
-            .size(Size::relative(0.1)) // Domain
+            .size(Size::relative(0.06)) // Domain Title
+            .size(Size::relative(0.09)) // Domain
             .size(Size::relative(0.06)) // Tab
             .size(Size::relative(0.75)) // Page
             .size(Size::relative(0.04)) // footer
@@ -190,7 +207,7 @@ impl App {
                 });
                 strip.cell(|ui| {
                     ui.centered_and_justified(|ui| {
-                        if let Some((config, _)) = self.config_and_path.value() {
+                        if let Some(config) = self.state.config() {
                             ui.label(
                                 RichText::new(config.primary_domain.as_str())
                                     .font(FontId::proportional(40.0)),
@@ -247,339 +264,223 @@ impl App {
             ui.visuals_mut().widgets.active.rounding = Rounding::same(2.0);
 
             let toggle = ui.toggle_value(
-                &mut (self.selected_page_tab == toggle_tab_value),
+                &mut (self.state.current_page_name() == toggle_tab_value),
                 display_text,
             );
 
             if toggle.clicked() {
-                self.selected_page_tab = toggle_tab_value.to_string();
+                self.state_updater
+                    .update_current_page_name(toggle_tab_value);
             }
         });
     }
 
     fn build_tab_view(&mut self, ui: &mut Ui) {
-        match self.selected_page_tab.as_str() {
-            "Connect" => ConnectPage::new(
-                &mut self.config_and_path,
-                &mut self.signaling_client,
-                &mut self.toasts,
-                &mut self.show_password,
-                &mut self.edit_password,
-                &mut self.edit_password_content,
-                &mut self.device_id_input_text,
-                &mut self.is_desktop_connecting,
-                &mut self.call_signaling_visit,
-            )
-            .build(ui),
+        match self.state.current_page_name() {
+            "Connect" => ConnectPage::new(&self.state).build(ui),
             "LAN" => LANPage::new().build(ui),
             "History" => HistoryPage::new().build(ui),
             _ => panic!("unknown select page tab"),
         }
     }
 
-    fn check_and_update_config_status(&mut self, ui: &mut Ui) -> bool {
-        self.config_and_path.poll();
+    // fn build_password_input_window(&mut self, ui: &mut Ui) {
+    //     if !(self.show_visit_password_dialog) {
+    //         return;
+    //     }
 
-        if self.config_and_path.value().is_none() {
-            self.config_and_path.update();
-        }
+    //     let window_size = Vec2::new(280.0, 140.0);
+    //     eframe::egui::Window::new("MirrorX")
+    //         .frame(
+    //             Frame::default()
+    //                 .inner_margin(Margin {
+    //                     left: 0.0,
+    //                     right: 0.0,
+    //                     top: 4.0,
+    //                     bottom: 0.0,
+    //                 })
+    //                 .stroke(Stroke::new(1.0, Color32::GRAY))
+    //                 .rounding(Rounding::same(2.0))
+    //                 .fill(Color32::WHITE)
+    //                 .shadow(Shadow::small_light()),
+    //         )
+    //         .fixed_size(window_size)
+    //         .fixed_pos(Pos2::new(
+    //             (380.0 - window_size.x) / 2.0,
+    //             (630.0 - window_size.y) / 2.0 - 10.0,
+    //         ))
+    //         .collapsible(false)
+    //         .resizable(false)
+    //         .title_bar(false)
+    //         .show(ui.ctx(), |ui| {
+    //             ui.style_mut().spacing.item_spacing = Vec2::ZERO;
+    //             StripBuilder::new(ui)
+    //                 .size(Size::relative(0.75))
+    //                 .size(Size::remainder())
+    //                 .vertical(|mut strip| {
+    //                     strip.strip(|builder| {
+    //                         builder.sizes(Size::relative(0.5), 2).vertical(|mut strip| {
+    //                             strip.cell(|ui| {
+    //                                 ui.centered_and_justified(|ui| {
+    //                                     ui.label(
+    //                                         RichText::new("Please input remote device password")
+    //                                             .font(FontId::proportional(18.0)),
+    //                                     );
+    //                                 });
+    //                             });
+    //                             strip.cell(|ui| {
+    //                                 ui.centered_and_justified(|ui| {
+    //                                     ui.visuals_mut().widgets.inactive.bg_stroke =
+    //                                         ui.visuals_mut().widgets.active.bg_stroke;
 
-        if self.update_config_channel.1.try_recv().is_ok() {
-            self.config_and_path.update();
-        }
+    //                                     Frame::default().outer_margin(Margin::same(12.0)).show(
+    //                                         ui,
+    //                                         |ui| {
+    //                                             TextEdit::singleline(
+    //                                                 &mut self.visit_password_content,
+    //                                             )
+    //                                             .font(FontId::proportional(22.0))
+    //                                             .password(true)
+    //                                             .show(ui);
+    //                                         },
+    //                                     );
+    //                                 });
+    //                             });
+    //                         });
+    //                     });
 
-        if let Some(err) = self.config_and_path.error() {
-            ui.centered_and_justified(|ui| {
-                ui.label(
-                    RichText::new(format!(
-                        "{:?}\n\nPlease delete the database file and re-open app!",
-                        err
-                    ))
-                    .font(FontId::proportional(18.0)),
-                );
-            });
+    //                     strip.strip(|builder| {
+    //                         builder
+    //                             .sizes(Size::relative(0.5), 2)
+    //                             .horizontal(|mut strip| {
+    //                                 strip.cell(|ui| {
+    //                                     ui.centered_and_justified(|ui| {
+    //                                         // ui.visuals_mut().button_frame = false;
 
-            return false;
-        }
+    //                                         ui.visuals_mut().widgets.hovered.expansion = 0.0;
+    //                                         ui.visuals_mut().widgets.hovered.bg_stroke =
+    //                                             Stroke::none();
+    //                                         ui.visuals_mut().widgets.hovered.bg_fill =
+    //                                             Color32::from_rgb(0x19, 0x8C, 0xFF);
+    //                                         ui.visuals_mut().widgets.hovered.fg_stroke =
+    //                                             Stroke::new(1.0, Color32::WHITE);
+    //                                         ui.visuals_mut().widgets.hovered.rounding = Rounding {
+    //                                             nw: 0.0,
+    //                                             ne: 0.0,
+    //                                             sw: 2.0,
+    //                                             se: 0.0,
+    //                                         };
 
-        true
-    }
+    //                                         ui.visuals_mut().widgets.inactive.expansion = 0.0;
+    //                                         ui.visuals_mut().widgets.inactive.bg_stroke =
+    //                                             Stroke::none();
+    //                                         ui.visuals_mut().widgets.inactive.bg_fill =
+    //                                             Color32::from_rgb(0x01, 0x6F, 0xFF);
+    //                                         ui.visuals_mut().widgets.inactive.fg_stroke =
+    //                                             Stroke::new(1.0, Color32::WHITE);
+    //                                         ui.visuals_mut().widgets.inactive.rounding = Rounding {
+    //                                             nw: 0.0,
+    //                                             ne: 0.0,
+    //                                             sw: 2.0,
+    //                                             se: 0.0,
+    //                                         };
 
-    fn check_and_update_signaling_client_status(&mut self, ui: &mut Ui) -> bool {
-        self.signaling_client.poll();
+    //                                         ui.visuals_mut().widgets.active.expansion = 0.0;
+    //                                         ui.visuals_mut().widgets.active.bg_stroke =
+    //                                             Stroke::none();
+    //                                         ui.visuals_mut().widgets.active.bg_fill =
+    //                                             Color32::from_rgb(0x00, 0x54, 0xE6);
+    //                                         ui.visuals_mut().widgets.active.fg_stroke =
+    //                                             Stroke::new(1.0, Color32::WHITE);
+    //                                         ui.visuals_mut().widgets.active.rounding = Rounding {
+    //                                             nw: 0.0,
+    //                                             ne: 0.0,
+    //                                             sw: 2.0,
+    //                                             se: 0.0,
+    //                                         };
 
-        if self.signaling_client.value().is_none() {
-            if let Some((config, config_path)) = self.config_and_path.value() {
-                let config = config.clone();
-                let config_path = config_path.clone();
-                let update_config_tx = self.update_config_channel.0.clone();
-                self.signaling_client.spawn_update(async move {
-                    let (signaling_client, config, publish_message_rx) =
-                        SignalingClient::new(config, config_path.clone()).await?;
+    //                                         if ui.button("Ok").clicked() {
+    //                                             self.show_visit_password_dialog = false;
+    //                                             if let Some((signaling_client, _)) =
+    //                                                 self.signaling_client.value()
+    //                                             {
+    //                                                 let signaling_client = signaling_client.clone();
+    //                                                 self.call_signaling_key_exchange.spawn_update(
+    //                                                     async move {
+    //                                                         signaling_client
+    //                                                             .key_exchange(KeyExchangeRequest {
+    //                                                                 domain: todo!(),
+    //                                                                 local_device_id: todo!(),
+    //                                                                 remote_device_id: todo!(),
+    //                                                                 password: todo!(),
+    //                                                             })
+    //                                                             .await
+    //                                                     },
+    //                                                 );
+    //                                             }
+    //                                         }
+    //                                     });
+    //                                 });
+    //                                 strip.cell(|ui| {
+    //                                     ui.centered_and_justified(|ui| {
+    //                                         ui.visuals_mut().widgets.hovered.expansion = 0.0;
+    //                                         ui.visuals_mut().widgets.hovered.bg_stroke =
+    //                                             Stroke::none();
+    //                                         ui.visuals_mut().widgets.hovered.rounding = Rounding {
+    //                                             nw: 0.0,
+    //                                             ne: 0.0,
+    //                                             sw: 0.0,
+    //                                             se: 2.0,
+    //                                         };
 
-                    tokio::task::block_in_place(|| {
-                        mirrorx_core::api::config::save(&config_path, &config)
-                    })?;
+    //                                         ui.visuals_mut().widgets.inactive.expansion = 0.0;
+    //                                         ui.visuals_mut().widgets.inactive.bg_stroke =
+    //                                             Stroke::none();
+    //                                         ui.visuals_mut().widgets.inactive.rounding = Rounding {
+    //                                             nw: 0.0,
+    //                                             ne: 0.0,
+    //                                             sw: 0.0,
+    //                                             se: 2.0,
+    //                                         };
 
-                    let _ = update_config_tx.try_send(());
-                    Ok((signaling_client, publish_message_rx))
-                });
-            }
-        }
+    //                                         ui.visuals_mut().widgets.active.expansion = 0.0;
+    //                                         ui.visuals_mut().widgets.active.bg_stroke =
+    //                                             Stroke::none();
+    //                                         ui.visuals_mut().widgets.active.rounding = Rounding {
+    //                                             nw: 0.0,
+    //                                             ne: 0.0,
+    //                                             sw: 0.0,
+    //                                             se: 2.0,
+    //                                         };
 
-        if let Some(err) = self.signaling_client.error() {
-            ui.centered_and_justified(|ui| {
-                ui.label(
-                    RichText::new(format!(
-                        "{:?}\n\nPlease check network and re-open app!",
-                        err
-                    ))
-                    .font(FontId::proportional(18.0)),
-                );
-            });
-
-            return false;
-        }
-
-        true
-    }
-
-    fn check_signaling_visit(&mut self, ui: &mut Ui) {
-        self.call_signaling_visit.poll();
-
-        if let Some(err) = self.call_signaling_visit.take_error() {
-            tracing::error!(?err, "request visit remote failed");
-            self.toasts
-                .error("Request visit remote failed, please retry later");
-            return;
-        }
-
-        if let Some(res) = self.call_signaling_visit.take_value() {
-            tracing::info!("signaling visit reply: {:?}", res.allow);
-            self.show_visit_password_dialog = res.allow;
-
-            if !res.allow {
-                self.toasts.error("Remote reject your visit request");
-            }
-        }
-    }
-
-    fn check_signaling_publish_message(&mut self) {
-        if let Some((signaling_client, publish_message_tx)) = self.signaling_client.value_mut() {
-            if let Ok(message) = publish_message_tx.try_recv() {
-                match message {
-                    PublishMessage::VisitRequest {
-                        active_device_id,
-                        passive_device_id,
-                        resource_type,
-                    } => {
-                        if let Some((config, _)) = self.config_and_path.value() {
-                            if let Some(domain_config) =
-                                config.domain_configs.get(&config.primary_domain)
-                            {
-                                if domain_config.device_id == passive_device_id {
-                                    let domain = config.primary_domain.clone();
-                                    let signaling_client = signaling_client.clone();
-                                    tokio::spawn(async move {
-                                        signaling_client
-                                            .visit_reply(VisitReplyRequest {
-                                                domain,
-                                                active_device_id,
-                                                passive_device_id,
-                                                allow: true, // todo : popup window to confirm
-                                            })
-                                            .await
-                                    });
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    fn build_password_input_window(&mut self, ui: &mut Ui) {
-        if !(self.show_visit_password_dialog) {
-            return;
-        }
-
-        let window_size = Vec2::new(280.0, 140.0);
-        eframe::egui::Window::new("MirrorX")
-            .frame(
-                Frame::default()
-                    .inner_margin(Margin {
-                        left: 0.0,
-                        right: 0.0,
-                        top: 4.0,
-                        bottom: 0.0,
-                    })
-                    .stroke(Stroke::new(1.0, Color32::GRAY))
-                    .rounding(Rounding::same(2.0))
-                    .fill(Color32::WHITE)
-                    .shadow(Shadow::small_light()),
-            )
-            .fixed_size(window_size)
-            .fixed_pos(Pos2::new(
-                (380.0 - window_size.x) / 2.0,
-                (630.0 - window_size.y) / 2.0 - 10.0,
-            ))
-            .collapsible(false)
-            .resizable(false)
-            .title_bar(false)
-            .show(ui.ctx(), |ui| {
-                ui.style_mut().spacing.item_spacing = Vec2::ZERO;
-                StripBuilder::new(ui)
-                    .size(Size::relative(0.75))
-                    .size(Size::remainder())
-                    .vertical(|mut strip| {
-                        strip.strip(|builder| {
-                            builder.sizes(Size::relative(0.5), 2).vertical(|mut strip| {
-                                strip.cell(|ui| {
-                                    ui.centered_and_justified(|ui| {
-                                        ui.label(
-                                            RichText::new("Please input remote device password")
-                                                .font(FontId::proportional(18.0)),
-                                        );
-                                    });
-                                });
-                                strip.cell(|ui| {
-                                    ui.centered_and_justified(|ui| {
-                                        ui.visuals_mut().widgets.inactive.bg_stroke =
-                                            ui.visuals_mut().widgets.active.bg_stroke;
-
-                                        Frame::default().outer_margin(Margin::same(12.0)).show(
-                                            ui,
-                                            |ui| {
-                                                TextEdit::singleline(
-                                                    &mut self.visit_password_content,
-                                                )
-                                                .font(FontId::proportional(22.0))
-                                                .password(true)
-                                                .show(ui);
-                                            },
-                                        );
-                                    });
-                                });
-                            });
-                        });
-
-                        strip.strip(|builder| {
-                            builder
-                                .sizes(Size::relative(0.5), 2)
-                                .horizontal(|mut strip| {
-                                    strip.cell(|ui| {
-                                        ui.centered_and_justified(|ui| {
-                                            // ui.visuals_mut().button_frame = false;
-
-                                            ui.visuals_mut().widgets.hovered.expansion = 0.0;
-                                            ui.visuals_mut().widgets.hovered.bg_stroke =
-                                                Stroke::none();
-                                            ui.visuals_mut().widgets.hovered.bg_fill =
-                                                Color32::from_rgb(0x19, 0x8C, 0xFF);
-                                            ui.visuals_mut().widgets.hovered.fg_stroke =
-                                                Stroke::new(1.0, Color32::WHITE);
-                                            ui.visuals_mut().widgets.hovered.rounding = Rounding {
-                                                nw: 0.0,
-                                                ne: 0.0,
-                                                sw: 2.0,
-                                                se: 0.0,
-                                            };
-
-                                            ui.visuals_mut().widgets.inactive.expansion = 0.0;
-                                            ui.visuals_mut().widgets.inactive.bg_stroke =
-                                                Stroke::none();
-                                            ui.visuals_mut().widgets.inactive.bg_fill =
-                                                Color32::from_rgb(0x01, 0x6F, 0xFF);
-                                            ui.visuals_mut().widgets.inactive.fg_stroke =
-                                                Stroke::new(1.0, Color32::WHITE);
-                                            ui.visuals_mut().widgets.inactive.rounding = Rounding {
-                                                nw: 0.0,
-                                                ne: 0.0,
-                                                sw: 2.0,
-                                                se: 0.0,
-                                            };
-
-                                            ui.visuals_mut().widgets.active.expansion = 0.0;
-                                            ui.visuals_mut().widgets.active.bg_stroke =
-                                                Stroke::none();
-                                            ui.visuals_mut().widgets.active.bg_fill =
-                                                Color32::from_rgb(0x00, 0x54, 0xE6);
-                                            ui.visuals_mut().widgets.active.fg_stroke =
-                                                Stroke::new(1.0, Color32::WHITE);
-                                            ui.visuals_mut().widgets.active.rounding = Rounding {
-                                                nw: 0.0,
-                                                ne: 0.0,
-                                                sw: 2.0,
-                                                se: 0.0,
-                                            };
-
-                                            ui.button("Ok");
-                                        });
-                                    });
-                                    strip.cell(|ui| {
-                                        ui.centered_and_justified(|ui| {
-                                            ui.visuals_mut().widgets.hovered.expansion = 0.0;
-                                            ui.visuals_mut().widgets.hovered.bg_stroke =
-                                                Stroke::none();
-                                            ui.visuals_mut().widgets.hovered.rounding = Rounding {
-                                                nw: 0.0,
-                                                ne: 0.0,
-                                                sw: 0.0,
-                                                se: 2.0,
-                                            };
-
-                                            ui.visuals_mut().widgets.inactive.expansion = 0.0;
-                                            ui.visuals_mut().widgets.inactive.bg_stroke =
-                                                Stroke::none();
-                                            ui.visuals_mut().widgets.inactive.rounding = Rounding {
-                                                nw: 0.0,
-                                                ne: 0.0,
-                                                sw: 0.0,
-                                                se: 2.0,
-                                            };
-
-                                            ui.visuals_mut().widgets.active.expansion = 0.0;
-                                            ui.visuals_mut().widgets.active.bg_stroke =
-                                                Stroke::none();
-                                            ui.visuals_mut().widgets.active.rounding = Rounding {
-                                                nw: 0.0,
-                                                ne: 0.0,
-                                                sw: 0.0,
-                                                se: 2.0,
-                                            };
-
-                                            ui.button("Cancel");
-                                        });
-                                    });
-                                });
-                        });
-                    });
-            });
-    }
+    //                                         if ui.button("Cancel").clicked() {
+    //                                             self.visit_password_content.clear();
+    //                                             self.show_visit_password_dialog = false;
+    //                                             self.is_desktop_connecting = false;
+    //                                         }
+    //                                     });
+    //                                 });
+    //                             });
+    //                     });
+    //                 });
+    //         });
+    // }
 }
 
 impl eframe::App for App {
     fn update(&mut self, ctx: &Context, _: &mut eframe::Frame) {
+        self.init_once();
+
         let frame = Frame::default()
             .inner_margin(Margin::symmetric(8.0, 0.0))
             .fill(ctx.style().visuals.window_fill());
 
         CentralPanel::default().frame(frame).show(ctx, |ui| {
-            if !self.check_and_update_config_status(ui) {
-                return;
-            }
-
-            if !self.check_and_update_signaling_client_status(ui) {
-                return;
-            }
-
-            self.check_signaling_visit(ui);
-            self.check_signaling_publish_message();
-
             self.build_panel(ui);
-            self.toasts.show(ui.ctx());
-            self.build_password_input_window(ui);
+            self.state.handle_event();
+            if let Some(err) = self.state.take_error() {
+                tracing::error!(?err, "last error");
+            }
         });
     }
 }
