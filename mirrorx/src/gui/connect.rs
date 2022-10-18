@@ -1,5 +1,5 @@
 use super::{
-    state::{State, StateUpdater},
+    state::{AppState, AppStateUpdater},
     widgets::device_id_input_field::DeviceIDInputField,
     View,
 };
@@ -8,12 +8,12 @@ use egui_extras::{Size, StripBuilder};
 use mirrorx_core::{api::signaling::ResourceType, core_error};
 
 pub struct ConnectPage<'a> {
-    app_state: &'a State,
-    app_state_updater: StateUpdater,
+    app_state: &'a AppState,
+    app_state_updater: AppStateUpdater,
 }
 
 impl<'a> ConnectPage<'a> {
-    pub fn new(app_state: &'a State) -> Self {
+    pub fn new(app_state: &'a AppState) -> Self {
         let app_state_updater = app_state.new_state_updater();
         Self {
             app_state,

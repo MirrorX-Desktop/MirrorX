@@ -2,11 +2,10 @@ use super::{
     connect::ConnectPage,
     history::HistoryPage,
     lan::LANPage,
-    state::{State, StateUpdater},
+    state::{AppState, AppStateUpdater},
     widgets::custom_toasts::CustomToasts,
     View,
 };
-use crate::utility::promise_value::{OneWayUpdatePromiseValue, PromiseValue};
 use eframe::{
     egui::{style::Margin, *},
     epaint::{Color32, FontFamily, FontId, Pos2, Rect, Shadow, Stroke, Vec2},
@@ -15,19 +14,15 @@ use egui_extras::{Size, StripBuilder};
 use mirrorx_core::{
     api::{
         config::{Config, DomainConfig},
-        signaling::{
-            KeyExchangeRequest, KeyExchangeResponse, PublishMessage, ResourceType, SignalingClient,
-            VisitReplyRequest, VisitResponse,
-        },
+        signaling::ResourceType,
     },
     core_error,
 };
-use std::{collections::HashMap, path::PathBuf, time::Duration};
-use tokio::sync::mpsc::{Receiver, Sender};
+use std::collections::HashMap;
 
 pub struct App {
-    state: State,
-    state_updater: StateUpdater,
+    app_state: AppState,
+    app_state_updater: AppStateUpdater,
     init_once: std::sync::Once,
     custom_toasts: CustomToasts,
 }
@@ -94,12 +89,12 @@ impl App {
 
         // initialize some global components
 
-        let state = State::new("Connect");
+        let state = AppState::new("Connect");
         let state_updater = state.new_state_updater();
 
         Self {
-            state,
-            state_updater,
+            app_state: state,
+            app_state_updater: state_updater,
             init_once: std::sync::Once::new(),
             custom_toasts: CustomToasts::new(),
         }
@@ -110,7 +105,7 @@ impl App {
             return;
         }
 
-        let state_updater = self.state.new_state_updater();
+        let state_updater = self.app_state.new_state_updater();
         self.init_once.call_once(move || {
             tokio::task::spawn_blocking(move || {
                 let base_dir_path = match directories_next::BaseDirs::new() {
@@ -209,7 +204,7 @@ impl App {
                 });
                 strip.cell(|ui| {
                     ui.centered_and_justified(|ui| {
-                        if let Some(config) = self.state.config() {
+                        if let Some(config) = self.app_state.config() {
                             ui.label(
                                 RichText::new(config.primary_domain.as_str())
                                     .font(FontId::proportional(40.0)),
@@ -266,20 +261,20 @@ impl App {
             ui.visuals_mut().widgets.active.rounding = Rounding::same(2.0);
 
             let toggle = ui.toggle_value(
-                &mut (self.state.current_page_name() == toggle_tab_value),
+                &mut (self.app_state.current_page_name() == toggle_tab_value),
                 display_text,
             );
 
             if toggle.clicked() {
-                self.state_updater
+                self.app_state_updater
                     .update_current_page_name(toggle_tab_value);
             }
         });
     }
 
     fn build_tab_view(&mut self, ui: &mut Ui) {
-        match self.state.current_page_name() {
-            "Connect" => ConnectPage::new(&self.state).build(ui),
+        match self.app_state.current_page_name() {
+            "Connect" => ConnectPage::new(&self.app_state).build(ui),
             "LAN" => LANPage::new().build(ui),
             "History" => HistoryPage::new().build(ui),
             _ => panic!("unknown select page tab"),
@@ -288,7 +283,7 @@ impl App {
 
     fn build_dialog_visit_request(&mut self, ui: &mut Ui) {
         if let Some((active_device_id, passive_device_id, resource_type)) =
-            self.state.dialog_visit_request_visible()
+            self.app_state.dialog_visit_request_visible()
         {
             let window_size = Vec2::new(280.0, 140.0);
             eframe::egui::Window::new("MirrorX Visit Request")
@@ -389,12 +384,13 @@ impl App {
                                                     };
 
                                                 if ui.button("Allow").clicked() {
-                                                    self.state_updater.emit_signaling_visit_reply(
-                                                        true,
-                                                        *active_device_id,
-                                                        *passive_device_id,
-                                                    );
-                                                    self.state_updater
+                                                    self.app_state_updater
+                                                        .emit_signaling_visit_reply(
+                                                            true,
+                                                            *active_device_id,
+                                                            *passive_device_id,
+                                                        );
+                                                    self.app_state_updater
                                                         .update_dialog_visit_request_visible(None);
                                                 }
                                             });
@@ -435,12 +431,13 @@ impl App {
                                                     };
 
                                                 if ui.button("Reject").clicked() {
-                                                    self.state_updater.emit_signaling_visit_reply(
-                                                        false,
-                                                        *active_device_id,
-                                                        *passive_device_id,
-                                                    );
-                                                    self.state_updater
+                                                    self.app_state_updater
+                                                        .emit_signaling_visit_reply(
+                                                            false,
+                                                            *active_device_id,
+                                                            *passive_device_id,
+                                                        );
+                                                    self.app_state_updater
                                                         .update_dialog_visit_request_visible(None);
                                                 }
                                             });
@@ -454,7 +451,7 @@ impl App {
 
     fn build_dialog_visit_password_input(&mut self, ui: &mut Ui) {
         if let Some((active_device_id, passive_device_id)) =
-            self.state.dialog_input_visit_password_visible()
+            self.app_state.dialog_input_visit_password_visible()
         {
             let window_size = Vec2::new(280.0, 140.0);
             eframe::egui::Window::new("MirrorX Visit Password Input")
@@ -503,7 +500,7 @@ impl App {
                                                 ui.visuals_mut().widgets.active;
 
                                             let mut snapshot_password = self
-                                                .state
+                                                .app_state
                                                 .dialog_input_visit_password()
                                                 .to_string();
 
@@ -517,7 +514,7 @@ impl App {
                                                         .response
                                                         .changed()
                                                     {
-                                                        self.state_updater
+                                                        self.app_state_updater
                                                             .update_dialog_input_visit_password(
                                                                 &snapshot_password,
                                                             );
@@ -583,10 +580,11 @@ impl App {
                                                     };
 
                                                 if ui.button("Ok").clicked() {
-                                                    self.state_updater.emit_signaling_key_exchange(
-                                                        active_device_id,
-                                                        passive_device_id,
-                                                    );
+                                                    self.app_state_updater
+                                                        .emit_signaling_key_exchange(
+                                                            active_device_id,
+                                                            passive_device_id,
+                                                        );
                                                 }
                                             });
                                         });
@@ -626,13 +624,13 @@ impl App {
                                                     };
 
                                                 if ui.button("Cancel").clicked() {
-                                                    self.state_updater
+                                                    self.app_state_updater
                                                         .update_dialog_input_visit_password_visible(
                                                             None,
                                                         );
-                                                    self.state_updater
+                                                    self.app_state_updater
                                                         .update_dialog_input_visit_password("");
-                                                    self.state_updater
+                                                    self.app_state_updater
                                                         .update_connect_page_desktop_connecting(
                                                             false,
                                                         );
@@ -659,8 +657,7 @@ impl eframe::App for App {
             self.build_panel(ui);
             self.build_dialog_visit_request(ui);
             self.build_dialog_visit_password_input(ui);
-            self.state.handle_event();
-            if let Some(err) = self.state.take_error() {
+            if let Some(err) = self.app_state.handle_event() {
                 self.custom_toasts.error(err.to_string().as_str());
             }
             self.custom_toasts.show(ctx);

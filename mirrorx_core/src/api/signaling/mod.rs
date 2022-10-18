@@ -21,6 +21,7 @@ use super::config::DomainConfig;
 
 #[derive(Debug, Clone)]
 pub struct SignalingClient {
+    domain: String,
     client: signaling_proto::service::signaling_client::SignalingClient<Channel>,
     _exit_tx: Sender<()>,
 }
@@ -66,11 +67,16 @@ impl SignalingClient {
         .await;
 
         let signaling_client = Self {
+            domain,
             client,
             _exit_tx: exit_tx,
         };
 
         Ok((signaling_client, register_response.device_id))
+    }
+
+    pub fn domain(&self) -> &str {
+        &self.domain
     }
 
     pub async fn visit(&self, req: visit::VisitRequest) -> CoreResult<visit::VisitResponse> {

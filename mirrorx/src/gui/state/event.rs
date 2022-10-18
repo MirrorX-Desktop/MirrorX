@@ -1,16 +1,14 @@
-use std::path::PathBuf;
-
 use mirrorx_core::{
     api::{
         config::Config,
-        signaling::{
-            KeyExchangeResponse, PublishMessage, ResourceType, SignalingClient, VisitResponse,
-        },
+        signaling::{KeyExchangeResponse, PublishMessage, ResourceType, SignalingClient},
     },
     error::CoreError,
 };
+use std::path::PathBuf;
+use strum_macros::AsRefStr;
 
-#[derive(Debug)]
+#[derive(Debug, AsRefStr)]
 pub enum Event {
     UpdateCurrentPage {
         page_name: String,

@@ -1,5 +1,4 @@
 use super::View;
-use std::sync::Arc;
 
 pub struct HistoryPage {}
 
