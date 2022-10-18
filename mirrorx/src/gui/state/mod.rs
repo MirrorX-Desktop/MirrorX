@@ -137,7 +137,26 @@ impl State {
                         }
                     });
                 }
-                Event::UpdateConfigSuccess { config } => self.config = Some(config),
+                Event::UpdateConfigSuccess { config } => {
+                    let mut update_signaling_client = false;
+                    if let Some(old_config) = &self.config {
+                        if old_config.primary_domain != config.primary_domain {
+                            update_signaling_client = true;
+                        }
+                    } else {
+                        // initial config is None, and receive UpdateConfigSuccess means config has initialized,
+                        // so signaling client has to update
+                        update_signaling_client = true;
+                    }
+
+                    self.config = Some(config);
+
+                    if update_signaling_client
+                        && self.tx.send(Event::UpdateSignalingClient).is_err()
+                    {
+                        tracing::error!("send UpdateSignalingClient event failed");
+                    }
+                }
                 Event::UpdateConfigPath { config_path } => self.config_path = config_path,
                 Event::UpdateSignalingClient => {
                     if let Some(config) = &self.config {

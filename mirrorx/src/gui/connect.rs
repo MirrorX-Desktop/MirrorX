@@ -1,6 +1,6 @@
 use super::{
     state::{State, StateUpdater},
-    widgets::{custom_toasts::CustomToasts, device_id_input_field::DeviceIDInputField},
+    widgets::device_id_input_field::DeviceIDInputField,
     View,
 };
 use eframe::{egui::*, emath::Align, epaint::*};
@@ -330,7 +330,7 @@ impl<'a> ConnectPage<'a> {
             });
         } else {
             self.app_state_updater.update_last_error(core_error!(
-                r#"Signaling connection has broken, please click Domain "🔄" button to reconnect Signaling Server"#
+                "Signaling connection has broken, please click Domain '🔄' button to reconnect Signaling Server"
             ));
         }
     }
