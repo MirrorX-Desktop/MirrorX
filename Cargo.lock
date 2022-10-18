@@ -3008,7 +3008,7 @@ dependencies = [
 [[package]]
 name = "signaling_proto"
 version = "0.1.0"
-source = "git+https://github.com/MirrorX-Desktop/signaling.git#ceb631fc101a4c2aa22794ad341281b2ff89da73"
+source = "git+https://github.com/MirrorX-Desktop/signaling.git#0288b400498de10bc28768c76216ca2c3dcd6cde"
 dependencies = [
  "once_cell",
  "prost",

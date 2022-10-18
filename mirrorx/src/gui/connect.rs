@@ -5,7 +5,7 @@ use super::{
 };
 use eframe::{egui::*, emath::Align, epaint::*};
 use egui_extras::{Size, StripBuilder};
-use mirrorx_core::core_error;
+use mirrorx_core::{api::signaling::ResourceType, core_error};
 
 pub struct ConnectPage<'a> {
     app_state: &'a State,
@@ -301,38 +301,13 @@ impl<'a> ConnectPage<'a> {
             }
         };
 
-        let domain = config.primary_domain.clone();
         let local_device_id = domain_config.device_id;
 
-        if let Some(signaling_client) = self.app_state.signaling_client() {
-            self.app_state_updater
-                .update_connect_page_desktop_connecting(true);
-
-            let signaling_client = signaling_client.clone();
-            let app_state_updater = self.app_state.new_state_updater();
-            tokio::spawn(async move {
-                match signaling_client
-                    .visit(mirrorx_core::api::signaling::VisitRequest {
-                        domain,
-                        local_device_id,
-                        remote_device_id: input_device_id,
-                        resource_type: mirrorx_core::api::signaling::ResourceType::Desktop,
-                    })
-                    .await
-                {
-                    Ok(resp) => app_state_updater.update_signaling_visit_response(&resp),
-                    Err(err) => {
-                        tracing::error!(?err, "signaling visit request failed");
-                        app_state_updater.update_connect_page_desktop_connecting(false);
-                        app_state_updater.update_last_error(err);
-                    }
-                }
-            });
-        } else {
-            self.app_state_updater.update_last_error(core_error!(
-                "Signaling connection has broken, please click Domain '🔄' button to reconnect Signaling Server"
-            ));
-        }
+        self.app_state_updater.emit_signaling_visit(
+            local_device_id,
+            input_device_id,
+            ResourceType::Desktop,
+        );
     }
 }
 

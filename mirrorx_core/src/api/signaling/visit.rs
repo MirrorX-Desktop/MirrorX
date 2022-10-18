@@ -1,7 +1,7 @@
 use crate::error::CoreResult;
 use tonic::transport::Channel;
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub enum ResourceType {
     Desktop,
     Files,
@@ -9,7 +9,6 @@ pub enum ResourceType {
 
 #[derive(Clone)]
 pub struct VisitRequest {
-    pub domain: String,
     pub local_device_id: i64,
     pub remote_device_id: i64,
     pub resource_type: ResourceType,
@@ -31,7 +30,6 @@ pub async fn visit(
 
     let resp = client
         .visit(signaling_proto::message::VisitRequest {
-            domain: req.domain,
             active_device_id: req.local_device_id,
             passive_device_id: req.remote_device_id,
             resource_type: resource_type.into(),

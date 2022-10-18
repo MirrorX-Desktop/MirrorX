@@ -22,10 +22,11 @@ use tonic::transport::Channel;
 
 pub async fn handle(
     client: &mut signaling_proto::service::signaling_client::SignalingClient<Channel>,
+    domain: String,
     config_path: PathBuf,
     req: &KeyExchangeRequest,
 ) {
-    let reply = match key_agreement(config_path, req).await {
+    let reply = match key_agreement(config_path, domain, req).await {
         Ok((
             secret_buffer,
             active_device_id,
@@ -68,6 +69,7 @@ pub async fn handle(
 
 async fn key_agreement(
     config_path: PathBuf,
+    domain: String,
     req: &KeyExchangeRequest,
 ) -> CoreResult<(
     Vec<u8>,
@@ -89,7 +91,7 @@ async fn key_agreement(
     let config = crate::api::config::read(&config_path)?.ok_or(core_error!("config is empty!"))?;
     let domain_config = config
         .domain_configs
-        .get(&config.primary_domain)
+        .get(&domain)
         .ok_or(core_error!("primary domain's config is empty"))?;
 
     if req.secret_nonce.len() != ring::aead::NONCE_LEN {
@@ -233,7 +235,7 @@ async fn key_agreement(
         secret_buffer,
         req.active_device_id,
         req.passive_device_id,
-        req.domain.to_owned(),
+        domain,
         active_device_secret.visit_credentials,
         sealing_key,
         opening_key,
@@ -282,7 +284,6 @@ fn build_reply(
     });
 
     KeyExchangeReplyRequest {
-        domain: req.domain.to_owned(),
         active_device_id: req.active_device_id,
         passive_device_id: req.passive_device_id,
         key_exchange_result: Some(KeyExchangeResult {

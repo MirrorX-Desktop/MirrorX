@@ -16,7 +16,7 @@ use mirrorx_core::{
     api::{
         config::{Config, DomainConfig},
         signaling::{
-            KeyExchangeRequest, KeyExchangeResponse, PublishMessage, SignalingClient,
+            KeyExchangeRequest, KeyExchangeResponse, PublishMessage, ResourceType, SignalingClient,
             VisitReplyRequest, VisitResponse,
         },
     },
@@ -286,187 +286,365 @@ impl App {
         }
     }
 
-    // fn build_password_input_window(&mut self, ui: &mut Ui) {
-    //     if !(self.show_visit_password_dialog) {
-    //         return;
-    //     }
+    fn build_visit_request_window(&mut self, ui: &mut Ui) {
+        if let Some((active_device_id, passive_device_id, resource_type)) =
+            self.state.dialog_visit_request_visible()
+        {
+            let window_size = Vec2::new(280.0, 140.0);
+            eframe::egui::Window::new("MirrorX")
+                .frame(
+                    Frame::default()
+                        .inner_margin(Margin {
+                            left: 0.0,
+                            right: 0.0,
+                            top: 4.0,
+                            bottom: 0.0,
+                        })
+                        .stroke(Stroke::new(1.0, Color32::GRAY))
+                        .rounding(Rounding::same(2.0))
+                        .fill(Color32::WHITE)
+                        .shadow(Shadow::small_light()),
+                )
+                .fixed_size(window_size)
+                .fixed_pos(Pos2::new(
+                    (380.0 - window_size.x) / 2.0,
+                    (630.0 - window_size.y) / 2.0 - 10.0,
+                ))
+                .collapsible(false)
+                .resizable(false)
+                .title_bar(false)
+                .show(ui.ctx(), |ui| {
+                    ui.style_mut().spacing.item_spacing = Vec2::ZERO;
+                    StripBuilder::new(ui)
+                        .size(Size::relative(0.75))
+                        .size(Size::remainder())
+                        .vertical(|mut strip| {
+                            strip.cell(|ui| {
+                                ui.centered_and_justified(|ui| {
+                                    let mut device_id_str = format!("{:0>10}", active_device_id);
+                                    device_id_str.insert(2, '-');
+                                    device_id_str.insert(7, '-');
 
-    //     let window_size = Vec2::new(280.0, 140.0);
-    //     eframe::egui::Window::new("MirrorX")
-    //         .frame(
-    //             Frame::default()
-    //                 .inner_margin(Margin {
-    //                     left: 0.0,
-    //                     right: 0.0,
-    //                     top: 4.0,
-    //                     bottom: 0.0,
-    //                 })
-    //                 .stroke(Stroke::new(1.0, Color32::GRAY))
-    //                 .rounding(Rounding::same(2.0))
-    //                 .fill(Color32::WHITE)
-    //                 .shadow(Shadow::small_light()),
-    //         )
-    //         .fixed_size(window_size)
-    //         .fixed_pos(Pos2::new(
-    //             (380.0 - window_size.x) / 2.0,
-    //             (630.0 - window_size.y) / 2.0 - 10.0,
-    //         ))
-    //         .collapsible(false)
-    //         .resizable(false)
-    //         .title_bar(false)
-    //         .show(ui.ctx(), |ui| {
-    //             ui.style_mut().spacing.item_spacing = Vec2::ZERO;
-    //             StripBuilder::new(ui)
-    //                 .size(Size::relative(0.75))
-    //                 .size(Size::remainder())
-    //                 .vertical(|mut strip| {
-    //                     strip.strip(|builder| {
-    //                         builder.sizes(Size::relative(0.5), 2).vertical(|mut strip| {
-    //                             strip.cell(|ui| {
-    //                                 ui.centered_and_justified(|ui| {
-    //                                     ui.label(
-    //                                         RichText::new("Please input remote device password")
-    //                                             .font(FontId::proportional(18.0)),
-    //                                     );
-    //                                 });
-    //                             });
-    //                             strip.cell(|ui| {
-    //                                 ui.centered_and_justified(|ui| {
-    //                                     ui.visuals_mut().widgets.inactive.bg_stroke =
-    //                                         ui.visuals_mut().widgets.active.bg_stroke;
+                                    ui.label(format!(
+                                        "{:?} want to visit your {:?}",
+                                        device_id_str,
+                                        if let ResourceType::Desktop = resource_type {
+                                            "desktop"
+                                        } else {
+                                            "files"
+                                        }
+                                    ));
+                                });
+                            });
 
-    //                                     Frame::default().outer_margin(Margin::same(12.0)).show(
-    //                                         ui,
-    //                                         |ui| {
-    //                                             TextEdit::singleline(
-    //                                                 &mut self.visit_password_content,
-    //                                             )
-    //                                             .font(FontId::proportional(22.0))
-    //                                             .password(true)
-    //                                             .show(ui);
-    //                                         },
-    //                                     );
-    //                                 });
-    //                             });
-    //                         });
-    //                     });
+                            strip.strip(|builder| {
+                                builder
+                                    .sizes(Size::relative(0.5), 2)
+                                    .horizontal(|mut strip| {
+                                        strip.cell(|ui| {
+                                            ui.centered_and_justified(|ui| {
+                                                ui.visuals_mut().widgets.hovered.expansion = 0.0;
+                                                ui.visuals_mut().widgets.hovered.bg_stroke =
+                                                    Stroke::none();
+                                                ui.visuals_mut().widgets.hovered.bg_fill =
+                                                    Color32::from_rgb(0x19, 0x8C, 0xFF);
+                                                ui.visuals_mut().widgets.hovered.fg_stroke =
+                                                    Stroke::new(1.0, Color32::WHITE);
+                                                ui.visuals_mut().widgets.hovered.rounding =
+                                                    Rounding {
+                                                        nw: 0.0,
+                                                        ne: 0.0,
+                                                        sw: 2.0,
+                                                        se: 0.0,
+                                                    };
 
-    //                     strip.strip(|builder| {
-    //                         builder
-    //                             .sizes(Size::relative(0.5), 2)
-    //                             .horizontal(|mut strip| {
-    //                                 strip.cell(|ui| {
-    //                                     ui.centered_and_justified(|ui| {
-    //                                         // ui.visuals_mut().button_frame = false;
+                                                ui.visuals_mut().widgets.inactive.expansion = 0.0;
+                                                ui.visuals_mut().widgets.inactive.bg_stroke =
+                                                    Stroke::none();
+                                                ui.visuals_mut().widgets.inactive.bg_fill =
+                                                    Color32::from_rgb(0x01, 0x6F, 0xFF);
+                                                ui.visuals_mut().widgets.inactive.fg_stroke =
+                                                    Stroke::new(1.0, Color32::WHITE);
+                                                ui.visuals_mut().widgets.inactive.rounding =
+                                                    Rounding {
+                                                        nw: 0.0,
+                                                        ne: 0.0,
+                                                        sw: 2.0,
+                                                        se: 0.0,
+                                                    };
 
-    //                                         ui.visuals_mut().widgets.hovered.expansion = 0.0;
-    //                                         ui.visuals_mut().widgets.hovered.bg_stroke =
-    //                                             Stroke::none();
-    //                                         ui.visuals_mut().widgets.hovered.bg_fill =
-    //                                             Color32::from_rgb(0x19, 0x8C, 0xFF);
-    //                                         ui.visuals_mut().widgets.hovered.fg_stroke =
-    //                                             Stroke::new(1.0, Color32::WHITE);
-    //                                         ui.visuals_mut().widgets.hovered.rounding = Rounding {
-    //                                             nw: 0.0,
-    //                                             ne: 0.0,
-    //                                             sw: 2.0,
-    //                                             se: 0.0,
-    //                                         };
+                                                ui.visuals_mut().widgets.active.expansion = 0.0;
+                                                ui.visuals_mut().widgets.active.bg_stroke =
+                                                    Stroke::none();
+                                                ui.visuals_mut().widgets.active.bg_fill =
+                                                    Color32::from_rgb(0x00, 0x54, 0xE6);
+                                                ui.visuals_mut().widgets.active.fg_stroke =
+                                                    Stroke::new(1.0, Color32::WHITE);
+                                                ui.visuals_mut().widgets.active.rounding =
+                                                    Rounding {
+                                                        nw: 0.0,
+                                                        ne: 0.0,
+                                                        sw: 2.0,
+                                                        se: 0.0,
+                                                    };
 
-    //                                         ui.visuals_mut().widgets.inactive.expansion = 0.0;
-    //                                         ui.visuals_mut().widgets.inactive.bg_stroke =
-    //                                             Stroke::none();
-    //                                         ui.visuals_mut().widgets.inactive.bg_fill =
-    //                                             Color32::from_rgb(0x01, 0x6F, 0xFF);
-    //                                         ui.visuals_mut().widgets.inactive.fg_stroke =
-    //                                             Stroke::new(1.0, Color32::WHITE);
-    //                                         ui.visuals_mut().widgets.inactive.rounding = Rounding {
-    //                                             nw: 0.0,
-    //                                             ne: 0.0,
-    //                                             sw: 2.0,
-    //                                             se: 0.0,
-    //                                         };
+                                                if ui.button("Allow").clicked() {
+                                                    self.state_updater.emit_signaling_visit_reply(
+                                                        true,
+                                                        *active_device_id,
+                                                        *passive_device_id,
+                                                    );
+                                                    self.state_updater
+                                                        .update_dialog_visit_request_visible(None);
+                                                }
+                                            });
+                                        });
+                                        strip.cell(|ui| {
+                                            ui.centered_and_justified(|ui| {
+                                                ui.visuals_mut().widgets.hovered.expansion = 0.0;
+                                                ui.visuals_mut().widgets.hovered.bg_stroke =
+                                                    Stroke::none();
+                                                ui.visuals_mut().widgets.hovered.rounding =
+                                                    Rounding {
+                                                        nw: 0.0,
+                                                        ne: 0.0,
+                                                        sw: 0.0,
+                                                        se: 2.0,
+                                                    };
 
-    //                                         ui.visuals_mut().widgets.active.expansion = 0.0;
-    //                                         ui.visuals_mut().widgets.active.bg_stroke =
-    //                                             Stroke::none();
-    //                                         ui.visuals_mut().widgets.active.bg_fill =
-    //                                             Color32::from_rgb(0x00, 0x54, 0xE6);
-    //                                         ui.visuals_mut().widgets.active.fg_stroke =
-    //                                             Stroke::new(1.0, Color32::WHITE);
-    //                                         ui.visuals_mut().widgets.active.rounding = Rounding {
-    //                                             nw: 0.0,
-    //                                             ne: 0.0,
-    //                                             sw: 2.0,
-    //                                             se: 0.0,
-    //                                         };
+                                                ui.visuals_mut().widgets.inactive.expansion = 0.0;
+                                                ui.visuals_mut().widgets.inactive.bg_stroke =
+                                                    Stroke::none();
+                                                ui.visuals_mut().widgets.inactive.rounding =
+                                                    Rounding {
+                                                        nw: 0.0,
+                                                        ne: 0.0,
+                                                        sw: 0.0,
+                                                        se: 2.0,
+                                                    };
 
-    //                                         if ui.button("Ok").clicked() {
-    //                                             self.show_visit_password_dialog = false;
-    //                                             if let Some((signaling_client, _)) =
-    //                                                 self.signaling_client.value()
-    //                                             {
-    //                                                 let signaling_client = signaling_client.clone();
-    //                                                 self.call_signaling_key_exchange.spawn_update(
-    //                                                     async move {
-    //                                                         signaling_client
-    //                                                             .key_exchange(KeyExchangeRequest {
-    //                                                                 domain: todo!(),
-    //                                                                 local_device_id: todo!(),
-    //                                                                 remote_device_id: todo!(),
-    //                                                                 password: todo!(),
-    //                                                             })
-    //                                                             .await
-    //                                                     },
-    //                                                 );
-    //                                             }
-    //                                         }
-    //                                     });
-    //                                 });
-    //                                 strip.cell(|ui| {
-    //                                     ui.centered_and_justified(|ui| {
-    //                                         ui.visuals_mut().widgets.hovered.expansion = 0.0;
-    //                                         ui.visuals_mut().widgets.hovered.bg_stroke =
-    //                                             Stroke::none();
-    //                                         ui.visuals_mut().widgets.hovered.rounding = Rounding {
-    //                                             nw: 0.0,
-    //                                             ne: 0.0,
-    //                                             sw: 0.0,
-    //                                             se: 2.0,
-    //                                         };
+                                                ui.visuals_mut().widgets.active.expansion = 0.0;
+                                                ui.visuals_mut().widgets.active.bg_stroke =
+                                                    Stroke::none();
+                                                ui.visuals_mut().widgets.active.rounding =
+                                                    Rounding {
+                                                        nw: 0.0,
+                                                        ne: 0.0,
+                                                        sw: 0.0,
+                                                        se: 2.0,
+                                                    };
 
-    //                                         ui.visuals_mut().widgets.inactive.expansion = 0.0;
-    //                                         ui.visuals_mut().widgets.inactive.bg_stroke =
-    //                                             Stroke::none();
-    //                                         ui.visuals_mut().widgets.inactive.rounding = Rounding {
-    //                                             nw: 0.0,
-    //                                             ne: 0.0,
-    //                                             sw: 0.0,
-    //                                             se: 2.0,
-    //                                         };
+                                                if ui.button("Reject").clicked() {
+                                                    self.state_updater.emit_signaling_visit_reply(
+                                                        false,
+                                                        *active_device_id,
+                                                        *passive_device_id,
+                                                    );
+                                                    self.state_updater
+                                                        .update_dialog_visit_request_visible(None);
+                                                }
+                                            });
+                                        });
+                                    });
+                            });
+                        });
+                });
+        }
+    }
 
-    //                                         ui.visuals_mut().widgets.active.expansion = 0.0;
-    //                                         ui.visuals_mut().widgets.active.bg_stroke =
-    //                                             Stroke::none();
-    //                                         ui.visuals_mut().widgets.active.rounding = Rounding {
-    //                                             nw: 0.0,
-    //                                             ne: 0.0,
-    //                                             sw: 0.0,
-    //                                             se: 2.0,
-    //                                         };
+    fn build_password_input_window(&mut self, ui: &mut Ui) {
+        if let Some((active_device_id, passive_device_id)) =
+            self.state.dialog_input_visit_password_visible()
+        {
+            let window_size = Vec2::new(280.0, 140.0);
+            eframe::egui::Window::new("MirrorX")
+                .frame(
+                    Frame::default()
+                        .inner_margin(Margin {
+                            left: 0.0,
+                            right: 0.0,
+                            top: 4.0,
+                            bottom: 0.0,
+                        })
+                        .stroke(Stroke::new(1.0, Color32::GRAY))
+                        .rounding(Rounding::same(2.0))
+                        .fill(Color32::WHITE)
+                        .shadow(Shadow::small_light()),
+                )
+                .fixed_size(window_size)
+                .fixed_pos(Pos2::new(
+                    (380.0 - window_size.x) / 2.0,
+                    (630.0 - window_size.y) / 2.0 - 10.0,
+                ))
+                .collapsible(false)
+                .resizable(false)
+                .title_bar(false)
+                .show(ui.ctx(), |ui| {
+                    ui.style_mut().spacing.item_spacing = Vec2::ZERO;
+                    StripBuilder::new(ui)
+                        .size(Size::relative(0.75))
+                        .size(Size::remainder())
+                        .vertical(|mut strip| {
+                            strip.strip(|builder| {
+                                builder.sizes(Size::relative(0.5), 2).vertical(|mut strip| {
+                                    strip.cell(|ui| {
+                                        ui.centered_and_justified(|ui| {
+                                            ui.label(
+                                                RichText::new(
+                                                    "Please input remote device password",
+                                                )
+                                                .font(FontId::proportional(18.0)),
+                                            );
+                                        });
+                                    });
+                                    strip.cell(|ui| {
+                                        ui.centered_and_justified(|ui| {
+                                            ui.visuals_mut().widgets.inactive.bg_stroke =
+                                                ui.visuals_mut().widgets.active.bg_stroke;
 
-    //                                         if ui.button("Cancel").clicked() {
-    //                                             self.visit_password_content.clear();
-    //                                             self.show_visit_password_dialog = false;
-    //                                             self.is_desktop_connecting = false;
-    //                                         }
-    //                                     });
-    //                                 });
-    //                             });
-    //                     });
-    //                 });
-    //         });
-    // }
+                                            let mut snapshot_password = self
+                                                .state
+                                                .dialog_input_visit_password()
+                                                .to_string();
+
+                                            Frame::default().outer_margin(Margin::same(12.0)).show(
+                                                ui,
+                                                |ui| {
+                                                    if TextEdit::singleline(&mut snapshot_password)
+                                                        .font(FontId::proportional(22.0))
+                                                        .password(true)
+                                                        .show(ui)
+                                                        .response
+                                                        .changed()
+                                                    {
+                                                        self.state_updater
+                                                            .update_dialog_input_visit_password(
+                                                                &snapshot_password,
+                                                            );
+                                                    }
+                                                },
+                                            );
+                                        });
+                                    });
+                                });
+                            });
+
+                            strip.strip(|builder| {
+                                builder
+                                    .sizes(Size::relative(0.5), 2)
+                                    .horizontal(|mut strip| {
+                                        strip.cell(|ui| {
+                                            ui.centered_and_justified(|ui| {
+                                                // ui.visuals_mut().button_frame = false;
+
+                                                ui.visuals_mut().widgets.hovered.expansion = 0.0;
+                                                ui.visuals_mut().widgets.hovered.bg_stroke =
+                                                    Stroke::none();
+                                                ui.visuals_mut().widgets.hovered.bg_fill =
+                                                    Color32::from_rgb(0x19, 0x8C, 0xFF);
+                                                ui.visuals_mut().widgets.hovered.fg_stroke =
+                                                    Stroke::new(1.0, Color32::WHITE);
+                                                ui.visuals_mut().widgets.hovered.rounding =
+                                                    Rounding {
+                                                        nw: 0.0,
+                                                        ne: 0.0,
+                                                        sw: 2.0,
+                                                        se: 0.0,
+                                                    };
+
+                                                ui.visuals_mut().widgets.inactive.expansion = 0.0;
+                                                ui.visuals_mut().widgets.inactive.bg_stroke =
+                                                    Stroke::none();
+                                                ui.visuals_mut().widgets.inactive.bg_fill =
+                                                    Color32::from_rgb(0x01, 0x6F, 0xFF);
+                                                ui.visuals_mut().widgets.inactive.fg_stroke =
+                                                    Stroke::new(1.0, Color32::WHITE);
+                                                ui.visuals_mut().widgets.inactive.rounding =
+                                                    Rounding {
+                                                        nw: 0.0,
+                                                        ne: 0.0,
+                                                        sw: 2.0,
+                                                        se: 0.0,
+                                                    };
+
+                                                ui.visuals_mut().widgets.active.expansion = 0.0;
+                                                ui.visuals_mut().widgets.active.bg_stroke =
+                                                    Stroke::none();
+                                                ui.visuals_mut().widgets.active.bg_fill =
+                                                    Color32::from_rgb(0x00, 0x54, 0xE6);
+                                                ui.visuals_mut().widgets.active.fg_stroke =
+                                                    Stroke::new(1.0, Color32::WHITE);
+                                                ui.visuals_mut().widgets.active.rounding =
+                                                    Rounding {
+                                                        nw: 0.0,
+                                                        ne: 0.0,
+                                                        sw: 2.0,
+                                                        se: 0.0,
+                                                    };
+
+                                                if ui.button("Ok").clicked() {
+                                                    self.state_updater.emit_signaling_key_exchange(
+                                                        active_device_id,
+                                                        passive_device_id,
+                                                    );
+                                                }
+                                            });
+                                        });
+                                        strip.cell(|ui| {
+                                            ui.centered_and_justified(|ui| {
+                                                ui.visuals_mut().widgets.hovered.expansion = 0.0;
+                                                ui.visuals_mut().widgets.hovered.bg_stroke =
+                                                    Stroke::none();
+                                                ui.visuals_mut().widgets.hovered.rounding =
+                                                    Rounding {
+                                                        nw: 0.0,
+                                                        ne: 0.0,
+                                                        sw: 0.0,
+                                                        se: 2.0,
+                                                    };
+
+                                                ui.visuals_mut().widgets.inactive.expansion = 0.0;
+                                                ui.visuals_mut().widgets.inactive.bg_stroke =
+                                                    Stroke::none();
+                                                ui.visuals_mut().widgets.inactive.rounding =
+                                                    Rounding {
+                                                        nw: 0.0,
+                                                        ne: 0.0,
+                                                        sw: 0.0,
+                                                        se: 2.0,
+                                                    };
+
+                                                ui.visuals_mut().widgets.active.expansion = 0.0;
+                                                ui.visuals_mut().widgets.active.bg_stroke =
+                                                    Stroke::none();
+                                                ui.visuals_mut().widgets.active.rounding =
+                                                    Rounding {
+                                                        nw: 0.0,
+                                                        ne: 0.0,
+                                                        sw: 0.0,
+                                                        se: 2.0,
+                                                    };
+
+                                                if ui.button("Cancel").clicked() {
+                                                    self.state_updater
+                                                        .update_dialog_input_visit_password_visible(
+                                                            None,
+                                                        );
+                                                    self.state_updater
+                                                        .update_dialog_input_visit_password("");
+                                                    self.state_updater
+                                                        .update_connect_page_desktop_connecting(
+                                                            false,
+                                                        );
+                                                }
+                                            });
+                                        });
+                                    });
+                            });
+                        });
+                });
+        }
+    }
 }
 
 impl eframe::App for App {

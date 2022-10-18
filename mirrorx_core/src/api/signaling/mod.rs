@@ -5,14 +5,10 @@ mod subscribe;
 mod visit;
 mod visit_reply;
 
-use super::config::{Config, DomainConfig};
 use crate::{core_error, error::CoreResult};
-use signaling_proto::message::RegisterRequest;
-use std::{path::PathBuf, sync::Arc};
-use tokio::sync::{
-    mpsc::{Receiver, Sender},
-    RwLock,
-};
+use signaling_proto::message::{GetDomainRequest, RegisterRequest};
+use std::path::PathBuf;
+use tokio::sync::mpsc::Sender;
 use tonic::transport::Channel;
 
 pub use key_exchange::{KeyExchangeRequest, KeyExchangeResponse};
@@ -20,6 +16,8 @@ pub use register::RegisterResponse;
 pub use subscribe::PublishMessage;
 pub use visit::{ResourceType, VisitRequest, VisitResponse};
 pub use visit_reply::VisitReplyRequest;
+
+use super::config::DomainConfig;
 
 #[derive(Debug, Clone)]
 pub struct SignalingClient {
@@ -29,40 +27,40 @@ pub struct SignalingClient {
 
 impl SignalingClient {
     pub async fn new(
-        mut config: Config,
+        domain: String,
+        domain_config: DomainConfig,
         config_path: PathBuf,
-    ) -> CoreResult<(Self, Config, Receiver<PublishMessage>)> {
-        let domain_config = config
-            .domain_configs
-            .get_mut(&config.primary_domain)
-            .ok_or(core_error!("no primary domain's config"))?;
+        publish_message_fn: Box<dyn Fn(PublishMessage) + Send>,
+    ) -> CoreResult<(Self, i64)> {
+        let mut client = dial::dial(&domain_config.addr).await?;
 
-        let mut client = dial::dial(domain_config.addr.as_str()).await?;
+        let get_domain_response = client.get_domain(GetDomainRequest {}).await?;
+        let get_domain_response = get_domain_response.into_inner();
+
+        if get_domain_response.domain != domain {
+            return Err(core_error!(
+                "mismatch domain, please delete current domain and re-add new one"
+            ));
+        }
 
         let register_response = client
             .register(RegisterRequest {
-                device_id: if domain_config.device_id != 0 {
-                    Some(domain_config.device_id)
-                } else {
-                    None
-                },
-                device_finger_print: domain_config.device_finger_print.clone(),
+                device_id: domain_config.device_id,
+                device_finger_print: domain_config.device_finger_print.to_string(),
             })
             .await?;
 
         let register_response = register_response.into_inner();
 
-        domain_config.device_id = register_response.device_id;
-        config.primary_domain = register_response.domain.clone();
-
-        let (publish_message_tx, publish_message_rx) = tokio::sync::mpsc::channel(8);
         let (exit_tx, exit_rx) = tokio::sync::mpsc::channel(1);
 
         subscribe::subscribe(
             &mut client,
-            domain_config.clone(),
+            get_domain_response.domain.clone(),
+            register_response.device_id,
+            domain_config.device_finger_print,
             config_path,
-            publish_message_tx,
+            publish_message_fn,
             exit_rx,
         )
         .await;
@@ -72,7 +70,7 @@ impl SignalingClient {
             _exit_tx: exit_tx,
         };
 
-        Ok((signaling_client, config, publish_message_rx))
+        Ok((signaling_client, register_response.device_id))
     }
 
     pub async fn visit(&self, req: visit::VisitRequest) -> CoreResult<visit::VisitResponse> {
