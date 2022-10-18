@@ -499,15 +499,15 @@ impl App {
                                     });
                                     strip.cell(|ui| {
                                         ui.centered_and_justified(|ui| {
-                                            ui.visuals_mut().widgets.inactive.bg_stroke =
-                                                ui.visuals_mut().widgets.active.bg_stroke;
+                                            ui.visuals_mut().widgets.inactive =
+                                                ui.visuals_mut().widgets.active;
 
                                             let mut snapshot_password = self
                                                 .state
                                                 .dialog_input_visit_password()
                                                 .to_string();
 
-                                            Frame::default().outer_margin(Margin::same(12.0)).show(
+                                            Frame::default().outer_margin(Margin::same(8.0)).show(
                                                 ui,
                                                 |ui| {
                                                     if TextEdit::singleline(&mut snapshot_password)

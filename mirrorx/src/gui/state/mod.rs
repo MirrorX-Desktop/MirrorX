@@ -322,9 +322,12 @@ impl State {
                     passive_device_id,
                 } => {
                     if let Some(signaling_client) = &self.signaling_client {
+                        self.dialog_input_visit_password_visible = None;
+                        let password = self.dialog_input_visit_password.clone();
+                        self.dialog_input_visit_password.clear();
+
                         let signaling_client = signaling_client.clone();
                         let tx = self.tx.clone();
-                        let password = self.dialog_input_visit_password.clone();
                         tokio::spawn(async move {
                             match signaling_client
                                 .key_exchange(KeyExchangeRequest {
@@ -344,6 +347,10 @@ impl State {
                                     });
                                 }
                             }
+
+                            tx.send(Event::UpdateConnectPageDesktopConnecting {
+                                connecting: false,
+                            });
                         });
                     }
                 }
