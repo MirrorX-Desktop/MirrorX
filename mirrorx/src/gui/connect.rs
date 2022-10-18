@@ -5,6 +5,7 @@ use super::{
 };
 use eframe::{egui::*, emath::Align, epaint::*};
 use egui_extras::{Size, StripBuilder};
+use mirrorx_core::core_error;
 
 pub struct ConnectPage<'a> {
     app_state: &'a State,
@@ -266,14 +267,16 @@ impl<'a> ConnectPage<'a> {
     fn connect_desktop(&mut self) {
         let input_device_id = self.app_state.connect_page_visit_device_id().to_string();
         if input_device_id.len() != 10 || !input_device_id.chars().all(|c| c.is_ascii_digit()) {
-            // todo: self.toasts.error("Invalid connect device id");
+            self.app_state_updater
+                .update_last_error(core_error!("Invalid visit device ID"));
             return;
         }
 
         let input_device_id: i64 = match input_device_id.parse() {
             Ok(v) => v,
             Err(_) => {
-                // todo: self.toasts.error("Invalid connect device id format");
+                self.app_state_updater
+                    .update_last_error(core_error!("Invalid visit device ID format"));
                 return;
             }
         };
@@ -281,7 +284,9 @@ impl<'a> ConnectPage<'a> {
         let config = match self.app_state.config() {
             Some(config) => config,
             None => {
-                // todo: self.toasts.error("Current config is empty");
+                self.app_state_updater.update_last_error(core_error!(
+                    "Config hasn't initialized, please try it later"
+                ));
                 return;
             }
         };
@@ -289,7 +294,9 @@ impl<'a> ConnectPage<'a> {
         let domain_config = match config.domain_configs.get(&config.primary_domain) {
             Some(domain_config) => domain_config,
             None => {
-                // todo: self.toasts.error("Current domain config is empty");
+                self.app_state_updater.update_last_error(core_error!(
+                    "Config hasn't initialized, please try it later"
+                ));
                 return;
             }
         };
@@ -322,8 +329,9 @@ impl<'a> ConnectPage<'a> {
                 }
             });
         } else {
-            // todo: give a resolution
-            // todo: self.toasts.error("Signaling connection is broken");
+            self.app_state_updater.update_last_error(core_error!(
+                r#"Signaling connection has broken, please click Domain "🔄" button to reconnect Signaling Server"#
+            ));
         }
     }
 }

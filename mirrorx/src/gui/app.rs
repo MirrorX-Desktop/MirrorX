@@ -29,6 +29,7 @@ pub struct App {
     state: State,
     state_updater: StateUpdater,
     init_once: std::sync::Once,
+    custom_toasts: CustomToasts,
 }
 
 impl App {
@@ -100,6 +101,7 @@ impl App {
             state,
             state_updater,
             init_once: std::sync::Once::new(),
+            custom_toasts: CustomToasts::new(),
         }
     }
 
@@ -479,8 +481,9 @@ impl eframe::App for App {
             self.build_panel(ui);
             self.state.handle_event();
             if let Some(err) = self.state.take_error() {
-                tracing::error!(?err, "last error");
+                self.custom_toasts.error(err.to_string().as_str());
             }
+            self.custom_toasts.show(ctx);
         });
     }
 }
