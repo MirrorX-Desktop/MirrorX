@@ -568,6 +568,7 @@ fn update_signaling_client(
     tokio::spawn(async move {
         let publish_message_tx = tx.clone();
         let publish_message_fn = Box::new(move |message: PublishMessage| {
+            tracing::info!("publish message");
             if publish_message_tx
                 .send(Event::UpdateSignalingPublishMessage {
                     publish_message: message,

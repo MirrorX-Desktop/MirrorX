@@ -286,12 +286,12 @@ impl App {
         }
     }
 
-    fn build_visit_request_window(&mut self, ui: &mut Ui) {
+    fn build_dialog_visit_request(&mut self, ui: &mut Ui) {
         if let Some((active_device_id, passive_device_id, resource_type)) =
             self.state.dialog_visit_request_visible()
         {
             let window_size = Vec2::new(280.0, 140.0);
-            eframe::egui::Window::new("MirrorX")
+            eframe::egui::Window::new("MirrorX Visit Request")
                 .frame(
                     Frame::default()
                         .inner_margin(Margin {
@@ -452,12 +452,12 @@ impl App {
         }
     }
 
-    fn build_password_input_window(&mut self, ui: &mut Ui) {
+    fn build_dialog_visit_password_input(&mut self, ui: &mut Ui) {
         if let Some((active_device_id, passive_device_id)) =
             self.state.dialog_input_visit_password_visible()
         {
             let window_size = Vec2::new(280.0, 140.0);
-            eframe::egui::Window::new("MirrorX")
+            eframe::egui::Window::new("MirrorX Visit Password Input")
                 .frame(
                     Frame::default()
                         .inner_margin(Margin {
@@ -657,6 +657,8 @@ impl eframe::App for App {
 
         CentralPanel::default().frame(frame).show(ctx, |ui| {
             self.build_panel(ui);
+            self.build_dialog_visit_request(ui);
+            self.build_dialog_visit_password_input(ui);
             self.state.handle_event();
             if let Some(err) = self.state.take_error() {
                 self.custom_toasts.error(err.to_string().as_str());

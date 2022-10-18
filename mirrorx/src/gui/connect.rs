@@ -266,6 +266,8 @@ impl<'a> ConnectPage<'a> {
 
     fn connect_desktop(&mut self) {
         let input_device_id = self.app_state.connect_page_visit_device_id().to_string();
+        tracing::info!("visit device id: {:?}", input_device_id);
+
         if input_device_id.len() != 10 || !input_device_id.chars().all(|c| c.is_ascii_digit()) {
             self.app_state_updater
                 .update_last_error(core_error!("Invalid visit device ID"));
