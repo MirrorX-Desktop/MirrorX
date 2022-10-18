@@ -303,6 +303,11 @@ impl<'a> ConnectPage<'a> {
             }
         };
 
+        if domain_config.device_id == input_device_id {
+            // todo: popup dialog
+            return;
+        }
+
         let local_device_id = domain_config.device_id;
 
         self.app_state_updater.emit_signaling_visit(

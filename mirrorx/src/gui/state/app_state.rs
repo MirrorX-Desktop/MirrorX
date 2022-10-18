@@ -16,7 +16,9 @@ use std::path::{Path, PathBuf};
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
 
 static SIGNALING_CONNECTION_BROKEN_ERROR: Lazy<String> = Lazy::new(|| {
-    String::from("Signaling connection has broken, please click Domain '🔄' button to reconnect Signaling Server")
+    String::from(
+        r#"Signaling connection has broken, please click Domain "🔄" button to reconnect Signaling Server"#,
+    )
 });
 
 pub struct AppState {
@@ -243,6 +245,10 @@ impl AppState {
                                 Event::UpdateLastError {
                                     err: core_error!("remote device reject your request"),
                                 }
+                            );
+                            send_event!(
+                                tx,
+                                Event::UpdateConnectPageDesktopConnecting { connecting: false }
                             );
                         }
                     }
