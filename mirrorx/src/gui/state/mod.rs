@@ -267,8 +267,8 @@ impl State {
                             {
                                 Ok(resp) => {
                                     if resp.allow {
-                                        tx.send(Event::UpdateDialogKeyExchangeProcessingVisible {
-                                            visible: true,
+                                        tx.send(Event::UpdateDialogInputVisitPasswordVisible {
+                                            visible: Some((local_device_id, remote_device_id)),
                                         });
                                     } else {
                                         tx.send(Event::UpdateLastError {
@@ -326,7 +326,7 @@ impl State {
                         let tx = self.tx.clone();
                         let password = self.dialog_input_visit_password.clone();
                         tokio::spawn(async move {
-                            if let Err(err) = signaling_client
+                            match signaling_client
                                 .key_exchange(KeyExchangeRequest {
                                     local_device_id: active_device_id,
                                     remote_device_id: passive_device_id,
@@ -334,10 +334,15 @@ impl State {
                                 })
                                 .await
                             {
-                                tracing::error!(?err, "signaling key exchange failed");
-                                tx.send(Event::UpdateLastError {
-                                    err: core_error!("request key exchange failed"),
-                                });
+                                Ok(resp) => {
+                                    tracing::info!(?resp, "key exchange finish");
+                                }
+                                Err(err) => {
+                                    tracing::error!(?err, "signaling key exchange failed");
+                                    tx.send(Event::UpdateLastError {
+                                        err: core_error!("request key exchange failed"),
+                                    });
+                                }
                             }
                         });
                     }
