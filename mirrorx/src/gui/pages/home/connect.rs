@@ -1,9 +1,8 @@
-use super::{
+use crate::gui::{
     state::{AppState, AppStateUpdater},
     widgets::device_id_input_field::DeviceIDInputField,
-    View,
 };
-use eframe::{egui::*, emath::Align, epaint::*};
+use egui::{emath::Align, epaint::*, *};
 use egui_extras::{Size, StripBuilder};
 use mirrorx_core::{api::signaling::ResourceType, core_error};
 
@@ -69,7 +68,7 @@ impl<'a> ConnectPage<'a> {
                 text_edit_size,
             ),
             |ui| {
-                eframe::egui::Frame::default()
+                Frame::default()
                     .stroke(Stroke::new(1.0, Color32::GRAY))
                     .rounding(Rounding::same(2.0))
                     .show(ui, |ui| {
@@ -318,8 +317,8 @@ impl<'a> ConnectPage<'a> {
     }
 }
 
-impl View for ConnectPage<'_> {
-    fn build(&mut self, ui: &mut eframe::egui::Ui) {
+impl ConnectPage<'_> {
+    pub fn show(&mut self, ui: &mut egui::Ui) {
         StripBuilder::new(ui)
             .size(Size::relative(0.21)) // Device ID Panel
             .size(Size::relative(0.21)) // Password Panel
@@ -429,7 +428,26 @@ fn make_connect_file_manager_button(ui: &mut Ui) {
         se: 2.0,
     };
 
-    ui.add_enabled(false, eframe::egui::widgets::Button::new("File Manager"));
+    if Button::new("File Manager").ui(ui).clicked() {
+        // let native_options = eframe::NativeOptions {
+        //     always_on_top: false,
+        //     maximized: false,
+        //     initial_window_size: Some(eframe::epaint::Vec2::new(380f32, 630f32)),
+        //     resizable: true,
+        //     follow_system_theme: false,
+        //     default_theme: eframe::Theme::Light,
+
+        //     // centered: true,
+        //     // fullsize_content: true,
+        //     ..Default::default()
+        // };
+
+        // eframe::run_native(
+        //     "MirrorX Desktop xxxx",
+        //     native_options,
+        //     Box::new(|cc| Box::new(DesktopWindow {})),
+        // );
+    }
 }
 
 #[inline]

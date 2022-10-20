@@ -1,6 +1,7 @@
-use eframe::{
-    egui::{style::Margin, Frame, Ui},
+use egui::{
     epaint::{Color32, Pos2, Rounding, Shadow, Stroke, Vec2},
+    style::Margin,
+    Frame, Ui,
 };
 
 pub struct Dialog {
@@ -28,7 +29,7 @@ impl Dialog {
             .fill(Color32::WHITE)
             .shadow(Shadow::small_light());
 
-        eframe::egui::Window::new(&self.title)
+        egui::Window::new(&self.title)
             .frame(frame)
             .fixed_size(self.size)
             .fixed_pos(Pos2::new(

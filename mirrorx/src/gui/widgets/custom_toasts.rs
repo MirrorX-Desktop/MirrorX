@@ -1,4 +1,4 @@
-use eframe::egui::{style::Margin, *};
+use egui::{style::Margin, *};
 use egui_toast::{Toast, ToastKind, ToastOptions, Toasts};
 
 pub struct CustomToasts {
@@ -30,7 +30,7 @@ impl CustomToasts {
 }
 
 fn custom_toast_contents(ui: &mut Ui, toast: &mut Toast) -> Response {
-    eframe::egui::Frame::default()
+    egui::Frame::default()
         .fill(Color32::BLACK)
         .inner_margin(Margin::same(8.0))
         .rounding(2.0)
@@ -69,7 +69,7 @@ fn custom_toast_contents(ui: &mut Ui, toast: &mut Toast) -> Response {
                     let (rect, response) = ui
                         .allocate_exact_size(text_galley.size(), Sense::focusable_noninteractive());
 
-                    ui.painter().add(eframe::epaint::TextShape {
+                    ui.painter().add(epaint::TextShape {
                         pos: rect.left_top(),
                         galley: text_galley.galley,
                         underline: Stroke::none(),

@@ -1,7 +1,8 @@
 use crate::gui::state::{AppState, AppStateUpdater};
-use eframe::{
-    egui::{style::Margin, Frame, TextEdit, TextFormat},
+use egui::{
     epaint::{text::LayoutSection, Color32, FontId, Rounding, Stroke, Vec2},
+    style::Margin,
+    Frame, TextEdit, TextFormat,
 };
 use egui_extras::{Size, StripBuilder};
 
@@ -21,9 +22,9 @@ impl<'a> DeviceIDInputField<'a> {
     }
 }
 
-impl<'a> eframe::egui::Widget for &mut DeviceIDInputField<'a> {
-    fn ui(self, ui: &mut eframe::egui::Ui) -> eframe::egui::Response {
-        let mut layouter = |ui: &eframe::egui::Ui, text: &str, wrap_width: f32| {
+impl<'a> egui::Widget for &mut DeviceIDInputField<'a> {
+    fn ui(self, ui: &mut egui::Ui) -> egui::Response {
+        let mut layouter = |ui: &egui::Ui, text: &str, wrap_width: f32| {
             let sections = if text.len() <= 2 {
                 vec![LayoutSection {
                     leading_space: 0.0,
@@ -63,7 +64,7 @@ impl<'a> eframe::egui::Widget for &mut DeviceIDInputField<'a> {
                 ]
             };
 
-            let mut layout_job = eframe::egui::text::LayoutJob {
+            let mut layout_job = egui::text::LayoutJob {
                 sections,
                 text: text.to_string(),
                 break_on_newline: false,
@@ -123,7 +124,7 @@ struct DeviceIDInputText<'a> {
     snapshot_str: String,
 }
 
-impl<'a> eframe::egui::TextBuffer for DeviceIDInputText<'a> {
+impl<'a> egui::TextBuffer for DeviceIDInputText<'a> {
     fn is_mutable(&self) -> bool {
         false
     }

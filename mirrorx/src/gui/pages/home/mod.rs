@@ -1,16 +1,21 @@
-use super::{
-    connect::ConnectPage,
-    history::HistoryPage,
-    lan::LANPage,
+mod connect;
+mod history;
+mod lan;
+
+use super::View;
+use crate::gui::{
     state::{AppState, AppStateUpdater},
     widgets::{custom_toasts::CustomToasts, dialog::Dialog},
-    View,
 };
-use eframe::{
-    egui::{style::Margin, *},
-    epaint::{Color32, FontFamily, FontId, Pos2, Rect, Stroke, Vec2},
+use connect::ConnectPage;
+use egui::{
+    epaint::{Color32, FontId, Pos2, Rect, Stroke, Vec2},
+    style::Margin,
+    CentralPanel, Context, Frame, Label, RichText, Rounding, TextEdit, Ui, Widget,
 };
 use egui_extras::{Size, StripBuilder};
+use history::HistoryPage;
+use lan::LANPage;
 use mirrorx_core::{
     api::{
         config::{Config, DomainConfig},
@@ -20,75 +25,15 @@ use mirrorx_core::{
 };
 use std::collections::HashMap;
 
-pub struct App {
+pub struct HomeView {
     app_state: AppState,
     app_state_updater: AppStateUpdater,
     init_once: std::sync::Once,
     custom_toasts: CustomToasts,
 }
 
-impl App {
-    pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
-        let mut fonts = FontDefinitions::default();
-        fonts.font_data.insert(
-            "NotoSans".to_owned(),
-            FontData::from_static(include_bytes!("../../assets/fonts/NotoSans-Regular.ttf")),
-        );
-        fonts.font_data.insert(
-            "NotoSansJP".to_owned(),
-            FontData::from_static(include_bytes!("../../assets/fonts/NotoSansJP-Regular.otf")),
-        );
-        fonts.font_data.insert(
-            "NotoSansKR".to_owned(),
-            FontData::from_static(include_bytes!("../../assets/fonts/NotoSansKR-Regular.otf")),
-        );
-        fonts.font_data.insert(
-            "NotoSansSC".to_owned(),
-            FontData::from_static(include_bytes!("../../assets/fonts/NotoSansSC-Regular.otf")),
-        );
-        fonts.font_data.insert(
-            "NotoSansTC".to_owned(),
-            FontData::from_static(include_bytes!("../../assets/fonts/NotoSansTC-Regular.otf")),
-        );
-        fonts.font_data.insert(
-            "NotoSansMono".to_owned(),
-            FontData::from_static(include_bytes!(
-                "../../assets/fonts/NotoSansMono-Regular.ttf"
-            )),
-        );
-
-        let mut proportional_fonts = vec![
-            "NotoSans".to_owned(),
-            "NotoSansSC".to_owned(),
-            "NotoSansTC".to_owned(),
-            "NotoSansJP".to_owned(),
-            "NotoSansKR".to_owned(),
-        ];
-
-        let old_fonts = fonts.families.entry(FontFamily::Proportional).or_default();
-
-        proportional_fonts.append(old_fonts);
-
-        fonts
-            .families
-            .insert(FontFamily::Proportional, proportional_fonts.clone());
-
-        let mut mono_fonts = vec!["NotoSansMono".to_owned()];
-
-        let old_fonts = fonts.families.entry(FontFamily::Monospace).or_default();
-
-        mono_fonts.append(old_fonts);
-
-        fonts
-            .families
-            .insert(FontFamily::Monospace, mono_fonts.clone());
-
-        // cc.egui_ctx.set_debug_on_hover(true);
-        // cc.egui_ctx.request_repaint_after(Duration::from_secs(1));
-        cc.egui_ctx.set_fonts(fonts);
-
-        // initialize some global components
-
+impl HomeView {
+    pub fn new() -> Self {
         let state = AppState::new("Connect");
         let state_updater = state.new_state_updater();
 
@@ -274,9 +219,9 @@ impl App {
 
     fn build_tab_view(&mut self, ui: &mut Ui) {
         match self.app_state.current_page_name() {
-            "Connect" => ConnectPage::new(&self.app_state).build(ui),
-            "LAN" => LANPage::new().build(ui),
-            "History" => HistoryPage::new().build(ui),
+            "Connect" => ConnectPage::new(&self.app_state).show(ui),
+            "LAN" => LANPage::new().show(ui),
+            "History" => HistoryPage::new().show(ui),
             _ => panic!("unknown select page tab"),
         }
     }
@@ -598,8 +543,8 @@ impl App {
     }
 }
 
-impl eframe::App for App {
-    fn update(&mut self, ctx: &Context, _: &mut eframe::Frame) {
+impl View for HomeView {
+    fn ui(&mut self, ctx: &Context) {
         ctx.request_repaint_after(std::time::Duration::from_secs(1));
 
         self.init_once();
