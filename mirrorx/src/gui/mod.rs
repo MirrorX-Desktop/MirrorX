@@ -4,6 +4,7 @@ mod state;
 mod widgets;
 
 use fxhash::FxHashMap;
+use mirrorx_core::api::signaling::KeyExchangeResponse;
 use pages::{Page, PageOptions, View};
 use std::fmt::Debug;
 use winit::{
@@ -20,8 +21,7 @@ pub enum CustomEvent {
     Repaint(WindowId),
     NewDesktopPage {
         remote_device_id: i64,
-        opening_key: Vec<u8>,
-        sealing_key: Vec<u8>,
+        key_exchange_resp: KeyExchangeResponse,
     },
 }
 
@@ -159,10 +159,19 @@ pub fn run_app() -> anyhow::Result<()> {
             }
             UserEvent(CustomEvent::NewDesktopPage {
                 remote_device_id,
-                opening_key,
-                sealing_key,
+                key_exchange_resp,
             }) => {
                 tracing::info!("receive build desktop visit page");
+                let desktop_view = DesktopView::new(
+                    key_exchange_resp.local_device_id,
+                    remote_device_id,
+                    key_exchange_resp.opening_key_bytes,
+                    key_exchange_resp.opening_nonce_bytes,
+                    key_exchange_resp.sealing_key_bytes,
+                    key_exchange_resp.sealing_nonce_bytes,
+                    key_exchange_resp.visit_credentials,
+                );
+
                 let desktop_page = Page::new(
                     format!("MirrorX Desktop {}", remote_device_id).as_str(),
                     PageOptions {
@@ -173,7 +182,7 @@ pub fn run_app() -> anyhow::Result<()> {
                     },
                     &window_target,
                     event_loop_proxy.clone(),
-                    Box::new(DesktopView::new()),
+                    Box::new(desktop_view),
                 )
                 .unwrap();
 

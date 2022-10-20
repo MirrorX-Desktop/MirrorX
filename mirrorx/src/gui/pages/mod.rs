@@ -61,7 +61,7 @@ impl Page {
             match repaint_rx.blocking_recv() {
                 Some(event) => {
                     if let Err(err) = event_loop_proxy.send_event(event) {
-                        tracing::error!(?err, "event loop send user event failed");
+                        tracing::error!(?err, "event loop proxy send user event failed");
                     }
                 }
                 None => return,

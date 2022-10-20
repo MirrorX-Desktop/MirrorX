@@ -1,26 +1,22 @@
 use crate::gui::{
     state::{AppState, AppStateUpdater},
     widgets::device_id_input_field::DeviceIDInputField,
-    CustomEvent,
 };
 use egui::{emath::Align, epaint::*, *};
 use egui_extras::{Size, StripBuilder};
 use mirrorx_core::{api::signaling::ResourceType, core_error};
-use winit::event_loop::EventLoopProxy;
 
 pub struct ConnectPage<'a> {
     app_state: &'a AppState,
     app_state_updater: AppStateUpdater,
-    event_loop_proxy: &'a EventLoopProxy<CustomEvent>,
 }
 
 impl<'a> ConnectPage<'a> {
-    pub fn new(app_state: &'a AppState, event_loop_proxy: &'a EventLoopProxy<CustomEvent>) -> Self {
+    pub fn new(app_state: &'a AppState) -> Self {
         let app_state_updater = app_state.new_state_updater();
         Self {
             app_state,
             app_state_updater,
-            event_loop_proxy,
         }
     }
 
@@ -348,14 +344,7 @@ impl<'a> ConnectPage<'a> {
             se: 2.0,
         };
 
-        if Button::new("File Manager").ui(ui).clicked() {
-            self.event_loop_proxy
-                .send_event(CustomEvent::NewDesktopPage {
-                    remote_device_id: 11111,
-                    opening_key: Vec::new(),
-                    sealing_key: Vec::new(),
-                });
-        }
+        if Button::new("File Manager").ui(ui).clicked() {}
     }
 }
 

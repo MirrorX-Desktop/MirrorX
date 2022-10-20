@@ -1,5 +1,5 @@
 use super::{app_state_updater::AppStateUpdater, event::Event};
-use crate::send_event;
+use crate::{gui::CustomEvent, send_event};
 use mirrorx_core::{
     api::{
         config::Config,
@@ -14,6 +14,7 @@ use mirrorx_core::{
 use once_cell::sync::Lazy;
 use std::path::{Path, PathBuf};
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
+use winit::event_loop::EventLoopProxy;
 
 static SIGNALING_CONNECTION_BROKEN_ERROR: Lazy<String> = Lazy::new(|| {
     String::from(
@@ -42,10 +43,12 @@ pub struct AppState {
     connect_page_password: String,
     connect_page_visit_device_id: String,
     connect_page_desktop_connecting: bool,
+
+    event_loop_proxy: EventLoopProxy<CustomEvent>,
 }
 
 impl AppState {
-    pub fn new(initial_page_name: &str) -> Self {
+    pub fn new(initial_page_name: &str, event_loop_proxy: EventLoopProxy<CustomEvent>) -> Self {
         let (tx, rx) = unbounded_channel();
 
         Self {
@@ -65,6 +68,7 @@ impl AppState {
             connect_page_password: Default::default(),
             connect_page_visit_device_id: Default::default(),
             connect_page_desktop_connecting: Default::default(),
+            event_loop_proxy,
         }
     }
     pub fn current_page_name(&self) -> &str {
@@ -317,6 +321,7 @@ impl AppState {
 
             let signaling_client = signaling_client.clone();
             let tx = self.tx.clone();
+            let event_loop_proxy = self.event_loop_proxy.clone();
             tokio::spawn(async move {
                 match signaling_client
                     .key_exchange(KeyExchangeRequest {
@@ -328,6 +333,12 @@ impl AppState {
                 {
                     Ok(resp) => {
                         tracing::info!(?resp, "key exchange finish");
+                        if let Err(err) = event_loop_proxy.send_event(CustomEvent::NewDesktopPage {
+                            remote_device_id: passive_device_id,
+                            key_exchange_resp: resp,
+                        }) {
+                            tracing::error!(?err, "event loop proxy send user event failed");
+                        }
                     }
                     Err(err) => {
                         tracing::error!(?err, "signaling key exchange failed");

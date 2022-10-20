@@ -32,12 +32,11 @@ pub struct HomeView {
     app_state_updater: AppStateUpdater,
     init_once: std::sync::Once,
     custom_toasts: CustomToasts,
-    event_loop_proxy: EventLoopProxy<CustomEvent>,
 }
 
 impl HomeView {
     pub fn new(event_loop_proxy: EventLoopProxy<CustomEvent>) -> Self {
-        let state = AppState::new("Connect");
+        let state = AppState::new("Connect", event_loop_proxy);
         let state_updater = state.new_state_updater();
 
         Self {
@@ -45,7 +44,6 @@ impl HomeView {
             app_state_updater: state_updater,
             init_once: std::sync::Once::new(),
             custom_toasts: CustomToasts::new(),
-            event_loop_proxy,
         }
     }
 
@@ -223,7 +221,7 @@ impl HomeView {
 
     fn build_tab_view(&mut self, ui: &mut Ui) {
         match self.app_state.current_page_name() {
-            "Connect" => ConnectPage::new(&self.app_state, &self.event_loop_proxy).show(ui),
+            "Connect" => ConnectPage::new(&self.app_state).show(ui),
             "LAN" => LANPage::new().show(ui),
             "History" => HistoryPage::new().show(ui),
             _ => panic!("unknown select page tab"),
