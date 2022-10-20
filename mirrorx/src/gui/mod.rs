@@ -4,7 +4,8 @@ mod state;
 mod widgets;
 
 use fxhash::FxHashMap;
-use pages::{Page, PageOptions};
+use pages::{Page, PageOptions, View};
+use std::fmt::Debug;
 use winit::{
     dpi::LogicalSize,
     event::Event::{self, UserEvent},
@@ -13,9 +14,29 @@ use winit::{
     window::WindowId,
 };
 
-#[derive(Debug)]
+use crate::gui::pages::desktop::DesktopView;
+
 pub enum CustomEvent {
     Repaint(WindowId),
+    NewDesktopPage {
+        remote_device_id: i64,
+        opening_key: Vec<u8>,
+        sealing_key: Vec<u8>,
+    },
+}
+
+impl Debug for CustomEvent {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Repaint(window_id) => f.debug_tuple("Repaint").field(window_id).finish(),
+            Self::NewDesktopPage {
+                remote_device_id, ..
+            } => f
+                .debug_struct("NewDesktopVisitPage")
+                .field("remote_device_id", remote_device_id)
+                .finish(),
+        }
+    }
 }
 
 pub fn run_app() -> anyhow::Result<()> {
@@ -38,9 +59,10 @@ pub fn run_app() -> anyhow::Result<()> {
     // );
 
     let mut event_loop = EventLoopBuilder::<CustomEvent>::with_user_event().build();
+    let event_loop_proxy = event_loop.create_proxy();
     let mut pages = FxHashMap::default();
 
-    let home_view = pages::home::HomeView::new();
+    let home_view = pages::home::HomeView::new(event_loop.create_proxy());
     let home_page = Page::new(
         "MirrorX",
         PageOptions {
@@ -50,13 +72,14 @@ pub fn run_app() -> anyhow::Result<()> {
             ..Default::default()
         },
         &event_loop,
+        event_loop_proxy.clone(),
         Box::new(home_view),
     )?;
 
     pages.insert(home_page.window_id(), home_page);
 
-    event_loop.run_return(move |event, _, control_flow| {
-        tracing::info!(?event, "event loop");
+    event_loop.run_return(move |event, window_target, control_flow| {
+        // tracing::info!(?event, "event loop");
         control_flow.set_wait();
 
         match event {
@@ -71,6 +94,7 @@ pub fn run_app() -> anyhow::Result<()> {
                             removed = true;
                         }
                         winit::event::WindowEvent::Resized(size) => {
+                            tracing::info!("resize");
                             if size.width > 0 && size.height > 0 {
                                 page.resize(size);
                             }
@@ -79,6 +103,7 @@ pub fn run_app() -> anyhow::Result<()> {
                             scale_factor,
                             new_inner_size,
                         } => {
+                            tracing::info!("scale factor");
                             page.scale_factor(scale_factor);
                             page.resize(*new_inner_size);
                         }
@@ -99,7 +124,6 @@ pub fn run_app() -> anyhow::Result<()> {
             }
             Event::RedrawRequested(window_id) => {
                 if let Some(page) = pages.get_mut(&window_id) {
-                    tracing::info!("redraw");
                     if let Err(err) = page.render() {
                         tracing::error!(?err, "page render failed");
                         control_flow.set_exit();
@@ -108,29 +132,52 @@ pub fn run_app() -> anyhow::Result<()> {
             }
             Event::RedrawEventsCleared => {
                 // todo: consider about multiple windows
-                for (_, page) in pages.values().enumerate() {
-                    if let Some(next_repaint_instant) = page.next_repaint_instant() {
-                        let now = std::time::Instant::now();
-                        match next_repaint_instant
-                            .checked_duration_since(now)
-                            .map(|duration| now + duration)
-                        {
-                            Some(wait_instant) => control_flow.set_wait_until(wait_instant),
-                            None => {
-                                page.request_redraw();
-                                control_flow.set_poll();
+                if pages.len() == 1 {
+                    for (_, page) in pages.values().enumerate() {
+                        if let Some(next_repaint_instant) = page.next_repaint_instant() {
+                            let now = std::time::Instant::now();
+                            match next_repaint_instant
+                                .checked_duration_since(now)
+                                .map(|duration| now + duration)
+                            {
+                                Some(wait_instant) => control_flow.set_wait_until(wait_instant),
+                                None => {
+                                    page.request_redraw();
+                                    control_flow.set_poll();
+                                }
                             }
+                        } else {
+                            control_flow.set_wait();
                         }
-                    } else {
-                        control_flow.set_wait();
                     }
                 }
             }
             UserEvent(CustomEvent::Repaint(window_id)) => {
-                tracing::info!("receive repaint");
                 if let Some(page) = pages.get_mut(&window_id) {
                     page.request_redraw();
                 }
+            }
+            UserEvent(CustomEvent::NewDesktopPage {
+                remote_device_id,
+                opening_key,
+                sealing_key,
+            }) => {
+                tracing::info!("receive build desktop visit page");
+                let desktop_page = Page::new(
+                    format!("MirrorX Desktop {}", remote_device_id).as_str(),
+                    PageOptions {
+                        size: LogicalSize::new(960, 540),
+                        resizable: true,
+                        maximized: false,
+                        ..Default::default()
+                    },
+                    &window_target,
+                    event_loop_proxy.clone(),
+                    Box::new(DesktopView::new()),
+                )
+                .unwrap();
+
+                pages.insert(desktop_page.window_id(), desktop_page);
             }
             _ => (),
         }

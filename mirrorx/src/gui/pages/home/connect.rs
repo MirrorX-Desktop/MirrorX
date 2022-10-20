@@ -1,22 +1,26 @@
 use crate::gui::{
     state::{AppState, AppStateUpdater},
     widgets::device_id_input_field::DeviceIDInputField,
+    CustomEvent,
 };
 use egui::{emath::Align, epaint::*, *};
 use egui_extras::{Size, StripBuilder};
 use mirrorx_core::{api::signaling::ResourceType, core_error};
+use winit::event_loop::EventLoopProxy;
 
 pub struct ConnectPage<'a> {
     app_state: &'a AppState,
     app_state_updater: AppStateUpdater,
+    event_loop_proxy: &'a EventLoopProxy<CustomEvent>,
 }
 
 impl<'a> ConnectPage<'a> {
-    pub fn new(app_state: &'a AppState) -> Self {
+    pub fn new(app_state: &'a AppState, event_loop_proxy: &'a EventLoopProxy<CustomEvent>) -> Self {
         let app_state_updater = app_state.new_state_updater();
         Self {
             app_state,
             app_state_updater,
+            event_loop_proxy,
         }
     }
 
@@ -315,6 +319,44 @@ impl<'a> ConnectPage<'a> {
             ResourceType::Desktop,
         );
     }
+
+    fn make_connect_file_manager_button(&mut self, ui: &mut Ui) {
+        ui.visuals_mut().widgets.hovered.expansion = 0.0;
+        ui.visuals_mut().widgets.hovered.bg_stroke = Stroke::none();
+        ui.visuals_mut().widgets.hovered.rounding = Rounding {
+            nw: 0.0,
+            ne: 2.0,
+            sw: 0.0,
+            se: 2.0,
+        };
+
+        ui.visuals_mut().widgets.inactive.expansion = 0.0;
+        ui.visuals_mut().widgets.inactive.bg_stroke = Stroke::none();
+        ui.visuals_mut().widgets.inactive.rounding = Rounding {
+            nw: 0.0,
+            ne: 2.0,
+            sw: 0.0,
+            se: 2.0,
+        };
+
+        ui.visuals_mut().widgets.active.expansion = 0.0;
+        ui.visuals_mut().widgets.active.bg_stroke = Stroke::none();
+        ui.visuals_mut().widgets.active.rounding = Rounding {
+            nw: 0.0,
+            ne: 2.0,
+            sw: 0.0,
+            se: 2.0,
+        };
+
+        if Button::new("File Manager").ui(ui).clicked() {
+            self.event_loop_proxy
+                .send_event(CustomEvent::NewDesktopPage {
+                    remote_device_id: 11111,
+                    opening_key: Vec::new(),
+                    sealing_key: Vec::new(),
+                });
+        }
+    }
 }
 
 impl ConnectPage<'_> {
@@ -386,7 +428,7 @@ impl ConnectPage<'_> {
                                         });
                                         strip.cell(|ui| {
                                             ui.centered_and_justified(|ui| {
-                                                make_connect_file_manager_button(ui);
+                                                self.make_connect_file_manager_button(ui);
                                             });
                                         });
                                         strip.empty();
@@ -396,57 +438,6 @@ impl ConnectPage<'_> {
                         });
                 });
             });
-    }
-}
-
-#[inline]
-fn make_connect_file_manager_button(ui: &mut Ui) {
-    ui.visuals_mut().widgets.hovered.expansion = 0.0;
-    ui.visuals_mut().widgets.hovered.bg_stroke = Stroke::none();
-    ui.visuals_mut().widgets.hovered.rounding = Rounding {
-        nw: 0.0,
-        ne: 2.0,
-        sw: 0.0,
-        se: 2.0,
-    };
-
-    ui.visuals_mut().widgets.inactive.expansion = 0.0;
-    ui.visuals_mut().widgets.inactive.bg_stroke = Stroke::none();
-    ui.visuals_mut().widgets.inactive.rounding = Rounding {
-        nw: 0.0,
-        ne: 2.0,
-        sw: 0.0,
-        se: 2.0,
-    };
-
-    ui.visuals_mut().widgets.active.expansion = 0.0;
-    ui.visuals_mut().widgets.active.bg_stroke = Stroke::none();
-    ui.visuals_mut().widgets.active.rounding = Rounding {
-        nw: 0.0,
-        ne: 2.0,
-        sw: 0.0,
-        se: 2.0,
-    };
-
-    if Button::new("File Manager").ui(ui).clicked() {
-        // let native_options = eframe::NativeOptions {
-        //     always_on_top: false,
-        //     maximized: false,
-        //     initial_window_size: Some(eframe::epaint::Vec2::new(380f32, 630f32)),
-        //     resizable: true,
-        //     follow_system_theme: false,
-        //     default_theme: eframe::Theme::Light,
-
-        //     // centered: true,
-        //     // fullsize_content: true,
-        //     ..Default::default()
-        // };
-
-        // eframe::run_native(
-        //     "MirrorX Desktop xxxx",
-        //     native_options,
-        //     Box::new(|cc| Box::new(DesktopWindow {})),
-        // );
     }
 }
 

@@ -8,7 +8,7 @@ use mirrorx_core::{core_error, error::CoreResult};
 use std::time::Instant;
 use winit::{
     dpi::{LogicalSize, PhysicalPosition, PhysicalSize},
-    event_loop::EventLoop,
+    event_loop::{EventLoopProxy, EventLoopWindowTarget},
     platform::macos::WindowBuilderExtMacOS,
     window::{Window, WindowBuilder, WindowId},
 };
@@ -28,6 +28,7 @@ pub struct PageOptions {
 }
 
 pub struct Page {
+    title: String,
     window: Window,
     egui_ctx: egui::Context,
     egui_state: egui_winit::State,
@@ -42,19 +43,19 @@ impl Page {
     pub fn new(
         title: &str,
         options: PageOptions,
-        event_loop: &EventLoop<CustomEvent>,
+        window_target: &EventLoopWindowTarget<CustomEvent>,
+        event_loop_proxy: EventLoopProxy<CustomEvent>,
         view: Box<dyn View>,
     ) -> CoreResult<Self> {
-        let window = create_window(title, &options, event_loop)?;
+        let window = create_window(title, &options, window_target)?;
 
         let gpu = Gpu::new(&window, window.inner_size())?;
 
-        let mut egui_state = egui_winit::State::new(event_loop);
+        let mut egui_state = egui_winit::State::new(window_target);
         egui_state.set_pixels_per_point(window.scale_factor() as f32);
 
         let window_id = window.id();
         let (repaint_tx, mut repaint_rx) = tokio::sync::mpsc::channel(1);
-        let event_loop_proxy = event_loop.create_proxy();
 
         tokio::task::spawn_blocking(move || loop {
             match repaint_rx.blocking_recv() {
@@ -88,6 +89,7 @@ impl Page {
         let render_pass = RenderPass::new(gpu.device(), wgpu::TextureFormat::Bgra8UnormSrgb, 1);
 
         Ok(Self {
+            title: title.to_string(),
             window,
             egui_ctx,
             egui_state,
@@ -97,6 +99,10 @@ impl Page {
             gpu,
             next_repaint_instant: Some(Instant::now()),
         })
+    }
+
+    pub fn title(&self) -> &str {
+        self.title.as_str()
     }
 
     pub fn window_id(&self) -> WindowId {
@@ -183,7 +189,7 @@ impl Page {
 fn create_window(
     title: &str,
     options: &PageOptions,
-    event_loop: &EventLoop<CustomEvent>,
+    window_target: &EventLoopWindowTarget<CustomEvent>,
 ) -> Result<winit::window::Window, mirrorx_core::error::CoreError> {
     let mut window_builder = {
         #[cfg(target_os = "windows")]
@@ -213,7 +219,7 @@ fn create_window(
     }
 
     let window = window_builder
-        .build(event_loop)
+        .build(window_target)
         .map_err(|err| core_error!("winit build window error ({})", err))?;
 
     Ok(window)
