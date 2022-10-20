@@ -9,7 +9,6 @@ use std::time::Instant;
 use winit::{
     dpi::{LogicalSize, PhysicalPosition, PhysicalSize},
     event_loop::{EventLoopProxy, EventLoopWindowTarget},
-    platform::macos::WindowBuilderExtMacOS,
     window::{Window, WindowBuilder, WindowId},
 };
 
@@ -193,13 +192,18 @@ fn create_window(
 ) -> Result<winit::window::Window, mirrorx_core::error::CoreError> {
     let mut window_builder = {
         #[cfg(target_os = "windows")]
-        WindowBuilderExtWindows::new();
+        {
+            WindowBuilder::new()
+        }
 
         #[cfg(target_os = "macos")]
-        WindowBuilder::new()
-            .with_fullsize_content_view(true)
-            .with_titlebar_transparent(true)
-            .with_title_hidden(true)
+        {
+            use platform::macos::WindowBuilderExtMacOS;
+            WindowBuilder::new()
+                .with_fullsize_content_view(true)
+                .with_titlebar_transparent(true)
+                .with_title_hidden(true)
+        }
     }
     .with_title(title)
     .with_resizable(options.resizable)
