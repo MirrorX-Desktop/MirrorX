@@ -5,6 +5,7 @@ use super::{gpu::Gpu, CustomEvent};
 use egui::{FontData, FontDefinitions, FontFamily};
 use egui_wgpu_backend::{RenderPass, ScreenDescriptor};
 use mirrorx_core::{core_error, error::CoreResult};
+use std::time::Instant;
 use winit::{
     dpi::{LogicalSize, PhysicalPosition, PhysicalSize},
     event_loop::EventLoop,
@@ -34,6 +35,7 @@ pub struct Page {
     render_pass: RenderPass,
     view: Box<dyn View>,
     gpu: Gpu,
+    next_repaint_instant: Option<Instant>,
 }
 
 impl Page {
@@ -51,7 +53,7 @@ impl Page {
         egui_state.set_pixels_per_point(window.scale_factor() as f32);
 
         let window_id = window.id();
-        let (repaint_tx, mut repaint_rx) = tokio::sync::mpsc::unbounded_channel();
+        let (repaint_tx, mut repaint_rx) = tokio::sync::mpsc::channel(1);
         let event_loop_proxy = event_loop.create_proxy();
 
         tokio::task::spawn_blocking(move || loop {
@@ -68,9 +70,7 @@ impl Page {
         let egui_ctx = egui::Context::default();
         set_fonts(&egui_ctx);
         egui_ctx.set_request_repaint_callback(move || {
-            if let Err(err) = repaint_tx.send(CustomEvent::Repaint(window_id)) {
-                tracing::error!(?err, "send repaint request failed");
-            }
+            let _ = repaint_tx.try_send(CustomEvent::Repaint(window_id));
         });
 
         tracing::info!(
@@ -95,6 +95,7 @@ impl Page {
             render_pass,
             view,
             gpu,
+            next_repaint_instant: Some(Instant::now()),
         })
     }
 
@@ -118,7 +119,11 @@ impl Page {
     }
 
     pub fn request_redraw(&self) {
-        self.window.request_redraw()
+        self.window.request_redraw();
+    }
+
+    pub fn next_repaint_instant(&self) -> Option<Instant> {
+        self.next_repaint_instant
     }
 
     pub fn render(&mut self) -> CoreResult<()> {
@@ -168,6 +173,8 @@ impl Page {
 
         self.gpu.queue().submit(Some(encoder.finish()));
         frame.present();
+
+        self.next_repaint_instant = Instant::now().checked_add(full_output.repaint_after);
 
         Ok(())
     }

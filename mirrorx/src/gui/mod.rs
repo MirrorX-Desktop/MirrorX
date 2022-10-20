@@ -8,7 +8,7 @@ use pages::{Page, PageOptions};
 use winit::{
     dpi::LogicalSize,
     event::Event::{self, UserEvent},
-    event_loop::{ControlFlow, EventLoopBuilder},
+    event_loop::EventLoopBuilder,
     platform::run_return::EventLoopExtRunReturn,
     window::WindowId,
 };
@@ -94,7 +94,7 @@ pub fn run_app() -> anyhow::Result<()> {
                 }
 
                 if pages.is_empty() {
-                    *control_flow = ControlFlow::Exit;
+                    control_flow.set_exit();
                 }
             }
             Event::RedrawRequested(window_id) => {
@@ -102,13 +102,33 @@ pub fn run_app() -> anyhow::Result<()> {
                     tracing::info!("redraw");
                     if let Err(err) = page.render() {
                         tracing::error!(?err, "page render failed");
-                        *control_flow = ControlFlow::Exit;
+                        control_flow.set_exit();
+                    }
+                }
+            }
+            Event::RedrawEventsCleared => {
+                // todo: consider about multiple windows
+                for (_, page) in pages.values().enumerate() {
+                    if let Some(next_repaint_instant) = page.next_repaint_instant() {
+                        let now = std::time::Instant::now();
+                        match next_repaint_instant
+                            .checked_duration_since(now)
+                            .map(|duration| now + duration)
+                        {
+                            Some(wait_instant) => control_flow.set_wait_until(wait_instant),
+                            None => {
+                                page.request_redraw();
+                                control_flow.set_poll();
+                            }
+                        }
+                    } else {
+                        control_flow.set_wait();
                     }
                 }
             }
             UserEvent(CustomEvent::Repaint(window_id)) => {
                 tracing::info!("receive repaint");
-                if let Some(page) = pages.get(&window_id) {
+                if let Some(page) = pages.get_mut(&window_id) {
                     page.request_redraw();
                 }
             }
