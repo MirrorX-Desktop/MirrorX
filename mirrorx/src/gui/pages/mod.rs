@@ -198,7 +198,7 @@ fn create_window(
 
         #[cfg(target_os = "macos")]
         {
-            use platform::macos::WindowBuilderExtMacOS;
+            use winit::platform::macos::WindowBuilderExtMacOS;
             WindowBuilder::new()
                 .with_fullsize_content_view(true)
                 .with_titlebar_transparent(true)
