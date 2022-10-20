@@ -1,18 +1,17 @@
+mod gpu;
+mod pages;
+mod state;
+mod widgets;
+
 use fxhash::FxHashMap;
+use pages::{Page, PageOptions};
 use winit::{
-    dpi::{LogicalSize, PhysicalSize},
+    dpi::LogicalSize,
     event::Event::{self, UserEvent},
     event_loop::{ControlFlow, EventLoopBuilder},
     platform::run_return::EventLoopExtRunReturn,
     window::WindowId,
 };
-
-use self::pages::{Page, PageOptions};
-
-mod gpu;
-mod pages;
-mod state;
-mod widgets;
 
 #[derive(Debug)]
 pub enum CustomEvent {
@@ -47,7 +46,7 @@ pub fn run_app() -> anyhow::Result<()> {
         PageOptions {
             size: LogicalSize::new(380, 630),
             resizable: false,
-            maximizable: false,
+            maximized: false,
             ..Default::default()
         },
         &event_loop,
@@ -57,6 +56,9 @@ pub fn run_app() -> anyhow::Result<()> {
     pages.insert(home_page.window_id(), home_page);
 
     event_loop.run_return(move |event, _, control_flow| {
+        tracing::info!(?event, "event loop");
+        control_flow.set_wait();
+
         match event {
             Event::WindowEvent { event, window_id } => {
                 let mut removed = false;
@@ -65,12 +67,8 @@ pub fn run_app() -> anyhow::Result<()> {
 
                     match event {
                         winit::event::WindowEvent::CloseRequested => {
-                            // Exit immediately if we've been asked to keep the config file,
-                            // or if saving was successful
-                            // if keep_config == ConfigHandler::Keep || framework.save_config(&window) {
                             println!("receive close request");
                             removed = true;
-                            // }
                         }
                         winit::event::WindowEvent::Resized(size) => {
                             if size.width > 0 && size.height > 0 {
@@ -101,6 +99,7 @@ pub fn run_app() -> anyhow::Result<()> {
             }
             Event::RedrawRequested(window_id) => {
                 if let Some(page) = pages.get_mut(&window_id) {
+                    tracing::info!("redraw");
                     if let Err(err) = page.render() {
                         tracing::error!(?err, "page render failed");
                         *control_flow = ControlFlow::Exit;
@@ -108,6 +107,7 @@ pub fn run_app() -> anyhow::Result<()> {
                 }
             }
             UserEvent(CustomEvent::Repaint(window_id)) => {
+                tracing::info!("receive repaint");
                 if let Some(page) = pages.get(&window_id) {
                     page.request_redraw();
                 }

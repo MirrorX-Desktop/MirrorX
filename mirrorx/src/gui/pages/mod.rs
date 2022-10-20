@@ -6,7 +6,7 @@ use egui::{FontData, FontDefinitions, FontFamily};
 use egui_wgpu_backend::{RenderPass, ScreenDescriptor};
 use mirrorx_core::{core_error, error::CoreResult};
 use winit::{
-    dpi::{LogicalPosition, LogicalSize, PhysicalPosition, PhysicalSize},
+    dpi::{LogicalSize, PhysicalPosition, PhysicalSize},
     event_loop::EventLoop,
     platform::macos::WindowBuilderExtMacOS,
     window::{Window, WindowBuilder, WindowId},
@@ -23,7 +23,7 @@ pub struct PageOptions {
     pub max_size: Option<LogicalSize<u32>>,
     pub initial_pos: Option<PhysicalPosition<u32>>,
     pub resizable: bool,
-    pub maximizable: bool,
+    pub maximized: bool,
 }
 
 pub struct Page {
@@ -190,7 +190,7 @@ fn create_window(
     }
     .with_title(title)
     .with_resizable(options.resizable)
-    .with_maximized(options.maximizable)
+    .with_maximized(options.maximized)
     .with_inner_size(options.size);
 
     if let Some(min_size) = options.min_size {
