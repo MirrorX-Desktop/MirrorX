@@ -1,11 +1,10 @@
 mod gpu;
 mod pages;
-mod state;
 mod widgets;
 
 use fxhash::FxHashMap;
 use mirrorx_core::api::signaling::KeyExchangeResponse;
-use pages::{Page, PageOptions, View};
+use pages::{Page, PageOptions};
 use std::fmt::Debug;
 use winit::{
     dpi::LogicalSize,
@@ -180,7 +179,7 @@ pub fn run_app() -> anyhow::Result<()> {
                         maximized: false,
                         ..Default::default()
                     },
-                    &window_target,
+                    window_target,
                     event_loop_proxy.clone(),
                     Box::new(desktop_view),
                 )

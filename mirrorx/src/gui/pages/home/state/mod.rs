@@ -1,5 +1,8 @@
-use super::{app_state_updater::AppStateUpdater, event::Event};
+mod event;
+mod updater;
+
 use crate::{gui::CustomEvent, send_event};
+use event::Event;
 use mirrorx_core::{
     api::{
         config::Config,
@@ -16,13 +19,24 @@ use std::path::{Path, PathBuf};
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
 use winit::event_loop::EventLoopProxy;
 
+pub use updater::StateUpdater;
+
 static SIGNALING_CONNECTION_BROKEN_ERROR: Lazy<String> = Lazy::new(|| {
     String::from(
         r#"Signaling connection has broken, please click Domain "🔄" button to reconnect Signaling Server"#,
     )
 });
 
-pub struct AppState {
+#[macro_export]
+macro_rules! send_event {
+    ($tx:expr, $event:expr) => {
+        if let Err(err) = $tx.send($event) {
+            tracing::error!("send event {:?} failed", err.0.as_ref());
+        }
+    };
+}
+
+pub struct State {
     tx: UnboundedSender<Event>,
     rx: UnboundedReceiver<Event>,
 
@@ -47,7 +61,7 @@ pub struct AppState {
     event_loop_proxy: EventLoopProxy<CustomEvent>,
 }
 
-impl AppState {
+impl State {
     pub fn new(initial_page_name: &str, event_loop_proxy: EventLoopProxy<CustomEvent>) -> Self {
         let (tx, rx) = unbounded_channel();
 
@@ -128,9 +142,9 @@ impl AppState {
     }
 }
 
-impl AppState {
-    pub fn new_state_updater(&self) -> AppStateUpdater {
-        AppStateUpdater::new(self.tx.clone())
+impl State {
+    pub fn new_state_updater(&self) -> StateUpdater {
+        StateUpdater::new(self.tx.clone())
     }
 
     pub fn handle_event(&mut self) -> Option<CoreError> {

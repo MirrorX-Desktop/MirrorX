@@ -27,7 +27,7 @@ pub struct PageOptions {
 }
 
 pub struct Page {
-    title: String,
+    // title: String,
     window: Window,
     egui_ctx: egui::Context,
     egui_state: egui_winit::State,
@@ -88,7 +88,7 @@ impl Page {
         let render_pass = RenderPass::new(gpu.device(), wgpu::TextureFormat::Bgra8UnormSrgb, 1);
 
         Ok(Self {
-            title: title.to_string(),
+            // title: title.to_string(),
             window,
             egui_ctx,
             egui_state,
@@ -100,9 +100,9 @@ impl Page {
         })
     }
 
-    pub fn title(&self) -> &str {
-        self.title.as_str()
-    }
+    // pub fn title(&self) -> &str {
+    //     self.title.as_str()
+    // }
 
     pub fn window_id(&self) -> WindowId {
         self.window.id()

@@ -1,28 +1,27 @@
-use crate::gui::{
-    state::{AppState, AppStateUpdater},
-    widgets::device_id_input_field::DeviceIDInputField,
-};
+use super::state::State;
+use super::state::StateUpdater;
+use super::widgets::device_id_input_field::DeviceIDInputField;
 use egui::{emath::Align, epaint::*, *};
 use egui_extras::{Size, StripBuilder};
 use mirrorx_core::{api::signaling::ResourceType, core_error};
 
 pub struct ConnectPage<'a> {
-    app_state: &'a AppState,
-    app_state_updater: AppStateUpdater,
+    state: &'a State,
+    state_updater: StateUpdater,
 }
 
 impl<'a> ConnectPage<'a> {
-    pub fn new(app_state: &'a AppState) -> Self {
-        let app_state_updater = app_state.new_state_updater();
+    pub fn new(state: &'a State) -> Self {
+        let app_state_updater = state.new_state_updater();
         Self {
-            app_state,
-            app_state_updater,
+            state,
+            state_updater: app_state_updater,
         }
     }
 
     #[inline]
     fn build_device_id(&mut self, ui: &mut Ui) {
-        if let Some(config) = self.app_state.config() {
+        if let Some(config) = self.state.config() {
             if let Some(domain_config) = config.domain_configs.get(&config.primary_domain) {
                 if domain_config.device_id != 0 {
                     let mut device_id_str = format!("{:0>10}", domain_config.device_id);
@@ -40,7 +39,7 @@ impl<'a> ConnectPage<'a> {
 
     #[inline]
     fn build_device_password(&mut self, ui: &mut Ui) {
-        if let Some(config) = self.app_state.config() {
+        if let Some(config) = self.state.config() {
             if config.domain_configs.get(&config.primary_domain).is_none() {
                 ui.spinner();
                 return;
@@ -50,7 +49,7 @@ impl<'a> ConnectPage<'a> {
             return;
         };
 
-        if self.app_state.connect_page_password_editing() {
+        if self.state.connect_page_password_editing() {
             self.build_device_password_edit(ui);
         } else {
             self.build_device_password_label(ui);
@@ -72,9 +71,9 @@ impl<'a> ConnectPage<'a> {
                     .stroke(Stroke::new(1.0, Color32::GRAY))
                     .rounding(Rounding::same(2.0))
                     .show(ui, |ui| {
-                        let mut text_buffer = self.app_state.connect_page_password().to_string();
+                        let mut text_buffer = self.state.connect_page_password().to_string();
                         if text_buffer.is_empty() {
-                            if let Some(config) = self.app_state.config() {
+                            if let Some(config) = self.state.config() {
                                 if let Some(domain_config) =
                                     config.domain_configs.get(&config.primary_domain)
                                 {
@@ -96,7 +95,7 @@ impl<'a> ConnectPage<'a> {
                             )
                             .changed()
                         {
-                            self.app_state_updater
+                            self.state_updater
                                 .update_connect_page_password(text_buffer.as_str());
                         }
                     })
@@ -108,8 +107,8 @@ impl<'a> ConnectPage<'a> {
     fn build_device_password_label(&mut self, ui: &mut Ui) {
         ui.centered_and_justified(|ui| {
             let mut content = "";
-            if self.app_state.connect_page_password_visible() {
-                if let Some(config) = self.app_state.config() {
+            if self.state.connect_page_password_visible() {
+                if let Some(config) = self.state.config() {
                     if let Some(domain_config) = config.domain_configs.get(&config.primary_domain) {
                         content = domain_config.device_password.as_str();
                     }
@@ -121,7 +120,7 @@ impl<'a> ConnectPage<'a> {
             if content.is_empty() {
                 ui.spinner();
             } else {
-                let font_size = if self.app_state.connect_page_password_visible() {
+                let font_size = if self.state.connect_page_password_visible() {
                     36.0
                 } else {
                     50.0
@@ -144,48 +143,47 @@ impl<'a> ConnectPage<'a> {
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                     ui.style_mut().spacing.item_spacing = Vec2::ZERO;
 
-                    if self.app_state.connect_page_password_editing() {
+                    if self.state.connect_page_password_editing() {
                         if make_password_editing_toolbar_cancel_button(ui).clicked() {
-                            self.app_state_updater
+                            self.state_updater
                                 .update_connect_page_password_editing(false);
                         }
 
                         if make_password_editing_toolbar_commit_button(ui).clicked() {
-                            if let Some(old_config) = self.app_state.config() {
+                            if let Some(old_config) = self.state.config() {
                                 let mut new_config = old_config.clone();
                                 if let Some(domain_config) = new_config
                                     .domain_configs
                                     .get_mut(&old_config.primary_domain)
                                 {
-                                    let password =
-                                        self.app_state.connect_page_password().to_string();
+                                    let password = self.state.connect_page_password().to_string();
                                     domain_config.device_password = password;
 
-                                    self.app_state_updater.update_config(&new_config);
-                                    self.app_state_updater.update_connect_page_password("");
-                                    self.app_state_updater
+                                    self.state_updater.update_config(&new_config);
+                                    self.state_updater.update_connect_page_password("");
+                                    self.state_updater
                                         .update_connect_page_password_editing(false);
                                 }
                             }
                         }
 
                         if make_password_editing_toolbar_regenerate_button(ui).clicked() {
-                            self.app_state_updater.update_connect_page_password(
+                            self.state_updater.update_connect_page_password(
                                 &mirrorx_core::utility::rand::generate_random_password(),
                             );
                         }
                     } else {
-                        let mut snapshot_visible = self.app_state.connect_page_password_visible();
+                        let mut snapshot_visible = self.state.connect_page_password_visible();
                         if make_password_toolbar_visible_button(ui).clicked() {
                             snapshot_visible = true;
                         }
 
-                        self.app_state_updater.update_connect_page_password_visible(
+                        self.state_updater.update_connect_page_password_visible(
                             snapshot_visible && ui.ui_contains_pointer(),
                         );
 
                         if make_password_toolbar_edit_button(ui).clicked() {
-                            self.app_state_updater
+                            self.state_updater
                                 .update_connect_page_password_editing(true);
                         };
                     }
@@ -232,7 +230,7 @@ impl<'a> ConnectPage<'a> {
         let (rect, response) = ui.allocate_exact_size(ui.available_size(), Sense::click());
 
         ui.allocate_ui_at_rect(rect, |ui| {
-            if self.app_state.connect_page_desktop_connecting() {
+            if self.state.connect_page_desktop_connecting() {
                 ui.painter().rect_filled(
                     rect,
                     ui.visuals().widgets.active.rounding,
@@ -258,17 +256,17 @@ impl<'a> ConnectPage<'a> {
             }
         });
 
-        if response.clicked() && !self.app_state.connect_page_desktop_connecting() {
+        if response.clicked() && !self.state.connect_page_desktop_connecting() {
             self.connect_desktop();
         }
     }
 
     fn connect_desktop(&mut self) {
-        let input_device_id = self.app_state.connect_page_visit_device_id().to_string();
+        let input_device_id = self.state.connect_page_visit_device_id().to_string();
         tracing::info!("visit device id: {:?}", input_device_id);
 
         if input_device_id.len() != 10 || !input_device_id.chars().all(|c| c.is_ascii_digit()) {
-            self.app_state_updater
+            self.state_updater
                 .update_last_error(core_error!("Invalid visit device ID"));
             return;
         }
@@ -276,16 +274,16 @@ impl<'a> ConnectPage<'a> {
         let input_device_id: i64 = match input_device_id.parse() {
             Ok(v) => v,
             Err(_) => {
-                self.app_state_updater
+                self.state_updater
                     .update_last_error(core_error!("Invalid visit device ID format"));
                 return;
             }
         };
 
-        let config = match self.app_state.config() {
+        let config = match self.state.config() {
             Some(config) => config,
             None => {
-                self.app_state_updater.update_last_error(core_error!(
+                self.state_updater.update_last_error(core_error!(
                     "Config hasn't initialized, please try it later"
                 ));
                 return;
@@ -295,7 +293,7 @@ impl<'a> ConnectPage<'a> {
         let domain_config = match config.domain_configs.get(&config.primary_domain) {
             Some(domain_config) => domain_config,
             None => {
-                self.app_state_updater.update_last_error(core_error!(
+                self.state_updater.update_last_error(core_error!(
                     "Config hasn't initialized, please try it later"
                 ));
                 return;
@@ -309,7 +307,7 @@ impl<'a> ConnectPage<'a> {
 
         let local_device_id = domain_config.device_id;
 
-        self.app_state_updater.emit_signaling_visit(
+        self.state_updater.emit_signaling_visit(
             local_device_id,
             input_device_id,
             ResourceType::Desktop,
@@ -389,7 +387,7 @@ impl ConnectPage<'_> {
                 strip.cell(|ui| {
                     ui.centered_and_justified(|ui| {
                         let mut input_field =
-                            DeviceIDInputField::new(self.app_state, &mut self.app_state_updater);
+                            DeviceIDInputField::new(self.state, &mut self.state_updater);
                         ui.add_sized(Vec2::new(0.0, 60.0), &mut input_field);
                     });
                 });

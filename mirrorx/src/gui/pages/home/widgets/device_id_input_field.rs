@@ -1,4 +1,4 @@
-use crate::gui::state::{AppState, AppStateUpdater};
+use crate::gui::pages::home::state::{State, StateUpdater};
 use egui::{
     epaint::{text::LayoutSection, Color32, FontId, Rounding, Stroke, Vec2},
     style::Margin,
@@ -11,7 +11,7 @@ pub struct DeviceIDInputField<'a> {
 }
 
 impl<'a> DeviceIDInputField<'a> {
-    pub fn new(app_state: &'a AppState, app_state_updater: &'a mut AppStateUpdater) -> Self {
+    pub fn new(app_state: &'a State, app_state_updater: &'a mut StateUpdater) -> Self {
         Self {
             text: DeviceIDInputText {
                 app_state,
@@ -119,8 +119,8 @@ impl<'a> egui::Widget for &mut DeviceIDInputField<'a> {
 }
 
 struct DeviceIDInputText<'a> {
-    app_state: &'a AppState,
-    app_state_updater: &'a mut AppStateUpdater,
+    app_state: &'a State,
+    app_state_updater: &'a mut StateUpdater,
     snapshot_str: String,
 }
 

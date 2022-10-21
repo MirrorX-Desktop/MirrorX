@@ -10,11 +10,11 @@ use mirrorx_core::{
 use std::path::Path;
 use tokio::sync::mpsc::UnboundedSender;
 
-pub struct AppStateUpdater {
+pub struct StateUpdater {
     tx: UnboundedSender<Event>,
 }
 
-impl AppStateUpdater {
+impl StateUpdater {
     pub fn new(tx: UnboundedSender<Event>) -> Self {
         Self { tx }
     }
