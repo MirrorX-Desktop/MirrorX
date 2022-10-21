@@ -1,3 +1,4 @@
+use crate::api::endpoint::PASSIVE_ENDPOINTS_MONITORS;
 use crate::{
     api::endpoint::EndPointClient,
     component::{
@@ -22,8 +23,6 @@ pub fn handle_negotiate_finished_request(client: EndPointClient) {
 
 #[cfg(target_os = "macos")]
 fn spawn_desktop_capture_and_encode_process(client: EndPointClient) {
-    use crate::api::endpoint::PASSIVE_ENDPOINTS_MONITORS;
-
     let (capture_frame_tx, capture_frame_rx) = crossbeam::channel::bounded(180);
 
     tokio::task::spawn_blocking(move || {
@@ -102,29 +101,20 @@ fn spawn_desktop_capture_and_encode_process(client: EndPointClient) {
 }
 
 #[cfg(target_os = "windows")]
-fn spawn_desktop_capture_and_encode_process(
-    active_device_id: i64,
-    passive_device_id: i64,
-    message_tx: Sender<Option<EndPointMessage>>,
-) {
+fn spawn_desktop_capture_and_encode_process(client: EndPointClient) {
     let monitors = match get_active_monitors(false) {
         Ok(params) => params,
         Err(err) => {
-            tracing::error!(
-                ?active_device_id,
-                ?passive_device_id,
-                ?err,
-                "get_active_monitors failed"
-            );
+            tracing::error!(?err, "get_active_monitors failed");
             return;
         }
     };
 
     let (capture_frame_tx, capture_frame_rx) = crossbeam::channel::bounded(180);
 
-    TOKIO_RUNTIME.spawn_blocking(move || {
+    tokio::task::spawn_blocking(move || {
         defer! {
-            tracing::info!(?active_device_id, ?passive_device_id, "desktop capture process exit");
+            tracing::info!( "desktop capture process exit");
         }
 
         let primary_monitor = monitors.iter().find(|monitor| monitor.is_primary);
@@ -133,12 +123,7 @@ fn spawn_desktop_capture_and_encode_process(
             match Duplicator::new(primary_monitor.map(|monitor| monitor.id.to_owned())) {
                 Ok(duplicator) => duplicator,
                 Err(err) => {
-                    tracing::error!(
-                        ?active_device_id,
-                        ?passive_device_id,
-                        ?err,
-                        "initialize encoder failed"
-                    );
+                    tracing::error!(?err, "initialize encoder failed");
                     return;
                 }
             };
@@ -149,16 +134,12 @@ fn spawn_desktop_capture_and_encode_process(
         {
             Some(monitor) => monitor,
             None => {
-                tracing::error!(
-                    ?active_device_id,
-                    ?passive_device_id,
-                    "can't find selected monitor"
-                );
+                tracing::error!("can't find selected monitor");
                 return;
             }
         };
 
-        ENDPOINTS_MONITOR.insert((active_device_id, passive_device_id), select_monitor);
+        PASSIVE_ENDPOINTS_MONITORS.insert(client.id, select_monitor);
 
         loop {
             match duplicator.capture() {
@@ -173,32 +154,22 @@ fn spawn_desktop_capture_and_encode_process(
                     }
                 }
                 Err(err) => {
-                    tracing::error!(
-                        ?active_device_id,
-                        ?passive_device_id,
-                        ?err,
-                        "dekstop duplicator capture loop exit"
-                    );
+                    tracing::error!(?err, "dekstop duplicator capture loop exit");
                     break;
                 }
             };
         }
     });
 
-    TOKIO_RUNTIME.spawn_blocking(move || {
-        defer! {
-            tracing::info!(?active_device_id, ?passive_device_id, "video encode process exit");
-        }
+    tokio::task::spawn_blocking(move || {
+        // defer! {
+        //     tracing::info!(?active_device_id, ?passive_device_id, "video encode process exit");
+        // }
 
-        let mut encoder = match VideoEncoder::new(EncoderType::Libx264, message_tx) {
+        let mut encoder = match VideoEncoder::new(EncoderType::Libx264, client) {
             Ok(encoder) => encoder,
             Err(err) => {
-                tracing::error!(
-                    ?active_device_id,
-                    ?passive_device_id,
-                    ?err,
-                    "video encoder initialize failed"
-                );
+                tracing::error!(?err, "video encoder initialize failed");
                 return;
             }
         };
@@ -207,22 +178,12 @@ fn spawn_desktop_capture_and_encode_process(
             match capture_frame_rx.recv() {
                 Ok(capture_frame) => {
                     if let Err(err) = encoder.encode(capture_frame) {
-                        tracing::error!(
-                            ?active_device_id,
-                            ?passive_device_id,
-                            ?err,
-                            "video encode failed"
-                        );
+                        tracing::error!(?err, "video encode failed");
                         break;
                     }
                 }
                 Err(err) => {
-                    tracing::error!(
-                        ?active_device_id,
-                        ?passive_device_id,
-                        ?err,
-                        "capture frame rx recv error"
-                    );
+                    tracing::error!(?err, "capture frame rx recv error");
                     break;
                 }
             }
