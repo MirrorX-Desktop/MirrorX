@@ -4,7 +4,7 @@ mod libx264;
 
 use crate::{
     core_error,
-    error::{CoreError, CoreResult},
+    error::CoreResult,
     ffi::ffmpeg::{
         avcodec::{AVCodecContext, AVCodecID},
         avutil::{av_opt_set, AVERROR, AVERROR_OPTION_NOT_FOUND},

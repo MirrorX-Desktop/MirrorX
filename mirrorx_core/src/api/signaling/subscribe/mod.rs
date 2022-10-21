@@ -1,6 +1,5 @@
 mod key_exchange;
 
-use crate::utility::runtime::TOKIO_RUNTIME;
 use signaling_proto::message::{publish_message::InnerPublishMessage, ResourceType};
 use std::{path::PathBuf, time::Duration};
 use tokio::{
@@ -28,7 +27,7 @@ pub async fn subscribe(
     mut exit_tx: Receiver<()>,
 ) {
     let mut subscribe_client = client.clone();
-    TOKIO_RUNTIME.spawn(async move {
+    tokio::spawn(async move {
         loop {
             match exit_tx.try_recv() {
                 Ok(_) => return,
@@ -115,14 +114,14 @@ pub async fn subscribe(
                         let mut client = subscribe_client.clone();
                         let domain = domain.clone();
                         let config_path = config_path.clone();
-                        TOKIO_RUNTIME.spawn(async move {
+                        tokio::spawn(async move {
                             key_exchange::handle(
                                 &mut client,
                                 domain,
                                 config_path,
                                 &key_exchange_request,
                             )
-                            .await
+                            .await;
                         });
                     }
                 }

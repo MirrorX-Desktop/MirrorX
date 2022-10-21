@@ -1980,6 +1980,7 @@ dependencies = [
  "either",
  "flutter_rust_bridge",
  "futures",
+ "fxhash",
  "hex",
  "hmac",
  "image",

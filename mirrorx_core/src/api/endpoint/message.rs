@@ -15,14 +15,36 @@ pub struct EndPointHandshakeResponse {
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub enum EndPointMessage {
     Error,
-    NegotiateVisitDesktopParamsRequest(EndPointNegotiateVisitDesktopParamsRequest),
-    NegotiateVisitDesktopParamsResponse(EndPointNegotiateVisitDesktopParamsResponse),
-    NegotiateSelectMonitorRequest(EndPointNegotiateSelectMonitorRequest),
-    NegotiateSelectMonitorResponse(EndPointNegotiateSelectMonitorResponse),
+    NegotiateDesktopParamsRequest(EndPointNegotiateDesktopParamsRequest),
+    NegotiateDesktopParamsResponse(EndPointNegotiateDesktopParamsResponse),
     NegotiateFinishedRequest(EndPointNegotiateFinishedRequest),
     VideoFrame(EndPointVideoFrame),
     AudioFrame(EndPointAudioFrame),
     Input(EndPointInput),
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
+pub struct EndPointNegotiateDesktopParamsRequest {
+    pub video_codecs: Vec<VideoCodec>,
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Default)]
+pub struct EndPointNegotiateVisitDesktopParams {
+    pub video_codec: VideoCodec,
+    pub audio_sample_rate: u32,
+    pub audio_sample_format: AudioSampleFormat,
+    pub audio_channels: u8,
+    pub os_type: String,
+    pub os_version: String,
+    pub monitor_id: String,
+    pub monitor_width: u16,
+    pub monitor_height: u16,
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
+pub enum EndPointNegotiateDesktopParamsResponse {
+    Error,
+    Params(EndPointNegotiateVisitDesktopParams),
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
@@ -50,50 +72,6 @@ impl Default for AudioSampleFormat {
     fn default() -> Self {
         AudioSampleFormat::I16
     }
-}
-
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
-pub struct EndPointNegotiateVisitDesktopParamsRequest {
-    pub video_codecs: Vec<VideoCodec>,
-}
-
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
-pub enum EndPointNegotiateVisitDesktopParamsResponse {
-    Error,
-    Params(EndPointNegotiateVisitDesktopParams),
-}
-
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Default)]
-pub struct EndPointNegotiateVisitDesktopParams {
-    pub video_codec: VideoCodec,
-    pub audio_sample_rate: u32,
-    pub audio_sample_format: AudioSampleFormat,
-    pub audio_channels: u8,
-    pub os_type: String,
-    pub os_version: String,
-    pub monitor_id: String,
-    pub monitor_width: u16,
-    pub monitor_height: u16,
-}
-
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
-pub struct EndPointNegotiateSelectMonitorRequest {}
-
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
-pub struct MonitorDescription {
-    pub id: String,
-    pub name: String,
-    pub frame_rate: u8,
-    pub width: u16,
-    pub height: u16,
-    pub is_primary: bool,
-    #[serde(with = "serde_bytes")]
-    pub screen_shot: Option<Vec<u8>>,
-}
-
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
-pub struct EndPointNegotiateSelectMonitorResponse {
-    pub monitor_descriptions: Vec<MonitorDescription>,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]

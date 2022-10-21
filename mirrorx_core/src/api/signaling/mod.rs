@@ -1,6 +1,5 @@
 mod dial;
 mod key_exchange;
-mod register;
 mod subscribe;
 mod visit;
 mod visit_reply;
@@ -12,7 +11,6 @@ use tokio::sync::mpsc::Sender;
 use tonic::transport::Channel;
 
 pub use key_exchange::{KeyExchangeRequest, KeyExchangeResponse};
-pub use register::RegisterResponse;
 pub use subscribe::PublishMessage;
 pub use visit::{ResourceType, VisitRequest, VisitResponse};
 pub use visit_reply::VisitReplyRequest;

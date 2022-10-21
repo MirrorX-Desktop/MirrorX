@@ -2,11 +2,7 @@ mod key_code;
 
 use self::key_code::*;
 use super::key::{KeyboardKey, MouseKey};
-use crate::{
-    component::desktop::monitor::Monitor,
-    core_error,
-    error::{CoreError, CoreResult},
-};
+use crate::{component::desktop::monitor::Monitor, core_error, error::CoreResult};
 use core_graphics::{
     display::{CGDirectDisplayID, CGDisplayMoveCursorToPoint, CGPoint},
     event::{

@@ -1,42 +1,33 @@
 use super::config::{EncoderConfig, EncoderType};
 use crate::{
-    api::endpoint::message::{EndPointMessage, EndPointVideoFrame},
+    api::endpoint::EndPointClient,
     component::frame::DesktopEncodeFrame,
     core_error,
-    error::{CoreError, CoreResult},
+    error::CoreResult,
     ffi::ffmpeg::{avcodec::*, avutil::*},
 };
-use tokio::sync::mpsc::{error::TrySendError, Sender};
 
 pub struct VideoEncoder {
     encode_config: Box<dyn EncoderConfig>,
     encode_context: *mut EncodeContext,
-    tx: Sender<Option<EndPointMessage>>,
+    client: EndPointClient,
 }
 
 impl VideoEncoder {
-    pub fn new(
-        encoder_type: EncoderType,
-        tx: Sender<Option<EndPointMessage>>,
-    ) -> CoreResult<VideoEncoder> {
+    pub fn new(encoder_type: EncoderType, client: EndPointClient) -> CoreResult<VideoEncoder> {
         let encode_config = encoder_type.create_config();
 
-        unsafe {
-            // av_log_set_level(AV_LOG_TRACE);
-            // av_log_set_flags(AV_LOG_SKIP_REPEATED);
-
-            Ok(VideoEncoder {
-                encode_config,
-                encode_context: std::ptr::null_mut(),
-                tx,
-            })
-        }
+        Ok(VideoEncoder {
+            encode_config,
+            encode_context: std::ptr::null_mut(),
+            client,
+        })
     }
 
     pub fn encode(&mut self, capture_frame: DesktopEncodeFrame) -> CoreResult<()> {
-        if self.tx.is_closed() {
-            return Err(core_error!("message tx has closed"));
-        }
+        // if self.tx.is_closed() {
+        //     return Err(core_error!("message tx has closed"));
+        // }
 
         unsafe {
             let mut ret: i32;
@@ -110,32 +101,17 @@ impl VideoEncoder {
                     ));
                 }
 
-                let buffer = std::slice::from_raw_parts(
-                    (*(*self.encode_context).packet).data,
-                    (*(*self.encode_context).packet).size as usize,
-                )
-                .to_vec();
-
-                let packet = EndPointMessage::VideoFrame(EndPointVideoFrame {
-                    width: (*(*self.encode_context).codec_ctx).width,
-                    height: (*(*self.encode_context).codec_ctx).height,
-                    pts: (*(*self.encode_context).packet).pts,
-                    buffer,
-                });
+                self.client.send_video_frame(
+                    (*(*self.encode_context).codec_ctx).width,
+                    (*(*self.encode_context).codec_ctx).height,
+                    (*(*self.encode_context).packet).pts,
+                    std::slice::from_raw_parts(
+                        (*(*self.encode_context).packet).data,
+                        (*(*self.encode_context).packet).size as usize,
+                    ),
+                )?;
 
                 av_packet_unref((*self.encode_context).packet);
-
-                if let Err(err) = self.tx.try_send(Some(packet)) {
-                    if let TrySendError::Full(_) = err {
-                        tracing::warn!(
-                            "video encoder send EndPointMessage failed, channel is full!"
-                        );
-                    } else {
-                        return Err(core_error!(
-                            "video encoder send EndPointMessage failed, channel is closed"
-                        ));
-                    }
-                }
             }
         }
     }

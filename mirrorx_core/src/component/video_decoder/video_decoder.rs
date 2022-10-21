@@ -1,6 +1,6 @@
 use crate::{
     core_error,
-    error::{CoreError, CoreResult},
+    error::CoreResult,
     ffi::ffmpeg::{avcodec::*, avutil::*},
 };
 use bytes::BufMut;
@@ -24,16 +24,14 @@ impl VideoDecoder {
         texture_id: i64,
         render_frame_tx: Sender<(Duration, Instant, Vec<u8>)>,
     ) -> VideoDecoder {
-        unsafe {
-            // av_log_set_level(AV_LOG_TRACE);
-            // av_log_set_flags(AV_LOG_SKIP_REPEATED);
+        // av_log_set_level(AV_LOG_TRACE);
+        // av_log_set_flags(AV_LOG_SKIP_REPEATED);
 
-            VideoDecoder {
-                decode_context: None,
-                texture_id,
-                render_frame_tx,
-                last_pts: 0,
-            }
+        VideoDecoder {
+            decode_context: None,
+            texture_id,
+            render_frame_tx,
+            last_pts: 0,
         }
     }
 
@@ -125,7 +123,7 @@ impl VideoDecoder {
                 let duration_from_pts = actual_pts - self.last_pts;
                 self.last_pts = actual_pts;
 
-                let mut frame_duration = std::time::Duration::from_secs_f64(
+                let frame_duration = std::time::Duration::from_secs_f64(
                     (duration_from_pts as f64) * av_q2d((*decode_context.codec_ctx).time_base),
                 );
 

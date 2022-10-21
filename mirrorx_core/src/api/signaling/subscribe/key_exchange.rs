@@ -1,10 +1,4 @@
-use crate::{
-    api::{config::Config, endpoint::handlers::connect::ConnectRequest},
-    core_error,
-    error::{CoreError, CoreResult},
-    utility::{nonce_value::NonceValue, runtime::TOKIO_RUNTIME},
-};
-use either::Either;
+use crate::utility::nonce_value::NonceValue;
 use hmac::Hmac;
 use prost::Message;
 use rand::RngCore;
@@ -16,8 +10,7 @@ use signaling_proto::message::{
     KeyExchangePassiveDeviceSecret, KeyExchangeReplyError, KeyExchangeReplyRequest,
     KeyExchangeRequest, KeyExchangeResult,
 };
-use std::{path::PathBuf, sync::Arc};
-use tokio::sync::RwLock;
+use std::path::PathBuf;
 use tonic::transport::Channel;
 
 pub async fn handle(
@@ -26,44 +19,100 @@ pub async fn handle(
     config_path: PathBuf,
     req: &KeyExchangeRequest,
 ) {
-    let reply = match key_agreement(config_path, domain, req).await {
-        Ok((
-            secret_buffer,
-            active_device_id,
-            passive_device_id,
-            domain,
-            visit_credentials,
-            sealing_key,
-            opening_key,
-        )) => {
-            if let Err(err) = build_endpoint(
-                passive_device_id,
+    // let reply = match key_agreement(config_path, domain, req).await {
+    //     Ok((
+    //         secret_buffer,
+    //         active_device_id,
+    //         passive_device_id,
+    //         domain,
+    //         visit_credentials,
+    //         sealing_key,
+    //         opening_key,
+    //     )) => {
+    //         if let Err(err) = build_endpoint(
+    //             passive_device_id,
+    //             active_device_id,
+    //             domain,
+    //             visit_credentials,
+    //             opening_key,
+    //             sealing_key,
+    //         )
+    //         .await
+    //         {
+    //             tracing::error!(?err, "build endpoint failed");
+    //             Either::Right(KeyExchangeReplyError::Internal)
+    //         } else {
+    //             Either::Left(secret_buffer)
+    //         }
+    //     }
+    //     Err(err) => {
+    //         if let CoreError::KeyExchangeReplyError(err) = err {
+    //             Either::Right(err)
+    //         } else {
+    //             tracing::error!(?err, "handle key agreement failed");
+    //             Either::Right(KeyExchangeReplyError::Internal)
+    //         }
+    //     }
+    // };
+
+    let (active_device_id, passive_device_id, _, visit_credentials, sealing_key, opening_key) =
+        match key_agreement(config_path, domain, req).await {
+            Ok((
+                secret,
                 active_device_id,
+                passive_device_id,
                 domain,
                 visit_credentials,
-                opening_key,
                 sealing_key,
-            )
-            .await
-            {
-                tracing::error!(?err, "build endpoint failed");
-                Either::Right(KeyExchangeReplyError::Internal)
-            } else {
-                Either::Left(secret_buffer)
-            }
-        }
-        Err(err) => {
-            if let CoreError::KeyExchangeReplyError(err) = err {
-                Either::Right(err)
-            } else {
-                tracing::error!(?err, "handle key agreement failed");
-                Either::Right(KeyExchangeReplyError::Internal)
-            }
-        }
-    };
+                opening_key,
+            )) => {
+                let reply = build_reply(active_device_id, passive_device_id, Ok(secret));
+                if let Err(err) = client.key_exchange_reply(reply).await {
+                    tracing::error!(?req.active_device_id, ?req.passive_device_id, ?err, "reply key exchange request failed");
+                    return;
+                }
 
-    if let Err(err) = client.key_exchange_reply(build_reply(req, reply)).await {
-        tracing::error!(?req.active_device_id, ?req.passive_device_id, ?err, "reply key exchange request failed");
+                (
+                    active_device_id,
+                    passive_device_id,
+                    domain,
+                    visit_credentials,
+                    sealing_key,
+                    opening_key,
+                )
+            }
+            Err(err) => {
+                tracing::error!(?err, "key agreement failed");
+
+                let reply = build_reply(
+                    req.active_device_id,
+                    req.passive_device_id,
+                    Err(KeyExchangeReplyError::Internal),
+                );
+
+                if let Err(err) = client.key_exchange_reply(reply).await {
+                    tracing::error!(?req.active_device_id, ?req.passive_device_id, ?err, "reply key exchange request failed");
+                }
+
+                return;
+            }
+        };
+
+    match crate::api::endpoint::EndPointClient::new(
+        passive_device_id,
+        active_device_id,
+        opening_key,
+        sealing_key,
+        visit_credentials,
+    )
+    .await
+    {
+        Ok(endpoint_client) => {
+            // todo: if there has same active device endpoint, how to deal it ?
+            let _ = crate::api::endpoint::PASSIVE_ENDPOINT_CLIENTS
+                .insert(endpoint_client.id(), endpoint_client);
+        }
+        Err(err) => tracing::error!(?err, "endpoint client initialize failed"),
     }
 }
 
@@ -71,33 +120,35 @@ async fn key_agreement(
     config_path: PathBuf,
     domain: String,
     req: &KeyExchangeRequest,
-) -> CoreResult<(
-    Vec<u8>,
-    i64,
-    i64,
-    String,
-    String,
-    SealingKey<NonceValue>,
-    OpeningKey<NonceValue>,
-)> {
-    // let c = config.read().await;
-    // let device_password = if let Some(domain_config) = c.domain_configs.get(&c.primary_domain) {
-    //     domain_config.device_password.clone()
-    // } else {
-    //     return Err(core_error!("read device password failed"));
-    // };
+) -> Result<
+    (
+        Vec<u8>,
+        i64,
+        i64,
+        String,
+        String,
+        SealingKey<NonceValue>,
+        OpeningKey<NonceValue>,
+    ),
+    KeyExchangeReplyError,
+> {
+    let config = crate::api::config::read(&config_path)
+        .map_err(|err| {
+            tracing::error!(?err, "read config failed");
+            KeyExchangeReplyError::Internal
+        })?
+        .ok_or_else(|| {
+            tracing::error!("config is empty");
+            KeyExchangeReplyError::Internal
+        })?;
 
-    // drop(c);
-    let config = crate::api::config::read(&config_path)?.ok_or(core_error!("config is empty!"))?;
-    let domain_config = config
-        .domain_configs
-        .get(&domain)
-        .ok_or(core_error!("primary domain's config is empty"))?;
+    let domain_config = config.domain_configs.get(&domain).ok_or_else(|| {
+        tracing::error!("domain config is empty");
+        KeyExchangeReplyError::Internal
+    })?;
 
     if req.secret_nonce.len() != ring::aead::NONCE_LEN {
-        return Err(CoreError::KeyExchangeReplyError(
-            KeyExchangeReplyError::InvalidArgs,
-        ));
+        return Err(KeyExchangeReplyError::InvalidArgs);
     }
 
     // generate secret opening key with salt
@@ -110,7 +161,11 @@ async fn key_agreement(
     );
 
     let unbound_key =
-        ring::aead::UnboundKey::new(&ring::aead::AES_256_GCM, &active_device_secret_opening_key)?;
+        ring::aead::UnboundKey::new(&ring::aead::AES_256_GCM, &active_device_secret_opening_key)
+            .map_err(|err| {
+                tracing::error!(?err, "create unbound key failed");
+                KeyExchangeReplyError::Internal
+            })?;
 
     let mut active_device_secret_opening_nonce = [0u8; ring::aead::NONCE_LEN];
     active_device_secret_opening_nonce[..ring::aead::NONCE_LEN]
@@ -128,15 +183,16 @@ async fn key_agreement(
             ring::aead::Aad::from(req.active_device_id.to_le_bytes()),
             &mut active_device_secret_buffer,
         )
-        .map_err(|_| CoreError::KeyExchangeReplyError(KeyExchangeReplyError::InvalidPassword))?;
+        .map_err(|_| KeyExchangeReplyError::InvalidPassword)?;
 
-    let active_device_secret =
-        KeyExchangeActiveDeviceSecret::decode(&*active_device_secret_buffer)?;
+    let active_device_secret = KeyExchangeActiveDeviceSecret::decode(&*active_device_secret_buffer)
+        .map_err(|err| {
+            tracing::error!(?err, "decode active device secret failed");
+            KeyExchangeReplyError::Internal
+        })?;
 
     if active_device_secret.active_exchange_nonce.len() != ring::aead::NONCE_LEN {
-        return Err(CoreError::KeyExchangeReplyError(
-            KeyExchangeReplyError::InvalidArgs,
-        ));
+        return Err(KeyExchangeReplyError::InvalidArgs);
     }
 
     // generate passive device key exchange pair and nonce
@@ -146,9 +202,19 @@ async fn key_agreement(
     let passive_exchange_private_key = ring::agreement::EphemeralPrivateKey::generate(
         &ring::agreement::X25519,
         &system_random_rng,
-    )?;
+    )
+    .map_err(|err| {
+        tracing::error!(?err, "generate ephemeral private key failed");
+        KeyExchangeReplyError::Internal
+    })?;
 
-    let passive_exchange_public_key = passive_exchange_private_key.compute_public_key()?;
+    let passive_exchange_public_key =
+        passive_exchange_private_key
+            .compute_public_key()
+            .map_err(|err| {
+                tracing::error!(?err, "compute exchange public key failed");
+                KeyExchangeReplyError::Internal
+            })?;
 
     let mut passive_exchange_nonce = [0u8; ring::aead::NONCE_LEN];
     OsRng.fill_bytes(&mut passive_exchange_nonce);
@@ -195,18 +261,28 @@ async fn key_agreement(
 
             Ok((sealing_key, opening_key))
         },
-    )?;
+    )
+    .map_err(|err| {
+        tracing::error!(?err, "agree ephemeral failed");
+        KeyExchangeReplyError::Internal
+    })?;
 
     // derive opening and sealing key
 
     let unbound_sealing_key =
-        ring::aead::UnboundKey::new(&ring::aead::AES_256_GCM, &raw_sealing_key)?;
+        ring::aead::UnboundKey::new(&ring::aead::AES_256_GCM, &raw_sealing_key).map_err(|err| {
+            tracing::error!(?err, "create unbound sealing key failed");
+            KeyExchangeReplyError::Internal
+        })?;
 
     let sealing_key =
         ring::aead::SealingKey::new(unbound_sealing_key, NonceValue::new(active_exchange_nonce));
 
     let unbound_opening_key =
-        ring::aead::UnboundKey::new(&ring::aead::AES_256_GCM, &raw_opening_key)?;
+        ring::aead::UnboundKey::new(&ring::aead::AES_256_GCM, &raw_opening_key).map_err(|err| {
+            tracing::error!(?err, "create unbound opening failed");
+            KeyExchangeReplyError::Internal
+        })?;
 
     let opening_key =
         ring::aead::OpeningKey::new(unbound_opening_key, NonceValue::new(passive_exchange_nonce));
@@ -223,13 +299,22 @@ async fn key_agreement(
     let active_exchange_reply_public_key = rsa::RsaPublicKey::new(
         BigUint::from_bytes_le(&active_device_secret.exchange_reply_public_key_n),
         BigUint::from_bytes_le(&active_device_secret.exchange_reply_public_key_e),
-    )?;
+    )
+    .map_err(|err| {
+        tracing::error!(?err, "recover exchange reply public key failed");
+        KeyExchangeReplyError::Internal
+    })?;
 
-    let secret_buffer = active_exchange_reply_public_key.encrypt(
-        &mut OsRng,
-        rsa::PaddingScheme::PKCS1v15Encrypt,
-        &passive_device_secret_buffer,
-    )?;
+    let secret_buffer = active_exchange_reply_public_key
+        .encrypt(
+            &mut OsRng,
+            rsa::PaddingScheme::PKCS1v15Encrypt,
+            &passive_device_secret_buffer,
+        )
+        .map_err(|err| {
+            tracing::error!(?err, "encrypt exchange reply data failed");
+            KeyExchangeReplyError::Internal
+        })?;
 
     Ok((
         secret_buffer,
@@ -242,50 +327,19 @@ async fn key_agreement(
     ))
 }
 
-async fn build_endpoint(
-    local_device_id: i64,
-    remote_device_id: i64,
-    domain: String,
-    visit_credentials: String,
-    opening_key: OpeningKey<NonceValue>,
-    sealing_key: SealingKey<NonceValue>,
-) -> CoreResult<()> {
-    crate::api::endpoint::handlers::connect::connect(ConnectRequest {
-        local_device_id,
-        remote_device_id,
-        addr: String::from("192.168.0.101:28001"),
-    })
-    .await?;
-
-    // run in new future otherwise it will dead lock for waiting active device handshake
-    TOKIO_RUNTIME.spawn(async move {
-        if let Err(err) = crate::api::endpoint::handlers::handshake::passive_device_handshake(
-            local_device_id,
-            remote_device_id,
-            visit_credentials,
-            opening_key,
-            sealing_key,
-        )
-        .await
-        {
-            tracing::error!(?err, "passive device handshake failed");
-        }
-    });
-
-    Ok(())
-}
-
 fn build_reply(
-    req: &KeyExchangeRequest,
-    reply: Either<Vec<u8>, KeyExchangeReplyError>,
+    active_device_id: i64,
+    passive_device_id: i64,
+    reply: Result<Vec<u8>, KeyExchangeReplyError>,
 ) -> KeyExchangeReplyRequest {
-    let inner_key_exchange_result = reply.either(InnerKeyExchangeResult::Secret, |error| {
-        InnerKeyExchangeResult::Error(error.into())
-    });
+    let inner_key_exchange_result = match reply {
+        Ok(secret) => InnerKeyExchangeResult::Secret(secret),
+        Err(err) => InnerKeyExchangeResult::Error(err.into()),
+    };
 
     KeyExchangeReplyRequest {
-        active_device_id: req.active_device_id,
-        passive_device_id: req.passive_device_id,
+        active_device_id,
+        passive_device_id,
         key_exchange_result: Some(KeyExchangeResult {
             inner_key_exchange_result: Some(inner_key_exchange_result),
         }),
