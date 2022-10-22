@@ -11,7 +11,7 @@ impl StateUpdater {
         Self { tx }
     }
 
-    pub fn emit_negotiate_desktop_params(&self) {
-        send_event!(self.tx, Event::EmitNegotiateDesktopParams)
-    }
+    // pub fn emit_negotiate_desktop_params(&self) {
+    //     send_event!(self.tx, Event::EmitNegotiateDesktopParams)
+    // }
 }

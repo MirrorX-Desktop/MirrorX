@@ -117,7 +117,10 @@ impl State {
                 }
                 Event::UpdateEndPointClient { client } => self.endpoint_client = Some(client),
                 Event::UpdateVisitState { new_state } => self.visit_state = new_state,
-                Event::UpdateError { err } => self.last_error = Some(err),
+                Event::UpdateError { err } => {
+                    tracing::error!(?err, "update error event");
+                    self.last_error = Some(err);
+                }
                 Event::EmitNegotiateDesktopParams => {
                     self.emit_negotiate_desktop_params();
                 }
@@ -178,7 +181,8 @@ impl State {
                                     new_state: VisitState::Negotiating
                                 }
                             );
-                            send_event!(tx, Event::UpdateEndPointClient { client })
+                            send_event!(tx, Event::UpdateEndPointClient { client });
+                            send_event!(tx, Event::EmitNegotiateDesktopParams);
                         }
                         Err(err) => {
                             send_event!(

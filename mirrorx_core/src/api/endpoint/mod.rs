@@ -1,4 +1,3 @@
-pub mod flutter_message;
 pub mod handlers;
 pub mod message;
 

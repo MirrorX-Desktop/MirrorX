@@ -57,7 +57,6 @@ impl DesktopView {
                 });
             }
             state::VisitState::Negotiating => {
-                self.state_updater.emit_negotiate_desktop_params();
                 ui.centered_and_justified(|ui| {
                     let (rect, response) = ui.allocate_exact_size(
                         Vec2::new(160.0, 80.0),
@@ -79,7 +78,7 @@ impl DesktopView {
                 ui.centered_and_justified(|ui| {
                     ui.label(
                         self.state
-                            .take_last_error()
+                            .last_error()
                             .map(|err| err.to_string())
                             .unwrap_or_else(|| String::from("An unknown error occurred")),
                     );
