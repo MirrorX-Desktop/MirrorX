@@ -219,15 +219,9 @@ function Invoke-CompileMFXDispatcher {
 function Invoke-CompileLibYUV {
     try {
         Write-Output "Invoke-CompileLibYUV: Compile"
-        
-        $proc = Start-Process -FilePath "CMake.exe" -PassThru -NoNewWindow -ArgumentList "-DCMAKE_INSTALL_PREFIX=.\dependencies\libyuv", "-DCMAKE_BUILD_TYPE=Release", "-DJPEG_NAMES="
-        Wait-Process -InputObject $proc
-        if ($proc.ExitCode -ne 0){
-            Write-Output "Invoke-CompileLibYUV: Build failed"
-            Exit
-        }
-        
-        $proc = Start-Process -FilePath "CMake.exe" -PassThru -NoNewWindow -ArgumentList "--build", ".", "Release"
+        Set-Location -Path ".\dependencies\source\libyuv"
+
+        $proc = Start-Process -FilePath "CMake.exe" -PassThru -NoNewWindow -ArgumentList "-DCMAKE_INSTALL_PREFIX=..\..\libyuv", "-DCMAKE_BUILD_TYPE=Release"
         Wait-Process -InputObject $proc
         if ($proc.ExitCode -ne 0){
             Write-Output "Invoke-CompileLibYUV: Build failed"
@@ -321,14 +315,16 @@ if ($elevated -eq $false) {
 
 Get-DependenciesSource
 
-Get-Component
+# Get-Component
 
-Install-Component
+# Install-Component
 
-Invoke-PrepareCompile
+# Invoke-PrepareCompile
 
-Invoke-CompileDependencies
+# Invoke-CompileDependencies
 
-Invoke-GenerateFFmpegVSProject
+# Invoke-GenerateFFmpegVSProject
 
-Invoke-CompileFFmpeg
+# Invoke-CompileFFmpeg
+
+Invoke-CompileLibYUV
