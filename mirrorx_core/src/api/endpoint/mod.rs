@@ -68,7 +68,7 @@ impl EndPointID {
     }
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct EndPointClient {
     id: EndPointID,
     message_tx: Sender<Option<EndPointMessage>>,
@@ -146,9 +146,9 @@ impl EndPointClient {
         Ok(rx)
     }
 
-    pub fn negotiate_finish(&self) -> CoreResult<()> {
+    pub fn negotiate_finish(&self, expected_frame_rate: u8) -> CoreResult<()> {
         let req = EndPointMessage::NegotiateFinishedRequest(EndPointNegotiateFinishedRequest {
-            expected_frame_rate: 60,
+            expected_frame_rate,
         });
 
         self.send_message(req)

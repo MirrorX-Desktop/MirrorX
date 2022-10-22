@@ -1952,6 +1952,7 @@ dependencies = [
  "mirrorx_core",
  "once_cell",
  "raw-window-handle 0.5.0",
+ "ring",
  "strum",
  "strum_macros",
  "tokio",

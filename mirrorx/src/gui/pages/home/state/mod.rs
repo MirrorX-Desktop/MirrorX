@@ -27,15 +27,6 @@ static SIGNALING_CONNECTION_BROKEN_ERROR: Lazy<String> = Lazy::new(|| {
     )
 });
 
-#[macro_export]
-macro_rules! send_event {
-    ($tx:expr, $event:expr) => {
-        if let Err(err) = $tx.send($event) {
-            tracing::error!("send event {:?} failed", err.0.as_ref());
-        }
-    };
-}
-
 pub struct State {
     tx: UnboundedSender<Event>,
     rx: UnboundedReceiver<Event>,

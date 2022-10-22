@@ -12,6 +12,15 @@ use winit::{
     window::{Window, WindowBuilder, WindowId},
 };
 
+#[macro_export]
+macro_rules! send_event {
+    ($tx:expr, $event:expr) => {
+        if let Err(err) = $tx.send($event) {
+            tracing::error!("send event {:?} failed", err.0.as_ref());
+        }
+    };
+}
+
 pub trait View {
     fn ui(&mut self, ctx: &egui::Context);
 }
