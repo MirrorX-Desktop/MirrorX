@@ -63,6 +63,10 @@ function Get-DependenciesSource {
     # clone mfx_dispatcher(Intel Media SDK dispatcher)
     Write-Output "Get-DependenciesSource: mfx_dispatcher"
     Get-Source "1.35.r89" "https://github.com/ShiftMediaProject/mfx_dispatch.git" ".\dependencies\source\mfx_dispatcher"
+
+    # clone libyuv
+    Write-Output "Get-DependenciesSource: libyuv"
+    Get-Source "stable" "https://chromium.googlesource.com/libyuv/libyuv" ".\dependencies\source\libyuv"
 }
 
 function Get-Component {
@@ -191,7 +195,6 @@ function Invoke-CompileX264 {
     }
 }
 
-
 function Invoke-CompileMFXDispatcher {
     try {
         Write-Output "Invoke-CompileMFXDispatcher: Upgrade project"
@@ -208,6 +211,38 @@ function Invoke-CompileMFXDispatcher {
     }
     catch {
         Write-Output "Invoke-CompileMFXDispatcher: Build failed"
+        Write-Output $Error
+        Exit
+    }
+}
+
+function Invoke-CompileLibYUV {
+    try {
+        Write-Output "Invoke-CompileLibYUV: Compile"
+        
+        $proc = Start-Process -FilePath "CMake.exe" -PassThru -NoNewWindow -ArgumentList "-DCMAKE_INSTALL_PREFIX=.\dependencies\libyuv", "-DCMAKE_BUILD_TYPE=Release", "-DJPEG_NAMES="
+        Wait-Process -InputObject $proc
+        if ($proc.ExitCode -ne 0){
+            Write-Output "Invoke-CompileLibYUV: Build failed"
+            Exit
+        }
+        
+        $proc = Start-Process -FilePath "CMake.exe" -PassThru -NoNewWindow -ArgumentList "--build", ".", "Release"
+        Wait-Process -InputObject $proc
+        if ($proc.ExitCode -ne 0){
+            Write-Output "Invoke-CompileLibYUV: Build failed"
+            Exit
+        }
+
+        $proc = Start-Process -FilePath "CMake.exe" -PassThru -NoNewWindow -ArgumentList "--build", ".", "--target", "install", "--config", "Release"
+        Wait-Process -InputObject $proc
+        if ($proc.ExitCode -ne 0){
+            Write-Output "Invoke-CompileLibYUV: Build failed"
+            Exit
+        }
+    }
+    catch {
+        Write-Output "Invoke-CompileLibYUV: Build failed"
         Write-Output $Error
         Exit
     }
