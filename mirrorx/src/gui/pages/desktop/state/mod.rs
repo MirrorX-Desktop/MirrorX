@@ -1,8 +1,6 @@
 mod event;
 mod updater;
 
-use std::time::Duration;
-
 use crate::send_event;
 use event::Event;
 use mirrorx_core::{
@@ -12,7 +10,10 @@ use mirrorx_core::{
     utility::nonce_value::NonceValue,
 };
 use ring::aead::{BoundKey, OpeningKey, SealingKey};
+use std::time::Duration;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
+
+pub use updater::StateUpdater;
 
 #[derive(Debug)]
 pub enum VisitState {
@@ -88,6 +89,10 @@ impl State {
 }
 
 impl State {
+    pub fn new_state_updater(&self) -> StateUpdater {
+        StateUpdater::new(self.tx.clone())
+    }
+
     pub fn handle_event(&mut self) {
         while let Ok(event) = self.rx.try_recv() {
             match event {
@@ -249,11 +254,10 @@ impl State {
                         }
                         EndPointNegotiateDesktopParamsResponse::Params(params) => {
                             // todo: prepare wgpu texture
-
                             send_event!(
                                 tx,
-                                Event::UpdateVisitState {
-                                    new_state: VisitState::Serving
+                                Event::EmitNegotiateFinish {
+                                    expected_frame_rate: 60
                                 }
                             );
                         }
@@ -275,8 +279,16 @@ impl State {
     fn emit_negotiate_finish(&mut self, expected_frame_rate: u8) {
         if let Some(client) = &self.endpoint_client {
             if let Err(err) = client.negotiate_finish(expected_frame_rate) {
-                send_event!(self.tx, Event::UpdateError { err })
+                send_event!(self.tx, Event::UpdateError { err });
+                return;
             }
+
+            send_event!(
+                self.tx,
+                Event::UpdateVisitState {
+                    new_state: VisitState::Serving
+                }
+            );
         }
     }
 }

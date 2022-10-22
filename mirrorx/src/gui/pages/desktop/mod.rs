@@ -2,10 +2,11 @@ mod state;
 
 use super::View;
 use egui::{style::Margin, CentralPanel, Frame, Sense, Ui, Vec2};
-use state::State;
+use state::{State, StateUpdater};
 
 pub struct DesktopView {
     state: State,
+    state_updater: StateUpdater,
     remote_device_id: i64,
 }
 
@@ -19,16 +20,21 @@ impl DesktopView {
         sealing_nonce: Vec<u8>,
         visit_credentials: String,
     ) -> Self {
+        let state = State::new(
+            local_device_id,
+            remote_device_id,
+            opening_key,
+            opening_nonce,
+            sealing_key,
+            sealing_nonce,
+            visit_credentials,
+        );
+
+        let state_updater = state.new_state_updater();
+
         Self {
-            state: State::new(
-                local_device_id,
-                remote_device_id,
-                opening_key,
-                opening_nonce,
-                sealing_key,
-                sealing_nonce,
-                visit_credentials,
-            ),
+            state,
+            state_updater,
             remote_device_id,
         }
     }
@@ -51,6 +57,7 @@ impl DesktopView {
                 });
             }
             state::VisitState::Negotiating => {
+                self.state_updater.emit_negotiate_desktop_params();
                 ui.centered_and_justified(|ui| {
                     let (rect, response) = ui.allocate_exact_size(
                         Vec2::new(160.0, 80.0),
