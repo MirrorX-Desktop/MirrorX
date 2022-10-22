@@ -7,7 +7,6 @@ use state::{State, StateUpdater};
 pub struct DesktopView {
     state: State,
     state_updater: StateUpdater,
-    remote_device_id: i64,
 }
 
 impl DesktopView {
@@ -35,7 +34,6 @@ impl DesktopView {
         Self {
             state,
             state_updater,
-            remote_device_id,
         }
     }
 
@@ -72,7 +70,15 @@ impl DesktopView {
                 });
             }
             state::VisitState::Serving => {
-                ui.centered_and_justified(|ui| ui.label("could serve"));
+                ui.centered_and_justified(|ui| {
+                    if let Some(frame_image) = self.state.take_frame_image() {
+                        egui_extras::RetainedImage::from_color_image(
+                            format!("desktop {}", self.state.remote_device_id()),
+                            frame_image,
+                        )
+                        .show(ui);
+                    }
+                });
             }
             state::VisitState::ErrorOccurred => {
                 ui.centered_and_justified(|ui| {

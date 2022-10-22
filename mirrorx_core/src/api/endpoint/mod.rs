@@ -3,8 +3,10 @@ pub mod message;
 
 use self::{
     handlers::{
+        audio_frame::serve_audio_decode,
         input::{handle_keyboard, handle_mouse},
         negotiate_desktop_params::handle_negotiate_desktop_params_request,
+        video_frame::serve_video_decode,
     },
     message::*,
 };
@@ -13,7 +15,7 @@ use crate::{
         audio_frame::handle_audio_frame, negotiate_finished::handle_negotiate_finished_request,
         video_frame::handle_video_frame,
     },
-    component::desktop::monitor::Monitor,
+    component::{desktop::monitor::Monitor, frame::DesktopDecodeFrame},
     core_error,
     error::CoreResult,
     utility::nonce_value::NonceValue,
@@ -31,7 +33,11 @@ use futures::{
 use once_cell::sync::Lazy;
 use ring::aead::{OpeningKey, SealingKey};
 use std::time::Duration;
-use tokio::{net::TcpStream, select, sync::mpsc::Sender};
+use tokio::{
+    net::TcpStream,
+    select,
+    sync::mpsc::{Receiver, Sender},
+};
 use tokio_util::codec::{Framed, LengthDelimitedCodec};
 use tracing::Instrument;
 
@@ -50,6 +56,7 @@ static BINARY_SERIALIZER: Lazy<
         .with_varint_encoding()
 });
 
+// todo: ttl
 static NEGOTIATE_DESKTOP_PARAMS_RESPONSE_RECEIVERS: Lazy<
     DashMap<EndPointID, tokio::sync::oneshot::Sender<EndPointNegotiateDesktopParamsResponse>>,
 > = Lazy::new(DashMap::new);
@@ -102,15 +109,6 @@ impl EndPointClient {
             exit_tx: exit_tx.clone(),
         };
 
-        // serve_video_decode(
-        //     req.active_device_id,
-        //     req.passive_device_id,
-        //     req.texture_id,
-        //     stream,
-        // );
-
-        // serve_audio_decode(req.active_device_id, req.passive_device_id);
-
         serve_reader(
             client.clone(),
             exit_tx.clone(),
@@ -145,12 +143,22 @@ impl EndPointClient {
         Ok(rx)
     }
 
-    pub fn negotiate_finish(&self, expected_frame_rate: u8) -> CoreResult<()> {
+    pub fn negotiate_finish(
+        &self,
+        expected_frame_rate: u8,
+    ) -> CoreResult<Receiver<DesktopDecodeFrame>> {
+        let (frame_tx, frame_rx) = tokio::sync::mpsc::channel(180);
+
+        serve_video_decode(self.id, frame_tx);
+        serve_audio_decode(self.id);
+
         let req = EndPointMessage::NegotiateFinishedRequest(EndPointNegotiateFinishedRequest {
             expected_frame_rate,
         });
 
-        self.send_message(req)
+        self.send_message(req)?;
+
+        Ok(frame_rx)
     }
 
     pub fn input(&self, event: InputEvent) -> CoreResult<()> {

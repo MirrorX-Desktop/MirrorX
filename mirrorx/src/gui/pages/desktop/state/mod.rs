@@ -2,16 +2,18 @@ mod event;
 mod updater;
 
 use crate::send_event;
+use egui::ColorImage;
 use event::Event;
 use mirrorx_core::{
     api::endpoint::{message::EndPointNegotiateDesktopParamsResponse, EndPointClient},
     core_error,
     error::{CoreError, CoreResult},
     utility::nonce_value::NonceValue,
+    DesktopDecodeFrame,
 };
 use ring::aead::{BoundKey, OpeningKey, SealingKey};
 use std::time::Duration;
-use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
+use tokio::sync::mpsc::{Receiver, UnboundedReceiver, UnboundedSender};
 
 pub use updater::StateUpdater;
 
@@ -32,6 +34,9 @@ pub struct State {
 
     visit_state: VisitState,
     endpoint_client: Option<EndPointClient>,
+    frame_rx: Option<Receiver<DesktopDecodeFrame>>,
+    frame_image: Option<ColorImage>,
+
     last_error: Option<CoreError>,
 }
 
@@ -67,8 +72,18 @@ impl State {
             remote_device_id,
             visit_state: VisitState::Connecting,
             endpoint_client: None,
+            frame_rx: None,
+            frame_image: None,
             last_error: None,
         }
+    }
+
+    pub fn local_device_id(&self) -> i64 {
+        self.local_device_id
+    }
+
+    pub fn remote_device_id(&self) -> i64 {
+        self.remote_device_id
     }
 
     pub fn endpoint_client(&self) -> Option<&EndPointClient> {
@@ -77,6 +92,10 @@ impl State {
 
     pub fn visit_state(&self) -> &VisitState {
         &self.visit_state
+    }
+
+    pub fn take_frame_image(&mut self) -> Option<ColorImage> {
+        self.frame_image.take()
     }
 
     pub fn last_error(&self) -> Option<&CoreError> {
@@ -94,6 +113,20 @@ impl State {
     }
 
     pub fn handle_event(&mut self) {
+        if let Some(frame_rx) = self.frame_rx.as_mut() {
+            if let Ok(desktop_decode_frame) = frame_rx.try_recv() {
+                let size = [
+                    desktop_decode_frame.width as _,
+                    desktop_decode_frame.height as _,
+                ];
+
+                self.frame_image = Some(ColorImage::from_rgba_unmultiplied(
+                    size,
+                    &desktop_decode_frame.data,
+                ));
+            }
+        }
+
         while let Ok(event) = self.rx.try_recv() {
             match event {
                 Event::ConnectEndPoint {
@@ -282,17 +315,19 @@ impl State {
 
     fn emit_negotiate_finish(&mut self, expected_frame_rate: u8) {
         if let Some(client) = &self.endpoint_client {
-            if let Err(err) = client.negotiate_finish(expected_frame_rate) {
-                send_event!(self.tx, Event::UpdateError { err });
-                return;
-            }
-
-            send_event!(
-                self.tx,
-                Event::UpdateVisitState {
-                    new_state: VisitState::Serving
+            match client.negotiate_finish(expected_frame_rate) {
+                Ok(frame_rx) => {
+                    send_event!(
+                        self.tx,
+                        Event::UpdateVisitState {
+                            new_state: VisitState::Serving
+                        }
+                    );
                 }
-            );
+                Err(err) => {
+                    send_event!(self.tx, Event::UpdateError { err });
+                }
+            }
         }
     }
 }
