@@ -1,16 +1,24 @@
 mod state;
 
+use std::time::Duration;
+
+use crate::gui::CustomEvent;
+
 use super::View;
-use egui::{style::Margin, CentralPanel, Frame, Sense, Ui, Vec2};
+use egui::{style::Margin, CentralPanel, Color32, ColorImage, Frame, Sense, Ui, Vec2};
+use egui_extras::RetainedImage;
 use state::{State, StateUpdater};
+use winit::{event_loop::EventLoopProxy, window::WindowId};
 
 pub struct DesktopView {
     state: State,
     state_updater: StateUpdater,
+    color_image: RetainedImage,
 }
 
 impl DesktopView {
     pub fn new(
+        // window_id: WindowId,
         local_device_id: i64,
         remote_device_id: i64,
         opening_key: Vec<u8>,
@@ -18,8 +26,10 @@ impl DesktopView {
         sealing_key: Vec<u8>,
         sealing_nonce: Vec<u8>,
         visit_credentials: String,
+        event_loop_proxy: EventLoopProxy<CustomEvent>,
     ) -> Self {
         let state = State::new(
+            // window_id,
             local_device_id,
             remote_device_id,
             opening_key,
@@ -27,6 +37,7 @@ impl DesktopView {
             sealing_key,
             sealing_nonce,
             visit_credentials,
+            event_loop_proxy,
         );
 
         let state_updater = state.new_state_updater();
@@ -34,6 +45,10 @@ impl DesktopView {
         Self {
             state,
             state_updater,
+            color_image: RetainedImage::from_color_image(
+                "initial",
+                ColorImage::new([1920, 1080], Color32::BLACK),
+            ),
         }
     }
 
@@ -72,12 +87,13 @@ impl DesktopView {
             state::VisitState::Serving => {
                 ui.centered_and_justified(|ui| {
                     if let Some(frame_image) = self.state.take_frame_image() {
-                        egui_extras::RetainedImage::from_color_image(
+                        self.color_image = egui_extras::RetainedImage::from_color_image(
                             format!("desktop {}", self.state.remote_device_id()),
                             frame_image,
-                        )
-                        .show(ui);
+                        );
                     }
+
+                    self.color_image.show(ui);
                 });
             }
             state::VisitState::ErrorOccurred => {
@@ -101,8 +117,8 @@ impl View for DesktopView {
             .fill(ctx.style().visuals.window_fill());
 
         CentralPanel::default().frame(frame).show(ctx, |ui| {
-            self.state.handle_event();
             self.build_panel(ui);
+            self.state.handle_event();
         });
     }
 }

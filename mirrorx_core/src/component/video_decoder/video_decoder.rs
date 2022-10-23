@@ -156,12 +156,12 @@ impl VideoDecoder {
                 };
 
                 if let Err(err) = self.render_frame_tx.try_send(desktop_decode_frame) {
-                    match err {
-                        TrySendError::Full(_) => tracing::warn!("video render tx is full!"),
-                        TrySendError::Closed(_) => {
-                            return Err(core_error!("video render tx has closed"))
-                        }
-                    }
+                    // match err {
+                    //     TrySendError::Full(_) => tracing::warn!("video render tx is full!"),
+                    //     TrySendError::Closed(_) => {
+                    //         return Err(core_error!("video render tx has closed"))
+                    //     }
+                    // }
                 }
 
                 av_frame_unref(tmp_frame);
@@ -340,7 +340,7 @@ impl Drop for DecodeContext {
 
 unsafe fn convert_yuv_to_rgb(frame: *mut AVFrame) -> CoreResult<Vec<u8>> {
     let argb_stride = 4 * ((32 * (*frame).width + 31) / 32);
-    let argb_frame_size = (argb_stride as usize) * ((*frame).height as usize) * 4;
+    let argb_frame_size = (argb_stride as usize) * ((*frame).height as usize);
     let mut argb_frame_buffer = Vec::<u8>::with_capacity(argb_frame_size);
 
     let ret = NV21ToARGBMatrix(

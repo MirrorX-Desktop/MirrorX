@@ -315,16 +315,16 @@ if ($elevated -eq $false) {
 
 Get-DependenciesSource
 
-# Get-Component
+Get-Component
 
-# Install-Component
+Install-Component
 
-# Invoke-PrepareCompile
+Invoke-PrepareCompile
 
-# Invoke-CompileDependencies
+Invoke-CompileDependencies
 
-# Invoke-GenerateFFmpegVSProject
+Invoke-GenerateFFmpegVSProject
 
-# Invoke-CompileFFmpeg
+Invoke-CompileFFmpeg
 
 Invoke-CompileLibYUV

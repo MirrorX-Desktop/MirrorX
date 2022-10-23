@@ -1,7 +1,7 @@
 mod event;
 mod updater;
 
-use crate::send_event;
+use crate::{gui::CustomEvent, send_event};
 use egui::ColorImage;
 use event::Event;
 use mirrorx_core::{
@@ -14,6 +14,7 @@ use mirrorx_core::{
 use ring::aead::{BoundKey, OpeningKey, SealingKey};
 use std::time::Duration;
 use tokio::sync::mpsc::{Receiver, UnboundedReceiver, UnboundedSender};
+use winit::{event_loop::EventLoopProxy, window::WindowId};
 
 pub use updater::StateUpdater;
 
@@ -29,19 +30,21 @@ pub struct State {
     tx: UnboundedSender<Event>,
     rx: UnboundedReceiver<Event>,
 
+    // window_id: WindowId,
     local_device_id: i64,
     remote_device_id: i64,
 
     visit_state: VisitState,
     endpoint_client: Option<EndPointClient>,
-    frame_rx: Option<Receiver<DesktopDecodeFrame>>,
     frame_image: Option<ColorImage>,
+    event_loop_proxy: EventLoopProxy<CustomEvent>,
 
     last_error: Option<CoreError>,
 }
 
 impl State {
     pub fn new(
+        // window_id: WindowId,
         local_device_id: i64,
         remote_device_id: i64,
         opening_key: Vec<u8>,
@@ -49,6 +52,7 @@ impl State {
         sealing_key: Vec<u8>,
         sealing_nonce: Vec<u8>,
         visit_credentials: String,
+        event_loop_proxy: EventLoopProxy<CustomEvent>,
     ) -> Self {
         let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
 
@@ -68,12 +72,13 @@ impl State {
         Self {
             tx,
             rx,
+            // window_id,
             local_device_id,
             remote_device_id,
             visit_state: VisitState::Connecting,
             endpoint_client: None,
-            frame_rx: None,
             frame_image: None,
+            event_loop_proxy,
             last_error: None,
         }
     }
@@ -113,20 +118,7 @@ impl State {
     }
 
     pub fn handle_event(&mut self) {
-        if let Some(frame_rx) = self.frame_rx.as_mut() {
-            if let Ok(desktop_decode_frame) = frame_rx.try_recv() {
-                let size = [
-                    desktop_decode_frame.width as _,
-                    desktop_decode_frame.height as _,
-                ];
-
-                self.frame_image = Some(ColorImage::from_rgba_unmultiplied(
-                    size,
-                    &desktop_decode_frame.data,
-                ));
-            }
-        }
-
+        tracing::info!("handle event begin");
         while let Ok(event) = self.rx.try_recv() {
             match event {
                 Event::ConnectEndPoint {
@@ -150,18 +142,25 @@ impl State {
                 }
                 Event::UpdateEndPointClient { client } => self.endpoint_client = Some(client),
                 Event::UpdateVisitState { new_state } => self.visit_state = new_state,
+                Event::UpdateFrameImage { frame_image } => {
+                    tracing::info!("update frame image");
+                    self.frame_image = Some(frame_image);
+                    // self.event_loop_proxy
+                    //     .send_event(CustomEvent::Repaint(self.window_id));
+                    // tracing::info!("send repaint event: {:?}", self.window_id);
+                    return;
+                }
                 Event::UpdateError { err } => {
                     tracing::error!(?err, "update error event");
                     self.last_error = Some(err);
                 }
-                Event::EmitNegotiateDesktopParams => {
-                    self.emit_negotiate_desktop_params();
-                }
+                Event::EmitNegotiateDesktopParams => self.emit_negotiate_desktop_params(),
                 Event::EmitNegotiateFinish {
                     expected_frame_rate,
                 } => self.emit_negotiate_finish(expected_frame_rate),
             }
         }
+        tracing::info!("handle event end");
     }
 
     fn connect_endpoint(
@@ -316,7 +315,29 @@ impl State {
     fn emit_negotiate_finish(&mut self, expected_frame_rate: u8) {
         if let Some(client) = &self.endpoint_client {
             match client.negotiate_finish(expected_frame_rate) {
-                Ok(frame_rx) => {
+                Ok(mut frame_rx) => {
+                    let event_tx = self.tx.clone();
+                    tokio::spawn(async move {
+                        while let Some(desktop_decode_frame) = frame_rx.recv().await {
+                            let size = [
+                                desktop_decode_frame.width as _,
+                                desktop_decode_frame.height as _,
+                            ];
+                            tracing::info!("receive desktop decode frame");
+
+                            send_event!(
+                                event_tx,
+                                Event::UpdateFrameImage {
+                                    frame_image: ColorImage::from_rgba_unmultiplied(
+                                        size,
+                                        &desktop_decode_frame.data,
+                                    )
+                                }
+                            );
+                            tracing::info!("send update frame image event end");
+                        }
+                    });
+
                     send_event!(
                         self.tx,
                         Event::UpdateVisitState {

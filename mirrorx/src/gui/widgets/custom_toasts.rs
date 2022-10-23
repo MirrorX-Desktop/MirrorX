@@ -5,6 +5,8 @@ pub struct CustomToasts {
     inner_toasts: Toasts,
 }
 
+unsafe impl Send for CustomToasts {}
+
 impl CustomToasts {
     pub fn new() -> Self {
         let inner_toasts = Toasts::new()

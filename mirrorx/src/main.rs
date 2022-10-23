@@ -1,7 +1,9 @@
 mod gui;
 
 #[tokio::main]
-async fn main() -> anyhow::Result<()> {
+async fn main() {
     tracing_subscriber::fmt::init();
-    crate::gui::run_app()
+    if let Err(err) = crate::gui::run_app() {
+        tracing::error!(?err, "run app failed");
+    }
 }

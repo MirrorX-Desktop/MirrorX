@@ -2,12 +2,17 @@ pub mod desktop;
 pub mod home;
 
 use super::{gpu::Gpu, CustomEvent};
+use crossbeam::channel::Sender;
 use egui::{FontData, FontDefinitions, FontFamily};
 use egui_wgpu_backend::{RenderPass, ScreenDescriptor};
 use mirrorx_core::{core_error, error::CoreResult};
-use std::time::Instant;
+use std::time::{Duration, Instant};
 use winit::{
     dpi::{LogicalSize, PhysicalPosition, PhysicalSize},
+    event::{
+        Event::{self, UserEvent},
+        WindowEvent,
+    },
     event_loop::{EventLoopProxy, EventLoopWindowTarget},
     window::{Window, WindowBuilder, WindowId},
 };
@@ -21,7 +26,7 @@ macro_rules! send_event {
     };
 }
 
-pub trait View {
+pub trait View: Send {
     fn ui(&mut self, ctx: &egui::Context);
 }
 
@@ -44,35 +49,33 @@ pub struct Page {
     render_pass: RenderPass,
     view: Box<dyn View>,
     gpu: Gpu,
-    next_repaint_instant: Option<Instant>,
+    repaint_after: Duration,
 }
 
 impl Page {
     pub fn new(
-        title: &str,
-        options: PageOptions,
+        window: Window,
         window_target: &EventLoopWindowTarget<CustomEvent>,
         event_loop_proxy: EventLoopProxy<CustomEvent>,
         view: Box<dyn View>,
     ) -> CoreResult<Self> {
-        let window = create_window(title, &options, window_target)?;
-
         let gpu = Gpu::new(&window, window.inner_size())?;
 
         let mut egui_state = egui_winit::State::new(window_target);
         egui_state.set_pixels_per_point(window.scale_factor() as f32);
 
         let window_id = window.id();
-        let (repaint_tx, mut repaint_rx) = tokio::sync::mpsc::channel(1);
+        let (repaint_tx, repaint_rx) = crossbeam::channel::bounded(1);
 
         tokio::task::spawn_blocking(move || loop {
-            match repaint_rx.blocking_recv() {
-                Some(event) => {
+            match repaint_rx.recv() {
+                Ok(event) => {
+                    tracing::info!("repaint thread {:?}", std::thread::current().id());
                     if let Err(err) = event_loop_proxy.send_event(event) {
                         tracing::error!(?err, "event loop proxy send user event failed");
                     }
                 }
-                None => return,
+                Err(_) => return,
             }
         });
 
@@ -105,7 +108,7 @@ impl Page {
             render_pass,
             view,
             gpu,
-            next_repaint_instant: Some(Instant::now()),
+            repaint_after: Duration::ZERO,
         })
     }
 
@@ -136,8 +139,8 @@ impl Page {
         self.window.request_redraw();
     }
 
-    pub fn next_repaint_instant(&self) -> Option<Instant> {
-        self.next_repaint_instant
+    pub fn repaint_after(&self) -> Duration {
+        self.repaint_after
     }
 
     pub fn render(&mut self) -> CoreResult<()> {
@@ -188,54 +191,10 @@ impl Page {
         self.gpu.queue().submit(Some(encoder.finish()));
         frame.present();
 
-        self.next_repaint_instant = Instant::now().checked_add(full_output.repaint_after);
+        self.repaint_after = full_output.repaint_after;
 
         Ok(())
     }
-}
-
-fn create_window(
-    title: &str,
-    options: &PageOptions,
-    window_target: &EventLoopWindowTarget<CustomEvent>,
-) -> Result<winit::window::Window, mirrorx_core::error::CoreError> {
-    let mut window_builder = {
-        #[cfg(target_os = "windows")]
-        {
-            WindowBuilder::new()
-        }
-
-        #[cfg(target_os = "macos")]
-        {
-            use winit::platform::macos::WindowBuilderExtMacOS;
-            WindowBuilder::new()
-                .with_fullsize_content_view(true)
-                .with_titlebar_transparent(true)
-                .with_title_hidden(true)
-        }
-    }
-    .with_title(title)
-    .with_resizable(options.resizable)
-    .with_maximized(options.maximized)
-    .with_inner_size(options.size);
-
-    if let Some(min_size) = options.min_size {
-        window_builder = window_builder.with_min_inner_size(min_size);
-    }
-
-    if let Some(max_size) = options.max_size {
-        window_builder = window_builder.with_max_inner_size(max_size);
-    }
-
-    if let Some(position) = options.initial_pos {
-        window_builder = window_builder.with_position(position);
-    }
-
-    let window = window_builder
-        .build(window_target)
-        .map_err(|err| core_error!("winit build window error ({})", err))?;
-
-    Ok(window)
 }
 
 fn set_fonts(ctx: &egui::Context) {
@@ -304,4 +263,60 @@ fn set_fonts(ctx: &egui::Context) {
     // cc.egui_ctx.set_debug_on_hover(true);
     // cc.egui_ctx.request_repaint_after(Duration::from_secs(1));
     ctx.set_fonts(fonts);
+}
+
+pub fn create_page(
+    title: &str,
+    options: &PageOptions,
+    window_target: &EventLoopWindowTarget<CustomEvent>,
+    view: Box<dyn View>,
+    event_loop_proxy: EventLoopProxy<CustomEvent>,
+) -> CoreResult<Page> {
+    let window = create_window(title, options, window_target)?;
+    let page = Page::new(window, window_target, event_loop_proxy.clone(), view)?;
+    Ok(page)
+}
+
+fn create_window(
+    title: &str,
+    options: &PageOptions,
+    window_target: &EventLoopWindowTarget<CustomEvent>,
+) -> Result<winit::window::Window, mirrorx_core::error::CoreError> {
+    let mut window_builder = {
+        #[cfg(target_os = "windows")]
+        {
+            WindowBuilder::new()
+        }
+
+        #[cfg(target_os = "macos")]
+        {
+            use winit::platform::macos::WindowBuilderExtMacOS;
+            WindowBuilder::new()
+                .with_fullsize_content_view(true)
+                .with_titlebar_transparent(true)
+                .with_title_hidden(true)
+        }
+    }
+    .with_title(title)
+    .with_resizable(options.resizable)
+    .with_maximized(options.maximized)
+    .with_inner_size(options.size);
+
+    if let Some(min_size) = options.min_size {
+        window_builder = window_builder.with_min_inner_size(min_size);
+    }
+
+    if let Some(max_size) = options.max_size {
+        window_builder = window_builder.with_max_inner_size(max_size);
+    }
+
+    if let Some(position) = options.initial_pos {
+        window_builder = window_builder.with_position(position);
+    }
+
+    let window = window_builder
+        .build(window_target)
+        .map_err(|err| core_error!("winit build window error ({})", err))?;
+
+    Ok(window)
 }

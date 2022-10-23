@@ -1,9 +1,10 @@
+use egui::ColorImage;
 use mirrorx_core::{api::endpoint::EndPointClient, error::CoreError};
 use strum_macros::AsRefStr;
 
 use super::VisitState;
 
-#[derive(Debug, AsRefStr)]
+#[derive(AsRefStr)]
 pub enum Event {
     ConnectEndPoint {
         local_device_id: i64,
@@ -21,6 +22,10 @@ pub enum Event {
 
     UpdateVisitState {
         new_state: VisitState,
+    },
+
+    UpdateFrameImage {
+        frame_image: ColorImage,
     },
 
     UpdateError {

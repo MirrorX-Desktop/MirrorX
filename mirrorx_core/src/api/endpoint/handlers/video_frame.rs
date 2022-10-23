@@ -35,16 +35,16 @@ pub fn serve_video_decode(id: EndPointID, frame_tx: Sender<DesktopDecodeFrame>) 
 
             let mut decoder = VideoDecoder::new(frame_tx);
 
-            async {
-                while let Some(video_frame) = rx.recv().await {
-                    if let Err(err) = decoder.decode(video_frame).await {
-                        tracing::error!(?err, "decode video frame failed");
-                        break;
-                    }
+            // async {
+            while let Some(video_frame) = rx.recv().await {
+                if let Err(err) = decoder.decode(video_frame).await {
+                    tracing::error!(?err, "decode video frame failed");
+                    break;
                 }
             }
-            .instrument(span.clone())
-            .await;
+            // }
+            // .instrument(span.clone())
+            // .await;
 
             let _ = DECODERS.remove(&id);
             tracing::info!("video decode process exit");
