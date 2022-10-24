@@ -20,8 +20,8 @@ use winit::{
 #[macro_export]
 macro_rules! send_event {
     ($tx:expr, $event:expr) => {
-        if let Err(err) = $tx.send($event) {
-            tracing::error!("send event {:?} failed", err.0.as_ref());
+        if let Err(err) = $tx.try_send($event) {
+            tracing::error!("send event failed");
         }
     };
 }
@@ -70,7 +70,6 @@ impl Page {
         tokio::task::spawn_blocking(move || loop {
             match repaint_rx.recv() {
                 Ok(event) => {
-                    tracing::info!("repaint thread {:?}", std::thread::current().id());
                     if let Err(err) = event_loop_proxy.send_event(event) {
                         tracing::error!(?err, "event loop proxy send user event failed");
                     }
@@ -84,6 +83,7 @@ impl Page {
         egui_ctx.set_request_repaint_callback(move || {
             let _ = repaint_tx.try_send(CustomEvent::Repaint(window_id));
         });
+        egui_ctx.set_debug_on_hover(true);
 
         tracing::info!(
             "width height {} {} {}",

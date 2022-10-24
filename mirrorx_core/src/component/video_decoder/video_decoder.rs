@@ -9,6 +9,7 @@ use crate::{
     },
 };
 use bytes::BufMut;
+use egui::Color32;
 use std::{
     ffi::{CStr, CString},
     time::{Duration, Instant},
@@ -25,8 +26,10 @@ unsafe impl Send for VideoDecoder {}
 
 impl VideoDecoder {
     pub fn new(render_frame_tx: Sender<DesktopDecodeFrame>) -> VideoDecoder {
-        // av_log_set_level(AV_LOG_TRACE);
-        // av_log_set_flags(AV_LOG_SKIP_REPEATED);
+        unsafe {
+            // av_log_set_level(AV_LOG_TRACE);
+            // av_log_set_flags(AV_LOG_SKIP_REPEATED);
+        }
 
         VideoDecoder {
             decode_context: None,
@@ -107,22 +110,22 @@ impl VideoDecoder {
                     ));
                 }
 
-                let begin = std::time::Instant::now();
+                // let begin = std::time::Instant::now();
 
-                let expect_time_base = av_inv_q((*decode_context.codec_ctx).framerate);
+                // let expect_time_base = av_inv_q((*decode_context.codec_ctx).framerate);
 
-                let actual_pts = av_rescale_q(
-                    (*decode_context.decode_frame).pts,
-                    expect_time_base,
-                    (*decode_context.codec_ctx).time_base,
-                );
+                // let actual_pts = av_rescale_q(
+                //     (*decode_context.decode_frame).pts,
+                //     expect_time_base,
+                //     (*decode_context.codec_ctx).time_base,
+                // );
 
-                let duration_from_pts = actual_pts - self.last_pts;
-                self.last_pts = actual_pts;
+                // let duration_from_pts = actual_pts - self.last_pts;
+                // self.last_pts = actual_pts;
 
-                let frame_duration = std::time::Duration::from_secs_f64(
-                    (duration_from_pts as f64) * av_q2d((*decode_context.codec_ctx).time_base),
-                );
+                // let frame_duration = std::time::Duration::from_secs_f64(
+                //     (duration_from_pts as f64) * av_q2d((*decode_context.codec_ctx).time_base),
+                // );
 
                 let tmp_frame = if !(decode_context).parser_ctx.is_null() {
                     (decode_context).decode_frame
@@ -149,19 +152,20 @@ impl VideoDecoder {
                 };
 
                 let rgb_buffer = convert_yuv_to_rgb(tmp_frame)?;
+
                 let desktop_decode_frame = DesktopDecodeFrame {
-                    width: (*tmp_frame).width,
-                    height: (*tmp_frame).height,
+                    width: (*tmp_frame).width as usize,
+                    height: (*tmp_frame).height as usize,
                     data: rgb_buffer,
                 };
 
                 if let Err(err) = self.render_frame_tx.try_send(desktop_decode_frame) {
-                    // match err {
-                    //     TrySendError::Full(_) => tracing::warn!("video render tx is full!"),
-                    //     TrySendError::Closed(_) => {
-                    //         return Err(core_error!("video render tx has closed"))
-                    //     }
-                    // }
+                    match err {
+                        TrySendError::Full(_) => tracing::warn!("video render tx is full!"),
+                        TrySendError::Closed(_) => {
+                            return Err(core_error!("video render tx has closed"))
+                        }
+                    }
                 }
 
                 av_frame_unref(tmp_frame);
@@ -338,17 +342,17 @@ impl Drop for DecodeContext {
     }
 }
 
-unsafe fn convert_yuv_to_rgb(frame: *mut AVFrame) -> CoreResult<Vec<u8>> {
+unsafe fn convert_yuv_to_rgb(frame: *mut AVFrame) -> CoreResult<Vec<Color32>> {
     let argb_stride = 4 * ((32 * (*frame).width + 31) / 32);
     let argb_frame_size = (argb_stride as usize) * ((*frame).height as usize);
-    let mut argb_frame_buffer = Vec::<u8>::with_capacity(argb_frame_size);
+    let mut color32_buffer = Vec::<Color32>::with_capacity(argb_frame_size / 4);
 
     let ret = NV21ToARGBMatrix(
         (*frame).data[0],
         (*frame).linesize[0] as isize,
         (*frame).data[1],
         (*frame).linesize[1] as isize,
-        argb_frame_buffer.as_mut_ptr(),
+        color32_buffer.as_mut_ptr() as *mut u8,
         argb_stride as isize,
         &kYvuF709Constants,
         (*frame).width as isize,
@@ -359,7 +363,7 @@ unsafe fn convert_yuv_to_rgb(frame: *mut AVFrame) -> CoreResult<Vec<u8>> {
         return Err(core_error!("NV21ToARGBMatrix returns error code: {}", ret));
     }
 
-    argb_frame_buffer.set_len(argb_frame_size);
+    color32_buffer.set_len(argb_frame_size / 4);
 
-    Ok(argb_frame_buffer)
+    Ok(color32_buffer)
 }

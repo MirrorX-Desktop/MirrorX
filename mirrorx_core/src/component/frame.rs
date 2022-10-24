@@ -1,5 +1,7 @@
 use std::time::Duration;
 
+use egui::Color32;
+
 pub struct DesktopEncodeFrame {
     pub capture_time: Duration,
     pub width: i32,
@@ -13,13 +15,9 @@ pub struct DesktopEncodeFrame {
 unsafe impl Send for DesktopEncodeFrame {}
 
 pub struct DesktopDecodeFrame {
-    pub width: i32,
-    pub height: i32,
-    // pub luminance_bytes: ZeroCopyBuffer<Vec<u8>>,
-    // pub luminance_stride: i32,
-    // pub chrominance_bytes: ZeroCopyBuffer<Vec<u8>>,
-    // pub chrominance_stride: i32,
-    pub data: Vec<u8>,
+    pub width: usize,
+    pub height: usize,
+    pub data: Vec<Color32>,
 }
 
 pub struct AudioEncodeFrame {

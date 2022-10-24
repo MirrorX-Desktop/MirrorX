@@ -28,6 +28,10 @@ pub enum Event {
         frame_image: ColorImage,
     },
 
+    UpdateUseOriginalResolution {
+        use_original_resolution: bool,
+    },
+
     UpdateError {
         err: CoreError,
     },

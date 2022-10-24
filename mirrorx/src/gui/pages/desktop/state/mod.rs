@@ -2,7 +2,7 @@ mod event;
 mod updater;
 
 use crate::{gui::CustomEvent, send_event};
-use egui::ColorImage;
+use egui::{epaint::TextureManager, Color32, ColorImage, TextureHandle};
 use event::Event;
 use mirrorx_core::{
     api::endpoint::{message::EndPointNegotiateDesktopParamsResponse, EndPointClient},
@@ -12,8 +12,8 @@ use mirrorx_core::{
     DesktopDecodeFrame,
 };
 use ring::aead::{BoundKey, OpeningKey, SealingKey};
-use std::time::Duration;
-use tokio::sync::mpsc::{Receiver, UnboundedReceiver, UnboundedSender};
+use std::time::{Duration, Instant};
+use tokio::sync::mpsc::{Receiver, Sender, UnboundedReceiver, UnboundedSender};
 use winit::{event_loop::EventLoopProxy, window::WindowId};
 
 pub use updater::StateUpdater;
@@ -27,17 +27,20 @@ pub enum VisitState {
 }
 
 pub struct State {
-    tx: UnboundedSender<Event>,
-    rx: UnboundedReceiver<Event>,
+    tx: Sender<Event>,
+    rx: Receiver<Event>,
 
     // window_id: WindowId,
     local_device_id: i64,
+    format_local_device_id: String,
     remote_device_id: i64,
+    format_remote_device_id: String,
 
     visit_state: VisitState,
     endpoint_client: Option<EndPointClient>,
-    frame_image: Option<ColorImage>,
-    event_loop_proxy: EventLoopProxy<CustomEvent>,
+    desktop_texture: Option<TextureHandle>,
+    frame_count: i64,
+    use_original_resolution: bool,
 
     last_error: Option<CoreError>,
 }
@@ -52,9 +55,8 @@ impl State {
         sealing_key: Vec<u8>,
         sealing_nonce: Vec<u8>,
         visit_credentials: String,
-        event_loop_proxy: EventLoopProxy<CustomEvent>,
     ) -> Self {
-        let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
+        let (tx, rx) = tokio::sync::mpsc::channel(360);
 
         send_event!(
             tx,
@@ -69,16 +71,27 @@ impl State {
             }
         );
 
+        let mut format_local_device_id = format!("{:0>10}", local_device_id);
+        format_local_device_id.insert(2, '-');
+        format_local_device_id.insert(7, '-');
+
+        let mut format_remote_device_id = format!("{:0>10}", remote_device_id);
+        format_remote_device_id.insert(2, '-');
+        format_remote_device_id.insert(7, '-');
+
         Self {
             tx,
             rx,
             // window_id,
             local_device_id,
+            format_local_device_id,
             remote_device_id,
+            format_remote_device_id,
             visit_state: VisitState::Connecting,
             endpoint_client: None,
-            frame_image: None,
-            event_loop_proxy,
+            desktop_texture: None,
+            use_original_resolution: true,
+            frame_count: 0,
             last_error: None,
         }
     }
@@ -87,8 +100,16 @@ impl State {
         self.local_device_id
     }
 
+    pub fn format_local_device_id(&self) -> &str {
+        self.format_local_device_id.as_ref()
+    }
+
     pub fn remote_device_id(&self) -> i64 {
         self.remote_device_id
+    }
+
+    pub fn format_remote_device_id(&self) -> &str {
+        self.format_remote_device_id.as_ref()
     }
 
     pub fn endpoint_client(&self) -> Option<&EndPointClient> {
@@ -99,8 +120,12 @@ impl State {
         &self.visit_state
     }
 
-    pub fn take_frame_image(&mut self) -> Option<ColorImage> {
-        self.frame_image.take()
+    pub fn desktop_texture(&self) -> Option<&TextureHandle> {
+        self.desktop_texture.as_ref()
+    }
+
+    pub fn use_original_resolution(&self) -> bool {
+        self.use_original_resolution
     }
 
     pub fn last_error(&self) -> Option<&CoreError> {
@@ -117,8 +142,7 @@ impl State {
         StateUpdater::new(self.tx.clone())
     }
 
-    pub fn handle_event(&mut self) {
-        tracing::info!("handle event begin");
+    pub fn handle_event(&mut self, ctx: &egui::Context) {
         while let Ok(event) = self.rx.try_recv() {
             match event {
                 Event::ConnectEndPoint {
@@ -143,13 +167,21 @@ impl State {
                 Event::UpdateEndPointClient { client } => self.endpoint_client = Some(client),
                 Event::UpdateVisitState { new_state } => self.visit_state = new_state,
                 Event::UpdateFrameImage { frame_image } => {
-                    tracing::info!("update frame image");
-                    self.frame_image = Some(frame_image);
-                    // self.event_loop_proxy
-                    //     .send_event(CustomEvent::Repaint(self.window_id));
-                    // tracing::info!("send repaint event: {:?}", self.window_id);
-                    return;
+                    if let Some(desktop_texture) = self.desktop_texture.as_mut() {
+                        desktop_texture.set(frame_image, egui::TextureFilter::Linear);
+                    } else {
+                        self.desktop_texture = Some(ctx.load_texture(
+                            "desktop_texture",
+                            frame_image,
+                            egui::TextureFilter::Linear,
+                        ));
+                    }
+
+                    self.frame_count += 1;
                 }
+                Event::UpdateUseOriginalResolution {
+                    use_original_resolution,
+                } => self.use_original_resolution = use_original_resolution,
                 Event::UpdateError { err } => {
                     tracing::error!(?err, "update error event");
                     self.last_error = Some(err);
@@ -160,9 +192,9 @@ impl State {
                 } => self.emit_negotiate_finish(expected_frame_rate),
             }
         }
-        tracing::info!("handle event end");
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn connect_endpoint(
         &mut self,
         local_device_id: i64,
@@ -289,7 +321,6 @@ impl State {
                             );
                         }
                         EndPointNegotiateDesktopParamsResponse::Params(params) => {
-                            // todo: prepare wgpu texture
                             send_event!(
                                 tx,
                                 Event::EmitNegotiateFinish {
@@ -319,22 +350,12 @@ impl State {
                     let event_tx = self.tx.clone();
                     tokio::spawn(async move {
                         while let Some(desktop_decode_frame) = frame_rx.recv().await {
-                            let size = [
-                                desktop_decode_frame.width as _,
-                                desktop_decode_frame.height as _,
-                            ];
-                            tracing::info!("receive desktop decode frame");
+                            let image = ColorImage {
+                                size: [desktop_decode_frame.width, desktop_decode_frame.height],
+                                pixels: desktop_decode_frame.data,
+                            };
 
-                            send_event!(
-                                event_tx,
-                                Event::UpdateFrameImage {
-                                    frame_image: ColorImage::from_rgba_unmultiplied(
-                                        size,
-                                        &desktop_decode_frame.data,
-                                    )
-                                }
-                            );
-                            tracing::info!("send update frame image event end");
+                            send_event!(event_tx, Event::UpdateFrameImage { frame_image: image });
                         }
                     });
 
@@ -349,6 +370,14 @@ impl State {
                     send_event!(self.tx, Event::UpdateError { err });
                 }
             }
+        }
+    }
+}
+
+impl Drop for State {
+    fn drop(&mut self) {
+        if let Some(endpoint_client) = &self.endpoint_client {
+            endpoint_client.close();
         }
     }
 }

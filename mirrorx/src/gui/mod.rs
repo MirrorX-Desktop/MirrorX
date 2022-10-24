@@ -1,3 +1,4 @@
+mod assets;
 mod gpu;
 mod pages;
 mod widgets;
@@ -79,7 +80,6 @@ pub fn run_app() -> anyhow::Result<()> {
                 event: window_event,
                 window_id,
             } => {
-                tracing::info!("get0 {:?}", std::thread::current().id());
                 if matches!(
                     window_event,
                     WindowEvent::CloseRequested | WindowEvent::Destroyed
@@ -105,9 +105,6 @@ pub fn run_app() -> anyhow::Result<()> {
                             page.scale_factor(scale_factor);
                             page.resize(*new_inner_size);
                         }
-                        winit::event::WindowEvent::CursorMoved { .. } => {
-                            tracing::info!("mouse move");
-                        }
 
                         _ => (),
                     }
@@ -123,12 +120,7 @@ pub fn run_app() -> anyhow::Result<()> {
                     }
                 }
             }
-            Event::RedrawEventsCleared
-            | winit::event::Event::NewEvents(winit::event::StartCause::ResumeTimeReached {
-                ..
-            }) => {
-                tracing::info!("redraw cleared");
-
+            Event::RedrawEventsCleared => {
                 let mut min_repaint_after = Duration::MAX;
 
                 pages.iter().for_each(|(_, page)| {
@@ -136,18 +128,18 @@ pub fn run_app() -> anyhow::Result<()> {
                 });
 
                 if min_repaint_after.is_zero() {
-                    pages.iter().for_each(|page| page.1.request_redraw());
+                    pages.iter().for_each(|(_, page)| page.request_redraw());
                     control_flow.set_poll();
                 } else if let Some(wait_until) = Instant::now().checked_add(min_repaint_after) {
-                    if cfg!(windows) {
-                        for (_, page) in pages.iter_mut() {
-                            if let Err(err) = page.render() {
-                                tracing::error!(?err, "window render failed");
-                                control_flow.set_exit();
-                                return;
-                            }
+                    for (_, page) in pages.iter_mut() {
+                        if let Err(err) = page.render() {
+                            tracing::error!(?err, "window render failed");
+                            control_flow.set_exit();
+                            return;
                         }
                     }
+
+                    // tracing::info!("wait next frame");
                     control_flow.set_wait_until(wait_until);
                 }
             }
@@ -171,7 +163,6 @@ pub fn run_app() -> anyhow::Result<()> {
                     key_exchange_resp.sealing_key_bytes,
                     key_exchange_resp.sealing_nonce_bytes,
                     key_exchange_resp.visit_credentials,
-                    event_loop_proxy.clone(),
                 );
 
                 let page = create_page(
