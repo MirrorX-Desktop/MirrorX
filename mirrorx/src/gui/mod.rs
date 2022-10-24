@@ -139,7 +139,15 @@ pub fn run_app() -> anyhow::Result<()> {
                     pages.iter().for_each(|page| page.1.request_redraw());
                     control_flow.set_poll();
                 } else if let Some(wait_until) = Instant::now().checked_add(min_repaint_after) {
-                    // pages.iter().for_each(|page| page.1.request_redraw());
+                    if cfg!(windows) {
+                        for (_, page) in pages.iter_mut() {
+                            if let Err(err) = page.render() {
+                                tracing::error!(?err, "window render failed");
+                                control_flow.set_exit();
+                                return;
+                            }
+                        }
+                    }
                     control_flow.set_wait_until(wait_until);
                 }
             }
