@@ -40,7 +40,7 @@ fn spawn_desktop_capture_and_encode_process(client: EndPointClient) {
             }
         };
 
-        let mut encoder = match VideoEncoder::new(EncoderType::H264VideoToolbox, client.clone()) {
+        let mut encoder = match VideoEncoder::new(EncoderType::Libx264, client.clone()) {
             Ok(encoder) => encoder,
             Err(err) => {
                 tracing::error!(?err, "initialize encoder failed");
