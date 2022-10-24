@@ -83,6 +83,7 @@ impl Page {
         egui_ctx.set_request_repaint_callback(move || {
             let _ = repaint_tx.try_send(CustomEvent::Repaint(window_id));
         });
+        egui_ctx.set_debug_on_hover(true);
 
         tracing::info!(
             "width height {} {} {}",

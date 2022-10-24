@@ -1,3 +1,4 @@
+mod assets;
 mod gpu;
 mod pages;
 mod widgets;
@@ -162,7 +163,6 @@ pub fn run_app() -> anyhow::Result<()> {
                     key_exchange_resp.sealing_key_bytes,
                     key_exchange_resp.sealing_nonce_bytes,
                     key_exchange_resp.visit_credentials,
-                    event_loop_proxy.clone(),
                 );
 
                 let page = create_page(
