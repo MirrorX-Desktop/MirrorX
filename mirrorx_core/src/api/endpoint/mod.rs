@@ -317,7 +317,7 @@ fn serve_writer(
             let endpoint_message = match async {
                 select! {
                     _ = exit_rx.recv() => {
-                        Err(core_error!("read processor receive exit tx signal"))
+                        Err(core_error!("write processor receive exit tx signal"))
                     }
                     message = message_rx.recv() => match message {
                         Some(packet) => match packet {

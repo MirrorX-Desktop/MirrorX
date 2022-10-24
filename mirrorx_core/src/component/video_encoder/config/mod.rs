@@ -58,7 +58,9 @@ fn set_codec_ctx_option(
 
         if ret == AVERROR_OPTION_NOT_FOUND {
             Err(core_error!(
-                "set AVCodecContext returns AVERROR_OPTION_NOT_FOUND"
+                "set AVCodecContext returns AVERROR_OPTION_NOT_FOUND {:?}:{:?}",
+                opt_name,
+                opt_value
             ))
         } else if ret == AVERROR(libc::ERANGE) {
             Err(core_error!("set AVCodecContext returns ERANGE"))

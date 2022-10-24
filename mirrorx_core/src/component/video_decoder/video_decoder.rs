@@ -110,22 +110,22 @@ impl VideoDecoder {
                     ));
                 }
 
-                let begin = std::time::Instant::now();
+                // let begin = std::time::Instant::now();
 
-                let expect_time_base = av_inv_q((*decode_context.codec_ctx).framerate);
+                // let expect_time_base = av_inv_q((*decode_context.codec_ctx).framerate);
 
-                let actual_pts = av_rescale_q(
-                    (*decode_context.decode_frame).pts,
-                    expect_time_base,
-                    (*decode_context.codec_ctx).time_base,
-                );
+                // let actual_pts = av_rescale_q(
+                //     (*decode_context.decode_frame).pts,
+                //     expect_time_base,
+                //     (*decode_context.codec_ctx).time_base,
+                // );
 
-                let duration_from_pts = actual_pts - self.last_pts;
-                self.last_pts = actual_pts;
+                // let duration_from_pts = actual_pts - self.last_pts;
+                // self.last_pts = actual_pts;
 
-                let frame_duration = std::time::Duration::from_secs_f64(
-                    (duration_from_pts as f64) * av_q2d((*decode_context.codec_ctx).time_base),
-                );
+                // let frame_duration = std::time::Duration::from_secs_f64(
+                //     (duration_from_pts as f64) * av_q2d((*decode_context.codec_ctx).time_base),
+                // );
 
                 let tmp_frame = if !(decode_context).parser_ctx.is_null() {
                     (decode_context).decode_frame

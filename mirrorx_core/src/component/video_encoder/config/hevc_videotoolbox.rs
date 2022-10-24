@@ -23,7 +23,7 @@ impl EncoderConfig for HEVCVideoToolboxConfig {
     fn apply_option(&self, codec_ctx: *mut AVCodecContext) -> CoreResult<()> {
         set_codec_ctx_option(codec_ctx, "profile", "high", 0)?;
         set_codec_ctx_option(codec_ctx, "realtime", "true", 0)?;
-        set_codec_ctx_option(codec_ctx, "prio_speed", "true", 0)?;
+        // set_codec_ctx_option(codec_ctx, "prio_speed", "true", 0)?;
 
         Ok(())
     }
