@@ -1979,6 +1979,7 @@ dependencies = [
  "crossbeam",
  "dashmap",
  "dispatch",
+ "egui",
  "either",
  "flutter_rust_bridge",
  "futures",

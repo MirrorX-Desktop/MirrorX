@@ -13,7 +13,6 @@ use winit::{event_loop::EventLoopProxy, window::WindowId};
 pub struct DesktopView {
     state: State,
     state_updater: StateUpdater,
-    color_image: RetainedImage,
 }
 
 impl DesktopView {
@@ -45,10 +44,6 @@ impl DesktopView {
         Self {
             state,
             state_updater,
-            color_image: RetainedImage::from_color_image(
-                "initial",
-                ColorImage::new([1920, 1080], Color32::BLACK),
-            ),
         }
     }
 
@@ -86,14 +81,19 @@ impl DesktopView {
             }
             state::VisitState::Serving => {
                 ui.centered_and_justified(|ui| {
-                    if let Some(frame_image) = self.state.take_frame_image() {
-                        self.color_image = egui_extras::RetainedImage::from_color_image(
-                            format!("desktop {}", self.state.remote_device_id()),
-                            frame_image,
-                        );
-                    }
+                    if let Some(desktop_texture) = self.state.desktop_texture() {
+                        let available_width = ui.available_width();
+                        let available_height = ui.available_height();
+                        let aspect_ratio = desktop_texture.aspect_ratio();
 
-                    self.color_image.show(ui);
+                        let desktop_size = if (available_width / aspect_ratio) < available_height {
+                            (available_width, available_width / aspect_ratio)
+                        } else {
+                            (available_height * aspect_ratio, available_height)
+                        };
+
+                        ui.image(desktop_texture, desktop_size);
+                    }
                 });
             }
             state::VisitState::ErrorOccurred => {
@@ -118,7 +118,9 @@ impl View for DesktopView {
 
         CentralPanel::default().frame(frame).show(ctx, |ui| {
             self.build_panel(ui);
-            self.state.handle_event();
+            self.state.handle_event(ctx);
         });
+
+        ctx.request_repaint();
     }
 }

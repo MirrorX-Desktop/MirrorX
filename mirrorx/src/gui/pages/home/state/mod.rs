@@ -16,7 +16,7 @@ use mirrorx_core::{
 };
 use once_cell::sync::Lazy;
 use std::path::{Path, PathBuf};
-use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
+use tokio::sync::mpsc::{channel, Receiver, Sender};
 use winit::event_loop::EventLoopProxy;
 
 pub use updater::StateUpdater;
@@ -28,8 +28,8 @@ static SIGNALING_CONNECTION_BROKEN_ERROR: Lazy<String> = Lazy::new(|| {
 });
 
 pub struct State {
-    tx: UnboundedSender<Event>,
-    rx: UnboundedReceiver<Event>,
+    tx: Sender<Event>,
+    rx: Receiver<Event>,
 
     current_page_name: String,
     config: Option<Config>,
@@ -54,7 +54,7 @@ pub struct State {
 
 impl State {
     pub fn new(initial_page_name: &str, event_loop_proxy: EventLoopProxy<CustomEvent>) -> Self {
-        let (tx, rx) = unbounded_channel();
+        let (tx, rx) = channel(360);
 
         Self {
             tx,
@@ -399,7 +399,7 @@ impl State {
     }
 }
 
-fn update_config(config_path: PathBuf, config: Config, tx: UnboundedSender<Event>) {
+fn update_config(config_path: PathBuf, config: Config, tx: Sender<Event>) {
     tokio::task::spawn_blocking(move || {
         if let Err(err) = mirrorx_core::api::config::save(&config_path, &config) {
             tracing::error!(?err, "config save failed");
@@ -413,7 +413,7 @@ fn update_config(config_path: PathBuf, config: Config, tx: UnboundedSender<Event
 fn update_signaling_client(
     config: Option<Config>,
     signaling_client: Option<SignalingClient>,
-    tx: UnboundedSender<Event>,
+    tx: Sender<Event>,
     config_path: PathBuf,
 ) {
     if let Some(mut config) = config {

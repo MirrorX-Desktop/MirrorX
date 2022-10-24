@@ -1,13 +1,13 @@
 use super::event::Event;
 use crate::send_event;
-use tokio::sync::mpsc::UnboundedSender;
+use tokio::sync::mpsc::{Sender, UnboundedSender};
 
 pub struct StateUpdater {
-    tx: UnboundedSender<Event>,
+    tx: Sender<Event>,
 }
 
 impl StateUpdater {
-    pub fn new(tx: UnboundedSender<Event>) -> Self {
+    pub fn new(tx: Sender<Event>) -> Self {
         Self { tx }
     }
 
