@@ -91,6 +91,7 @@ impl<'a> ConnectPage<'a> {
                                 ui.available_size(),
                                 TextEdit::singleline(&mut text_buffer)
                                     .frame(false)
+                                    .text_color(ui.visuals().text_color())
                                     .font(FontId::monospace(26.0)),
                             )
                             .changed()
@@ -194,10 +195,6 @@ impl<'a> ConnectPage<'a> {
 
     #[inline]
     fn build_connect_desktop_button(&mut self, ui: &mut Ui) {
-        ui.visuals_mut().widgets.hovered.expansion = 0.0;
-        ui.visuals_mut().widgets.hovered.bg_stroke = Stroke::none();
-        ui.visuals_mut().widgets.hovered.bg_fill = Color32::from_rgb(0x19, 0x8C, 0xFF);
-        ui.visuals_mut().widgets.hovered.fg_stroke = Stroke::new(1.0, Color32::WHITE);
         ui.visuals_mut().widgets.hovered.rounding = Rounding {
             nw: 2.0,
             ne: 0.0,
@@ -205,10 +202,6 @@ impl<'a> ConnectPage<'a> {
             se: 0.0,
         };
 
-        ui.visuals_mut().widgets.inactive.expansion = 0.0;
-        ui.visuals_mut().widgets.inactive.bg_stroke = Stroke::none();
-        ui.visuals_mut().widgets.inactive.bg_fill = Color32::from_rgb(0x01, 0x6F, 0xFF);
-        ui.visuals_mut().widgets.inactive.fg_stroke = Stroke::new(1.0, Color32::WHITE);
         ui.visuals_mut().widgets.inactive.rounding = Rounding {
             nw: 2.0,
             ne: 0.0,
@@ -216,10 +209,6 @@ impl<'a> ConnectPage<'a> {
             se: 0.0,
         };
 
-        ui.visuals_mut().widgets.active.expansion = 0.0;
-        ui.visuals_mut().widgets.active.bg_stroke = Stroke::none();
-        ui.visuals_mut().widgets.active.bg_fill = Color32::from_rgb(0x00, 0x54, 0xE6);
-        ui.visuals_mut().widgets.active.fg_stroke = Stroke::new(1.0, Color32::WHITE);
         ui.visuals_mut().widgets.active.rounding = Rounding {
             nw: 2.0,
             ne: 0.0,
@@ -236,23 +225,28 @@ impl<'a> ConnectPage<'a> {
                     ui.visuals().widgets.active.rounding,
                     ui.visuals().widgets.active.bg_fill,
                 );
-                ui.add_enabled(false, Spinner::default());
+                ui.add_enabled(false, Spinner::default())
             } else {
-                let visuals = ui.style().interact(&response);
-                ui.painter()
-                    .rect_filled(rect, visuals.rounding, visuals.bg_fill);
+                // let visuals = ui.style().interact(&response);
+                // ui.painter()
+                //     .rect_filled(rect, visuals.rounding, visuals.bg_fill);
 
-                let text = WidgetText::from("桌面")
-                    .color(visuals.fg_stroke.color)
-                    .into_galley(ui, None, ui.available_width(), FontId::proportional(28.0));
+                // let text = WidgetText::from("桌面").into_galley(
+                //     ui,
+                //     None,
+                //     ui.available_width(),
+                //     FontId::proportional(28.0),
+                // );
 
-                ui.painter().add(TextShape {
-                    pos: rect.left_top() + ((ui.available_size() - text.size()) / 2.0),
-                    galley: text.galley,
-                    underline: Stroke::none(),
-                    override_text_color: None,
-                    angle: 0.0,
-                });
+                // ui.painter().add(TextShape {
+                //     pos: rect.left_top() + ((ui.available_size() - text.size()) / 2.0),
+                //     galley: text.galley,
+                //     underline: Stroke::none(),
+                //     override_text_color: None,
+                //     angle: 0.0,
+                // });
+
+                ui.button("桌面")
             }
         });
 
@@ -315,8 +309,6 @@ impl<'a> ConnectPage<'a> {
     }
 
     fn make_connect_file_manager_button(&mut self, ui: &mut Ui) {
-        ui.visuals_mut().widgets.hovered.expansion = 0.0;
-        ui.visuals_mut().widgets.hovered.bg_stroke = Stroke::none();
         ui.visuals_mut().widgets.hovered.rounding = Rounding {
             nw: 0.0,
             ne: 2.0,
@@ -324,8 +316,6 @@ impl<'a> ConnectPage<'a> {
             se: 2.0,
         };
 
-        ui.visuals_mut().widgets.inactive.expansion = 0.0;
-        ui.visuals_mut().widgets.inactive.bg_stroke = Stroke::none();
         ui.visuals_mut().widgets.inactive.rounding = Rounding {
             nw: 0.0,
             ne: 2.0,
@@ -333,8 +323,6 @@ impl<'a> ConnectPage<'a> {
             se: 2.0,
         };
 
-        ui.visuals_mut().widgets.active.expansion = 0.0;
-        ui.visuals_mut().widgets.active.bg_stroke = Stroke::none();
         ui.visuals_mut().widgets.active.rounding = Rounding {
             nw: 0.0,
             ne: 2.0,

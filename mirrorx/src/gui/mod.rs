@@ -1,6 +1,7 @@
 mod assets;
 mod gpu;
 mod pages;
+mod themes;
 mod widgets;
 
 use crate::gui::pages::desktop::DesktopView;

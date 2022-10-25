@@ -1,12 +1,15 @@
 pub mod desktop;
 pub mod home;
 
-use super::{gpu::Gpu, CustomEvent};
+use super::{gpu::Gpu, themes, CustomEvent};
 use crossbeam::channel::Sender;
 use egui::{FontData, FontDefinitions, FontFamily};
 use egui_wgpu_backend::{RenderPass, ScreenDescriptor};
 use mirrorx_core::{core_error, error::CoreResult};
-use std::time::{Duration, Instant};
+use std::{
+    sync::Arc,
+    time::{Duration, Instant},
+};
 use winit::{
     dpi::{LogicalSize, PhysicalPosition, PhysicalSize},
     event::{
@@ -14,7 +17,7 @@ use winit::{
         WindowEvent,
     },
     event_loop::{EventLoopProxy, EventLoopWindowTarget},
-    window::{Window, WindowBuilder, WindowId},
+    window::{Theme, Window, WindowBuilder, WindowId},
 };
 
 #[macro_export]
@@ -83,7 +86,6 @@ impl Page {
         egui_ctx.set_request_repaint_callback(move || {
             let _ = repaint_tx.try_send(CustomEvent::Repaint(window_id));
         });
-        egui_ctx.set_debug_on_hover(true);
 
         tracing::info!(
             "width height {} {} {}",
@@ -262,6 +264,7 @@ fn set_fonts(ctx: &egui::Context) {
 
     // cc.egui_ctx.set_debug_on_hover(true);
     // cc.egui_ctx.request_repaint_after(Duration::from_secs(1));
+    ctx.set_style(Arc::new(themes::light::THEME.clone()));
     ctx.set_fonts(fonts);
 }
 

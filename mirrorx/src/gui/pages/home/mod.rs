@@ -13,7 +13,8 @@ use connect::ConnectPage;
 use egui::{
     epaint::{Color32, FontId, Pos2, Rect, Stroke, Vec2},
     style::Margin,
-    CentralPanel, Context, Frame, Label, RichText, Rounding, TextEdit, Ui, Widget,
+    CentralPanel, Context, Frame, Label, RichText, Rounding, Sense, TextEdit, TextStyle, Ui,
+    Widget, WidgetText,
 };
 use egui_extras::{Size, StripBuilder};
 use history::HistoryPage;
@@ -132,6 +133,7 @@ impl HomeView {
             .size(Size::relative(0.75)) // Page
             .size(Size::relative(0.04)) // footer
             .vertical(|mut strip| {
+                // Domain Title
                 strip.cell(|ui| {
                     ui.centered_and_justified(|ui| {
                         let label_rect = ui
@@ -151,6 +153,7 @@ impl HomeView {
                         );
                     });
                 });
+                // Domain
                 strip.cell(|ui| {
                     ui.centered_and_justified(|ui| {
                         if let Some(config) = self.state.config() {
@@ -163,6 +166,7 @@ impl HomeView {
                         }
                     });
                 });
+                // Tab bar
                 strip.strip(|builder| {
                     builder
                         .sizes(Size::relative(1.0 / 3.0), 3)
@@ -178,7 +182,9 @@ impl HomeView {
                             strip.cell(|ui| self.build_toggle_tab(ui, "History", "History"));
                         });
                 });
+                // Tab view
                 strip.cell(|ui| self.build_tab_view(ui));
+                // Footer
                 strip.cell(|ui| {
                     ui.painter().line_segment(
                         [
@@ -195,26 +201,49 @@ impl HomeView {
             });
     }
 
-    fn build_toggle_tab(&mut self, ui: &mut Ui, display_text: &str, toggle_tab_value: &str) {
+    fn build_toggle_tab(
+        &mut self,
+        ui: &mut Ui,
+        display_text: impl Into<WidgetText>,
+        toggle_tab_value: &str,
+    ) {
         ui.centered_and_justified(|ui| {
-            ui.visuals_mut().widgets.hovered.expansion = 0.0;
-            ui.visuals_mut().widgets.hovered.bg_stroke = Stroke::none();
-            ui.visuals_mut().widgets.hovered.rounding = Rounding::same(2.0);
+            let response = ui.allocate_response(ui.available_size(), Sense::click());
 
-            ui.visuals_mut().widgets.inactive.expansion = 0.0;
-            ui.visuals_mut().widgets.inactive.bg_stroke = Stroke::none();
-            ui.visuals_mut().widgets.inactive.rounding = Rounding::same(2.0);
+            let visuals = if !response.has_focus()
+                && (self.state.current_page_name() == toggle_tab_value
+                    || response.is_pointer_button_down_on())
+            {
+                ui.visuals().widgets.inactive
+            } else if response.hovered() {
+                let mut visual = ui.visuals_mut().widgets.hovered;
+                visual.bg_fill = Color32::from_rgb(0xC9, 0xC9, 0xC9);
+                visual.fg_stroke = ui.visuals().widgets.noninteractive.fg_stroke;
+                visual
+            } else if response.clicked() || response.has_focus() {
+                ui.visuals().widgets.active
+            } else {
+                ui.visuals().widgets.noninteractive
+            };
 
-            ui.visuals_mut().widgets.active.expansion = 0.0;
-            ui.visuals_mut().widgets.active.bg_stroke = Stroke::none();
-            ui.visuals_mut().widgets.active.rounding = Rounding::same(2.0);
-
-            let toggle = ui.toggle_value(
-                &mut (self.state.current_page_name() == toggle_tab_value),
-                display_text,
+            ui.painter().rect(
+                response.rect,
+                visuals.rounding,
+                visuals.bg_fill,
+                visuals.bg_stroke,
             );
 
-            if toggle.clicked() {
+            let display_widget_text: WidgetText = display_text.into();
+            let text =
+                display_widget_text.into_galley(ui, None, response.rect.width(), TextStyle::Button);
+            let text_pos = ui
+                .layout()
+                .align_size_within_rect(text.size(), response.rect)
+                .min;
+
+            text.paint_with_visuals(ui.painter(), text_pos, &visuals);
+
+            if response.clicked() {
                 self.state_updater
                     .update_current_page_name(toggle_tab_value);
             }
@@ -275,13 +304,6 @@ impl HomeView {
                                                 bottom: 1.0,
                                             };
 
-                                            ui.visuals_mut().widgets.hovered.expansion = 0.0;
-                                            ui.visuals_mut().widgets.hovered.bg_stroke =
-                                                Stroke::none();
-                                            ui.visuals_mut().widgets.hovered.bg_fill =
-                                                Color32::from_rgb(0x19, 0x8C, 0xFF);
-                                            ui.visuals_mut().widgets.hovered.fg_stroke =
-                                                Stroke::new(1.0, Color32::WHITE);
                                             ui.visuals_mut().widgets.hovered.rounding = Rounding {
                                                 nw: 0.0,
                                                 ne: 0.0,
@@ -289,13 +311,6 @@ impl HomeView {
                                                 se: 0.0,
                                             };
 
-                                            ui.visuals_mut().widgets.inactive.expansion = 0.0;
-                                            ui.visuals_mut().widgets.inactive.bg_stroke =
-                                                Stroke::none();
-                                            ui.visuals_mut().widgets.inactive.bg_fill =
-                                                Color32::from_rgb(0x01, 0x6F, 0xFF);
-                                            ui.visuals_mut().widgets.inactive.fg_stroke =
-                                                Stroke::new(1.0, Color32::WHITE);
                                             ui.visuals_mut().widgets.inactive.rounding = Rounding {
                                                 nw: 0.0,
                                                 ne: 0.0,
@@ -303,13 +318,6 @@ impl HomeView {
                                                 se: 0.0,
                                             };
 
-                                            ui.visuals_mut().widgets.active.expansion = 0.0;
-                                            ui.visuals_mut().widgets.active.bg_stroke =
-                                                Stroke::none();
-                                            ui.visuals_mut().widgets.active.bg_fill =
-                                                Color32::from_rgb(0x00, 0x54, 0xE6);
-                                            ui.visuals_mut().widgets.active.fg_stroke =
-                                                Stroke::new(1.0, Color32::WHITE);
                                             ui.visuals_mut().widgets.active.rounding = Rounding {
                                                 nw: 0.0,
                                                 ne: 0.0,
@@ -443,13 +451,6 @@ impl HomeView {
                                         ui.centered_and_justified(|ui| {
                                             // ui.visuals_mut().button_frame = false;
 
-                                            ui.visuals_mut().widgets.hovered.expansion = 0.0;
-                                            ui.visuals_mut().widgets.hovered.bg_stroke =
-                                                Stroke::none();
-                                            ui.visuals_mut().widgets.hovered.bg_fill =
-                                                Color32::from_rgb(0x19, 0x8C, 0xFF);
-                                            ui.visuals_mut().widgets.hovered.fg_stroke =
-                                                Stroke::new(1.0, Color32::WHITE);
                                             ui.visuals_mut().widgets.hovered.rounding = Rounding {
                                                 nw: 0.0,
                                                 ne: 0.0,
@@ -457,13 +458,6 @@ impl HomeView {
                                                 se: 0.0,
                                             };
 
-                                            ui.visuals_mut().widgets.inactive.expansion = 0.0;
-                                            ui.visuals_mut().widgets.inactive.bg_stroke =
-                                                Stroke::none();
-                                            ui.visuals_mut().widgets.inactive.bg_fill =
-                                                Color32::from_rgb(0x01, 0x6F, 0xFF);
-                                            ui.visuals_mut().widgets.inactive.fg_stroke =
-                                                Stroke::new(1.0, Color32::WHITE);
                                             ui.visuals_mut().widgets.inactive.rounding = Rounding {
                                                 nw: 0.0,
                                                 ne: 0.0,
@@ -471,13 +465,6 @@ impl HomeView {
                                                 se: 0.0,
                                             };
 
-                                            ui.visuals_mut().widgets.active.expansion = 0.0;
-                                            ui.visuals_mut().widgets.active.bg_stroke =
-                                                Stroke::none();
-                                            ui.visuals_mut().widgets.active.bg_fill =
-                                                Color32::from_rgb(0x00, 0x54, 0xE6);
-                                            ui.visuals_mut().widgets.active.fg_stroke =
-                                                Stroke::new(1.0, Color32::WHITE);
                                             ui.visuals_mut().widgets.active.rounding = Rounding {
                                                 nw: 0.0,
                                                 ne: 0.0,
