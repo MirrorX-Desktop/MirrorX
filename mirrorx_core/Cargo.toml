@@ -27,11 +27,10 @@ dashmap = "5.4.0"
 crossbeam = "0.8.2"
 libc = "0.2.133"
 tracing = "0.1.36"
-tracing-subscriber = "0.3.15"
 scopeguard = "1.1.0"
 hmac = "0.12.1"
 sha2 = "0.10.6"
-rsa = "0.6.1"
+rsa = "0.7.0"
 ring = { version = "0.16.20", features = ["std"] }
 pbkdf2 = "0.11"
 thiserror = "1.0.35"
@@ -45,6 +44,9 @@ prost = "0.11.0"
 serde_json = "1.0.85"
 either = "1.8.0"
 signaling_proto = { git = "https://github.com/MirrorX-Desktop/signaling.git" }
+uuid = { version = "1.2.1", features = ["v4"] }
+fxhash = "0.2.1"
+egui = "0.19"
 
 [target.x86_64-apple-darwin.dependencies]
 objc = { version = "0.2.7" }
@@ -58,7 +60,7 @@ core-graphics = { version = "0.22.3", features = ["highsierra"] }
 
 [target.x86_64-pc-windows-msvc.dependencies]
 image = "0.24.2"
-windows = { version = "0.41.0", features = [
+windows = { version = "0.42.0", features = [
   "Win32_Foundation",
   "Win32_System_Threading",
   "Win32_Graphics_Dxgi",
@@ -81,11 +83,3 @@ windows = { version = "0.41.0", features = [
   "Win32_UI_Shell_PropertiesSystem",
   "Win32_Devices_FunctionDiscovery",
 ] }
-
-[profile.dev.package.num-bigint-dig]
-opt-level = 3
-
-[profile.release]
-lto = true
-incremental = true
-strip = true

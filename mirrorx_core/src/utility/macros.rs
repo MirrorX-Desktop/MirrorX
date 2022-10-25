@@ -2,7 +2,7 @@
 #[macro_export]
 macro_rules! HRESULT {
     ($exp:expr) => {
-        $exp.map_err(|err| CoreError::HResultError {
+        $exp.map_err(|err| $crate::error::CoreError::HResultError {
             error: err,
             file: file!().to_string(),
             line: line!().to_string(),
@@ -13,7 +13,7 @@ macro_rules! HRESULT {
 #[macro_export]
 macro_rules! core_error {
     ($($arg:tt)*) => {
-        CoreError::Other {
+        $crate::error::CoreError::Other {
             message: format!($($arg)*),
             file: file!().to_string(),
             line: line!().to_string(),

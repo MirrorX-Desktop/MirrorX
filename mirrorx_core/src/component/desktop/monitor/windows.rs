@@ -345,12 +345,3 @@ unsafe fn take_screen_shot(
 
     Ok(png_bytes)
 }
-
-#[test]
-fn test_active() {
-    tracing_subscriber::fmt::init();
-
-    let monitors = unsafe { enum_all_monitors_path_and_name().unwrap() };
-    let a = unsafe { enum_dxgi_outputs(monitors, false).unwrap() };
-    println!("{:?}", a)
-}

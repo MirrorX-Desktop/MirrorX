@@ -1,0 +1,11 @@
+[workspace]
+members = ["mirrorx", "mirrorx_core"]
+resolver = "2"
+
+[profile.dev.package.num-bigint-dig]
+opt-level = 3
+
+[profile.release]
+lto = true
+incremental = true
+strip = true

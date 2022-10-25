@@ -1,7 +1,7 @@
 use crate::{
     api::endpoint::message::EndPointAudioFrame,
     core_error,
-    error::{CoreError, CoreResult},
+    error::CoreResult,
     ffi::opus::decoder::{
         opus_decode_float, opus_decoder_create, opus_decoder_destroy, OpusDecoder,
     },
@@ -37,7 +37,7 @@ impl AudioPlayer {
     }
 
     pub fn play_samples(&mut self, audio_frame: EndPointAudioFrame) -> CoreResult<()> {
-        if let Some((sample_rate, sample_format, channels, frame_size)) = audio_frame.params {
+        if let Some((sample_rate, _, channels, frame_size)) = audio_frame.params {
             tracing::info!(
                 "sample_rate: {}, channels: {}, frame_size:{}",
                 sample_rate,
@@ -182,7 +182,7 @@ impl PlaybackContext {
         let (callback_exit_tx, callback_exit_rx) = tokio::sync::mpsc::channel(1);
         let err_callback_exit_tx = callback_exit_tx.clone();
 
-        let input_callback = move |data: &mut [f32], info: &OutputCallbackInfo| {
+        let input_callback = move |data: &mut [f32], _: &OutputCallbackInfo| {
             if let Ok(samples) = audio_sample_rx.try_recv() {
                 unsafe {
                     std::ptr::copy_nonoverlapping(
@@ -241,7 +241,7 @@ impl PlaybackContext {
         })
     }
 
-    pub fn enqueue_samples(&mut self, mut buffer: &[f32]) -> bool {
+    pub fn enqueue_samples(&mut self, buffer: &[f32]) -> bool {
         match self.callback_exit_rx.try_recv() {
             Ok(_) => return false,
             Err(err) => {

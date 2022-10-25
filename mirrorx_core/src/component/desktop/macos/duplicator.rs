@@ -1,7 +1,7 @@
 use crate::{
     component::{desktop::monitor::NSScreen, frame::DesktopEncodeFrame},
     core_error,
-    error::{CoreError, CoreResult},
+    error::CoreResult,
     ffi::os::macos::{core_graphics::*, core_video::*, io_surface::*},
 };
 use block::ConcreteBlock;

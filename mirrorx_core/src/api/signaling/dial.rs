@@ -1,8 +1,4 @@
-use super::SignalingClientManager;
-use crate::{
-    core_error,
-    error::{CoreError, CoreResult},
-};
+use crate::{core_error, error::CoreResult};
 use signaling_proto::service::signaling_client::SignalingClient;
 use std::{convert::TryFrom, time::Duration};
 use tonic::{
@@ -10,16 +6,8 @@ use tonic::{
     transport::{Channel, Uri},
 };
 
-pub struct DialRequest {
-    pub uri: String,
-}
-
-pub async fn dial(req: DialRequest) -> CoreResult<()> {
-    let uri = Uri::try_from(req.uri).map_err(|_| core_error!("invalid uri format"))?;
-    let domain = uri
-        .host()
-        .ok_or_else(|| core_error!("invalid uri format"))?
-        .to_string();
+pub async fn dial(uri: &str) -> CoreResult<SignalingClient<Channel>> {
+    let uri = Uri::try_from(uri).map_err(|_| core_error!("invalid uri format"))?;
 
     let channel = Channel::builder(uri)
         .tcp_nodelay(true)
@@ -35,16 +23,5 @@ pub async fn dial(req: DialRequest) -> CoreResult<()> {
         .accept_compressed(CompressionEncoding::Gzip)
         .send_compressed(CompressionEncoding::Gzip);
 
-    SignalingClientManager::set_client(Some(client)).await;
-
-    Ok(())
-}
-
-#[tokio::test]
-async fn test_dial() {
-    dial(DialRequest {
-        uri: String::from("mirrorx.cloud"),
-    })
-    .await
-    .unwrap();
+    Ok(client)
 }

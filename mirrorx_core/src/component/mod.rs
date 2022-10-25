@@ -6,5 +6,3 @@ pub mod frame;
 pub mod input;
 pub mod video_decoder;
 pub mod video_encoder;
-
-pub const NALU_HEADER_LENGTH: usize = 4;

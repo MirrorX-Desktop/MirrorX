@@ -1,8 +1,8 @@
 use crate::{
-    api::endpoint::message::{AudioSampleFormat, EndPointAudioFrame, EndPointMessage},
+    api::endpoint::{message::AudioSampleFormat, EndPointClient},
     component::frame::AudioEncodeFrame,
     core_error,
-    error::{CoreError, CoreResult},
+    error::CoreResult,
     ffi::opus::encoder::{
         opus_encode_float, opus_encoder_create, opus_encoder_destroy, OpusEncoder,
         OPUS_APPLICATION_RESTRICTED_LOWDELAY,
@@ -11,23 +11,22 @@ use crate::{
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::InputCallbackInfo;
 use once_cell::sync::OnceCell;
-use std::time::Duration;
-use tokio::sync::mpsc::{error::TrySendError, Receiver, Sender};
+use tokio::sync::mpsc::{error::TrySendError, Receiver};
 
 pub struct AudioDuplicator {
     encode_context: Option<EncodeContext>,
     duplicate_context: Option<DuplicateContext>,
-    tx: Sender<Option<EndPointMessage>>,
+    client: EndPointClient,
 }
 
 unsafe impl Send for AudioDuplicator {}
 
 impl AudioDuplicator {
-    pub fn new(tx: Sender<Option<EndPointMessage>>) -> CoreResult<Self> {
+    pub fn new(client: EndPointClient) -> CoreResult<Self> {
         Ok(AudioDuplicator {
             encode_context: None,
             duplicate_context: None,
-            tx,
+            client,
         })
     }
 
@@ -76,24 +75,7 @@ impl AudioDuplicator {
             let params = encode_context.initial_params.take();
             let buffer = encode_context.encode(&audio_encode_frame.buffer)?;
 
-            let packet = EndPointMessage::AudioFrame(EndPointAudioFrame {
-                params,
-                buffer: buffer.to_vec(),
-            });
-
-            if let Err(err) = self
-                .tx
-                .send_timeout(Some(packet), Duration::from_millis(80))
-                .await
-            {
-                // if let TrySendError::Full(_) = err {
-                //     tracing::warn!(
-                //         "audio duplicator send EndPointMessage failed, channel is full!"
-                //     );
-                // } else {
-                return Err(core_error!("audio duplicator send EndPointMessage timeout"));
-                // }
-            };
+            self.client.send_audio_frame(params, buffer)?;
 
             Ok(())
         } else {
@@ -212,7 +194,7 @@ impl DuplicateContext {
         let (audio_encode_frame_tx, audio_encode_frame_rx) = tokio::sync::mpsc::channel(64);
         let err_callback_tx = audio_encode_frame_tx.clone();
 
-        let input_callback = move |data: &[f32], info: &InputCallbackInfo| {
+        let input_callback = move |data: &[f32], _: &InputCallbackInfo| {
             let audio_encode_frame = AudioEncodeFrame {
                 initial_encoder_params: initial_encoder_params.take(),
                 buffer: data.to_vec(),

@@ -1,9 +1,5 @@
 use super::Monitor;
-use crate::{
-    core_error,
-    error::{CoreError, CoreResult},
-    ffi::os::macos::core_graphics::*,
-};
+use crate::{core_error, error::CoreResult, ffi::os::macos::core_graphics::*};
 use core_graphics::display::{CGDirectDisplayID, CGRect, *};
 use objc::{class, msg_send, runtime::Class, sel, sel_impl};
 use objc_foundation::{

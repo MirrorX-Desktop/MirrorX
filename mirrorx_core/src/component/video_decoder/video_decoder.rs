@@ -1,9 +1,15 @@
 use crate::{
+    api::endpoint::message::EndPointVideoFrame,
+    component::frame::DesktopDecodeFrame,
     core_error,
-    error::{CoreError, CoreResult},
-    ffi::ffmpeg::{avcodec::*, avutil::*},
+    error::CoreResult,
+    ffi::{
+        ffmpeg::{avcodec::*, avutil::*},
+        libyuv::{kYvuF709Constants, NV21ToARGBMatrix},
+    },
 };
 use bytes::BufMut;
+use egui::Color32;
 use std::{
     ffi::{CStr, CString},
     time::{Duration, Instant},
@@ -12,35 +18,27 @@ use tokio::sync::mpsc::{error::TrySendError, Sender};
 
 pub struct VideoDecoder {
     decode_context: Option<DecodeContext>,
-    texture_id: i64,
-    render_frame_tx: Sender<(Duration, Instant, Vec<u8>)>,
+    render_frame_tx: Sender<DesktopDecodeFrame>,
     last_pts: i64,
 }
 
 unsafe impl Send for VideoDecoder {}
 
 impl VideoDecoder {
-    pub fn new(
-        texture_id: i64,
-        render_frame_tx: Sender<(Duration, Instant, Vec<u8>)>,
-    ) -> VideoDecoder {
+    pub fn new(render_frame_tx: Sender<DesktopDecodeFrame>) -> VideoDecoder {
         unsafe {
             // av_log_set_level(AV_LOG_TRACE);
             // av_log_set_flags(AV_LOG_SKIP_REPEATED);
+        }
 
-            VideoDecoder {
-                decode_context: None,
-                texture_id,
-                render_frame_tx,
-                last_pts: 0,
-            }
+        VideoDecoder {
+            decode_context: None,
+            render_frame_tx,
+            last_pts: 0,
         }
     }
 
-    pub async fn decode(
-        &mut self,
-        mut video_frame: crate::api::endpoint::message::EndPointVideoFrame,
-    ) -> CoreResult<()> {
+    pub async fn decode(&mut self, mut video_frame: EndPointVideoFrame) -> CoreResult<()> {
         unsafe {
             if let Some(decode_context) = self.decode_context.as_ref() {
                 if (*decode_context.codec_ctx).width != video_frame.width
@@ -112,22 +110,22 @@ impl VideoDecoder {
                     ));
                 }
 
-                let begin = std::time::Instant::now();
+                // let begin = std::time::Instant::now();
 
-                let expect_time_base = av_inv_q((*decode_context.codec_ctx).framerate);
+                // let expect_time_base = av_inv_q((*decode_context.codec_ctx).framerate);
 
-                let actual_pts = av_rescale_q(
-                    (*decode_context.decode_frame).pts,
-                    expect_time_base,
-                    (*decode_context.codec_ctx).time_base,
-                );
+                // let actual_pts = av_rescale_q(
+                //     (*decode_context.decode_frame).pts,
+                //     expect_time_base,
+                //     (*decode_context.codec_ctx).time_base,
+                // );
 
-                let duration_from_pts = actual_pts - self.last_pts;
-                self.last_pts = actual_pts;
+                // let duration_from_pts = actual_pts - self.last_pts;
+                // self.last_pts = actual_pts;
 
-                let mut frame_duration = std::time::Duration::from_secs_f64(
-                    (duration_from_pts as f64) * av_q2d((*decode_context.codec_ctx).time_base),
-                );
+                // let frame_duration = std::time::Duration::from_secs_f64(
+                //     (duration_from_pts as f64) * av_q2d((*decode_context.codec_ctx).time_base),
+                // );
 
                 let tmp_frame = if !(decode_context).parser_ctx.is_null() {
                     (decode_context).decode_frame
@@ -153,52 +151,15 @@ impl VideoDecoder {
                     (decode_context).hw_decode_frame
                 };
 
-                // 8: id
-                // 4: width
-                // 4: height
-                // 4: lumina stride
-                // 4: chroma stride
-                // 4: lumina body length
-                // n: lumina body
-                // 4: chroma body length
-                // n: chroma body
+                let rgb_buffer = convert_yuv_to_rgb(tmp_frame)?;
 
-                let width = (*tmp_frame).width;
-                let height = (*tmp_frame).height;
-                let luminance_stride = (*tmp_frame).linesize[0];
-                let chrominance_stride = (*tmp_frame).linesize[1];
-                let luminance_bytes_length = height * luminance_stride;
-                let chrominance_bytes_length = height * chrominance_stride / 2;
-                let luminance_bytes = std::slice::from_raw_parts(
-                    (*tmp_frame).data[0],
-                    luminance_bytes_length as usize,
-                );
-                let chrominance_bytes = std::slice::from_raw_parts(
-                    (*tmp_frame).data[1],
-                    chrominance_bytes_length as usize,
-                );
+                let desktop_decode_frame = DesktopDecodeFrame {
+                    width: (*tmp_frame).width as usize,
+                    height: (*tmp_frame).height as usize,
+                    data: rgb_buffer,
+                };
 
-                let mut video_frame_buffer = Vec::<u8>::with_capacity(
-                    24 + 4
-                        + (luminance_bytes_length as usize)
-                        + 4
-                        + (chrominance_bytes_length as usize),
-                );
-
-                video_frame_buffer.put_i64_le(self.texture_id);
-                video_frame_buffer.put_i32_le(width);
-                video_frame_buffer.put_i32_le(height);
-                video_frame_buffer.put_i32_le(luminance_stride);
-                video_frame_buffer.put_i32_le(chrominance_stride);
-                video_frame_buffer.put_i32_le(luminance_bytes_length);
-                video_frame_buffer.put_slice(luminance_bytes);
-                video_frame_buffer.put_i32_le(chrominance_bytes_length);
-                video_frame_buffer.put_slice(chrominance_bytes);
-
-                if let Err(err) =
-                    self.render_frame_tx
-                        .try_send((frame_duration, begin, video_frame_buffer))
-                {
+                if let Err(err) = self.render_frame_tx.try_send(desktop_decode_frame) {
                     match err {
                         TrySendError::Full(_) => tracing::warn!("video render tx is full!"),
                         TrySendError::Closed(_) => {
@@ -381,46 +342,28 @@ impl Drop for DecodeContext {
     }
 }
 
-// unsafe fn convert_yuv_to_rgb(frame: *mut AVFrame) -> CoreResult<Vec<u8>> {
-//     let argb_stride = 4 * ((32 * (*frame).width + 31) / 32);
-//     let argb_frame_size = (argb_stride as usize) * ((*frame).height as usize) * 4;
-//     let mut argb_frame_buffer = Vec::<u8>::with_capacity(argb_frame_size);
+unsafe fn convert_yuv_to_rgb(frame: *mut AVFrame) -> CoreResult<Vec<Color32>> {
+    let argb_stride = 4 * ((32 * (*frame).width + 31) / 32);
+    let argb_frame_size = (argb_stride as usize) * ((*frame).height as usize);
+    let mut color32_buffer = Vec::<Color32>::with_capacity(argb_frame_size / 4);
 
-//     let ret = NV21ToARGBMatrix(
-//         (*frame).data[0],
-//         (*frame).linesize[0] as isize,
-//         (*frame).data[1],
-//         (*frame).linesize[1] as isize,
-//         argb_frame_buffer.as_mut_ptr(),
-//         argb_stride as isize,
-//         &kYvuF709Constants,
-//         (*frame).width as isize,
-//         (*frame).height as isize,
-//     );
+    let ret = NV21ToARGBMatrix(
+        (*frame).data[0],
+        (*frame).linesize[0] as isize,
+        (*frame).data[1],
+        (*frame).linesize[1] as isize,
+        color32_buffer.as_mut_ptr() as *mut u8,
+        argb_stride as isize,
+        &kYvuF709Constants,
+        (*frame).width as isize,
+        (*frame).height as isize,
+    );
 
-//     if ret != 0 {
-//         return Err(core_error!("NV21ToARGBMatrix returns error code: {}", ret));
-//     }
-
-//     argb_frame_buffer.set_len(argb_frame_size);
-
-//     Ok(argb_frame_buffer)
-// }
-
-#[test]
-fn test_dict() -> CoreResult<()> {
-    unsafe {
-        let vsync_key = CString::new("vsync")?.as_ptr();
-        let vsync_value = CString::new("0")?.as_ptr();
-
-        let mut options = std::ptr::null_mut();
-        let ret = av_dict_set(&mut options, vsync_key, vsync_value, 0);
-        if ret < 0 {
-            return Err(core_error!(
-                "av_dict_set vsync:0 returns error code: {}",
-                ret
-            ));
-        }
-        Ok(())
+    if ret != 0 {
+        return Err(core_error!("NV21ToARGBMatrix returns error code: {}", ret));
     }
+
+    color32_buffer.set_len(argb_frame_size / 4);
+
+    Ok(color32_buffer)
 }
