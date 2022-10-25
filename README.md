@@ -3,7 +3,7 @@
 </h1>
 
 <p align="center">
-Secure and Fast remote desktop / file manager
+Secure, Fast and Light remote desktop / file manager
 </p>
 
 <p align="center">
