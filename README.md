@@ -1,4 +1,4 @@
-![screenshoot](screenshot.png)
+![screenshoot](https://raw.githubusercontent.com/MirrorX-Desktop/MirrorX/master/screenshot.png =300x)
 
 # MirrorX
 
