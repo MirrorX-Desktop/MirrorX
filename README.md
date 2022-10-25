@@ -13,7 +13,7 @@ Secure and Fast remote desktop / file manager
 </p>
   
 <p align="center">
-<img src="https://raw.githubusercontent.com/MirrorX-Desktop/MirrorX/master/screenshot.png" width="40%" height="40%">
+<img src="https://raw.githubusercontent.com/MirrorX-Desktop/MirrorX/master/screenshot.png" width="50%" height="50%">
 </p>
 
 
