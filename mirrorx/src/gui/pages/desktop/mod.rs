@@ -59,7 +59,7 @@ impl DesktopView {
 
                     ui.allocate_ui_at_rect(rect, |ui| {
                         ui.spinner();
-                        ui.label("Connecting EndPoint Server...");
+                        ui.label(t!("desktop.label.connecting"));
                     });
 
                     response
@@ -74,7 +74,7 @@ impl DesktopView {
 
                     ui.allocate_ui_at_rect(rect, |ui| {
                         ui.spinner();
-                        ui.label("Connecting EndPoint Server...");
+                        ui.label(t!("desktop.label.negotiating"));
                     });
 
                     response
@@ -133,7 +133,7 @@ impl DesktopView {
 
                 ui.allocate_ui_at_rect(rect, |ui| {
                     ui.spinner();
-                    ui.label("Are you ready? Preparing into ...");
+                    ui.label(t!("desktop.label.preparing"));
                 });
             });
         }

@@ -1,3 +1,5 @@
+use crate::utility::format_device_id;
+
 use super::state::State;
 use super::state::StateUpdater;
 use super::widgets::device_id_input_field::DeviceIDInputField;
@@ -24,10 +26,9 @@ impl<'a> ConnectPage<'a> {
         if let Some(config) = self.state.config() {
             if let Some(domain_config) = config.domain_configs.get(&config.primary_domain) {
                 if domain_config.device_id != 0 {
-                    let mut device_id_str = format!("{:0>10}", domain_config.device_id);
-                    device_id_str.insert(2, '-');
-                    device_id_str.insert(7, '-');
-                    ui.label(RichText::new(device_id_str).font(FontId::proportional(50.0)));
+                    // todo: add format device id to state
+                    let device_id = format_device_id(domain_config.device_id);
+                    ui.label(RichText::new(device_id).font(FontId::proportional(50.0)));
                 } else {
                     ui.spinner();
                 }
@@ -246,7 +247,7 @@ impl<'a> ConnectPage<'a> {
                 //     angle: 0.0,
                 // });
 
-                ui.button("桌面")
+                ui.button(t!("home.connect.button.connect_desktop"))
             }
         });
 
@@ -330,7 +331,10 @@ impl<'a> ConnectPage<'a> {
             se: 2.0,
         };
 
-        if Button::new("File Manager").ui(ui).clicked() {}
+        if Button::new(t!("home.connect.button.connect_file_manager"))
+            .ui(ui)
+            .clicked()
+        {}
     }
 }
 
@@ -367,7 +371,10 @@ impl ConnectPage<'_> {
                     );
 
                     ui.centered_and_justified(|ui| {
-                        ui.label(RichText::new("Connect Remote").font(FontId::proportional(28.0)));
+                        ui.label(
+                            RichText::new(t!("home.connect.label.connect_remote"))
+                                .font(FontId::proportional(28.0)),
+                        );
                     });
                 });
 
@@ -418,8 +425,6 @@ impl ConnectPage<'_> {
 
 #[inline]
 fn make_password_editing_toolbar_regenerate_button(ui: &mut Ui) -> Response {
-    ui.visuals_mut().widgets.hovered.expansion = 0.0;
-    ui.visuals_mut().widgets.hovered.bg_stroke = Stroke::none();
     ui.visuals_mut().widgets.hovered.rounding = Rounding {
         nw: 2.0,
         ne: 0.0,
@@ -427,8 +432,6 @@ fn make_password_editing_toolbar_regenerate_button(ui: &mut Ui) -> Response {
         se: 0.0,
     };
 
-    ui.visuals_mut().widgets.inactive.expansion = 0.0;
-    ui.visuals_mut().widgets.inactive.bg_stroke = Stroke::none();
     ui.visuals_mut().widgets.inactive.rounding = Rounding {
         nw: 2.0,
         ne: 0.0,
@@ -436,8 +439,6 @@ fn make_password_editing_toolbar_regenerate_button(ui: &mut Ui) -> Response {
         se: 0.0,
     };
 
-    ui.visuals_mut().widgets.active.expansion = 0.0;
-    ui.visuals_mut().widgets.active.bg_stroke = Stroke::none();
     ui.visuals_mut().widgets.active.rounding = Rounding {
         nw: 2.0,
         ne: 0.0,
@@ -446,29 +447,17 @@ fn make_password_editing_toolbar_regenerate_button(ui: &mut Ui) -> Response {
     };
 
     ui.button(RichText::new("🔄").font(FontId::proportional(18.0)))
+        .on_hover_text(t!("home.connect.tooltip.random_password"))
 }
 
 #[inline]
 fn make_password_editing_toolbar_commit_button(ui: &mut Ui) -> Response {
-    ui.visuals_mut().widgets.hovered.expansion = 0.0;
-    ui.visuals_mut().widgets.hovered.bg_stroke = Stroke::none();
-    ui.visuals_mut().widgets.hovered.rounding = Rounding::none();
-
-    ui.visuals_mut().widgets.inactive.expansion = 0.0;
-    ui.visuals_mut().widgets.inactive.bg_stroke = Stroke::none();
-    ui.visuals_mut().widgets.inactive.rounding = Rounding::none();
-
-    ui.visuals_mut().widgets.active.expansion = 0.0;
-    ui.visuals_mut().widgets.active.bg_stroke = Stroke::none();
-    ui.visuals_mut().widgets.active.rounding = Rounding::none();
-
     ui.button(RichText::new("✔").font(FontId::proportional(18.0)))
+        .on_hover_text(t!("home.connect.tooltip.edit_password_commit"))
 }
 
 #[inline]
 fn make_password_editing_toolbar_cancel_button(ui: &mut Ui) -> Response {
-    ui.visuals_mut().widgets.hovered.expansion = 0.0;
-    ui.visuals_mut().widgets.hovered.bg_stroke = Stroke::none();
     ui.visuals_mut().widgets.hovered.rounding = Rounding {
         nw: 0.0,
         ne: 2.0,
@@ -476,8 +465,6 @@ fn make_password_editing_toolbar_cancel_button(ui: &mut Ui) -> Response {
         se: 2.0,
     };
 
-    ui.visuals_mut().widgets.inactive.expansion = 0.0;
-    ui.visuals_mut().widgets.inactive.bg_stroke = Stroke::none();
     ui.visuals_mut().widgets.inactive.rounding = Rounding {
         nw: 0.0,
         ne: 2.0,
@@ -485,8 +472,6 @@ fn make_password_editing_toolbar_cancel_button(ui: &mut Ui) -> Response {
         se: 2.0,
     };
 
-    ui.visuals_mut().widgets.active.expansion = 0.0;
-    ui.visuals_mut().widgets.active.bg_stroke = Stroke::none();
     ui.visuals_mut().widgets.active.rounding = Rounding {
         nw: 0.0,
         ne: 2.0,
@@ -495,12 +480,11 @@ fn make_password_editing_toolbar_cancel_button(ui: &mut Ui) -> Response {
     };
 
     ui.button(RichText::new("❌").font(FontId::proportional(18.0)))
+        .on_hover_text(t!("home.connect.tooltip.edit_password_cancel"))
 }
 
 #[inline]
 fn make_password_toolbar_edit_button(ui: &mut Ui) -> Response {
-    ui.visuals_mut().widgets.hovered.expansion = 0.0;
-    ui.visuals_mut().widgets.hovered.bg_stroke = Stroke::none();
     ui.visuals_mut().widgets.hovered.rounding = Rounding {
         nw: 2.0,
         ne: 0.0,
@@ -508,8 +492,6 @@ fn make_password_toolbar_edit_button(ui: &mut Ui) -> Response {
         se: 0.0,
     };
 
-    ui.visuals_mut().widgets.inactive.expansion = 0.0;
-    ui.visuals_mut().widgets.inactive.bg_stroke = Stroke::none();
     ui.visuals_mut().widgets.inactive.rounding = Rounding {
         nw: 2.0,
         ne: 0.0,
@@ -517,8 +499,6 @@ fn make_password_toolbar_edit_button(ui: &mut Ui) -> Response {
         se: 0.0,
     };
 
-    ui.visuals_mut().widgets.active.expansion = 0.0;
-    ui.visuals_mut().widgets.active.bg_stroke = Stroke::none();
     ui.visuals_mut().widgets.active.rounding = Rounding {
         nw: 2.0,
         ne: 0.0,
@@ -527,12 +507,11 @@ fn make_password_toolbar_edit_button(ui: &mut Ui) -> Response {
     };
 
     ui.button(RichText::new("✏").font(FontId::proportional(18.0)))
+        .on_hover_text(t!("home.connect.tooltip.edit_password"))
 }
 
 #[inline]
 fn make_password_toolbar_visible_button(ui: &mut Ui) -> Response {
-    ui.visuals_mut().widgets.hovered.expansion = 0.0;
-    ui.visuals_mut().widgets.hovered.bg_stroke = Stroke::none();
     ui.visuals_mut().widgets.hovered.rounding = Rounding {
         nw: 0.0,
         ne: 2.0,
@@ -540,8 +519,6 @@ fn make_password_toolbar_visible_button(ui: &mut Ui) -> Response {
         se: 2.0,
     };
 
-    ui.visuals_mut().widgets.inactive.expansion = 0.0;
-    ui.visuals_mut().widgets.inactive.bg_stroke = Stroke::none();
     ui.visuals_mut().widgets.inactive.rounding = Rounding {
         nw: 0.0,
         ne: 2.0,
@@ -549,8 +526,6 @@ fn make_password_toolbar_visible_button(ui: &mut Ui) -> Response {
         se: 2.0,
     };
 
-    ui.visuals_mut().widgets.active.expansion = 0.0;
-    ui.visuals_mut().widgets.active.bg_stroke = Stroke::none();
     ui.visuals_mut().widgets.active.rounding = Rounding {
         nw: 0.0,
         ne: 2.0,
@@ -559,4 +534,5 @@ fn make_password_toolbar_visible_button(ui: &mut Ui) -> Response {
     };
 
     ui.button(RichText::new("👁").font(FontId::proportional(18.0)))
+        .on_hover_text(t!("home.connect.tooltip.show_password"))
 }

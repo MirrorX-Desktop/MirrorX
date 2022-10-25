@@ -1,7 +1,7 @@
 mod event;
 mod updater;
 
-use crate::{gui::CustomEvent, send_event};
+use crate::{gui::CustomEvent, send_event, utility::format_device_id};
 use egui::{epaint::TextureManager, Color32, ColorImage, TextureHandle};
 use event::Event;
 use mirrorx_core::{
@@ -71,13 +71,8 @@ impl State {
             }
         );
 
-        let mut format_local_device_id = format!("{:0>10}", local_device_id);
-        format_local_device_id.insert(2, '-');
-        format_local_device_id.insert(7, '-');
-
-        let mut format_remote_device_id = format!("{:0>10}", remote_device_id);
-        format_remote_device_id.insert(2, '-');
-        format_remote_device_id.insert(7, '-');
+        let mut format_local_device_id = format_device_id(local_device_id);
+        let mut format_remote_device_id = format_device_id(remote_device_id);
 
         Self {
             tx,

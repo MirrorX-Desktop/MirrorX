@@ -1,0 +1,36 @@
+en:
+  home:
+    domain: Domain
+    dialog:
+      visit_request:
+        content: "%{remote_device_id}\nwants to visit your '%{resource_type}'"
+        allow: Allow
+        reject: Reject
+        resource_type_desktop: Desktop
+        resource_type_file_manager: File Manager
+      visit_password:
+        content: "Please input %{remote_device_id} remote access password"
+        ok: OK
+        cancel: Cancel
+    connect: 
+      title: Connect
+      label:
+        connect_remote: Connect Remote
+      button:
+        connect_desktop: Desktop
+        connect_file_manager: File Manager
+      tooltip:
+        edit_password: Edit Password
+        show_password: Show Password
+        random_password: Generate Random Password
+        edit_password_commit: Confirm
+        edit_password_cancel: Cancel
+    lan: 
+      title: LAN Discovery
+    history: 
+      title: History
+  desktop:
+    label:
+      connecting: Connecting to EndPoint Server...
+      negotiating: Negotiating with remote device...
+      preparing: Are you ready? Preparing enter desktop...

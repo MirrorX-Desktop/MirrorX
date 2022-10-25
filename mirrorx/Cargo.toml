@@ -27,7 +27,9 @@ raw-window-handle = "0.5.0"
 fxhash = "0.2.1"
 ring = { version = "0.16.20", features = ["std"] }
 crossbeam = "0.8.2"
-
+rust-i18n = "0.6.1"
+sys-locale = "0.2.1"
+language-tags = "0.3.2"
 # [patch.crates-io]
 
 # eframe = { git = "https://github.com/emilk/egui", branch = "master" }

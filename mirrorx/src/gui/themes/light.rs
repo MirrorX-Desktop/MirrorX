@@ -54,6 +54,7 @@ pub static THEME: Lazy<egui::Style> = Lazy::new(|| egui::Style {
             bg_fill: PRIMARY_COLOR_LIGHTER,
             stroke: Stroke::new(1.0, TEXT_COLOR),
         },
+        extreme_bg_color: BACKGROUND_COLOR,
         ..Default::default()
     },
     ..Default::default()

@@ -5,9 +5,12 @@ mod state;
 mod widgets;
 
 use super::View;
-use crate::gui::{
-    widgets::{custom_toasts::CustomToasts, dialog::Dialog},
-    CustomEvent,
+use crate::{
+    gui::{
+        widgets::{custom_toasts::CustomToasts, dialog::Dialog},
+        CustomEvent,
+    },
+    utility::format_device_id,
 };
 use connect::ConnectPage;
 use egui::{
@@ -137,7 +140,9 @@ impl HomeView {
                 strip.cell(|ui| {
                     ui.centered_and_justified(|ui| {
                         let label_rect = ui
-                            .label(RichText::new("Domain").font(FontId::proportional(28.0)))
+                            .label(
+                                RichText::new(t!("home.domain")).font(FontId::proportional(28.0)),
+                            )
                             .rect;
 
                         let button_pos = Pos2::new(
@@ -172,14 +177,16 @@ impl HomeView {
                         .sizes(Size::relative(1.0 / 3.0), 3)
                         .horizontal(|mut strip| {
                             strip.cell(|ui| {
-                                self.build_toggle_tab(ui, "Connect", "Connect");
+                                self.build_toggle_tab(ui, t!("home.connect.title"), "Connect");
                             });
 
                             strip.cell(|ui| {
-                                self.build_toggle_tab(ui, "LAN", "LAN");
+                                self.build_toggle_tab(ui, t!("home.lan.title"), "LAN");
                             });
 
-                            strip.cell(|ui| self.build_toggle_tab(ui, "History", "History"));
+                            strip.cell(|ui| {
+                                self.build_toggle_tab(ui, t!("home.history.title"), "History")
+                            });
                         });
                 });
                 // Tab view
@@ -271,23 +278,22 @@ impl HomeView {
                     .vertical(|mut strip| {
                         strip.cell(|ui| {
                             ui.centered_and_justified(|ui| {
-                                let mut device_id_str = format!("{:0>10}", active_device_id);
-                                device_id_str.insert(2, '-');
-                                device_id_str.insert(7, '-');
+                                let device_id_str = format_device_id(*active_device_id);
 
-                                Label::new(
-                                    RichText::new(format!(
-                                        "{}\nwant to visit your {}",
-                                        device_id_str,
-                                        if let ResourceType::Desktop = resource_type {
-                                            "desktop"
-                                        } else {
-                                            "files"
-                                        }
-                                    ))
-                                    .font(FontId::proportional(20.0)),
-                                )
-                                .ui(ui);
+                                let resource_type = if let ResourceType::Desktop = resource_type {
+                                    t!("home.dialog.visit_request.resource_type_desktop")
+                                } else {
+                                    t!("home.dialog.visit_request.resource_type_file_manager")
+                                };
+
+                                let content = t!(
+                                    "home.dialog.visit_request.content",
+                                    remote_device_id = &device_id_str,
+                                    resource_type = &resource_type
+                                );
+
+                                Label::new(RichText::new(content).font(FontId::proportional(20.0)))
+                                    .ui(ui);
                             });
                         });
 
@@ -325,7 +331,10 @@ impl HomeView {
                                                 se: 0.0,
                                             };
 
-                                            if ui.button("Allow").clicked() {
+                                            if ui
+                                                .button(t!("home.dialog.visit_request.allow"))
+                                                .clicked()
+                                            {
                                                 self.state_updater.emit_signaling_visit_reply(
                                                     true,
                                                     *active_device_id,
@@ -345,9 +354,6 @@ impl HomeView {
                                                 bottom: 1.0,
                                             };
 
-                                            ui.visuals_mut().widgets.hovered.expansion = 0.0;
-                                            ui.visuals_mut().widgets.hovered.bg_stroke =
-                                                Stroke::none();
                                             ui.visuals_mut().widgets.hovered.rounding = Rounding {
                                                 nw: 0.0,
                                                 ne: 0.0,
@@ -355,9 +361,6 @@ impl HomeView {
                                                 se: 2.0,
                                             };
 
-                                            ui.visuals_mut().widgets.inactive.expansion = 0.0;
-                                            ui.visuals_mut().widgets.inactive.bg_stroke =
-                                                Stroke::none();
                                             ui.visuals_mut().widgets.inactive.rounding = Rounding {
                                                 nw: 0.0,
                                                 ne: 0.0,
@@ -365,9 +368,6 @@ impl HomeView {
                                                 se: 2.0,
                                             };
 
-                                            ui.visuals_mut().widgets.active.expansion = 0.0;
-                                            ui.visuals_mut().widgets.active.bg_stroke =
-                                                Stroke::none();
                                             ui.visuals_mut().widgets.active.rounding = Rounding {
                                                 nw: 0.0,
                                                 ne: 0.0,
@@ -375,7 +375,10 @@ impl HomeView {
                                                 se: 2.0,
                                             };
 
-                                            if ui.button("Reject").clicked() {
+                                            if ui
+                                                .button(t!("home.dialog.visit_request.reject"))
+                                                .clicked()
+                                            {
                                                 self.state_updater.emit_signaling_visit_reply(
                                                     false,
                                                     *active_device_id,
@@ -408,16 +411,17 @@ impl HomeView {
                                 strip.cell(|ui| {
                                     ui.centered_and_justified(|ui| {
                                         ui.label(
-                                            RichText::new("Please input remote device password")
-                                                .font(FontId::proportional(18.0)),
+                                            RichText::new(t!(
+                                                "home.dialog.visit_password.content",
+                                                remote_device_id =
+                                                    format_device_id(passive_device_id).as_str()
+                                            ))
+                                            .font(FontId::proportional(18.0)),
                                         );
                                     });
                                 });
                                 strip.cell(|ui| {
                                     ui.centered_and_justified(|ui| {
-                                        ui.visuals_mut().widgets.inactive =
-                                            ui.visuals_mut().widgets.active;
-
                                         let mut snapshot_password =
                                             self.state.dialog_input_visit_password().to_string();
 
@@ -426,7 +430,7 @@ impl HomeView {
                                             |ui| {
                                                 if TextEdit::singleline(&mut snapshot_password)
                                                     .font(FontId::proportional(22.0))
-                                                    .password(true)
+                                                    .text_color(ui.visuals().text_color())
                                                     .show(ui)
                                                     .response
                                                     .changed()
@@ -472,7 +476,10 @@ impl HomeView {
                                                 se: 0.0,
                                             };
 
-                                            if ui.button("Ok").clicked() {
+                                            if ui
+                                                .button(t!("home.dialog.visit_password.ok"))
+                                                .clicked()
+                                            {
                                                 self.state_updater.emit_signaling_key_exchange(
                                                     active_device_id,
                                                     passive_device_id,
@@ -482,9 +489,6 @@ impl HomeView {
                                     });
                                     strip.cell(|ui| {
                                         ui.centered_and_justified(|ui| {
-                                            ui.visuals_mut().widgets.hovered.expansion = 0.0;
-                                            ui.visuals_mut().widgets.hovered.bg_stroke =
-                                                Stroke::none();
                                             ui.visuals_mut().widgets.hovered.rounding = Rounding {
                                                 nw: 0.0,
                                                 ne: 0.0,
@@ -492,9 +496,6 @@ impl HomeView {
                                                 se: 2.0,
                                             };
 
-                                            ui.visuals_mut().widgets.inactive.expansion = 0.0;
-                                            ui.visuals_mut().widgets.inactive.bg_stroke =
-                                                Stroke::none();
                                             ui.visuals_mut().widgets.inactive.rounding = Rounding {
                                                 nw: 0.0,
                                                 ne: 0.0,
@@ -502,9 +503,6 @@ impl HomeView {
                                                 se: 2.0,
                                             };
 
-                                            ui.visuals_mut().widgets.active.expansion = 0.0;
-                                            ui.visuals_mut().widgets.active.bg_stroke =
-                                                Stroke::none();
                                             ui.visuals_mut().widgets.active.rounding = Rounding {
                                                 nw: 0.0,
                                                 ne: 0.0,
@@ -512,7 +510,10 @@ impl HomeView {
                                                 se: 2.0,
                                             };
 
-                                            if ui.button("Cancel").clicked() {
+                                            if ui
+                                                .button(t!("home.dialog.visit_password.cancel"))
+                                                .clicked()
+                                            {
                                                 self.state_updater
                                                     .update_dialog_input_visit_password_visible(
                                                         None,
