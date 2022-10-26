@@ -107,9 +107,14 @@ impl DesktopView {
                         ui.set_width(desktop_texture.size_vec2().x);
                         ui.set_height(desktop_texture.size_vec2().y);
 
-                        ui.image(desktop_texture, desktop_texture.size_vec2());
-
-                        emit_input(&self.state_updater, ui, viewport.left_top());
+                        ui.add_enabled_ui(false, |ui| {
+                            let response = ui.image(desktop_texture, desktop_texture.size_vec2());
+                            let events = &response.ctx.input().events;
+                            let left_top = viewport.left_top();
+                            emit_input(&self.state_updater, events, move |pos| {
+                                pos + left_top.to_vec2()
+                            });
+                        });
                     });
             } else {
                 ui.centered_and_justified(|ui| {
@@ -123,9 +128,23 @@ impl DesktopView {
                         (available_height * aspect_ratio, available_height)
                     };
 
-                    ui.image(desktop_texture, desktop_size);
+                    let scale_ratio = desktop_size.0 / desktop_texture.size_vec2().x;
 
-                    emit_input(&self.state_updater, ui, Pos2::new(0.0, 0.0));
+                    let space_around_image = Vec2::new(
+                        (available_width - desktop_size.0) / 2.0,
+                        (available_height - desktop_size.1) / 2.0,
+                    );
+
+                    ui.add_enabled_ui(false, |ui| {
+                        let response = ui.image(desktop_texture, desktop_size);
+                        let events = &response.ctx.input().events;
+                        emit_input(&self.state_updater, events, move |pos| {
+                            Pos2::new(
+                                (pos.x - space_around_image.x).max(0.0) / scale_ratio,
+                                (pos.y - space_around_image.y).max(0.0) / scale_ratio,
+                            )
+                        });
+                    });
                 });
             }
         } else {
@@ -202,12 +221,16 @@ impl View for DesktopView {
     }
 }
 
-fn emit_input(state_updater: &StateUpdater, ui: &mut Ui, mouse_offset: Pos2) {
+fn emit_input(
+    state_updater: &StateUpdater,
+    events: &[egui::Event],
+    pos_calc_fn: impl Fn(Pos2) -> Pos2,
+) {
     let mut input_series = Vec::new();
-    for event in ui.input().events.iter() {
+    for event in events.iter() {
         match event {
             egui::Event::PointerMoved(pos) => {
-                let mouse_pos = *pos + mouse_offset.to_vec2();
+                let mouse_pos = pos_calc_fn(*pos);
                 input_series.push(InputEvent::Mouse(MouseEvent::Move(
                     MouseKey::None,
                     mouse_pos.x,
@@ -220,7 +243,7 @@ fn emit_input(state_updater: &StateUpdater, ui: &mut Ui, mouse_offset: Pos2) {
                 pressed,
                 modifiers,
             } => {
-                let mouse_pos = *pos + mouse_offset.to_vec2();
+                let mouse_pos = pos_calc_fn(*pos);
 
                 let mouse_key = match button {
                     egui::PointerButton::Primary => MouseKey::Left,
