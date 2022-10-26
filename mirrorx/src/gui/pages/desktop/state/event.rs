@@ -1,5 +1,8 @@
 use egui::ColorImage;
-use mirrorx_core::{api::endpoint::EndPointClient, error::CoreError};
+use mirrorx_core::{
+    api::endpoint::{message::InputEvent, EndPointClient},
+    error::CoreError,
+};
 use strum_macros::AsRefStr;
 
 use super::VisitState;
@@ -34,6 +37,10 @@ pub enum Event {
 
     UpdateError {
         err: CoreError,
+    },
+
+    Input {
+        input_series: Vec<InputEvent>,
     },
 
     EmitNegotiateDesktopParams,

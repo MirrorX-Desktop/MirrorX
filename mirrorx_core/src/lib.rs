@@ -1,10 +1,10 @@
-mod component;
 mod ffi;
 
 #[cfg(test)]
 mod test;
 
 pub mod api;
+pub mod component;
 pub mod error;
 pub mod utility;
 

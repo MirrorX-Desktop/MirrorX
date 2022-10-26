@@ -1,17 +1,15 @@
 mod state;
 
-use std::time::Duration;
-
-use crate::gui::CustomEvent;
-
 use super::View;
 use egui::{
-    epaint::Shadow, style::Margin, Align, CentralPanel, Color32, ColorImage, FontId, Frame, Layout,
-    Pos2, RichText, Rounding, Sense, Stroke, Ui, Vec2,
+    epaint::Shadow, style::Margin, Align, CentralPanel, Color32, FontId, Frame, Layout, Pos2,
+    RichText, Rounding, Sense, Stroke, Ui, Vec2,
 };
-use egui_extras::RetainedImage;
+use mirrorx_core::{
+    api::endpoint::message::{InputEvent, KeyboardEvent, MouseEvent},
+    component::input::key::{KeyboardKey, MouseKey},
+};
 use state::{State, StateUpdater};
-use winit::{event_loop::EventLoopProxy, window::WindowId};
 
 pub struct DesktopView {
     state: State,
@@ -110,6 +108,8 @@ impl DesktopView {
                         ui.set_height(desktop_texture.size_vec2().y);
 
                         ui.image(desktop_texture, desktop_texture.size_vec2());
+
+                        emit_input(&self.state_updater, ui, viewport.left_top());
                     });
             } else {
                 ui.centered_and_justified(|ui| {
@@ -124,6 +124,8 @@ impl DesktopView {
                     };
 
                     ui.image(desktop_texture, desktop_size);
+
+                    emit_input(&self.state_updater, ui, Pos2::new(0.0, 0.0));
                 });
             }
         } else {
@@ -197,5 +199,147 @@ impl View for DesktopView {
         });
 
         ctx.request_repaint();
+    }
+}
+
+fn emit_input(state_updater: &StateUpdater, ui: &mut Ui, mouse_offset: Pos2) {
+    let mut input_series = Vec::new();
+    for event in ui.input().events.iter() {
+        match event {
+            egui::Event::PointerMoved(pos) => {
+                let mouse_pos = *pos + mouse_offset.to_vec2();
+                input_series.push(InputEvent::Mouse(MouseEvent::Move(
+                    MouseKey::None,
+                    mouse_pos.x,
+                    mouse_pos.y,
+                )));
+            }
+            egui::Event::PointerButton {
+                pos,
+                button,
+                pressed,
+                modifiers,
+            } => {
+                let mouse_pos = *pos + mouse_offset.to_vec2();
+
+                let mouse_key = match button {
+                    egui::PointerButton::Primary => MouseKey::Left,
+                    egui::PointerButton::Secondary => MouseKey::Right,
+                    egui::PointerButton::Middle => MouseKey::Wheel,
+                    egui::PointerButton::Extra1 => MouseKey::SideBack,
+                    egui::PointerButton::Extra2 => MouseKey::SideForward,
+                };
+
+                let mouse_event = if *pressed {
+                    MouseEvent::Down(mouse_key, mouse_pos.x, mouse_pos.y)
+                } else {
+                    MouseEvent::Up(mouse_key, mouse_pos.x, mouse_pos.y)
+                };
+
+                input_series.push(InputEvent::Mouse(mouse_event));
+            }
+            egui::Event::Scroll(scroll_vector) => {
+                input_series.push(InputEvent::Mouse(MouseEvent::ScrollWheel(scroll_vector.y)));
+            }
+            egui::Event::Key {
+                key,
+                pressed,
+                modifiers,
+            } => {
+                // todo: modifiers order
+                let keyboard_event = if *pressed {
+                    KeyboardEvent::KeyDown(map_key(*key))
+                } else {
+                    KeyboardEvent::KeyUp(map_key(*key))
+                };
+
+                input_series.push(InputEvent::Keyboard(keyboard_event));
+            }
+            egui::Event::Text(text) => {
+                tracing::info!(?text, "input text");
+            }
+            _ => {}
+        }
+    }
+
+    if !input_series.is_empty() {
+        tracing::info!(?input_series, "input series");
+        state_updater.input(input_series);
+    }
+}
+
+const fn map_key(key: egui::Key) -> KeyboardKey {
+    match key {
+        egui::Key::ArrowDown => KeyboardKey::ArrowDown,
+        egui::Key::ArrowLeft => KeyboardKey::ArrowLeft,
+        egui::Key::ArrowRight => KeyboardKey::ArrowRight,
+        egui::Key::ArrowUp => KeyboardKey::ArrowUp,
+        egui::Key::Escape => KeyboardKey::Escape,
+        egui::Key::Tab => KeyboardKey::Tab,
+        egui::Key::Backspace => KeyboardKey::Backspace,
+        egui::Key::Enter => KeyboardKey::Enter,
+        egui::Key::Space => KeyboardKey::Space,
+        egui::Key::Insert => KeyboardKey::Insert,
+        egui::Key::Delete => KeyboardKey::Delete,
+        egui::Key::Home => KeyboardKey::Home,
+        egui::Key::End => KeyboardKey::End,
+        egui::Key::PageUp => KeyboardKey::PageUp,
+        egui::Key::PageDown => KeyboardKey::PageDown,
+        egui::Key::Num0 => KeyboardKey::Digit0,
+        egui::Key::Num1 => KeyboardKey::Digit1,
+        egui::Key::Num2 => KeyboardKey::Digit2,
+        egui::Key::Num3 => KeyboardKey::Digit3,
+        egui::Key::Num4 => KeyboardKey::Digit4,
+        egui::Key::Num5 => KeyboardKey::Digit5,
+        egui::Key::Num6 => KeyboardKey::Digit6,
+        egui::Key::Num7 => KeyboardKey::Digit7,
+        egui::Key::Num8 => KeyboardKey::Digit8,
+        egui::Key::Num9 => KeyboardKey::Digit9,
+        egui::Key::A => KeyboardKey::A,
+        egui::Key::B => KeyboardKey::B,
+        egui::Key::C => KeyboardKey::C,
+        egui::Key::D => KeyboardKey::D,
+        egui::Key::E => KeyboardKey::E,
+        egui::Key::F => KeyboardKey::F,
+        egui::Key::G => KeyboardKey::G,
+        egui::Key::H => KeyboardKey::H,
+        egui::Key::I => KeyboardKey::I,
+        egui::Key::J => KeyboardKey::J,
+        egui::Key::K => KeyboardKey::K,
+        egui::Key::L => KeyboardKey::L,
+        egui::Key::M => KeyboardKey::M,
+        egui::Key::N => KeyboardKey::N,
+        egui::Key::O => KeyboardKey::O,
+        egui::Key::P => KeyboardKey::P,
+        egui::Key::Q => KeyboardKey::Q,
+        egui::Key::R => KeyboardKey::R,
+        egui::Key::S => KeyboardKey::S,
+        egui::Key::T => KeyboardKey::T,
+        egui::Key::U => KeyboardKey::U,
+        egui::Key::V => KeyboardKey::V,
+        egui::Key::W => KeyboardKey::W,
+        egui::Key::X => KeyboardKey::X,
+        egui::Key::Y => KeyboardKey::Y,
+        egui::Key::Z => KeyboardKey::Z,
+        egui::Key::F1 => KeyboardKey::F1,
+        egui::Key::F2 => KeyboardKey::F2,
+        egui::Key::F3 => KeyboardKey::F3,
+        egui::Key::F4 => KeyboardKey::F4,
+        egui::Key::F5 => KeyboardKey::F5,
+        egui::Key::F6 => KeyboardKey::F6,
+        egui::Key::F7 => KeyboardKey::F7,
+        egui::Key::F8 => KeyboardKey::F8,
+        egui::Key::F9 => KeyboardKey::F9,
+        egui::Key::F10 => KeyboardKey::F10,
+        egui::Key::F11 => KeyboardKey::F11,
+        egui::Key::F12 => KeyboardKey::F12,
+        egui::Key::F13 => KeyboardKey::PrintScreen,
+        egui::Key::F14 => KeyboardKey::ScrollLock,
+        egui::Key::F15 => KeyboardKey::Pause,
+        egui::Key::F16 => KeyboardKey::Fn, // todo: temp
+        egui::Key::F17 => KeyboardKey::Fn, // todo: temp
+        egui::Key::F18 => KeyboardKey::Fn, // todo: temp
+        egui::Key::F19 => KeyboardKey::Fn, // todo: temp
+        egui::Key::F20 => KeyboardKey::Fn, // todo: temp
     }
 }

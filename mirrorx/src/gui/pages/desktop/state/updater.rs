@@ -1,5 +1,6 @@
 use super::event::Event;
 use crate::send_event;
+use mirrorx_core::api::endpoint::message::InputEvent;
 use tokio::sync::mpsc::{Sender, UnboundedSender};
 
 pub struct StateUpdater {
@@ -18,5 +19,9 @@ impl StateUpdater {
                 use_original_resolution
             }
         )
+    }
+
+    pub fn input(&self, input_series: Vec<InputEvent>) {
+        send_event!(self.tx, Event::Input { input_series })
     }
 }

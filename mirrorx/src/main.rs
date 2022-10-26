@@ -8,7 +8,13 @@ i18n!("locales");
 
 #[tokio::main]
 async fn main() {
-    tracing_subscriber::fmt::init();
+    std::env::set_var("RUST_LOG", "warn,mirrorx=trace,mirrorx_core=trace");
+
+    tracing_subscriber::fmt()
+        .with_thread_ids(true)
+        .with_thread_names(true)
+        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
+        .init();
 
     let locale = if let Ok(locale) = select_language() {
         locale

@@ -119,5 +119,5 @@ pub enum InputEvent {
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct EndPointInput {
-    pub event: InputEvent,
+    pub events: Vec<InputEvent>,
 }

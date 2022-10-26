@@ -1,20 +1,18 @@
 mod event;
 mod updater;
 
-use crate::{gui::CustomEvent, send_event, utility::format_device_id};
-use egui::{epaint::TextureManager, Color32, ColorImage, TextureHandle};
+use crate::{send_event, utility::format_device_id};
+use egui::{ColorImage, TextureHandle};
 use event::Event;
 use mirrorx_core::{
     api::endpoint::{message::EndPointNegotiateDesktopParamsResponse, EndPointClient},
     core_error,
     error::{CoreError, CoreResult},
     utility::nonce_value::NonceValue,
-    DesktopDecodeFrame,
 };
 use ring::aead::{BoundKey, OpeningKey, SealingKey};
-use std::time::{Duration, Instant};
-use tokio::sync::mpsc::{Receiver, Sender, UnboundedReceiver, UnboundedSender};
-use winit::{event_loop::EventLoopProxy, window::WindowId};
+use std::time::Duration;
+use tokio::sync::mpsc::{Receiver, Sender};
 
 pub use updater::StateUpdater;
 
@@ -180,6 +178,13 @@ impl State {
                 Event::UpdateError { err } => {
                     tracing::error!(?err, "update error event");
                     self.last_error = Some(err);
+                }
+                Event::Input { input_series } => {
+                    if let Some(client) = &self.endpoint_client {
+                        if let Err(err) = client.input(input_series) {
+                            tracing::error!(?err, "endpoint input failed");
+                        }
+                    }
                 }
                 Event::EmitNegotiateDesktopParams => self.emit_negotiate_desktop_params(),
                 Event::EmitNegotiateFinish {

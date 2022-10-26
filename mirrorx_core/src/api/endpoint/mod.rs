@@ -161,8 +161,8 @@ impl EndPointClient {
         Ok(frame_rx)
     }
 
-    pub fn input(&self, event: InputEvent) -> CoreResult<()> {
-        let req = EndPointMessage::Input(EndPointInput { event });
+    pub fn input(&self, events: Vec<InputEvent>) -> CoreResult<()> {
+        let req = EndPointMessage::Input(EndPointInput { events });
         self.send_message(req)
     }
 
@@ -399,13 +399,17 @@ fn handle_message(client: EndPointClient, message: EndPointMessage) {
         EndPointMessage::AudioFrame(audio_frame) => {
             handle_audio_frame(client.id, audio_frame);
         }
-        EndPointMessage::Input(input_event) => match input_event.event {
-            InputEvent::Mouse(event) => {
-                if let Some(entry) = PASSIVE_ENDPOINTS_MONITORS.get(&client.id) {
-                    handle_mouse(event, entry.value());
+        EndPointMessage::Input(input_event) => {
+            for event in input_event.events {
+                match event {
+                    InputEvent::Mouse(event) => {
+                        if let Some(entry) = PASSIVE_ENDPOINTS_MONITORS.get(&client.id) {
+                            handle_mouse(event, entry.value());
+                        }
+                    }
+                    InputEvent::Keyboard(event) => handle_keyboard(event),
                 }
             }
-            InputEvent::Keyboard(event) => handle_keyboard(event),
-        },
+        }
     }
 }

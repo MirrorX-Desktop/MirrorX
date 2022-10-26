@@ -88,6 +88,15 @@ pub fn run_app() -> anyhow::Result<()> {
                     pages.remove(&window_id);
                 }
 
+                // if let WindowEvent::KeyboardInput {
+                //     device_id,
+                //     input,
+                //     is_synthetic,
+                // } = window_event
+                // {
+                //     tracing::info!(?input, "winit input");
+                // }
+
                 if let Some(page) = pages.get_mut(&window_id) {
                     page.handle_event(&window_event);
 
