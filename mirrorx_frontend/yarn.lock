@@ -196,6 +196,11 @@
     magic-string "^0.26.7"
     svelte-hmr "^0.15.0"
 
+"@tauri-apps/api@^1.1.0":
+  version "1.1.0"
+  resolved "https://registry.npmmirror.com/@tauri-apps/api/-/api-1.1.0.tgz#2c5756f6aeecd36f7683183eaba021690711bedf"
+  integrity sha512-n13pIqdPd3KtaMmmAcrU7BTfdMtIlGNnfZD0dNX8L4p8dgmuNyikm6JAA+yCpl9gqq6I8x5cV2Y0muqdgD0cWw==
+
 "@types/cookie@^0.5.1":
   version "0.5.1"
   resolved "https://registry.npmmirror.com/@types/cookie/-/cookie-0.5.1.tgz#b29aa1f91a59f35e29ff8f7cb24faf1a3a750554"
@@ -2046,6 +2051,11 @@ type-fest@^0.20.2:
   version "0.20.2"
   resolved "https://registry.npmmirror.com/type-fest/-/type-fest-0.20.2.tgz#1bf207f4b28f91583666cb5fbd327887301cd5f4"
   integrity sha512-Ne+eE4r0/iWnpAxD852z3A+N0Bt5RN//NjJwRd2VFHEmrywxf5vsZlh4R6lixl6B+wz/8d+maTSAkN1FIkI3LQ==
+
+typesafe-i18n@^5.14.0:
+  version "5.14.0"
+  resolved "https://registry.npmmirror.com/typesafe-i18n/-/typesafe-i18n-5.14.0.tgz#917147865b0244ba7eef080eab3cda35f0ec6cb9"
+  integrity sha512-ZNHysUvZZhmUuMjBvDGtUI8vT3g//4ay5fFOk2sJCsjx4ztippW1Hrhrq59nJ9mV/Q0u4OX80Gyorq8L3rwNLw==
 
 typescript@*, typescript@^4.7.4:
   version "4.8.4"

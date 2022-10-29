@@ -3,34 +3,62 @@
 	import Connect from './home/connect.svelte';
 	import History from './home/history.svelte';
 	import Lan from './home/lan.svelte';
+	import LL from '../i18n/i18n-svelte';
+	import { invoke } from '@tauri-apps/api/tauri';
+	import { onMount } from 'svelte';
+	import Fa from 'svelte-fa';
+	import { faSpinner } from '@fortawesome/free-solid-svg-icons';
 
 	var select_tab: String = 'connect';
+	var primary_domain: String;
+
+	onMount(() => {
+		init_config_and_domain();
+	});
 
 	const switch_tab = (tab_name: String) => (select_tab = tab_name);
+
+	const init_config_and_domain = async () => {
+		try {
+			await invoke('init_config');
+			setTimeout(async () => {
+				primary_domain = await invoke('get_config_primary_domain');
+			}, 5000);
+		} catch (error) {
+			// todo: pop dialog
+		}
+	};
 </script>
 
 <div class="flex h-full flex-col">
 	<div class="flex-none">
-		<div class="mt-1 mb-2 text-center text-2xl">Domain</div>
-		<div class="my-2 text-center text-4xl">MirrorX.cloud</div>
+		<div class="mt-1 mb-2 text-center text-2xl">{$LL.Domain()}</div>
+		<div class="my-2 text-center text-4xl">
+			{#if primary_domain == undefined}
+				<Fa class="w-full text-center" icon={faSpinner} spin={true} size={'sm'} />
+			{/if}
+			{#if primary_domain != undefined}
+				{primary_domain}
+			{/if}
+		</div>
 		<div class="btn-group my-3 mx-2 flex flex-row">
 			<button
 				class="btn flex-1 {select_tab == 'connect' ? 'btn-active' : undefined}"
-				on:click={() => switch_tab('connect')}>Connect</button
+				on:click={() => switch_tab('connect')}>{$LL.Connect()}</button
 			>
 			<button class="btn flex-1 {select_tab == 'lan' ? 'btn-active' : undefined}" on:click={() => switch_tab('lan')}
-				>LAN</button
+				>{$LL.LAN()}</button
 			>
 			<button
 				class="btn flex-1 {select_tab == 'history' ? 'btn-active' : undefined}"
-				on:click={() => switch_tab('history')}>History</button
+				on:click={() => switch_tab('history')}>{$LL.History()}</button
 			>
 		</div>
 	</div>
 
 	<div class="flex-1">
 		{#if select_tab == 'connect'}
-			<Connect />
+			<Connect domain={primary_domain} />
 		{/if}
 		{#if select_tab == 'lan'}
 			<Lan />
