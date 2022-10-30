@@ -3,12 +3,13 @@ use mirrorx_core::{
     api::config::{Config, DomainConfig},
     utility,
 };
-use std::collections::HashMap;
+use std::{collections::HashMap, path::PathBuf};
 use tauri::async_runtime::Mutex;
 
 #[derive(Default)]
 pub struct UIState {
     config: Mutex<Option<Config>>,
+    config_path: Mutex<PathBuf>,
 }
 
 #[tauri::command]
@@ -66,6 +67,7 @@ pub fn init_config(
             };
 
             *state.config.blocking_lock() = Some(config);
+            *state.config_path.blocking_lock() = db_filepath;
             Ok(())
         }
         Err(err) => {
@@ -123,4 +125,36 @@ pub fn get_config_device_password(
         .to_owned();
 
     Ok(password)
+}
+
+#[tauri::command]
+pub fn generate_random_password() -> String {
+    mirrorx_core::utility::rand::generate_random_password()
+}
+
+#[tauri::command]
+pub fn set_config_device_password(
+    domain: String,
+    password: String,
+    state: tauri::State<UIState>,
+) -> Result<(), String> {
+    let mut guard = state.config.blocking_lock();
+
+    let config = guard.as_mut().ok_or("get primary domain failed")?;
+
+    let mut domain_config = config
+        .domain_configs
+        .get_mut(&domain)
+        .ok_or("current domain doesn't have config")?;
+
+    domain_config.device_password = password;
+
+    let config_db_path = state.config_path.blocking_lock();
+
+    if let Err(err) = mirrorx_core::api::config::save(&config_db_path, config) {
+        tracing::error!(?err, "save config failed");
+        return Err("save config failed".into());
+    }
+
+    Ok(())
 }

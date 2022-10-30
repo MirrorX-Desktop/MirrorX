@@ -31,6 +31,8 @@ fn main() {
             api::get_config_primary_domain,
             api::get_config_device_id,
             api::get_config_device_password,
+            api::generate_random_password,
+            api::set_config_device_password
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

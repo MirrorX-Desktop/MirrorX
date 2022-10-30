@@ -21,9 +21,7 @@
 	const init_config_and_domain = async () => {
 		try {
 			await invoke('init_config');
-			setTimeout(async () => {
-				primary_domain = await invoke('get_config_primary_domain');
-			}, 5000);
+			primary_domain = await invoke('get_config_primary_domain');
 		} catch (error) {
 			// todo: pop dialog
 		}

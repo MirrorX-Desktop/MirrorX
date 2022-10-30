@@ -6,7 +6,10 @@
 		faEyeSlash,
 		faDisplay,
 		faFolderTree,
-		faSpinner
+		faSpinner,
+		faRotate,
+		faCheck,
+		faCircleXmark
 	} from '@fortawesome/free-solid-svg-icons';
 	import LL, { setLocale } from '../../i18n/i18n-svelte';
 	import { invoke } from '@tauri-apps/api/tauri';
@@ -17,7 +20,10 @@
 	var input_remote_device_id: String;
 	var device_id: String;
 	var device_password: String;
+	var device_password_display: String;
 	var show_password = false;
+	var edit_password = false;
+	var random_password_generating = false;
 
 	$: {
 		load_device_id(domain);
@@ -36,6 +42,7 @@
 	const load_device_password = async (domain: String) => {
 		try {
 			device_password = await invoke('get_config_device_password', { domain });
+			device_password_display = device_password;
 		} catch (error) {
 			// todo: pop dialog
 		}
@@ -78,6 +85,33 @@
 			input_remote_device_id = value;
 		}
 	}
+
+	const generate_random_password = async () => {
+		try {
+			random_password_generating = true;
+			device_password_display = await invoke('generate_random_password');
+		} catch {
+			// todo: pop dialog
+		} finally {
+			random_password_generating = false;
+		}
+	};
+
+	const cancel_edit_password = () => {
+		edit_password = false;
+		device_password_display = device_password;
+	};
+
+	const commit_edit_password = async () => {
+		try {
+			await invoke('set_config_device_password', { domain, password: device_password_display });
+			await load_device_password(domain);
+			edit_password = false;
+			device_password_display = device_password;
+		} catch (error) {
+			// todo: pop dialog
+		}
+	};
 </script>
 
 <slot>
@@ -87,26 +121,61 @@
 			<div class="my-3 text-center text-4xl">{device_id}</div>
 			<div class="my-3 text-center text-3xl">{$LL.Pages.Connect.Password()}</div>
 			<div class="my-3 text-center">
-				{#if show_password}
-					<p class="text-3xl">{device_password}</p>
+				{#if edit_password}
+					<div class="input-group flex flex-row">
+						<button class="btn btn-square flex-none" on:click={generate_random_password}>
+							<Fa icon={faRotate} spin={random_password_generating} />
+						</button>
+
+						<input
+							id="remote_device_id_input"
+							class="input input-bordered flex-1 text-center focus:border-blue-300 focus:outline-none focus:ring"
+							type="text"
+							placeholder={''}
+							maxlength="20"
+							bind:value={device_password_display}
+						/>
+
+						<button class="btn btn-square flex-none" on:click={commit_edit_password}>
+							<Fa icon={faCheck} />
+						</button>
+					</div>
+				{:else if show_password}
+					<p class="text-3xl">{device_password_display}</p>
 				{:else}
 					<p class="text-4xl">＊＊＊＊＊＊</p>
 				{/if}
+
 				<br />
+
 				<p>
-					<button class="tooltip tooltip-bottom text-xl" data-tip={$LL.Pages.Connect.Tooltips.EditPassword()}>
-						<Fa icon={faPenToSquare} />
-					</button>
-					<button
-						class="tooltip tooltip-bottom text-xl"
-						data-tip={show_password
-							? $LL.Pages.Connect.Tooltips.PasswordInvisible()
-							: $LL.Pages.Connect.Tooltips.PasswordVisible()}
-						on:click={() => (show_password = true)}
-						on:mouseleave={() => (show_password = false)}
-					>
-						<Fa icon={faEyeSlash} />
-					</button>
+					{#if edit_password}
+						<button
+							class="tooltip tooltip-bottom text-xl"
+							data-tip={$LL.Pages.Connect.Tooltips.EditPassword()}
+							on:click={cancel_edit_password}
+						>
+							<Fa icon={faCircleXmark} />
+						</button>
+					{:else}
+						<button
+							class="tooltip tooltip-bottom text-xl"
+							data-tip={$LL.Pages.Connect.Tooltips.EditPassword()}
+							on:click={() => (edit_password = true)}
+						>
+							<Fa icon={faPenToSquare} />
+						</button>
+						<button
+							class="tooltip tooltip-bottom text-xl"
+							data-tip={show_password
+								? $LL.Pages.Connect.Tooltips.PasswordInvisible()
+								: $LL.Pages.Connect.Tooltips.PasswordVisible()}
+							on:click={() => (show_password = true)}
+							on:mouseleave={() => (show_password = false)}
+						>
+							<Fa icon={faEyeSlash} />
+						</button>
+					{/if}
 				</p>
 			</div>
 
