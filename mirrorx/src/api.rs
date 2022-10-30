@@ -1,13 +1,11 @@
 use crate::utility::format_device_id;
-use mirrorx_core::{
-    api::{
-        config::{Config, DomainConfig},
-        signaling::SignalingClient,
-    },
-    utility,
+use mirrorx_core::api::{
+    config::{Config, DomainConfig},
+    signaling::{PublishMessage, ResourceType, SignalingClient, VisitReplyRequest},
 };
 use std::{collections::HashMap, path::PathBuf};
 use tauri::async_runtime::Mutex;
+use tokio::sync::mpsc::Receiver;
 
 #[derive(Default)]
 pub struct UIState {
@@ -93,7 +91,7 @@ pub async fn init_signaling_client(
     }
 
     let config_db_path = state.config_path.lock().await;
-    let (publish_message_tx, mut publish_message_rx) = tokio::sync::mpsc::channel(8);
+    let (publish_message_tx, publish_message_rx) = tokio::sync::mpsc::channel(8);
 
     let device_id = signaling_client
         .dial(&domain, &config_db_path, publish_message_tx)
@@ -102,22 +100,6 @@ pub async fn init_signaling_client(
             tracing::error!(?domain, ?err, "init signaling client failed");
             "Signaling client initialize failed"
         })?;
-
-    tokio::spawn(async move {
-        loop {
-            match publish_message_rx.recv().await {
-                Some(publish_message) => {
-                    if let Err(err) = window.emit("publish_message", publish_message) {
-                        tracing::error!(?err, "window emit 'publish_message' event failed");
-                    }
-                }
-                None => {
-                    tracing::error!("publish message channel is closed");
-                    return;
-                }
-            }
-        }
-    });
 
     let mut guard = state.config.lock().await;
 
@@ -136,6 +118,8 @@ pub async fn init_signaling_client(
             return Err("save config failed".into());
         }
     }
+
+    start_signaling_publish_event_handle(publish_message_rx, window);
 
     Ok(())
 }
@@ -223,4 +207,86 @@ pub async fn set_config_device_password(
     }
 
     Ok(())
+}
+
+#[tauri::command]
+pub async fn signaling_reply_visit_request(
+    allow: bool,
+    active_device_id: String,
+    passive_device_id: String,
+    state: tauri::State<'_, UIState>,
+) -> Result<(), String> {
+    tracing::info!("signaling_reply_visit_request");
+
+    let active_device_id: i64 = active_device_id
+        .replace('-', "")
+        .parse()
+        .map_err(|_| "invalid device_id format")?;
+
+    let passive_device_id: i64 = passive_device_id
+        .replace('-', "")
+        .parse()
+        .map_err(|_| "invalid device_id format")?;
+
+    let signaling_client = state.signaling_client.lock().await;
+    if let Err(err) = signaling_client
+        .visit_reply(VisitReplyRequest {
+            active_device_id,
+            passive_device_id,
+            allow,
+        })
+        .await
+    {
+        tracing::error!(
+            ?active_device_id,
+            ?passive_device_id,
+            ?allow,
+            ?err,
+            "signaling client reply visit request failed"
+        );
+        return Err(
+            "Reply visit request failed, maybe remote device is offline or reply timeout".into(),
+        );
+    }
+
+    Ok(())
+}
+
+fn start_signaling_publish_event_handle(
+    mut publish_message_rx: Receiver<PublishMessage>,
+    window: tauri::Window,
+) {
+    tokio::spawn(async move {
+        loop {
+            match publish_message_rx.recv().await {
+                Some(publish_message) => match publish_message {
+                    mirrorx_core::api::signaling::PublishMessage::VisitRequest {
+                        active_device_id,
+                        passive_device_id,
+                        resource_type,
+                    } => {
+                        if let Err(err) = window.emit(
+                            "pop_dialog_visit_request",
+                            crate::event::VisitRequest {
+                                active_device_id: format_device_id(active_device_id),
+                                passive_device_id: format_device_id(passive_device_id),
+                                resource_type: if let ResourceType::Desktop = resource_type {
+                                    "desktop"
+                                } else {
+                                    "files"
+                                }
+                                .into(),
+                            },
+                        ) {
+                            tracing::error!(?err, "window emit 'pop_dialog_visit_request' failed");
+                        }
+                    }
+                },
+                None => {
+                    tracing::error!("publish message channel is closed");
+                    return;
+                }
+            }
+        }
+    });
 }
