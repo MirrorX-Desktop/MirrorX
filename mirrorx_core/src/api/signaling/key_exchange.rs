@@ -33,7 +33,7 @@ pub struct KeyExchangeResponse {
 }
 
 pub async fn key_exchange(
-    client: &mut signaling_proto::service::signaling_client::SignalingClient<Channel>,
+    mut client: signaling_proto::service::signaling_client::SignalingClient<Channel>,
     req: KeyExchangeRequest,
 ) -> CoreResult<KeyExchangeResponse> {
     let secure_random = ring::rand::SystemRandom::new();

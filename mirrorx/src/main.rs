@@ -28,6 +28,7 @@ fn main() {
         // invoke_handler should be called only once!
         .invoke_handler(tauri::generate_handler![
             api::init_config,
+            api::init_signaling_client,
             api::get_config_primary_domain,
             api::get_config_device_id,
             api::get_config_device_password,

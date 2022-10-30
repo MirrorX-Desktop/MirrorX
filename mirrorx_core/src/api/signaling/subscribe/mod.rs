@@ -1,14 +1,15 @@
 mod key_exchange;
 
+use serde::Serialize;
 use signaling_proto::message::{publish_message::InnerPublishMessage, ResourceType};
 use std::{path::PathBuf, time::Duration};
 use tokio::{
     select,
-    sync::mpsc::{error::TryRecvError, Receiver},
+    sync::mpsc::{error::TryRecvError, Receiver, Sender},
 };
 use tonic::transport::Channel;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Serialize)]
 pub enum PublishMessage {
     VisitRequest {
         active_device_id: i64,
@@ -23,7 +24,7 @@ pub async fn subscribe(
     device_id: i64,
     device_finger_print: String,
     config_path: PathBuf,
-    publish_message_fn: Box<dyn Fn(PublishMessage) + Send>,
+    publish_message_tx: Sender<PublishMessage>,
     mut exit_tx: Receiver<()>,
 ) {
     let mut subscribe_client = client.clone();
@@ -108,7 +109,9 @@ pub async fn subscribe(
                             resource_type,
                         };
 
-                        (publish_message_fn)(publish_message);
+                        if let Err(err) = publish_message_tx.send(publish_message).await {
+                            tracing::error!(?err, "publish message channel send failed");
+                        }
                     }
                     InnerPublishMessage::KeyExchangeRequest(key_exchange_request) => {
                         let mut client = subscribe_client.clone();

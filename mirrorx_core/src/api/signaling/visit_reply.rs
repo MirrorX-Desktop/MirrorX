@@ -8,7 +8,7 @@ pub struct VisitReplyRequest {
 }
 
 pub async fn visit_reply(
-    client: &mut signaling_proto::service::signaling_client::SignalingClient<Channel>,
+    mut client: signaling_proto::service::signaling_client::SignalingClient<Channel>,
     req: VisitReplyRequest,
 ) -> CoreResult<()> {
     let _ = client

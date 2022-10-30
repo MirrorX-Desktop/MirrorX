@@ -5,24 +5,47 @@
 	import Lan from './home/lan.svelte';
 	import LL from '../i18n/i18n-svelte';
 	import { invoke } from '@tauri-apps/api/tauri';
-	import { onMount } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
 	import Fa from 'svelte-fa';
 	import { faSpinner } from '@fortawesome/free-solid-svg-icons';
+	import { listen } from '@tauri-apps/api/event';
+	import type { UnlistenFn } from '@tauri-apps/api/event';
 
 	var select_tab: String = 'connect';
 	var primary_domain: String;
+	var unlisten: UnlistenFn;
 
 	onMount(() => {
-		init_config_and_domain();
+		init();
+	});
+
+	onDestroy(() => {
+		if (unlisten) {
+			unlisten();
+		}
 	});
 
 	const switch_tab = (tab_name: String) => (select_tab = tab_name);
 
-	const init_config_and_domain = async () => {
+	const init = async () => {
 		try {
 			await invoke('init_config');
-			primary_domain = await invoke('get_config_primary_domain');
+			let domain: String = await invoke('get_config_primary_domain');
+			await invoke('init_signaling_client', { domain });
+			await listen_publish_message();
+
+			primary_domain = domain;
 		} catch (error) {
+			// todo: pop dialog
+		}
+	};
+
+	const listen_publish_message = async () => {
+		try {
+			unlisten = await listen('publish_message', (event) => {
+				console.log(event);
+			});
+		} catch (err) {
 			// todo: pop dialog
 		}
 	};

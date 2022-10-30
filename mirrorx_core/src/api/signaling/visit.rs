@@ -1,7 +1,8 @@
 use crate::error::CoreResult;
+use serde::Serialize;
 use tonic::transport::Channel;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub enum ResourceType {
     Desktop,
     Files,
@@ -20,7 +21,7 @@ pub struct VisitResponse {
 }
 
 pub async fn visit(
-    client: &mut signaling_proto::service::signaling_client::SignalingClient<Channel>,
+    mut client: signaling_proto::service::signaling_client::SignalingClient<Channel>,
     req: VisitRequest,
 ) -> CoreResult<VisitResponse> {
     let resource_type = match req.resource_type {
