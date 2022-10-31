@@ -1,36 +1,29 @@
 <script lang="ts">
 	import { faSpinner } from '@fortawesome/free-solid-svg-icons';
-	import type { UnlistenFn } from '@tauri-apps/api/event';
 	import { invoke } from '@tauri-apps/api/tauri';
-	import { onDestroy, onMount } from 'svelte';
+	import { onMount } from 'svelte';
 	import Fa from 'svelte-fa';
 	import '../app.css';
 	import LL from '../i18n/i18n-svelte';
 	import Connect from './home/connect.svelte';
 	import History from './home/history.svelte';
 	import Lan from './home/lan.svelte';
+	import DialogInputRemotePassword from './widgets/dialog_input_remote_password.svelte';
 	import DialogVisitRequest from './widgets/dialog_visit_request.svelte';
 
-	var select_tab: String = 'connect';
-	var primary_domain: String;
-	var unlisten: UnlistenFn;
+	var select_tab: string = 'connect';
+	var primary_domain: string;
 
 	onMount(() => {
 		init();
 	});
 
-	onDestroy(() => {
-		if (unlisten) {
-			unlisten();
-		}
-	});
-
-	const switch_tab = (tab_name: String) => (select_tab = tab_name);
+	const switch_tab = (tab_name: string) => (select_tab = tab_name);
 
 	const init = async () => {
 		try {
 			await invoke('init_config');
-			let domain: String = await invoke('get_config_primary_domain');
+			let domain: string = await invoke('get_config_primary_domain');
 			await invoke('init_signaling_client', { domain });
 
 			primary_domain = domain;
@@ -88,3 +81,4 @@
 </div>
 
 <DialogVisitRequest />
+<DialogInputRemotePassword />

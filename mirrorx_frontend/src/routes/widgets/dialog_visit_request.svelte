@@ -1,26 +1,39 @@
 <script lang="ts">
-	import { listen } from '@tauri-apps/api/event';
+	import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 	import { invoke } from '@tauri-apps/api/tauri';
-	import { onMount } from 'svelte';
-	import type { VisitRequest } from '../event_types';
+	import { onDestroy, onMount } from 'svelte';
+	import type { PopupDialogVisitRequestEvent } from '../event_types';
 
-	var visit_request: VisitRequest | null;
+	var event: PopupDialogVisitRequestEvent | null;
 	var countdown = 30;
 	var show = false;
+	var popup_dialog_visit_request_unlisten_fn: UnlistenFn | null;
+	var countdownIntervalId: NodeJS.Timer | null;
 
-	onMount(() => {
-		listen<VisitRequest>('pop_dialog_visit_request', (event) => {
-			visit_request = event.payload;
-			countdown = 30;
-			show = true;
-			let intervalId = setInterval(() => {
-				countdown--;
-				if (countdown == 0) {
-					clearInterval(intervalId);
-					decide(false);
-				}
-			}, 1000);
-		});
+	onMount(async () => {
+		popup_dialog_visit_request_unlisten_fn = await listen<PopupDialogVisitRequestEvent>(
+			'popup_dialog_visit_request',
+			(ev) => {
+				event = ev.payload;
+				countdown = 30;
+				show = true;
+				countdownIntervalId = setInterval(() => {
+					countdown--;
+					if (countdown == 0) {
+						clearCountdown();
+						decide(false);
+					}
+				}, 1000);
+			}
+		);
+	});
+
+	onDestroy(() => {
+		if (popup_dialog_visit_request_unlisten_fn) {
+			popup_dialog_visit_request_unlisten_fn();
+		}
+
+		clearCountdown();
 	});
 
 	const decide = async (allow: boolean) => {
@@ -28,12 +41,20 @@
 		try {
 			await invoke('signaling_reply_visit_request', {
 				allow,
-				activeDeviceId: visit_request?.active_device_id,
-				passiveDeviceId: visit_request?.passive_device_id
+				activeDeviceId: event?.active_device_id,
+				passiveDeviceId: event?.passive_device_id
 			});
 		} catch (error) {
 			console.log('decide error: ' + error);
 			// todo: pop dialog
+		}
+
+		clearCountdown();
+	};
+
+	const clearCountdown = () => {
+		if (countdownIntervalId) {
+			clearInterval(countdownIntervalId);
 		}
 	};
 </script>
@@ -44,8 +65,8 @@
 		<div class="modal-box">
 			<h3 class="text-lg font-bold">Visit Request</h3>
 			<p class="py-4">
-				Remote Device '<span class="font-bold">{visit_request?.active_device_id ?? ''}</span>' want to visit your
-				<span class="font-bold">{visit_request?.resource_type ?? 'Unknown'}</span>
+				Remote Device '<span class="font-bold">{event?.active_device_id ?? ''}</span>' want to visit your
+				<span class="font-bold">{event?.resource_type ?? 'Unknown'}</span>
 			</p>
 			<div class="modal-action">
 				<button class="btn" on:click={() => decide(true)}>

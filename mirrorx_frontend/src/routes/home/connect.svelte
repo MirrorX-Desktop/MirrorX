@@ -1,36 +1,57 @@
 <script lang="ts">
-	import Fa from 'svelte-fa';
 	import {
-		faPenToSquare,
-		faEye,
-		faEyeSlash,
-		faDisplay,
-		faFolderTree,
-		faSpinner,
-		faRotate,
 		faCheck,
-		faCircleXmark
+		faCircleXmark,
+		faDisplay,
+		faEyeSlash,
+		faFolderTree,
+		faPenToSquare,
+		faRotate,
+		faSpinner
 	} from '@fortawesome/free-solid-svg-icons';
-	import LL, { setLocale } from '../../i18n/i18n-svelte';
+	import { emit, listen, type UnlistenFn } from '@tauri-apps/api/event';
 	import { invoke } from '@tauri-apps/api/tauri';
+	import { onDestroy, onMount } from 'svelte';
+	import Fa from 'svelte-fa';
+	import LL from '../../i18n/i18n-svelte';
 
-	export let domain: String;
+	export let domain: string;
 
-	var input_remote_device_id_before: String;
-	var input_remote_device_id: String;
-	var device_id: String;
-	var device_password: String;
-	var device_password_display: String;
+	var input_remote_device_id_before: string;
+	var input_remote_device_id: string;
+	var device_id: string;
+	var device_password: string;
+	var device_password_display: string;
 	var show_password = false;
 	var edit_password = false;
 	var random_password_generating = false;
+	let desktop_is_connecting = false;
+	var desktop_is_connecting_unlisten_fn: UnlistenFn | null;
 
 	$: {
 		load_device_id(domain);
 		load_device_password(domain);
 	}
 
-	const load_device_id = async (domain: String) => {
+	onMount(async () => {
+		desktop_is_connecting_unlisten_fn = await listen<string>('desktop_is_connecting', (event) => {
+			let is_connecting: boolean = JSON.parse(event.payload);
+			desktop_is_connecting = is_connecting;
+
+			if (!is_connecting) {
+				input_remote_device_id = '';
+				input_remote_device_id_before = '';
+			}
+		});
+	});
+
+	onDestroy(() => {
+		if (desktop_is_connecting_unlisten_fn) {
+			desktop_is_connecting_unlisten_fn();
+		}
+	});
+
+	const load_device_id = async (domain: string) => {
 		try {
 			console.log(domain);
 			device_id = await invoke('get_config_device_id', { domain });
@@ -39,7 +60,7 @@
 		}
 	};
 
-	const load_device_password = async (domain: String) => {
+	const load_device_password = async (domain: string) => {
 		try {
 			device_password = await invoke('get_config_device_password', { domain });
 			device_password_display = device_password;
@@ -92,9 +113,9 @@
 			device_password_display = await invoke('generate_random_password');
 		} catch {
 			// todo: pop dialog
-		} finally {
-			random_password_generating = false;
 		}
+
+		random_password_generating = false;
 	};
 
 	const cancel_edit_password = () => {
@@ -109,6 +130,17 @@
 			edit_password = false;
 			device_password_display = device_password;
 		} catch (error) {
+			// todo: pop dialog
+		}
+	};
+
+	const connect_desktop = async () => {
+		try {
+			emit('desktop_is_connecting', true);
+			await invoke('signaling_visit_request', { domain, remoteDeviceId: input_remote_device_id });
+		} catch (error) {
+			emit('desktop_is_connecting', false);
+			console.log('visit request: ' + error);
 			// todo: pop dialog
 		}
 	};
@@ -192,10 +224,16 @@
 					on:input={(event) => on_remote_device_id_input(event)}
 				/>
 				<div class="btn-group">
-					<button class="btn btn-active tooltip inline-flex" data-tip="SSS">
-						<Fa class="mr-2" icon={faDisplay} />
-						{$LL.Pages.Connect.Desktop()}
-					</button>
+					{#if desktop_is_connecting}
+						<button class="btn btn-active tooltip tooltip-bottom btn-disabled" data-tip="SSS">
+							<Fa icon={faSpinner} spin />
+						</button>
+					{:else}
+						<button class="btn btn-active tooltip tooltip-bottom inline-flex" data-tip="SSS" on:click={connect_desktop}>
+							<Fa class="mr-2" icon={faDisplay} />
+							{$LL.Pages.Connect.Desktop()}
+						</button>
+					{/if}
 
 					<button class="btn tooltip inline-flex" data-tip="AAA">
 						<Fa class="mr-2" icon={faFolderTree} />{$LL.Pages.Connect.Files()}

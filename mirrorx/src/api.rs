@@ -1,4 +1,4 @@
-use crate::utility::format_device_id;
+use crate::{event::PopupDialogInputRemotePasswordEvent, utility::format_device_id};
 use mirrorx_core::api::{
     config::{Config, DomainConfig},
     signaling::{PublishMessage, ResourceType, SignalingClient, VisitReplyRequest},
@@ -15,12 +15,11 @@ pub struct UIState {
 }
 
 #[tauri::command]
+#[tracing::instrument(skip(app_handle, state))]
 pub async fn init_config(
     app_handle: tauri::AppHandle,
     state: tauri::State<'_, UIState>,
 ) -> Result<(), String> {
-    tracing::info!("call init_config");
-
     let app_dir = app_handle
         .path_resolver()
         .app_dir()
@@ -80,6 +79,7 @@ pub async fn init_config(
 }
 
 #[tauri::command]
+#[tracing::instrument(skip(state, window))]
 pub async fn init_signaling_client(
     domain: String,
     state: tauri::State<'_, UIState>,
@@ -125,6 +125,7 @@ pub async fn init_signaling_client(
 }
 
 #[tauri::command]
+#[tracing::instrument(skip(state))]
 pub async fn get_config_primary_domain(state: tauri::State<'_, UIState>) -> Result<String, String> {
     let primary_domain = state
         .config
@@ -139,6 +140,7 @@ pub async fn get_config_primary_domain(state: tauri::State<'_, UIState>) -> Resu
 }
 
 #[tauri::command]
+#[tracing::instrument(skip(state))]
 pub async fn get_config_device_id(
     domain: String,
     state: tauri::State<'_, UIState>,
@@ -158,6 +160,7 @@ pub async fn get_config_device_id(
 }
 
 #[tauri::command]
+#[tracing::instrument(skip(state))]
 pub async fn get_config_device_password(
     domain: String,
     state: tauri::State<'_, UIState>,
@@ -178,11 +181,13 @@ pub async fn get_config_device_password(
 }
 
 #[tauri::command]
+#[tracing::instrument]
 pub fn generate_random_password() -> String {
     mirrorx_core::utility::rand::generate_random_password()
 }
 
 #[tauri::command]
+#[tracing::instrument(skip(password, state))]
 pub async fn set_config_device_password(
     domain: String,
     password: String,
@@ -210,14 +215,70 @@ pub async fn set_config_device_password(
 }
 
 #[tauri::command]
+#[tracing::instrument(skip(state, window))]
+pub async fn signaling_visit_request(
+    domain: String,
+    remote_device_id: String,
+    state: tauri::State<'_, UIState>,
+    window: tauri::Window,
+) -> Result<(), String> {
+    let remote_device_id: i64 = remote_device_id
+        .replace('-', "")
+        .parse()
+        .map_err(|_| "invalid device_id format")?;
+
+    let local_device_id = state
+        .config
+        .lock()
+        .await
+        .as_ref()
+        .ok_or("current config is empty")?
+        .domain_configs
+        .get(&domain)
+        .ok_or("domain config is empty")?
+        .device_id;
+
+    let signaling_client = state.signaling_client.lock().await;
+    let resp = signaling_client
+        .visit(mirrorx_core::api::signaling::VisitRequest {
+            local_device_id,
+            remote_device_id,
+            resource_type: ResourceType::Desktop,
+        })
+        .await
+        .map_err(|err| {
+            tracing::error!(?err, "signaling client visit request failed");
+            "Visit request failed, remote device is offline or accept timeout"
+        })?;
+
+    if resp.allow {
+        if let Err(err) = window.emit(
+            "popup_dialog_input_remote_password",
+            PopupDialogInputRemotePasswordEvent {
+                active_device_id: format_device_id(local_device_id),
+                passive_device_id: format_device_id(remote_device_id),
+            },
+        ) {
+            tracing::error!(
+                ?err,
+                "window emit 'pop_dialog_input_remote_password' event failed"
+            );
+        }
+
+        Ok(())
+    } else {
+        Err("Remote device reject your visit request".into())
+    }
+}
+
+#[tauri::command]
+#[tracing::instrument(skip(state))]
 pub async fn signaling_reply_visit_request(
     allow: bool,
     active_device_id: String,
     passive_device_id: String,
     state: tauri::State<'_, UIState>,
 ) -> Result<(), String> {
-    tracing::info!("signaling_reply_visit_request");
-
     let active_device_id: i64 = active_device_id
         .replace('-', "")
         .parse()
@@ -230,7 +291,7 @@ pub async fn signaling_reply_visit_request(
 
     let signaling_client = state.signaling_client.lock().await;
     if let Err(err) = signaling_client
-        .visit_reply(VisitReplyRequest {
+        .visit_reply(mirrorx_core::api::signaling::VisitReplyRequest {
             active_device_id,
             passive_device_id,
             allow,
@@ -252,6 +313,43 @@ pub async fn signaling_reply_visit_request(
     Ok(())
 }
 
+#[tauri::command]
+#[tracing::instrument(skip(state))]
+pub async fn signaling_key_exchange(
+    local_device_id: String,
+    remote_device_id: String,
+    password: String,
+    state: tauri::State<'_, UIState>,
+) -> Result<(), String> {
+    let local_device_id = local_device_id
+        .replace('-', "")
+        .parse()
+        .map_err(|_| "invalid device_id format")?;
+
+    let remote_device_id: i64 = remote_device_id
+        .replace('-', "")
+        .parse()
+        .map_err(|_| "invalid device_id format")?;
+
+    let signaling_client = state.signaling_client.lock().await;
+    let resp = signaling_client
+        .key_exchange(mirrorx_core::api::signaling::KeyExchangeRequest {
+            local_device_id,
+            remote_device_id,
+            password,
+        })
+        .await
+        .map_err(|err| {
+            tracing::error!(?err, "signaling client key exchange failed");
+            String::from("Key exchange failed, please try again later")
+        })?;
+
+    tracing::info!("key exchange success");
+    // todo: open new desktop window
+
+    Ok(())
+}
+
 fn start_signaling_publish_event_handle(
     mut publish_message_rx: Receiver<PublishMessage>,
     window: tauri::Window,
@@ -266,8 +364,8 @@ fn start_signaling_publish_event_handle(
                         resource_type,
                     } => {
                         if let Err(err) = window.emit(
-                            "pop_dialog_visit_request",
-                            crate::event::VisitRequest {
+                            "popup_dialog_visit_request",
+                            crate::event::PopupDialogVisitRequestEvent {
                                 active_device_id: format_device_id(active_device_id),
                                 passive_device_id: format_device_id(passive_device_id),
                                 resource_type: if let ResourceType::Desktop = resource_type {
