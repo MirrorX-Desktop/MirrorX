@@ -15,7 +15,8 @@ const zh_Hans: Translation = {
 			Tooltips: {
 				EditPassword: '更改密码',
 				PasswordVisible: '点击以显示密码',
-				PasswordInvisible: '在鼠标移开时隐藏密码'
+				PasswordInvisible: '在鼠标移开时隐藏密码',
+				EditPasswordCancel: '取消'
 			}
 		}
 	}

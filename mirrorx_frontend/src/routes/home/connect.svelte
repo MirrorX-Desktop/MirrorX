@@ -14,14 +14,15 @@
 	import { onDestroy, onMount } from 'svelte';
 	import Fa from 'svelte-fa';
 	import LL from '../../i18n/i18n-svelte';
+	import type { NotificationEvent } from '../event_types';
 
 	export let domain: string;
 
-	var input_remote_device_id_before: string;
-	var input_remote_device_id: string;
-	var device_id: string;
-	var device_password: string;
-	var device_password_display: string;
+	var input_remote_device_id_before: string = '';
+	var input_remote_device_id: string = '';
+	var device_id: string = '';
+	var device_password: string = '';
+	var device_password_display: string = '';
 	var show_password = false;
 	var edit_password = false;
 	var random_password_generating = false;
@@ -29,9 +30,14 @@
 	var desktop_is_connecting_unlisten_fn: UnlistenFn | null;
 
 	$: {
-		load_device_id(domain);
-		load_device_password(domain);
+		if (domain) {
+			load_device_id(domain);
+			load_device_password(domain);
+		}
 	}
+
+	$: device_password_display_valid =
+		input_remote_device_id.length == 0 || /^\d{2}-\d{4}-\d{4}$/.test(input_remote_device_id);
 
 	onMount(async () => {
 		desktop_is_connecting_unlisten_fn = await listen<string>('desktop_is_connecting', (event) => {
@@ -55,8 +61,13 @@
 		try {
 			console.log(domain);
 			device_id = await invoke('get_config_device_id', { domain });
-		} catch (error) {
-			// todo: pop dialog
+		} catch (error: any) {
+			let notification: NotificationEvent = {
+				level: 'error',
+				title: 'Error',
+				message: error.toString()
+			};
+			emit('notification', notification);
 		}
 	};
 
@@ -64,16 +75,21 @@
 		try {
 			device_password = await invoke('get_config_device_password', { domain });
 			device_password_display = device_password;
-		} catch (error) {
-			// todo: pop dialog
+		} catch (error: any) {
+			let notification: NotificationEvent = {
+				level: 'error',
+				title: 'Error',
+				message: error.toString()
+			};
+			emit('notification', notification);
 		}
 	};
 
-	function on_remote_device_id_input(
+	const on_remote_device_id_input = (
 		event: Event & {
 			currentTarget: EventTarget & HTMLInputElement;
 		}
-	) {
+	) => {
 		let input_event = event as InputEvent & {
 			currentTarget: EventTarget & HTMLInputElement;
 		};
@@ -105,14 +121,19 @@
 
 			input_remote_device_id = value;
 		}
-	}
+	};
 
 	const generate_random_password = async () => {
 		try {
 			random_password_generating = true;
 			device_password_display = await invoke('generate_random_password');
-		} catch {
-			// todo: pop dialog
+		} catch (error: any) {
+			let notification: NotificationEvent = {
+				level: 'error',
+				title: 'Error',
+				message: error.toString()
+			};
+			emit('notification', notification);
 		}
 
 		random_password_generating = false;
@@ -129,19 +150,31 @@
 			await load_device_password(domain);
 			edit_password = false;
 			device_password_display = device_password;
-		} catch (error) {
-			// todo: pop dialog
+		} catch (error: any) {
+			let notification: NotificationEvent = {
+				level: 'error',
+				title: 'Error',
+				message: error.toString()
+			};
+			emit('notification', notification);
 		}
 	};
 
 	const connect_desktop = async () => {
 		try {
+			if (!/^\d{2}-\d{4}-\d{4}$/.test(input_remote_device_id)) {
+				return;
+			}
 			emit('desktop_is_connecting', true);
 			await invoke('signaling_visit_request', { domain, remoteDeviceId: input_remote_device_id });
-		} catch (error) {
+		} catch (error: any) {
 			emit('desktop_is_connecting', false);
-			console.log('visit request: ' + error);
-			// todo: pop dialog
+			let notification: NotificationEvent = {
+				level: 'error',
+				title: 'Error',
+				message: error.toString()
+			};
+			emit('notification', notification);
 		}
 	};
 </script>
@@ -184,7 +217,7 @@
 					{#if edit_password}
 						<button
 							class="tooltip tooltip-bottom text-xl"
-							data-tip={$LL.Pages.Connect.Tooltips.EditPassword()}
+							data-tip={$LL.Pages.Connect.Tooltips.EditPasswordCancel()}
 							on:click={cancel_edit_password}
 						>
 							<Fa icon={faCircleXmark} />
@@ -215,7 +248,9 @@
 			<div class="flex h-full flex-1 flex-col place-items-center justify-evenly">
 				<input
 					id="remote_device_id_input"
-					class="w-5/6 rounded border text-center text-4xl focus:border-blue-300 focus:outline-none focus:ring"
+					class="w-5/6 rounded border text-center text-4xl  {device_password_display_valid
+						? 'ring-blue-400 focus:outline-none focus:ring'
+						: 'outline-none ring ring-red-500'}"
 					type="text"
 					placeholder={$LL.Pages.Connect.RemoteDeviceIDPlaceHolder()}
 					maxlength="12"
@@ -225,17 +260,17 @@
 				/>
 				<div class="btn-group">
 					{#if desktop_is_connecting}
-						<button class="btn btn-active tooltip tooltip-bottom btn-disabled" data-tip="SSS">
+						<button class="btn btn-active btn-disabled">
 							<Fa icon={faSpinner} spin />
 						</button>
 					{:else}
-						<button class="btn btn-active tooltip tooltip-bottom inline-flex" data-tip="SSS" on:click={connect_desktop}>
+						<button class="btn btn-active inline-flex" on:click={connect_desktop}>
 							<Fa class="mr-2" icon={faDisplay} />
 							{$LL.Pages.Connect.Desktop()}
 						</button>
 					{/if}
 
-					<button class="btn tooltip inline-flex" data-tip="AAA">
+					<button class="btn inline-flex">
 						<Fa class="mr-2" icon={faFolderTree} />{$LL.Pages.Connect.Files()}
 					</button>
 				</div>

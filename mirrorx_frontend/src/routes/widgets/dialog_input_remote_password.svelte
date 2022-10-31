@@ -4,7 +4,7 @@
 	import { invoke } from '@tauri-apps/api/tauri';
 	import { onDestroy, onMount } from 'svelte';
 	import Fa from 'svelte-fa';
-	import type { PopupDialogInputRemotePasswordEvent } from '../event_types';
+	import type { NotificationEvent, PopupDialogInputRemotePasswordEvent } from '../event_types';
 
 	var event: PopupDialogInputRemotePasswordEvent | null;
 	var show = false;
@@ -37,9 +37,13 @@
 				remoteDeviceId: event?.passive_device_id,
 				password: input_password
 			});
-		} catch (error) {
-			console.log('decide error: ' + error);
-			// todo: pop dialog
+		} catch (error: any) {
+			let notification: NotificationEvent = {
+				level: 'error',
+				title: 'Error',
+				message: error.toString()
+			};
+			emit('notification', notification);
 		}
 
 		event = null;

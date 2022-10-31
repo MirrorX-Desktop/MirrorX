@@ -10,6 +10,7 @@ mod event;
 mod platform;
 mod utility;
 
+#[tracing::instrument]
 fn main() {
     tracing_subscriber::fmt::init();
 

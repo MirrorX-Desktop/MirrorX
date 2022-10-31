@@ -65,6 +65,10 @@ type RootTranslation = {
 				 * H​i​d​e​ ​p​a​s​s​w​o​r​d​ ​w​h​e​n​ ​m​o​u​s​e​ ​l​e​a​v​e
 				 */
 				PasswordInvisible: string
+				/**
+				 * C​a​n​c​e​l
+				 */
+				EditPasswordCancel: string
 			}
 		}
 	}
@@ -122,6 +126,10 @@ export type TranslationFunctions = {
 				 * Hide password when mouse leave
 				 */
 				PasswordInvisible: () => LocalizedString
+				/**
+				 * Cancel
+				 */
+				EditPasswordCancel: () => LocalizedString
 			}
 		}
 	}

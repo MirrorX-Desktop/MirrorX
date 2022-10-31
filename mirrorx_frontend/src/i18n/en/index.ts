@@ -15,7 +15,8 @@ const en: BaseTranslation = {
 			Tooltips: {
 				EditPassword: 'Edit Password',
 				PasswordVisible: 'Click to show plain password',
-				PasswordInvisible: 'Hide password when mouse leave'
+				PasswordInvisible: 'Hide password when mouse leave',
+				EditPasswordCancel: 'Cancel'
 			}
 		}
 	}

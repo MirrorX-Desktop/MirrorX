@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { listen, type UnlistenFn } from '@tauri-apps/api/event';
+	import { emit, listen, type UnlistenFn } from '@tauri-apps/api/event';
 	import { invoke } from '@tauri-apps/api/tauri';
 	import { onDestroy, onMount } from 'svelte';
-	import type { PopupDialogVisitRequestEvent } from '../event_types';
+	import type { NotificationEvent, PopupDialogVisitRequestEvent } from '../event_types';
 
 	var event: PopupDialogVisitRequestEvent | null;
 	var countdown = 30;
@@ -44,9 +44,13 @@
 				activeDeviceId: event?.active_device_id,
 				passiveDeviceId: event?.passive_device_id
 			});
-		} catch (error) {
-			console.log('decide error: ' + error);
-			// todo: pop dialog
+		} catch (error: any) {
+			let notification: NotificationEvent = {
+				level: 'error',
+				title: 'Error',
+				message: error.toString()
+			};
+			emit('notification', notification);
 		}
 
 		clearCountdown();
