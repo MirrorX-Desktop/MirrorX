@@ -39,7 +39,7 @@
 </script>
 
 <slot>
-	<div class="toast toast-top toast-center">
+	<div class="toast toast-top toast-center w-full">
 		<div class="stack">
 			{#each notifications_reverse as notification}
 				<div
