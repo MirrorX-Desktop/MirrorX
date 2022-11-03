@@ -1,0 +1,821 @@
+mod state;
+
+use mirrorx_core::{
+    api::endpoint::message::{InputEvent, KeyboardEvent, MouseEvent},
+    component::input::key::{KeyboardKey, MouseKey},
+    DesktopDecodeFrame,
+};
+use state::{State, StateUpdater};
+use std::sync::Arc;
+use tauri_egui::{
+    eframe::{
+        egui_glow::{self, check_for_gl_error},
+        glow::{
+            self, Context, HasContext, NativeBuffer, NativeTexture, NativeUniformLocation,
+            NativeVertexArray,
+        },
+    },
+    egui::{
+        epaint::Shadow,
+        mutex::{Mutex, RwLock},
+        style::Margin,
+        Align, CentralPanel, Color32, ColorImage, FontId, Frame, Layout, PaintCallback, Pos2,
+        RichText, Rounding, Sense, Stroke, TextureHandle, TextureId, Ui, Vec2,
+    },
+};
+
+pub struct DesktopWindow {
+    state: State,
+    state_updater: StateUpdater,
+    r: Arc<RotatingTriangle>,
+}
+
+impl DesktopWindow {
+    #[allow(clippy::too_many_arguments)]
+    pub fn new(
+        local_device_id: i64,
+        remote_device_id: i64,
+        opening_key: Vec<u8>,
+        opening_nonce: Vec<u8>,
+        sealing_key: Vec<u8>,
+        sealing_nonce: Vec<u8>,
+        visit_credentials: String,
+        gl_context: Arc<Context>,
+    ) -> Self {
+        let state = State::new(
+            local_device_id,
+            remote_device_id,
+            opening_key,
+            opening_nonce,
+            sealing_key,
+            sealing_nonce,
+            visit_credentials,
+        );
+
+        let state_updater = state.new_state_updater();
+
+        Self {
+            state,
+            state_updater,
+            r: Arc::new(RotatingTriangle::new(gl_context.as_ref())),
+        }
+    }
+
+    fn build_panel(&mut self, ui: &mut Ui) {
+        match self.state.visit_state() {
+            state::VisitState::Connecting => {
+                ui.centered_and_justified(|ui| {
+                    let (rect, response) = ui.allocate_exact_size(
+                        Vec2::new(160.0, 80.0),
+                        Sense::focusable_noninteractive(),
+                    );
+
+                    ui.allocate_ui_at_rect(rect, |ui| {
+                        ui.spinner();
+                        ui.label("connecting");
+                    });
+
+                    response
+                });
+            }
+            state::VisitState::Negotiating => {
+                ui.centered_and_justified(|ui| {
+                    let (rect, response) = ui.allocate_exact_size(
+                        Vec2::new(160.0, 80.0),
+                        Sense::focusable_noninteractive(),
+                    );
+
+                    ui.allocate_ui_at_rect(rect, |ui| {
+                        ui.spinner();
+                        ui.label("negotiating");
+                    });
+
+                    response
+                });
+            }
+            state::VisitState::Serving => {
+                self.build_desktop_texture(ui);
+                self.build_toolbar(ui);
+            }
+            state::VisitState::ErrorOccurred => {
+                ui.centered_and_justified(|ui| {
+                    ui.label(
+                        self.state
+                            .last_error()
+                            .map(|err| err.to_string())
+                            .unwrap_or_else(|| String::from("An unknown error occurred")),
+                    );
+                });
+            }
+        }
+    }
+
+    fn build_desktop_texture(&mut self, ui: &mut Ui) {
+
+        // if let Some(frame_rx) = self.state.poll_frame() {
+        //     if let Ok(frame) = frame_rx.try_recv() {
+        //         self.desktop_frame = Some(frame);
+        //     }
+
+        //     if let Some(frame) = self.desktop_frame.clone() {
+        //         // if self.state.use_original_resolution() {
+        //         ui.style_mut().spacing.item_spacing = Vec2::ZERO;
+        //         tauri_egui::egui::ScrollArea::both()
+        //             .max_width(frame.width as f32)
+        //             .max_height(frame.height as f32)
+        //             .auto_shrink([false; 2])
+        //             .show_viewport(ui, |ui, viewport| {
+        //                 ui.set_width(frame.width as f32);
+        //                 ui.set_height(frame.height as f32);
+
+        //                 // let (rect, response) = ui.allocate_exact_size(
+        //                 //     Vec2::new(frame.width as f32, frame.height as f32),
+        //                 //     Sense::click_and_drag(),
+        //                 // );
+
+        //                 // let rotating = self.rotating.clone();
+
+        //                 // let cb = tauri_egui::eframe::egui_glow::CallbackFn::new(
+        //                 //     move |_info, painter| {
+        //                 //         // todo: gl draw
+        //                 //         let frame = frame.clone();
+        //                 //         rotating.lock().paint(painter.gl(), frame).unwrap();
+        //                 //     },
+        //                 // );
+
+        //                 // let callback = tauri_egui::egui::PaintCallback {
+        //                 //     rect,
+        //                 //     callback: Arc::new(cb),
+        //                 // };
+
+        //                 // ui.painter().add(callback);
+
+        //                 // let events = &response.ctx.input().events;
+        //                 // let left_top = viewport.left_top();
+        //                 // emit_input(&self.state_updater, events, move |pos| {
+        //                 //     pos + left_top.to_vec2()
+        //                 // });
+        //             });
+        //         // } else {
+        //         //     ui.centered_and_justified(|ui| {
+        //         //         let available_width = ui.available_width();
+        //         //         let available_height = ui.available_height();
+        //         //         let aspect_ratio = (frame.width as f32) / (frame.height as f32);
+
+        //         //         let desktop_size = if (available_width / aspect_ratio) < available_height {
+        //         //             (available_width, available_width / aspect_ratio)
+        //         //         } else {
+        //         //             (available_height * aspect_ratio, available_height)
+        //         //         };
+
+        //         //         let scale_ratio = desktop_size.0 / (frame.width as f32);
+
+        //         //         let space_around_image = Vec2::new(
+        //         //             (available_width - desktop_size.0) / 2.0,
+        //         //             (available_height - desktop_size.1) / 2.0,
+        //         //         );
+
+        //         //         ui.add_enabled_ui(false, |ui| {
+        //         //             // let response = ui.image(frame, desktop_size);
+        //         //             // let events = &response.ctx.input().events;
+        //         //             // emit_input(&self.state_updater, events, move |pos| {
+        //         //             //     Pos2::new(
+        //         //             //         (pos.x - space_around_image.x).max(0.0) / scale_ratio,
+        //         //             //         (pos.y - space_around_image.y).max(0.0) / scale_ratio,
+        //         //             //     )
+        //         //             // });
+        //         //         });
+        //         //     });
+        //         // }
+        //     }
+        // } else {
+        //     ui.centered_and_justified(|ui| {
+        //         let (rect, response) = ui
+        //             .allocate_exact_size(Vec2::new(160.0, 80.0), Sense::focusable_noninteractive());
+
+        //         ui.allocate_ui_at_rect(rect, |ui| {
+        //             ui.spinner();
+        //             ui.label("preparing");
+        //         });
+        //     });
+        // }
+    }
+
+    fn build_toolbar(&mut self, ui: &mut Ui) {
+        // put the toolbar at central top
+        let (mut rect, response) = ui.allocate_exact_size(Vec2::new(240.0, 35.0), Sense::click());
+        rect.set_center(Pos2::new(ui.max_rect().width() / 2.0, 50.0));
+
+        ui.allocate_ui_at_rect(rect, |ui| {
+            Frame::default()
+                .inner_margin(Margin::symmetric(6.0, 2.0))
+                .rounding(Rounding::same(12.0))
+                .fill(ui.style().visuals.window_fill())
+                .shadow(Shadow::small_light())
+                .stroke(Stroke::new(1.0, Color32::GRAY))
+                .show(ui, |ui| {
+                    ui.set_min_size(rect.size());
+
+                    ui.style_mut().spacing.item_spacing = Vec2::new(6.0, 2.0);
+                    ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
+                        ui.label(
+                            RichText::new(self.state.format_remote_device_id())
+                                .font(FontId::proportional(20.0)),
+                        );
+                        ui.separator();
+                        self.build_toolbar_button_scale(ui);
+                    });
+                })
+        });
+    }
+
+    fn build_toolbar_button_scale(&mut self, ui: &mut Ui) {
+        // when use_original_resolution is true, the button should display 'fit size' icon
+        ui.visuals_mut().widgets.active.fg_stroke = Stroke::new(1.0, Color32::WHITE);
+        let title = if self.state.use_original_resolution() {
+            "原始"
+        } else {
+            "按比例"
+        };
+        let button = tauri_egui::egui::Button::new(title);
+        if ui.add(button).clicked() {
+            self.state_updater
+                .update_use_original_resolution(!self.state.use_original_resolution());
+        }
+    }
+}
+
+impl tauri_egui::eframe::App for DesktopWindow {
+    fn update(&mut self, ctx: &tauri_egui::egui::Context, frame: &mut tauri_egui::eframe::Frame) {
+        // self.build_panel(ui);
+        self.state.handle_event(ctx);
+
+        CentralPanel::default().show(ctx, |ui| {
+            tauri_egui::egui::Frame::canvas(ui.style()).show(ui, |ui| {
+                if let Some(frame) = self.state.poll_frame() {
+                    let (rect, response) =
+                        ui.allocate_exact_size((1920.0, 1080.0).into(), Sense::click());
+
+                    let r = self.r.clone();
+                    let frame = frame.clone();
+                    let callback = egui_glow::CallbackFn::new(move |info, painter| {
+                        r.paint(painter.gl(), frame.clone()).unwrap()
+                    });
+
+                    let cb = PaintCallback {
+                        rect,
+                        callback: Arc::new(callback),
+                    };
+
+                    ui.painter().add(cb);
+
+                    ctx.request_repaint()
+                }
+            });
+        });
+    }
+}
+
+fn emit_input(
+    state_updater: &StateUpdater,
+    events: &[tauri_egui::egui::Event],
+    pos_calc_fn: impl Fn(Pos2) -> Pos2,
+) {
+    let mut input_series = Vec::new();
+    for event in events.iter() {
+        match event {
+            tauri_egui::egui::Event::PointerMoved(pos) => {
+                let mouse_pos = pos_calc_fn(*pos);
+                input_series.push(InputEvent::Mouse(MouseEvent::Move(
+                    MouseKey::None,
+                    mouse_pos.x,
+                    mouse_pos.y,
+                )));
+            }
+            tauri_egui::egui::Event::PointerButton {
+                pos,
+                button,
+                pressed,
+                modifiers,
+            } => {
+                let mouse_pos = pos_calc_fn(*pos);
+
+                let mouse_key = match button {
+                    tauri_egui::egui::PointerButton::Primary => MouseKey::Left,
+                    tauri_egui::egui::PointerButton::Secondary => MouseKey::Right,
+                    tauri_egui::egui::PointerButton::Middle => MouseKey::Wheel,
+                    tauri_egui::egui::PointerButton::Extra1 => MouseKey::SideBack,
+                    tauri_egui::egui::PointerButton::Extra2 => MouseKey::SideForward,
+                };
+
+                let mouse_event = if *pressed {
+                    MouseEvent::Down(mouse_key, mouse_pos.x, mouse_pos.y)
+                } else {
+                    MouseEvent::Up(mouse_key, mouse_pos.x, mouse_pos.y)
+                };
+
+                input_series.push(InputEvent::Mouse(mouse_event));
+            }
+            tauri_egui::egui::Event::Scroll(scroll_vector) => {
+                input_series.push(InputEvent::Mouse(MouseEvent::ScrollWheel(scroll_vector.y)));
+            }
+            tauri_egui::egui::Event::Key {
+                key,
+                pressed,
+                modifiers,
+            } => {
+                // todo: modifiers order
+                let keyboard_event = if *pressed {
+                    KeyboardEvent::KeyDown(map_key(*key))
+                } else {
+                    KeyboardEvent::KeyUp(map_key(*key))
+                };
+
+                input_series.push(InputEvent::Keyboard(keyboard_event));
+            }
+            tauri_egui::egui::Event::Text(text) => {
+                tracing::info!(?text, "input text");
+            }
+            _ => {}
+        }
+    }
+
+    if !input_series.is_empty() {
+        tracing::info!(?input_series, "input series");
+        state_updater.input(input_series);
+    }
+}
+
+const fn map_key(key: tauri_egui::egui::Key) -> KeyboardKey {
+    match key {
+        tauri_egui::egui::Key::ArrowDown => KeyboardKey::ArrowDown,
+        tauri_egui::egui::Key::ArrowLeft => KeyboardKey::ArrowLeft,
+        tauri_egui::egui::Key::ArrowRight => KeyboardKey::ArrowRight,
+        tauri_egui::egui::Key::ArrowUp => KeyboardKey::ArrowUp,
+        tauri_egui::egui::Key::Escape => KeyboardKey::Escape,
+        tauri_egui::egui::Key::Tab => KeyboardKey::Tab,
+        tauri_egui::egui::Key::Backspace => KeyboardKey::Backspace,
+        tauri_egui::egui::Key::Enter => KeyboardKey::Enter,
+        tauri_egui::egui::Key::Space => KeyboardKey::Space,
+        tauri_egui::egui::Key::Insert => KeyboardKey::Insert,
+        tauri_egui::egui::Key::Delete => KeyboardKey::Delete,
+        tauri_egui::egui::Key::Home => KeyboardKey::Home,
+        tauri_egui::egui::Key::End => KeyboardKey::End,
+        tauri_egui::egui::Key::PageUp => KeyboardKey::PageUp,
+        tauri_egui::egui::Key::PageDown => KeyboardKey::PageDown,
+        tauri_egui::egui::Key::Num0 => KeyboardKey::Digit0,
+        tauri_egui::egui::Key::Num1 => KeyboardKey::Digit1,
+        tauri_egui::egui::Key::Num2 => KeyboardKey::Digit2,
+        tauri_egui::egui::Key::Num3 => KeyboardKey::Digit3,
+        tauri_egui::egui::Key::Num4 => KeyboardKey::Digit4,
+        tauri_egui::egui::Key::Num5 => KeyboardKey::Digit5,
+        tauri_egui::egui::Key::Num6 => KeyboardKey::Digit6,
+        tauri_egui::egui::Key::Num7 => KeyboardKey::Digit7,
+        tauri_egui::egui::Key::Num8 => KeyboardKey::Digit8,
+        tauri_egui::egui::Key::Num9 => KeyboardKey::Digit9,
+        tauri_egui::egui::Key::A => KeyboardKey::A,
+        tauri_egui::egui::Key::B => KeyboardKey::B,
+        tauri_egui::egui::Key::C => KeyboardKey::C,
+        tauri_egui::egui::Key::D => KeyboardKey::D,
+        tauri_egui::egui::Key::E => KeyboardKey::E,
+        tauri_egui::egui::Key::F => KeyboardKey::F,
+        tauri_egui::egui::Key::G => KeyboardKey::G,
+        tauri_egui::egui::Key::H => KeyboardKey::H,
+        tauri_egui::egui::Key::I => KeyboardKey::I,
+        tauri_egui::egui::Key::J => KeyboardKey::J,
+        tauri_egui::egui::Key::K => KeyboardKey::K,
+        tauri_egui::egui::Key::L => KeyboardKey::L,
+        tauri_egui::egui::Key::M => KeyboardKey::M,
+        tauri_egui::egui::Key::N => KeyboardKey::N,
+        tauri_egui::egui::Key::O => KeyboardKey::O,
+        tauri_egui::egui::Key::P => KeyboardKey::P,
+        tauri_egui::egui::Key::Q => KeyboardKey::Q,
+        tauri_egui::egui::Key::R => KeyboardKey::R,
+        tauri_egui::egui::Key::S => KeyboardKey::S,
+        tauri_egui::egui::Key::T => KeyboardKey::T,
+        tauri_egui::egui::Key::U => KeyboardKey::U,
+        tauri_egui::egui::Key::V => KeyboardKey::V,
+        tauri_egui::egui::Key::W => KeyboardKey::W,
+        tauri_egui::egui::Key::X => KeyboardKey::X,
+        tauri_egui::egui::Key::Y => KeyboardKey::Y,
+        tauri_egui::egui::Key::Z => KeyboardKey::Z,
+        tauri_egui::egui::Key::F1 => KeyboardKey::F1,
+        tauri_egui::egui::Key::F2 => KeyboardKey::F2,
+        tauri_egui::egui::Key::F3 => KeyboardKey::F3,
+        tauri_egui::egui::Key::F4 => KeyboardKey::F4,
+        tauri_egui::egui::Key::F5 => KeyboardKey::F5,
+        tauri_egui::egui::Key::F6 => KeyboardKey::F6,
+        tauri_egui::egui::Key::F7 => KeyboardKey::F7,
+        tauri_egui::egui::Key::F8 => KeyboardKey::F8,
+        tauri_egui::egui::Key::F9 => KeyboardKey::F9,
+        tauri_egui::egui::Key::F10 => KeyboardKey::F10,
+        tauri_egui::egui::Key::F11 => KeyboardKey::F11,
+        tauri_egui::egui::Key::F12 => KeyboardKey::F12,
+        tauri_egui::egui::Key::F13 => KeyboardKey::PrintScreen,
+        tauri_egui::egui::Key::F14 => KeyboardKey::ScrollLock,
+        tauri_egui::egui::Key::F15 => KeyboardKey::Pause,
+        tauri_egui::egui::Key::F16 => KeyboardKey::Fn, // todo: temp
+        tauri_egui::egui::Key::F17 => KeyboardKey::Fn, // todo: temp
+        tauri_egui::egui::Key::F18 => KeyboardKey::Fn, // todo: temp
+        tauri_egui::egui::Key::F19 => KeyboardKey::Fn, // todo: temp
+        tauri_egui::egui::Key::F20 => KeyboardKey::Fn, // todo: temp
+    }
+}
+
+struct RotatingTriangle {
+    program: glow::Program,
+    y_texture: NativeTexture,
+    uv_texture: NativeTexture,
+    vao: VertexArrayObject,
+    vbo: NativeBuffer,
+}
+
+#[allow(unsafe_code)] // we need unsafe code to use glow
+impl RotatingTriangle {
+    fn new(gl: &glow::Context) -> Self {
+        use glow::HasContext as _;
+
+        unsafe {
+            tracing::info!("OpenGL version: {:?}", gl.version());
+
+            let program = gl.create_program().expect("Cannot create program");
+
+            let vertex_shader_source = r#"
+            #version 330
+            uniform vec4 vertexIn;
+            uniform vec2 textureIn;
+            out vec2 textureOut;
+            void main(void)
+            {
+                gl_Position = vertexIn;
+                textureOut = textureIn;
+            }"#;
+
+            let fragment_shader_source = r#"
+            #version 330
+            uniform sampler2D textureY;
+            uniform sampler2D textureUV;
+
+            in vec2 textureOut;
+            layout(location = 0) out vec4 fragColor;
+
+            void main(void)
+            {
+            vec3 yuv;
+            vec3 rgb;
+            yuv.x = texture(textureY, textureOut).r - 0.0625;
+            yuv.y = texture(textureUV, textureOut).r - 0.5;
+            yuv.z = texture(textureUV, textureOut).g - 0.5;
+            rgb = mat3( 1,       1,         1,
+                        0,       -0.39465,  2.03211,
+                        1.13983, -0.58060,  0) * yuv;
+            fragColor = vec4(rgb, 1);
+            }"#;
+
+            // compile, link and attach vertex shader
+            let vertex_shader = gl
+                .create_shader(glow::VERTEX_SHADER)
+                .expect("Cannot create shader");
+
+            gl.shader_source(vertex_shader, vertex_shader_source);
+
+            gl.compile_shader(vertex_shader);
+
+            if !gl.get_shader_compile_status(vertex_shader) {
+                panic!(
+                    "Failed to compile vertex shader: {}",
+                    gl.get_shader_info_log(vertex_shader)
+                );
+            }
+
+            gl.attach_shader(program, vertex_shader);
+
+            // compile, link and attach vertex shader
+            let fragment_shader = gl
+                .create_shader(glow::FRAGMENT_SHADER)
+                .expect("Cannot create shader");
+
+            gl.shader_source(fragment_shader, fragment_shader_source);
+
+            gl.compile_shader(fragment_shader);
+
+            if !gl.get_shader_compile_status(fragment_shader) {
+                panic!(
+                    "Failed to compile fragment shader: {}",
+                    gl.get_shader_info_log(fragment_shader)
+                );
+            }
+
+            gl.attach_shader(program, fragment_shader);
+            check_for_gl_error!(&gl);
+
+            gl.bind_attrib_location(program, 0, "vertexIn");
+            gl.bind_attrib_location(program, 1, "textureIn");
+
+            gl.link_program(program);
+            if !gl.get_program_link_status(program) {
+                panic!("{}", gl.get_program_info_log(program));
+            }
+
+            gl.detach_shader(program, vertex_shader);
+            gl.detach_shader(program, fragment_shader);
+
+            let y_texture = gl.create_texture().unwrap();
+            let uv_texture = gl.create_texture().unwrap();
+
+            let vbo = gl.create_buffer().unwrap();
+            let buffer_infos = vec![
+                BufferInfo {
+                    location: 0,
+                    vector_size: 3,
+                    data_type: glow::FLOAT,
+                    normalized: false,
+                    stride: 0,
+                    offset: 0,
+                },
+                BufferInfo {
+                    location: 0,
+                    vector_size: 2,
+                    data_type: glow::FLOAT,
+                    normalized: false,
+                    stride: 0,
+                    offset: 0,
+                },
+            ];
+            let vao = VertexArrayObject::new(gl, vbo, buffer_infos);
+
+            // let vao = gl.create_vertex_array().unwrap();
+            // gl.bind_vertex_array(Some(vao));
+
+            // let vertex_vertices_buffer = gl.create_buffer().unwrap();
+            // gl.bind_buffer(glow::ARRAY_BUFFER, Some(vertex_vertices_buffer));
+            // gl.buffer_data_u8_slice(glow::ARRAY_BUFFER, vertex_vertices_u8, glow::STATIC_DRAW);
+            // gl.vertex_attrib_pointer_f32(0, 3, glow::FLOAT, false, 0, 0);
+            // gl.enable_vertex_attrib_array(0);
+
+            // let texture_vertices_buffer = gl.create_buffer().unwrap();
+            // gl.bind_buffer(glow::ARRAY_BUFFER, Some(texture_vertices_buffer));
+            // gl.buffer_data_u8_slice(glow::ARRAY_BUFFER, texture_vertices_u8, glow::STATIC_DRAW);
+            // gl.vertex_attrib_pointer_f32(1, 2, glow::FLOAT, false, 0, 0);
+            // gl.enable_vertex_attrib_array(1);
+
+            Self {
+                program,
+                y_texture,
+                uv_texture,
+                vao,
+                vbo,
+            }
+        }
+    }
+
+    fn destroy(&self, gl: &glow::Context) {
+        use glow::HasContext as _;
+        unsafe {
+            gl.delete_program(self.program);
+            // gl.delete_vertex_array(self.vao);
+        }
+    }
+
+    fn paint(&self, gl: &glow::Context, frame: DesktopDecodeFrame) -> Result<(), String> {
+        unsafe {
+            tracing::info!("draw");
+
+            gl.use_program(Some(self.program));
+            check_for_gl_error!(gl);
+
+            gl.clear_color(0.5, 0.5, 0.5, 1.0);
+
+            self.vao.bind(gl);
+
+            gl.bind_buffer(glow::ARRAY_BUFFER, Some(self.vbo));
+
+            let vertex_vertices: [f32; 12] = [
+                1.0, -1.0, 0.0, -1.0, -1.0, 0.0, 1.0, 1.0, 0.0, -1.0, 1.0, 0.0,
+            ];
+            let vertex_vertices_u8 = std::slice::from_raw_parts(
+                vertex_vertices.as_ptr() as *const u8,
+                vertex_vertices.len() * std::mem::size_of::<f32>(),
+            );
+
+            let texture_vertices: [f32; 8] = [1.0, 0.0, 0.0, 0.0, 1.0, 1.0, 0.0, 1.0];
+            let texture_vertices_u8 = std::slice::from_raw_parts(
+                texture_vertices.as_ptr() as *const u8,
+                texture_vertices.len() * std::mem::size_of::<f32>(),
+            );
+
+            gl.buffer_data_u8_slice(glow::ARRAY_BUFFER, vertex_vertices_u8, glow::STATIC_DRAW);
+            gl.vertex_attrib_pointer_f32(0, 3, glow::FLOAT, false, 0, 0);
+            gl.buffer_data_u8_slice(glow::ARRAY_BUFFER, texture_vertices_u8, glow::STATIC_DRAW);
+            gl.vertex_attrib_pointer_f32(0, 2, glow::FLOAT, false, 0, 0);
+
+            write_texture_buffer(
+                gl,
+                glow::TEXTURE10,
+                self.y_texture,
+                frame.width,
+                frame.height,
+                frame.luminance_stride,
+                frame.luminance_bytes.as_slice(),
+            );
+            check_for_gl_error!(gl);
+
+            write_texture_buffer(
+                gl,
+                glow::TEXTURE11,
+                self.uv_texture,
+                frame.width / 2,
+                frame.height / 2,
+                frame.chrominance_stride,
+                frame.chrominance_bytes.as_slice(),
+            );
+            check_for_gl_error!(gl);
+
+            gl.bind_texture(glow::TEXTURE_2D, Some(self.y_texture));
+            check_for_gl_error!(gl);
+            let y_uniform_location = gl.get_uniform_location(self.program, "textureY");
+            check_for_gl_error!(gl);
+            gl.uniform_1_i32(y_uniform_location.as_ref(), 10);
+            check_for_gl_error!(gl);
+
+            gl.bind_texture(glow::TEXTURE_2D, Some(self.uv_texture));
+            check_for_gl_error!(gl);
+            let uv_uniform_location = gl.get_uniform_location(self.program, "textureUV");
+            check_for_gl_error!(gl);
+            gl.uniform_1_i32(uv_uniform_location.as_ref(), 11);
+            check_for_gl_error!(gl);
+
+            gl.draw_arrays(glow::TRIANGLE_STRIP, 0, 4);
+            check_for_gl_error!(gl);
+
+            self.vao.unbind(gl);
+
+            Ok(())
+        }
+    }
+}
+
+unsafe fn write_texture_buffer(
+    gl: &glow::Context,
+    target: u32,
+    texture: glow::NativeTexture,
+    width: i32,
+    height: i32,
+    stride: i32,
+    buffer: &[u8],
+) {
+    gl.active_texture(target);
+    check_for_gl_error!(gl);
+
+    gl.bind_texture(glow::TEXTURE_2D, Some(texture));
+    check_for_gl_error!(gl);
+
+    // gl.pixel_store_i32(glow::UNPACK_ROW_LENGTH, stride);
+    // check_for_gl_error!(gl);
+
+    let internal_format = if target == glow::TEXTURE10 {
+        glow::RED
+    } else {
+        glow::RG
+    };
+
+    gl.tex_image_2d(
+        glow::TEXTURE_2D,
+        0,
+        internal_format as i32,
+        width,
+        height,
+        0,
+        internal_format,
+        glow::UNSIGNED_BYTE,
+        Some(buffer),
+    );
+    check_for_gl_error!(gl);
+
+    gl.tex_parameter_i32(
+        glow::TEXTURE_2D,
+        glow::TEXTURE_MIN_FILTER,
+        glow::LINEAR as i32,
+    );
+    check_for_gl_error!(gl);
+
+    gl.tex_parameter_i32(
+        glow::TEXTURE_2D,
+        glow::TEXTURE_MAG_FILTER,
+        glow::LINEAR as i32,
+    );
+    check_for_gl_error!(gl);
+
+    gl.tex_parameter_i32(
+        glow::TEXTURE_2D,
+        glow::TEXTURE_WRAP_S,
+        glow::CLAMP_TO_EDGE as i32,
+    );
+    check_for_gl_error!(gl);
+
+    gl.tex_parameter_i32(
+        glow::TEXTURE_2D,
+        glow::TEXTURE_WRAP_T,
+        glow::CLAMP_TO_EDGE as i32,
+    );
+    check_for_gl_error!(gl);
+
+    gl.bind_texture(glow::TEXTURE_2D, None);
+}
+
+#[derive(Debug)]
+pub(crate) struct BufferInfo {
+    pub location: u32, //
+    pub vector_size: i32,
+    pub data_type: u32, //GL_FLOAT,GL_UNSIGNED_BYTE
+    pub normalized: bool,
+    pub stride: i32,
+    pub offset: i32,
+}
+
+pub(crate) struct VertexArrayObject {
+    // If `None`, we emulate VAO:s.
+    vao: Option<glow::VertexArray>,
+    vbo: glow::Buffer,
+    buffer_infos: Vec<BufferInfo>,
+}
+
+impl VertexArrayObject {
+    #[allow(clippy::needless_pass_by_value)] // false positive
+    pub(crate) unsafe fn new(
+        gl: &glow::Context,
+        vbo: glow::Buffer,
+        buffer_infos: Vec<BufferInfo>,
+    ) -> Self {
+        // let vao = if supports_vao(gl) {
+        let vao = gl.create_vertex_array().unwrap();
+        check_for_gl_error!(gl, "create_vertex_array");
+
+        // Store state in the VAO:
+        gl.bind_vertex_array(Some(vao));
+        gl.bind_buffer(glow::ARRAY_BUFFER, Some(vbo));
+
+        for attribute in &buffer_infos {
+            gl.vertex_attrib_pointer_f32(
+                attribute.location,
+                attribute.vector_size,
+                attribute.data_type,
+                attribute.normalized,
+                attribute.stride,
+                attribute.offset,
+            );
+            check_for_gl_error!(gl, "vertex_attrib_pointer_f32");
+            gl.enable_vertex_attrib_array(attribute.location);
+            check_for_gl_error!(gl, "enable_vertex_attrib_array");
+        }
+
+        gl.bind_vertex_array(None);
+
+        // Some(vao)
+        // } else {
+        //     tracing::debug!("VAO not supported");
+        //     None
+        // };
+
+        Self {
+            vao: Some(vao),
+            vbo,
+            buffer_infos,
+        }
+    }
+
+    pub(crate) unsafe fn bind(&self, gl: &glow::Context) {
+        if let Some(vao) = self.vao {
+            gl.bind_vertex_array(Some(vao));
+            check_for_gl_error!(gl, "bind_vertex_array");
+        } else {
+            gl.bind_buffer(glow::ARRAY_BUFFER, Some(self.vbo));
+            check_for_gl_error!(gl, "bind_buffer");
+
+            for attribute in &self.buffer_infos {
+                gl.vertex_attrib_pointer_f32(
+                    attribute.location,
+                    attribute.vector_size,
+                    attribute.data_type,
+                    attribute.normalized,
+                    attribute.stride,
+                    attribute.offset,
+                );
+                check_for_gl_error!(gl, "vertex_attrib_pointer_f32");
+                gl.enable_vertex_attrib_array(attribute.location);
+                check_for_gl_error!(gl, "enable_vertex_attrib_array");
+            }
+        }
+    }
+
+    pub(crate) unsafe fn unbind(&self, gl: &glow::Context) {
+        if self.vao.is_some() {
+            gl.bind_vertex_array(None);
+        } else {
+            gl.bind_buffer(glow::ARRAY_BUFFER, None);
+            for attribute in &self.buffer_infos {
+                gl.disable_vertex_attrib_array(attribute.location);
+            }
+        }
+    }
+}

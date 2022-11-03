@@ -9,14 +9,19 @@ mod api;
 mod event;
 mod platform;
 mod utility;
+mod window;
 
 #[tracing::instrument]
-fn main() {
+#[tokio::main]
+async fn main() {
     tracing_subscriber::fmt::init();
+    tauri::async_runtime::set(tokio::runtime::Handle::current());
 
     tauri::Builder::default()
         .manage(api::UIState::default())
         .setup(|app| {
+            app.wry_plugin(tauri_egui::EguiPluginBuilder::new(app.handle()));
+
             if let Some(win) = app.get_window("main") {
                 #[cfg(target_os = "macos")]
                 {

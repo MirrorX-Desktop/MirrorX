@@ -151,12 +151,23 @@ impl VideoDecoder {
                     (decode_context).hw_decode_frame
                 };
 
-                let rgb_buffer = convert_yuv_to_rgb(tmp_frame)?;
+                // let rgb_buffer = convert_yuv_to_rgb(tmp_frame)?;
 
                 let desktop_decode_frame = DesktopDecodeFrame {
-                    width: (*tmp_frame).width as usize,
-                    height: (*tmp_frame).height as usize,
-                    data: rgb_buffer,
+                    width: (*tmp_frame).width,
+                    height: (*tmp_frame).height,
+                    luminance_bytes: std::slice::from_raw_parts(
+                        (*tmp_frame).data[0],
+                        ((*tmp_frame).linesize[0] * (*tmp_frame).height) as usize,
+                    )
+                    .to_vec(),
+                    luminance_stride: (*tmp_frame).linesize[0],
+                    chrominance_bytes: std::slice::from_raw_parts(
+                        (*tmp_frame).data[1],
+                        ((*tmp_frame).linesize[1] * (*tmp_frame).height / 2) as usize,
+                    )
+                    .to_vec(),
+                    chrominance_stride: (*tmp_frame).linesize[1],
                 };
 
                 if let Err(err) = self.render_frame_tx.try_send(desktop_decode_frame) {

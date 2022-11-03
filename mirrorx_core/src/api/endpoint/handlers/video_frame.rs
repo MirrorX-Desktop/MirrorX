@@ -26,7 +26,7 @@ pub fn handle_video_frame(id: EndPointID, video_frame: EndPointVideoFrame) {
 
 pub fn serve_video_decode(id: EndPointID, frame_tx: Sender<DesktopDecodeFrame>) {
     if !DECODERS.contains_key(&id) {
-        let (tx, mut rx) = tokio::sync::mpsc::channel(180);
+        let (tx, mut rx) = tokio::sync::mpsc::channel(1800);
         DECODERS.insert(id, tx);
 
         tokio::spawn(async move {
@@ -37,10 +37,13 @@ pub fn serve_video_decode(id: EndPointID, frame_tx: Sender<DesktopDecodeFrame>) 
 
             // async {
             while let Some(video_frame) = rx.recv().await {
+                let instant = std::time::Instant::now();
                 if let Err(err) = decoder.decode(video_frame).await {
                     tracing::error!(?err, "decode video frame failed");
                     break;
                 }
+                let elapsed = instant.elapsed();
+                tracing::info!(?elapsed, "instant");
             }
             // }
             // .instrument(span.clone())
