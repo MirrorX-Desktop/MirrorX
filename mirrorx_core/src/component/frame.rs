@@ -1,7 +1,5 @@
 use std::time::Duration;
 
-use egui::Color32;
-
 pub struct DesktopEncodeFrame {
     pub capture_time: Duration,
     pub width: i32,

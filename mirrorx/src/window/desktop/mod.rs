@@ -11,15 +11,15 @@ use tauri_egui::{
     eframe::{
         egui_glow::{self, check_for_gl_error},
         glow::{
-            self, Context, HasContext, NativeBuffer, NativeTexture, NativeUniformLocation,
-            NativeVertexArray,
+            self, Context, HasContext, NativeBuffer, NativeShader, NativeTexture,
+            NativeUniformLocation, NativeVertexArray,
         },
     },
     egui::{
         epaint::Shadow,
         mutex::{Mutex, RwLock},
         style::Margin,
-        Align, CentralPanel, Color32, ColorImage, FontId, Frame, Layout, PaintCallback, Pos2,
+        Align, CentralPanel, Color32, ColorImage, FontId, Frame, Layout, PaintCallback, Pos2, Rect,
         RichText, Rounding, Sense, Stroke, TextureHandle, TextureId, Ui, Vec2,
     },
 };
@@ -27,7 +27,8 @@ use tauri_egui::{
 pub struct DesktopWindow {
     state: State,
     state_updater: StateUpdater,
-    r: Arc<RotatingTriangle>,
+    r: Arc<Mutex<RotatingTriangle>>,
+    paint_callback: Option<PaintCallback>,
 }
 
 impl DesktopWindow {
@@ -57,7 +58,8 @@ impl DesktopWindow {
         Self {
             state,
             state_updater,
-            r: Arc::new(RotatingTriangle::new(gl_context.as_ref())),
+            r: Arc::new(Mutex::new(RotatingTriangle::new(gl_context.as_ref()))),
+            paint_callback: None,
         }
     }
 
@@ -111,94 +113,96 @@ impl DesktopWindow {
     }
 
     fn build_desktop_texture(&mut self, ui: &mut Ui) {
+        if let Some(frame) = self.state.poll_frame() {
+            if self.state.use_original_resolution() {
+                ui.style_mut().spacing.item_spacing = Vec2::ZERO;
+                tauri_egui::egui::ScrollArea::both()
+                    .max_width(frame.width as f32)
+                    .max_height(frame.height as f32)
+                    .auto_shrink([false; 2])
+                    .show_viewport(ui, |ui, mut viewport| {
+                        ui.set_width(frame.width as f32);
+                        ui.set_height(frame.height as f32);
+                        ui.style_mut().spacing.item_spacing = Vec2::ZERO;
 
-        // if let Some(frame_rx) = self.state.poll_frame() {
-        //     if let Ok(frame) = frame_rx.try_recv() {
-        //         self.desktop_frame = Some(frame);
-        //     }
+                        let rotating = self.r.clone();
 
-        //     if let Some(frame) = self.desktop_frame.clone() {
-        //         // if self.state.use_original_resolution() {
-        //         ui.style_mut().spacing.item_spacing = Vec2::ZERO;
-        //         tauri_egui::egui::ScrollArea::both()
-        //             .max_width(frame.width as f32)
-        //             .max_height(frame.height as f32)
-        //             .auto_shrink([false; 2])
-        //             .show_viewport(ui, |ui, viewport| {
-        //                 ui.set_width(frame.width as f32);
-        //                 ui.set_height(frame.height as f32);
+                        let cb = tauri_egui::eframe::egui_glow::CallbackFn::new(
+                            move |_info, painter| {
+                                rotating.lock().paint(painter.gl(), frame.clone()).unwrap();
+                            },
+                        );
 
-        //                 // let (rect, response) = ui.allocate_exact_size(
-        //                 //     Vec2::new(frame.width as f32, frame.height as f32),
-        //                 //     Sense::click_and_drag(),
-        //                 // );
+                        let callback = tauri_egui::egui::PaintCallback {
+                            rect: ui.available_rect_before_wrap(),
+                            callback: Arc::new(cb),
+                        };
 
-        //                 // let rotating = self.rotating.clone();
+                        ui.painter().add(callback);
 
-        //                 // let cb = tauri_egui::eframe::egui_glow::CallbackFn::new(
-        //                 //     move |_info, painter| {
-        //                 //         // todo: gl draw
-        //                 //         let frame = frame.clone();
-        //                 //         rotating.lock().paint(painter.gl(), frame).unwrap();
-        //                 //     },
-        //                 // );
+                        // let events = &response.ctx.input().events;
+                        // let left_top = viewport.left_top();
+                        // emit_input(&self.state_updater, events, move |pos| {
+                        //     pos + left_top.to_vec2()
+                        // });
+                    });
+            } else {
+                ui.centered_and_justified(|ui| {
+                    let available_width = ui.available_width();
+                    let available_height = ui.available_height();
+                    let aspect_ratio = (frame.width as f32) / (frame.height as f32);
 
-        //                 // let callback = tauri_egui::egui::PaintCallback {
-        //                 //     rect,
-        //                 //     callback: Arc::new(cb),
-        //                 // };
+                    let desktop_size = if (available_width / aspect_ratio) < available_height {
+                        (available_width, available_width / aspect_ratio)
+                    } else {
+                        (available_height * aspect_ratio, available_height)
+                    };
 
-        //                 // ui.painter().add(callback);
+                    let scale_ratio = desktop_size.0 / (frame.width as f32);
 
-        //                 // let events = &response.ctx.input().events;
-        //                 // let left_top = viewport.left_top();
-        //                 // emit_input(&self.state_updater, events, move |pos| {
-        //                 //     pos + left_top.to_vec2()
-        //                 // });
-        //             });
-        //         // } else {
-        //         //     ui.centered_and_justified(|ui| {
-        //         //         let available_width = ui.available_width();
-        //         //         let available_height = ui.available_height();
-        //         //         let aspect_ratio = (frame.width as f32) / (frame.height as f32);
+                    let space_around_image = Vec2::new(
+                        (available_width - desktop_size.0) / 2.0,
+                        (available_height - desktop_size.1) / 2.0,
+                    );
 
-        //         //         let desktop_size = if (available_width / aspect_ratio) < available_height {
-        //         //             (available_width, available_width / aspect_ratio)
-        //         //         } else {
-        //         //             (available_height * aspect_ratio, available_height)
-        //         //         };
+                    let rotating = self.r.clone();
 
-        //         //         let scale_ratio = desktop_size.0 / (frame.width as f32);
+                    let cb =
+                        tauri_egui::eframe::egui_glow::CallbackFn::new(move |_info, painter| {
+                            rotating.lock().paint(painter.gl(), frame.clone()).unwrap();
+                        });
 
-        //         //         let space_around_image = Vec2::new(
-        //         //             (available_width - desktop_size.0) / 2.0,
-        //         //             (available_height - desktop_size.1) / 2.0,
-        //         //         );
+                    let callback = tauri_egui::egui::PaintCallback {
+                        rect: Rect {
+                            min: space_around_image.to_pos2(),
+                            max: space_around_image.to_pos2() + desktop_size.into(),
+                        },
+                        callback: Arc::new(cb),
+                    };
 
-        //         //         ui.add_enabled_ui(false, |ui| {
-        //         //             // let response = ui.image(frame, desktop_size);
-        //         //             // let events = &response.ctx.input().events;
-        //         //             // emit_input(&self.state_updater, events, move |pos| {
-        //         //             //     Pos2::new(
-        //         //             //         (pos.x - space_around_image.x).max(0.0) / scale_ratio,
-        //         //             //         (pos.y - space_around_image.y).max(0.0) / scale_ratio,
-        //         //             //     )
-        //         //             // });
-        //         //         });
-        //         //     });
-        //         // }
-        //     }
-        // } else {
-        //     ui.centered_and_justified(|ui| {
-        //         let (rect, response) = ui
-        //             .allocate_exact_size(Vec2::new(160.0, 80.0), Sense::focusable_noninteractive());
+                    ui.painter().add(callback);
 
-        //         ui.allocate_ui_at_rect(rect, |ui| {
-        //             ui.spinner();
-        //             ui.label("preparing");
-        //         });
-        //     });
-        // }
+                    // let response = ui.image(frame, desktop_size);
+                    // let events = &response.ctx.input().events;
+                    // emit_input(&self.state_updater, events, move |pos| {
+                    //     Pos2::new(
+                    //         (pos.x - space_around_image.x).max(0.0) / scale_ratio,
+                    //         (pos.y - space_around_image.y).max(0.0) / scale_ratio,
+                    //     )
+                    // });
+                });
+            }
+        } else {
+            ui.centered_and_justified(|ui| {
+                let (rect, response) = ui
+                    .allocate_exact_size(Vec2::new(160.0, 80.0), Sense::focusable_noninteractive());
+
+                ui.allocate_ui_at_rect(rect, |ui| {
+                    ui.spinner();
+                    ui.label("preparing");
+                });
+            });
+        }
     }
 
     fn build_toolbar(&mut self, ui: &mut Ui) {
@@ -250,29 +254,13 @@ impl tauri_egui::eframe::App for DesktopWindow {
         // self.build_panel(ui);
         self.state.handle_event(ctx);
 
-        CentralPanel::default().show(ctx, |ui| {
-            tauri_egui::egui::Frame::canvas(ui.style()).show(ui, |ui| {
-                if let Some(frame) = self.state.poll_frame() {
-                    let (rect, response) =
-                        ui.allocate_exact_size((1920.0, 1080.0).into(), Sense::click());
-
-                    let r = self.r.clone();
-                    let frame = frame.clone();
-                    let callback = egui_glow::CallbackFn::new(move |info, painter| {
-                        r.paint(painter.gl(), frame.clone()).unwrap()
-                    });
-
-                    let cb = PaintCallback {
-                        rect,
-                        callback: Arc::new(callback),
-                    };
-
-                    ui.painter().add(cb);
-
-                    ctx.request_repaint()
-                }
+        CentralPanel::default()
+            .frame(tauri_egui::egui::Frame::none())
+            .show(ctx, |ui| {
+                self.build_panel(ui);
             });
-        });
+
+        ctx.request_repaint();
     }
 }
 
@@ -422,12 +410,47 @@ const fn map_key(key: tauri_egui::egui::Key) -> KeyboardKey {
     }
 }
 
+// const vertex_vertices: [f32; 12] = [
+//     1.0, -1.0, 0.0, -1.0, -1.0, 0.0, 1.0, 1.0, 0.0, -1.0, 1.0, 0.0,
+// ];
+
+#[rustfmt::skip]
+const vertex_vertices: [f32; 20] = [
+     1.0,  1.0, 0.0, 1.0, 1.0, 
+     1.0, -1.0, 0.0, 1.0, 0.0, 
+    -1.0, -1.0, 0.0, 0.0, 0.0, 
+    -1.0,  1.0, 0.0, 0.0, 1.0,
+];
+
+const vertex_vertices_u8: &[u8] = unsafe {
+    std::slice::from_raw_parts(
+        vertex_vertices.as_ptr() as *const u8,
+        vertex_vertices.len() * std::mem::size_of::<f32>(),
+    )
+};
+
+// const texture_vertices: [f32; 8] = [1.0, 0.0, 0.0, 0.0, 1.0, 1.0, 0.0, 1.0];
+
+#[rustfmt::skip]
+const indices_vertices: [u32; 6] = [
+    0, 1, 3, 
+    1, 2, 3,
+];
+
+const indices_u8: &[u8] = unsafe {
+    std::slice::from_raw_parts(
+        indices_vertices.as_ptr() as *const u8,
+        indices_vertices.len() * std::mem::size_of::<u32>(),
+    )
+};
+
 struct RotatingTriangle {
     program: glow::Program,
-    y_texture: NativeTexture,
-    uv_texture: NativeTexture,
-    vao: VertexArrayObject,
+    y_texture: Option<NativeTexture>,
+    uv_texture: Option<NativeTexture>,
+    vao: NativeVertexArray,
     vbo: NativeBuffer,
+    ebo: NativeBuffer,
 }
 
 #[allow(unsafe_code)] // we need unsafe code to use glow
@@ -441,45 +464,53 @@ impl RotatingTriangle {
             let program = gl.create_program().expect("Cannot create program");
 
             let vertex_shader_source = r#"
-            #version 330
-            uniform vec4 vertexIn;
-            uniform vec2 textureIn;
-            out vec2 textureOut;
+            #version 330 core
+            layout (location = 0) in vec3 aPos;
+            layout (location = 1) in vec2 aTexCoord;
+
+            out vec2 texCoord;
+            
             void main(void)
             {
-                gl_Position = vertexIn;
-                textureOut = textureIn;
+                gl_Position = vec4(aPos, 1.0);
+                texCoord = vec2(aTexCoord.x, 1 - aTexCoord.y);
             }"#;
 
             let fragment_shader_source = r#"
-            #version 330
+            #version 330 core
+
             uniform sampler2D textureY;
             uniform sampler2D textureUV;
 
-            in vec2 textureOut;
-            layout(location = 0) out vec4 fragColor;
+            in vec2 texCoord;
+            layout (location = 0) out vec4 fragColor;
 
             void main(void)
             {
             vec3 yuv;
             vec3 rgb;
-            yuv.x = texture(textureY, textureOut).r - 0.0625;
-            yuv.y = texture(textureUV, textureOut).r - 0.5;
-            yuv.z = texture(textureUV, textureOut).g - 0.5;
+            yuv.x = texture(textureY, texCoord.st).r -0.0625;
+            yuv.y = texture(textureUV, texCoord.st).r - 0.5;
+            yuv.z = texture(textureUV, texCoord.st).g - 0.5;
             rgb = mat3( 1,       1,         1,
                         0,       -0.39465,  2.03211,
                         1.13983, -0.58060,  0) * yuv;
-            fragColor = vec4(rgb, 1);
+            fragColor = vec4(rgb, 1.0);
             }"#;
 
             // compile, link and attach vertex shader
             let vertex_shader = gl
                 .create_shader(glow::VERTEX_SHADER)
                 .expect("Cannot create shader");
+            check_for_gl_error!(gl);
 
             gl.shader_source(vertex_shader, vertex_shader_source);
+            check_for_gl_error!(gl);
 
             gl.compile_shader(vertex_shader);
+            check_for_gl_error!(gl);
+
+            tracing::info!("{}", gl.get_shader_info_log(vertex_shader));
 
             if !gl.get_shader_compile_status(vertex_shader) {
                 panic!(
@@ -489,15 +520,21 @@ impl RotatingTriangle {
             }
 
             gl.attach_shader(program, vertex_shader);
+            check_for_gl_error!(gl);
 
             // compile, link and attach vertex shader
             let fragment_shader = gl
                 .create_shader(glow::FRAGMENT_SHADER)
                 .expect("Cannot create shader");
+            check_for_gl_error!(gl);
 
             gl.shader_source(fragment_shader, fragment_shader_source);
+            check_for_gl_error!(gl);
 
             gl.compile_shader(fragment_shader);
+            check_for_gl_error!(gl);
+
+            tracing::info!("{}", gl.get_shader_info_log(fragment_shader));
 
             if !gl.get_shader_compile_status(fragment_shader) {
                 panic!(
@@ -507,10 +544,10 @@ impl RotatingTriangle {
             }
 
             gl.attach_shader(program, fragment_shader);
-            check_for_gl_error!(&gl);
+            check_for_gl_error!(gl);
 
-            gl.bind_attrib_location(program, 0, "vertexIn");
-            gl.bind_attrib_location(program, 1, "textureIn");
+            gl.bind_attrib_location(program, 0, "aPos");
+            gl.bind_attrib_location(program, 1, "aTexCoord");
 
             gl.link_program(program);
             if !gl.get_program_link_status(program) {
@@ -518,53 +555,66 @@ impl RotatingTriangle {
             }
 
             gl.detach_shader(program, vertex_shader);
+            check_for_gl_error!(gl);
+
             gl.detach_shader(program, fragment_shader);
+            check_for_gl_error!(gl);
 
-            let y_texture = gl.create_texture().unwrap();
-            let uv_texture = gl.create_texture().unwrap();
+            gl.delete_shader(vertex_shader);
+            gl.delete_shader(fragment_shader);
 
+            let ebo = gl.create_buffer().unwrap();
+            let vao = gl.create_vertex_array().unwrap();
             let vbo = gl.create_buffer().unwrap();
-            let buffer_infos = vec![
-                BufferInfo {
-                    location: 0,
-                    vector_size: 3,
-                    data_type: glow::FLOAT,
-                    normalized: false,
-                    stride: 0,
-                    offset: 0,
-                },
-                BufferInfo {
-                    location: 0,
-                    vector_size: 2,
-                    data_type: glow::FLOAT,
-                    normalized: false,
-                    stride: 0,
-                    offset: 0,
-                },
-            ];
-            let vao = VertexArrayObject::new(gl, vbo, buffer_infos);
 
-            // let vao = gl.create_vertex_array().unwrap();
-            // gl.bind_vertex_array(Some(vao));
+            gl.bind_vertex_array(Some(vao));
+            check_for_gl_error!(gl);
 
-            // let vertex_vertices_buffer = gl.create_buffer().unwrap();
-            // gl.bind_buffer(glow::ARRAY_BUFFER, Some(vertex_vertices_buffer));
-            // gl.buffer_data_u8_slice(glow::ARRAY_BUFFER, vertex_vertices_u8, glow::STATIC_DRAW);
-            // gl.vertex_attrib_pointer_f32(0, 3, glow::FLOAT, false, 0, 0);
-            // gl.enable_vertex_attrib_array(0);
+            gl.bind_buffer(glow::ARRAY_BUFFER, Some(vbo));
+            check_for_gl_error!(gl);
 
-            // let texture_vertices_buffer = gl.create_buffer().unwrap();
-            // gl.bind_buffer(glow::ARRAY_BUFFER, Some(texture_vertices_buffer));
-            // gl.buffer_data_u8_slice(glow::ARRAY_BUFFER, texture_vertices_u8, glow::STATIC_DRAW);
-            // gl.vertex_attrib_pointer_f32(1, 2, glow::FLOAT, false, 0, 0);
-            // gl.enable_vertex_attrib_array(1);
+            gl.buffer_data_u8_slice(glow::ARRAY_BUFFER, vertex_vertices_u8, glow::STATIC_DRAW);
+            check_for_gl_error!(gl);
+
+            gl.vertex_attrib_pointer_f32(
+                0,
+                3,
+                glow::FLOAT,
+                false,
+                5 * std::mem::size_of::<f32>() as i32,
+                0,
+            );
+            check_for_gl_error!(gl);
+
+            gl.vertex_attrib_pointer_f32(
+                1,
+                2,
+                glow::FLOAT,
+                false,
+                5 * std::mem::size_of::<f32>() as i32,
+                3 * std::mem::size_of::<f32>() as i32,
+            );
+            check_for_gl_error!(gl);
+
+            gl.enable_vertex_attrib_array(0);
+            check_for_gl_error!(gl);
+
+            gl.enable_vertex_attrib_array(1);
+            check_for_gl_error!(gl);
+
+            gl.bind_buffer(glow::ELEMENT_ARRAY_BUFFER, Some(ebo));
+            check_for_gl_error!(gl);
+
+            gl.buffer_data_u8_slice(glow::ELEMENT_ARRAY_BUFFER, indices_u8, glow::STATIC_DRAW);
+            check_for_gl_error!(gl);
 
             Self {
                 program,
-                y_texture,
-                uv_texture,
+                y_texture: None,
+                uv_texture: None,
                 vao,
                 vbo,
+                ebo,
             }
         }
     }
@@ -577,95 +627,98 @@ impl RotatingTriangle {
         }
     }
 
-    fn paint(&self, gl: &glow::Context, frame: DesktopDecodeFrame) -> Result<(), String> {
+    fn paint(&mut self, gl: &glow::Context, frame: DesktopDecodeFrame) -> Result<(), String> {
         unsafe {
-            tracing::info!("draw");
+            if self.y_texture.is_none() {
+                self.y_texture = Some(create_texture(
+                    gl,
+                    true,
+                    frame.width,
+                    frame.height,
+                    frame.luminance_stride,
+                ));
+            }
 
+            if self.uv_texture.is_none() {
+                self.uv_texture = Some(create_texture(
+                    gl,
+                    false,
+                    frame.width / 2,
+                    frame.height / 2,
+                    frame.chrominance_stride,
+                ));
+            }
+
+            gl.clear_color(1.0, 1.0, 1.0, 1.0);
+            gl.clear(glow::COLOR_BUFFER_BIT | glow::DEPTH_BUFFER_BIT);
+
+            // gl.disable(glow::SCISSOR_TEST);
             gl.use_program(Some(self.program));
             check_for_gl_error!(gl);
 
-            gl.clear_color(0.5, 0.5, 0.5, 1.0);
-
-            self.vao.bind(gl);
-
-            gl.bind_buffer(glow::ARRAY_BUFFER, Some(self.vbo));
-
-            let vertex_vertices: [f32; 12] = [
-                1.0, -1.0, 0.0, -1.0, -1.0, 0.0, 1.0, 1.0, 0.0, -1.0, 1.0, 0.0,
-            ];
-            let vertex_vertices_u8 = std::slice::from_raw_parts(
-                vertex_vertices.as_ptr() as *const u8,
-                vertex_vertices.len() * std::mem::size_of::<f32>(),
-            );
-
-            let texture_vertices: [f32; 8] = [1.0, 0.0, 0.0, 0.0, 1.0, 1.0, 0.0, 1.0];
-            let texture_vertices_u8 = std::slice::from_raw_parts(
-                texture_vertices.as_ptr() as *const u8,
-                texture_vertices.len() * std::mem::size_of::<f32>(),
-            );
-
-            gl.buffer_data_u8_slice(glow::ARRAY_BUFFER, vertex_vertices_u8, glow::STATIC_DRAW);
-            gl.vertex_attrib_pointer_f32(0, 3, glow::FLOAT, false, 0, 0);
-            gl.buffer_data_u8_slice(glow::ARRAY_BUFFER, texture_vertices_u8, glow::STATIC_DRAW);
-            gl.vertex_attrib_pointer_f32(0, 2, glow::FLOAT, false, 0, 0);
-
-            write_texture_buffer(
-                gl,
-                glow::TEXTURE10,
-                self.y_texture,
+            gl.active_texture(glow::TEXTURE0);
+            check_for_gl_error!(gl);
+            gl.bind_texture(glow::TEXTURE_2D, self.y_texture);
+            check_for_gl_error!(gl);
+            gl.tex_sub_image_2d(
+                glow::TEXTURE_2D,
+                0,
+                0,
+                0,
                 frame.width,
                 frame.height,
-                frame.luminance_stride,
-                frame.luminance_bytes.as_slice(),
+                glow::RED,
+                glow::UNSIGNED_BYTE,
+                glow::PixelUnpackData::Slice(&frame.luminance_bytes),
             );
             check_for_gl_error!(gl);
 
-            write_texture_buffer(
-                gl,
-                glow::TEXTURE11,
-                self.uv_texture,
-                frame.width / 2,
-                frame.height / 2,
-                frame.chrominance_stride,
-                frame.chrominance_bytes.as_slice(),
-            );
-            check_for_gl_error!(gl);
-
-            gl.bind_texture(glow::TEXTURE_2D, Some(self.y_texture));
-            check_for_gl_error!(gl);
             let y_uniform_location = gl.get_uniform_location(self.program, "textureY");
             check_for_gl_error!(gl);
-            gl.uniform_1_i32(y_uniform_location.as_ref(), 10);
+            gl.uniform_1_i32(y_uniform_location.as_ref(), 0);
             check_for_gl_error!(gl);
 
-            gl.bind_texture(glow::TEXTURE_2D, Some(self.uv_texture));
+            gl.active_texture(glow::TEXTURE1);
             check_for_gl_error!(gl);
+            gl.bind_texture(glow::TEXTURE_2D, self.uv_texture);
+            check_for_gl_error!(gl);
+            gl.tex_sub_image_2d(
+                glow::TEXTURE_2D,
+                0,
+                0,
+                0,
+                frame.width / 2,
+                frame.height / 2,
+                glow::RG,
+                glow::UNSIGNED_BYTE,
+                glow::PixelUnpackData::Slice(&frame.chrominance_bytes),
+            );
+            check_for_gl_error!(gl);
+
             let uv_uniform_location = gl.get_uniform_location(self.program, "textureUV");
             check_for_gl_error!(gl);
-            gl.uniform_1_i32(uv_uniform_location.as_ref(), 11);
+            gl.uniform_1_i32(uv_uniform_location.as_ref(), 1);
             check_for_gl_error!(gl);
 
-            gl.draw_arrays(glow::TRIANGLE_STRIP, 0, 4);
+            gl.bind_vertex_array(Some(self.vao));
             check_for_gl_error!(gl);
 
-            self.vao.unbind(gl);
+            gl.draw_elements(glow::TRIANGLES, 6, glow::UNSIGNED_INT, 0);
+            check_for_gl_error!(gl);
 
             Ok(())
         }
     }
 }
 
-unsafe fn write_texture_buffer(
+unsafe fn create_texture(
     gl: &glow::Context,
-    target: u32,
-    texture: glow::NativeTexture,
+    is_luminance_texture: bool,
     width: i32,
     height: i32,
     stride: i32,
-    buffer: &[u8],
-) {
-    gl.active_texture(target);
-    check_for_gl_error!(gl);
+) -> NativeTexture {
+    let texture = gl.create_texture().unwrap();
 
     gl.bind_texture(glow::TEXTURE_2D, Some(texture));
     check_for_gl_error!(gl);
@@ -673,7 +726,7 @@ unsafe fn write_texture_buffer(
     // gl.pixel_store_i32(glow::UNPACK_ROW_LENGTH, stride);
     // check_for_gl_error!(gl);
 
-    let internal_format = if target == glow::TEXTURE10 {
+    let internal_format = if is_luminance_texture {
         glow::RED
     } else {
         glow::RG
@@ -688,7 +741,7 @@ unsafe fn write_texture_buffer(
         0,
         internal_format,
         glow::UNSIGNED_BYTE,
-        Some(buffer),
+        None,
     );
     check_for_gl_error!(gl);
 
@@ -706,21 +759,21 @@ unsafe fn write_texture_buffer(
     );
     check_for_gl_error!(gl);
 
-    gl.tex_parameter_i32(
-        glow::TEXTURE_2D,
-        glow::TEXTURE_WRAP_S,
-        glow::CLAMP_TO_EDGE as i32,
-    );
-    check_for_gl_error!(gl);
+    // gl.tex_parameter_i32(
+    //     glow::TEXTURE_2D,
+    //     glow::TEXTURE_WRAP_S,
+    //     glow::CLAMP_TO_EDGE as i32,
+    // );
+    // check_for_gl_error!(gl);
 
-    gl.tex_parameter_i32(
-        glow::TEXTURE_2D,
-        glow::TEXTURE_WRAP_T,
-        glow::CLAMP_TO_EDGE as i32,
-    );
-    check_for_gl_error!(gl);
+    // gl.tex_parameter_i32(
+    //     glow::TEXTURE_2D,
+    //     glow::TEXTURE_WRAP_T,
+    //     glow::CLAMP_TO_EDGE as i32,
+    // );
+    // check_for_gl_error!(gl);
 
-    gl.bind_texture(glow::TEXTURE_2D, None);
+    texture
 }
 
 #[derive(Debug)]
