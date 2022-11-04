@@ -494,9 +494,12 @@ impl RotatingTriangle {
             layout (location = 0) out vec4 fragColor;
 
             const mat3 YCbCrToRGBmatrix = mat3(
-            1.1643835616, 0.0000000000, 1.7927410714,
-            1.1643835616, -0.2132486143, -0.5329093286,
-            1.1643835616, 2.1124017857, 0.0000000000
+            // 1.1643835616, 0.0000000000, 1.7927410714,
+            // 1.1643835616, -0.2132486143, -0.5329093286,
+            // 1.1643835616, 2.1124017857, 0.0000000000
+            1,0,1.5748
+            1,-0.1873,-0.4681
+            1,1.8556,0
             );
             
             const vec3 YCbCrToRGBzero = vec3(-0.972945075, 0.301482665, -1.133402218);
@@ -511,8 +514,8 @@ impl RotatingTriangle {
             // rgb = mat3( 1,       1,         1,
             //             0,       -0.39465,  2.03211,
             //             1.13983, -0.58060,  0) * yuv;
-            rgb = yuv * YCbCrToRGBmatrix + YCbCrToRGBzero;
-            rgb = clamp(rgb, vec3(0.0, 0.0, 0.0), vec3(1.0, 1.0, 1.0));
+            rgb = yuv * YCbCrToRGBmatrix;//+ YCbCrToRGBzero;
+            // rgb = clamp(rgb, vec3(0.0, 0.0, 0.0), vec3(1.0, 1.0, 1.0));
             fragColor = vec4(rgb, 1.0);
             }"#;
 
