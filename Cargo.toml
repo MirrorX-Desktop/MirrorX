@@ -9,6 +9,3 @@ opt-level = 3
 lto = true
 incremental = true
 strip = true
-
-[patch.crates-io]
-tauri-egui = { path = "../tauri-egui" }

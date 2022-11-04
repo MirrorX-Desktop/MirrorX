@@ -356,7 +356,7 @@ pub async fn signaling_key_exchange(
 
     if let Err(err) = egui_plugin.create_window(
         window_label.clone(),
-        Box::new(move |cc, painter| {
+        Box::new(move |cc| {
             cc.egui_ctx.set_debug_on_hover(true);
             if let Some(gl_context) = cc.gl.as_ref() {
                 set_fonts(&cc.egui_ctx);

@@ -248,7 +248,7 @@
 			<div class="flex h-full flex-1 flex-col place-items-center justify-evenly">
 				<input
 					id="remote_device_id_input"
-					class="w-5/6 rounded border text-center text-4xl  {device_password_display_valid
+					class="w-5/6 rounded border text-center text-4xl {device_password_display_valid
 						? 'ring-blue-400 focus:outline-none focus:ring'
 						: 'outline-none ring ring-red-500'}"
 					type="text"
@@ -284,7 +284,19 @@
 </slot>
 
 <style>
-	#remote_device_id_input::-webkit-input-placeholder {
-		font-size: large;
+	/* #remote_device_id_input::-webkit-input-placeholder {
+		@apply text-center align-middle text-xl;
 	}
+
+	#remote_device_id_input::placeholder {
+		@apply text-center align-middle text-xl;
+	}
+
+	#remote_device_id_input::-moz-placeholder {
+		@apply text-center align-middle text-xl;
+	}
+
+	#remote_device_id_input::-ms-input-placeholder {
+		@apply text-center align-middle text-xl;
+	} */
 </style>

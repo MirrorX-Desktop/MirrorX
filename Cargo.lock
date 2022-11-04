@@ -4618,6 +4618,8 @@ dependencies = [
 [[package]]
 name = "tauri-egui"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7e16c90fe6da287ece4a85126b6453de5708a556a4434760ad3abe8ad35b5e2d"
 dependencies = [
  "eframe_tao",
  "egui",
