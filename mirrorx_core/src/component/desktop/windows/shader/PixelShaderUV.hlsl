@@ -38,7 +38,7 @@ static const float3x2 RGBtoUVCoeffMatrix =
 float2 CalculateUV(float3 rgb)
 {
 	float2 uv = mul(rgb, RGBtoUVCoeffMatrix);
-	uv += float2(0.5f, 0.5f);// 0.501960f = 128/255
+	// uv += float2(0.5f, 0.5f);// 0.501960f = 128/255
 	return saturate(uv);
 }
 

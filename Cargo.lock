@@ -2549,6 +2549,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "cocoa",
+ "crossbeam",
  "egui_extras",
  "mirrorx_core",
  "objc",

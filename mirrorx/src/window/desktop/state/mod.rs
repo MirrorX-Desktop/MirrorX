@@ -11,6 +11,7 @@ use mirrorx_core::{
     DesktopDecodeFrame,
 };
 use ring::aead::{BoundKey, OpeningKey, SealingKey};
+use std::sync::Mutex;
 use std::{sync::Arc, time::Duration};
 use tauri_egui::{
     eframe::{
@@ -20,6 +21,7 @@ use tauri_egui::{
     egui::{ColorImage, TextureHandle, TextureId},
 };
 use tokio::sync::mpsc::{Receiver, Sender};
+
 pub use updater::StateUpdater;
 
 #[macro_export]
@@ -57,7 +59,8 @@ pub struct State {
 
     last_error: Option<CoreError>,
 
-    frame_rx: Option<Receiver<DesktopDecodeFrame>>,
+    render_rx: Option<crossbeam::channel::Receiver<DesktopDecodeFrame>>,
+    current_frame: Option<DesktopDecodeFrame>,
 }
 
 impl State {
@@ -101,7 +104,8 @@ impl State {
             use_original_resolution: true,
             frame_count: 0,
             last_error: None,
-            frame_rx: None,
+            render_rx: None,
+            current_frame: None,
         }
     }
 
@@ -141,12 +145,14 @@ impl State {
         self.last_error.as_ref()
     }
 
-    pub fn poll_frame(&mut self) -> Option<DesktopDecodeFrame> {
-        if let Some(rx) = &mut self.frame_rx {
-            rx.try_recv().ok()
-        } else {
-            None
+    pub fn frame(&mut self) -> Option<DesktopDecodeFrame> {
+        if let Some(rx) = &mut self.render_rx {
+            while let Ok(frame) = rx.try_recv() {
+                self.current_frame = Some(frame);
+            }
         }
+
+        self.current_frame.clone()
     }
 }
 
@@ -156,7 +162,7 @@ impl State {
     }
 
     pub fn handle_event(&mut self, ctx: &tauri_egui::egui::Context) {
-        if let Ok(event) = self.rx.try_recv() {
+        while let Ok(event) = self.rx.try_recv() {
             match event {
                 Event::ConnectEndPoint {
                     local_device_id,
@@ -179,19 +185,7 @@ impl State {
                 }
                 Event::UpdateEndPointClient { client } => self.endpoint_client = Some(client),
                 Event::UpdateVisitState { new_state } => self.visit_state = new_state,
-                Event::UpdateFrameImage { frame_image } => {
-                    if let Some(desktop_texture) = self.desktop_texture.as_mut() {
-                        desktop_texture.set(frame_image, tauri_egui::egui::TextureFilter::Linear);
-                    } else {
-                        self.desktop_texture = Some(ctx.load_texture(
-                            "desktop_texture",
-                            frame_image,
-                            tauri_egui::egui::TextureFilter::Linear,
-                        ));
-                    }
-
-                    self.frame_count += 1;
-                }
+                Event::UpdateRenderFrameReceiver { render_rx } => self.render_rx = Some(render_rx),
                 Event::UpdateUseOriginalResolution {
                     use_original_resolution,
                 } => self.use_original_resolution = use_original_resolution,
@@ -365,21 +359,25 @@ impl State {
 
     fn emit_negotiate_finish(&mut self, expected_frame_rate: u8) {
         if let Some(client) = &self.endpoint_client {
-            match client.negotiate_finish(expected_frame_rate) {
-                Ok(mut frame_rx) => {
-                    self.frame_rx = Some(frame_rx);
+            let mut client = client.clone();
+            let tx = self.tx.clone();
+            tokio::spawn(async move {
+                match client.negotiate_finish(expected_frame_rate).await {
+                    Ok(render_rx) => {
+                        send_event!(tx, Event::UpdateRenderFrameReceiver { render_rx });
 
-                    send_event!(
-                        self.tx,
-                        Event::UpdateVisitState {
-                            new_state: VisitState::Serving
-                        }
-                    );
+                        send_event!(
+                            tx,
+                            Event::UpdateVisitState {
+                                new_state: VisitState::Serving
+                            }
+                        );
+                    }
+                    Err(err) => {
+                        send_event!(tx, Event::UpdateError { err });
+                    }
                 }
-                Err(err) => {
-                    send_event!(self.tx, Event::UpdateError { err });
-                }
-            }
+            });
         }
     }
 }

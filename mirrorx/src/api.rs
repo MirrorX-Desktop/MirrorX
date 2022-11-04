@@ -5,7 +5,10 @@ use mirrorx_core::api::{
 };
 use std::{collections::HashMap, path::PathBuf};
 use tauri::async_runtime::Mutex;
-use tauri_egui::{eframe::glow::HasContext, EguiPluginHandle};
+use tauri_egui::{
+    eframe::{glow::HasContext, HardwareAcceleration},
+    EguiPluginHandle,
+};
 use tokio::sync::mpsc::Receiver;
 
 #[derive(Default)]
@@ -372,7 +375,10 @@ pub async fn signaling_key_exchange(
             }
         }),
         window_label,
-        tauri_egui::eframe::NativeOptions::default(),
+        tauri_egui::eframe::NativeOptions {
+            // hardware_acceleration: HardwareAcceleration::Required,
+            ..Default::default()
+        },
     ) {
         tracing::error!(?err, "create desktop window failed");
         return Err("create remote desktop window failed".into());

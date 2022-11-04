@@ -6,7 +6,7 @@ use mirrorx_core::{
     DesktopDecodeFrame,
 };
 use state::{State, StateUpdater};
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 use tauri_egui::{
     eframe::{
         egui_glow::{self, check_for_gl_error},
@@ -113,14 +113,14 @@ impl DesktopWindow {
     }
 
     fn build_desktop_texture(&mut self, ui: &mut Ui) {
-        if let Some(frame) = self.state.poll_frame() {
+        if let Some(frame) = self.state.frame() {
             if self.state.use_original_resolution() {
                 ui.style_mut().spacing.item_spacing = Vec2::ZERO;
                 tauri_egui::egui::ScrollArea::both()
                     .max_width(frame.width as f32)
                     .max_height(frame.height as f32)
                     .auto_shrink([false; 2])
-                    .show_viewport(ui, |ui, mut viewport| {
+                    .show_viewport(ui, |ui, _| {
                         ui.set_width(frame.width as f32);
                         ui.set_height(frame.height as f32);
                         ui.style_mut().spacing.item_spacing = Vec2::ZERO;
@@ -251,6 +251,7 @@ impl DesktopWindow {
 
 impl tauri_egui::eframe::App for DesktopWindow {
     fn update(&mut self, ctx: &tauri_egui::egui::Context, frame: &mut tauri_egui::eframe::Frame) {
+        let update_instant = std::time::Instant::now();
         // self.build_panel(ui);
         self.state.handle_event(ctx);
 
@@ -260,7 +261,14 @@ impl tauri_egui::eframe::App for DesktopWindow {
                 self.build_panel(ui);
             });
 
-        ctx.request_repaint();
+        // ctx.request_repaint();
+        let cost = update_instant.elapsed();
+
+        if let Some(wait) = cost.checked_sub(Duration::from_millis(16)) {
+            ctx.request_repaint_after(wait);
+        } else {
+            ctx.request_repaint();
+        }
     }
 }
 
@@ -485,16 +493,26 @@ impl RotatingTriangle {
             in vec2 texCoord;
             layout (location = 0) out vec4 fragColor;
 
+            const mat3 YCbCrToRGBmatrix = mat3(
+            1.1643835616, 0.0000000000, 1.7927410714,
+            1.1643835616, -0.2132486143, -0.5329093286,
+            1.1643835616, 2.1124017857, 0.0000000000
+            );
+            
+            const vec3 YCbCrToRGBzero = vec3(-0.972945075, 0.301482665, -1.133402218);
+
             void main(void)
             {
             vec3 yuv;
             vec3 rgb;
-            yuv.x = texture(textureY, texCoord.st).r -0.0625;
-            yuv.y = texture(textureUV, texCoord.st).r - 0.5;
-            yuv.z = texture(textureUV, texCoord.st).g - 0.5;
-            rgb = mat3( 1,       1,         1,
-                        0,       -0.39465,  2.03211,
-                        1.13983, -0.58060,  0) * yuv;
+            yuv.x = texture(textureY, texCoord.st).r; //-0.0625;
+            yuv.y = texture(textureUV, texCoord.st).r; // - 0.5;
+            yuv.z = texture(textureUV, texCoord.st).g; // - 0.5;
+            // rgb = mat3( 1,       1,         1,
+            //             0,       -0.39465,  2.03211,
+            //             1.13983, -0.58060,  0) * yuv;
+            rgb = yuv * YCbCrToRGBmatrix + YCbCrToRGBzero;
+            rgb = clamp(rgb, vec3(0.0, 0.0, 0.0), vec3(1.0, 1.0, 1.0));
             fragColor = vec4(rgb, 1.0);
             }"#;
 
@@ -759,116 +777,19 @@ unsafe fn create_texture(
     );
     check_for_gl_error!(gl);
 
-    // gl.tex_parameter_i32(
-    //     glow::TEXTURE_2D,
-    //     glow::TEXTURE_WRAP_S,
-    //     glow::CLAMP_TO_EDGE as i32,
-    // );
-    // check_for_gl_error!(gl);
+    gl.tex_parameter_i32(
+        glow::TEXTURE_2D,
+        glow::TEXTURE_WRAP_S,
+        glow::CLAMP_TO_EDGE as i32,
+    );
+    check_for_gl_error!(gl);
 
-    // gl.tex_parameter_i32(
-    //     glow::TEXTURE_2D,
-    //     glow::TEXTURE_WRAP_T,
-    //     glow::CLAMP_TO_EDGE as i32,
-    // );
-    // check_for_gl_error!(gl);
+    gl.tex_parameter_i32(
+        glow::TEXTURE_2D,
+        glow::TEXTURE_WRAP_T,
+        glow::CLAMP_TO_EDGE as i32,
+    );
+    check_for_gl_error!(gl);
 
     texture
-}
-
-#[derive(Debug)]
-pub(crate) struct BufferInfo {
-    pub location: u32, //
-    pub vector_size: i32,
-    pub data_type: u32, //GL_FLOAT,GL_UNSIGNED_BYTE
-    pub normalized: bool,
-    pub stride: i32,
-    pub offset: i32,
-}
-
-pub(crate) struct VertexArrayObject {
-    // If `None`, we emulate VAO:s.
-    vao: Option<glow::VertexArray>,
-    vbo: glow::Buffer,
-    buffer_infos: Vec<BufferInfo>,
-}
-
-impl VertexArrayObject {
-    #[allow(clippy::needless_pass_by_value)] // false positive
-    pub(crate) unsafe fn new(
-        gl: &glow::Context,
-        vbo: glow::Buffer,
-        buffer_infos: Vec<BufferInfo>,
-    ) -> Self {
-        // let vao = if supports_vao(gl) {
-        let vao = gl.create_vertex_array().unwrap();
-        check_for_gl_error!(gl, "create_vertex_array");
-
-        // Store state in the VAO:
-        gl.bind_vertex_array(Some(vao));
-        gl.bind_buffer(glow::ARRAY_BUFFER, Some(vbo));
-
-        for attribute in &buffer_infos {
-            gl.vertex_attrib_pointer_f32(
-                attribute.location,
-                attribute.vector_size,
-                attribute.data_type,
-                attribute.normalized,
-                attribute.stride,
-                attribute.offset,
-            );
-            check_for_gl_error!(gl, "vertex_attrib_pointer_f32");
-            gl.enable_vertex_attrib_array(attribute.location);
-            check_for_gl_error!(gl, "enable_vertex_attrib_array");
-        }
-
-        gl.bind_vertex_array(None);
-
-        // Some(vao)
-        // } else {
-        //     tracing::debug!("VAO not supported");
-        //     None
-        // };
-
-        Self {
-            vao: Some(vao),
-            vbo,
-            buffer_infos,
-        }
-    }
-
-    pub(crate) unsafe fn bind(&self, gl: &glow::Context) {
-        if let Some(vao) = self.vao {
-            gl.bind_vertex_array(Some(vao));
-            check_for_gl_error!(gl, "bind_vertex_array");
-        } else {
-            gl.bind_buffer(glow::ARRAY_BUFFER, Some(self.vbo));
-            check_for_gl_error!(gl, "bind_buffer");
-
-            for attribute in &self.buffer_infos {
-                gl.vertex_attrib_pointer_f32(
-                    attribute.location,
-                    attribute.vector_size,
-                    attribute.data_type,
-                    attribute.normalized,
-                    attribute.stride,
-                    attribute.offset,
-                );
-                check_for_gl_error!(gl, "vertex_attrib_pointer_f32");
-                gl.enable_vertex_attrib_array(attribute.location);
-                check_for_gl_error!(gl, "enable_vertex_attrib_array");
-            }
-        }
-    }
-
-    pub(crate) unsafe fn unbind(&self, gl: &glow::Context) {
-        if self.vao.is_some() {
-            gl.bind_vertex_array(None);
-        } else {
-            gl.bind_buffer(glow::ARRAY_BUFFER, None);
-            for attribute in &self.buffer_infos {
-                gl.disable_vertex_attrib_array(attribute.location);
-            }
-        }
-    }
 }

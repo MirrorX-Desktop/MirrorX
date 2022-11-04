@@ -2,6 +2,7 @@ use super::VisitState;
 use mirrorx_core::{
     api::endpoint::{message::InputEvent, EndPointClient},
     error::CoreError,
+    DesktopDecodeFrame,
 };
 use strum_macros::AsRefStr;
 use tauri_egui::egui::ColorImage;
@@ -26,8 +27,8 @@ pub enum Event {
         new_state: VisitState,
     },
 
-    UpdateFrameImage {
-        frame_image: ColorImage,
+    UpdateRenderFrameReceiver {
+        render_rx: crossbeam::channel::Receiver<DesktopDecodeFrame>,
     },
 
     UpdateUseOriginalResolution {

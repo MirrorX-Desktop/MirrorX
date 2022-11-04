@@ -18,14 +18,14 @@ use tokio::sync::mpsc::{error::TrySendError, Sender};
 
 pub struct VideoDecoder {
     decode_context: Option<DecodeContext>,
-    render_frame_tx: Sender<DesktopDecodeFrame>,
+    render_frame_tx: crossbeam::channel::Sender<DesktopDecodeFrame>,
     last_pts: i64,
 }
 
 unsafe impl Send for VideoDecoder {}
 
 impl VideoDecoder {
-    pub fn new(render_frame_tx: Sender<DesktopDecodeFrame>) -> VideoDecoder {
+    pub fn new(render_frame_tx: crossbeam::channel::Sender<DesktopDecodeFrame>) -> VideoDecoder {
         unsafe {
             // av_log_set_level(AV_LOG_TRACE);
             // av_log_set_flags(AV_LOG_SKIP_REPEATED);
@@ -38,7 +38,7 @@ impl VideoDecoder {
         }
     }
 
-    pub async fn decode(&mut self, mut video_frame: EndPointVideoFrame) -> CoreResult<()> {
+    pub fn decode(&mut self, mut video_frame: EndPointVideoFrame) -> CoreResult<()> {
         unsafe {
             if let Some(decode_context) = self.decode_context.as_ref() {
                 if (*decode_context.codec_ctx).width != video_frame.width
@@ -110,36 +110,17 @@ impl VideoDecoder {
                     ));
                 }
 
-                // let begin = std::time::Instant::now();
-
-                // let expect_time_base = av_inv_q((*decode_context.codec_ctx).framerate);
-
-                // let actual_pts = av_rescale_q(
-                //     (*decode_context.decode_frame).pts,
-                //     expect_time_base,
-                //     (*decode_context.codec_ctx).time_base,
-                // );
-
-                // let duration_from_pts = actual_pts - self.last_pts;
-                // self.last_pts = actual_pts;
-
-                // let frame_duration = std::time::Duration::from_secs_f64(
-                //     (duration_from_pts as f64) * av_q2d((*decode_context.codec_ctx).time_base),
-                // );
-
                 let tmp_frame = if !(decode_context).parser_ctx.is_null() {
                     (decode_context).decode_frame
                 } else {
-                    // let transfer_instant = std::time::Instant::now();
+                    let transfer_instant = std::time::Instant::now();
                     let ret = av_hwframe_transfer_data(
                         (decode_context).hw_decode_frame,
                         (decode_context).decode_frame,
                         0,
                     );
-                    // let transfer_cost_time = transfer_instant.elapsed();
-                    // frame_duration = frame_duration
-                    //     .checked_sub(transfer_cost_time)
-                    //     .unwrap_or(Duration::ZERO);
+                    let cost = transfer_instant.elapsed();
+                    tracing::info!(?cost, "hardware decode frame transfer cost");
 
                     if ret < 0 {
                         return Err(core_error!(
@@ -150,8 +131,6 @@ impl VideoDecoder {
 
                     (decode_context).hw_decode_frame
                 };
-
-                // let rgb_buffer = convert_yuv_to_rgb(tmp_frame)?;
 
                 let desktop_decode_frame = DesktopDecodeFrame {
                     width: (*tmp_frame).width,
@@ -171,11 +150,12 @@ impl VideoDecoder {
                 };
 
                 if let Err(err) = self.render_frame_tx.try_send(desktop_decode_frame) {
-                    match err {
-                        TrySendError::Full(_) => tracing::warn!("video render tx is full!"),
-                        TrySendError::Closed(_) => {
-                            return Err(core_error!("video render tx has closed"))
-                        }
+                    if err.is_full() {
+                        tracing::warn!("video render tx is full!");
+                    }
+
+                    if err.is_disconnected() {
+                        return Err(core_error!("video render tx has closed"));
                     }
                 }
 
@@ -209,6 +189,7 @@ impl DecodeContext {
             let mut decode_ctx = DecodeContext::default();
 
             let codec = avcodec_find_decoder(AV_CODEC_ID_H264);
+
             if codec.is_null() {
                 return Err(core_error!("avcodec_find_decoder returns null"));
             }
@@ -237,7 +218,7 @@ impl DecodeContext {
             );
 
             if hw_device_type == AV_HWDEVICE_TYPE_NONE {
-                tracing::error!("current environment does't support 'd3d11va'");
+                tracing::error!("current environment does't support hardware decode");
 
                 let mut devices = Vec::new();
                 loop {

@@ -13,7 +13,6 @@ use self::{
 use crate::{
     api::endpoint::handlers::{
         audio_frame::handle_audio_frame, negotiate_finished::handle_negotiate_finished_request,
-        video_frame::handle_video_frame,
     },
     component::{desktop::monitor::Monitor, frame::DesktopDecodeFrame},
     core_error,
@@ -30,13 +29,16 @@ use futures::{
     stream::{SplitSink, SplitStream},
     SinkExt, StreamExt,
 };
-use once_cell::sync::Lazy;
+use once_cell::sync::{Lazy, OnceCell};
 use ring::aead::{OpeningKey, SealingKey};
-use std::time::Duration;
+use std::{cell::UnsafeCell, sync::Arc, time::Duration};
 use tokio::{
     net::TcpStream,
     select,
-    sync::mpsc::{Receiver, Sender},
+    sync::{
+        mpsc::{Receiver, Sender},
+        Mutex,
+    },
 };
 use tokio_util::codec::{Framed, LengthDelimitedCodec};
 use tracing::Instrument;
@@ -79,6 +81,7 @@ pub struct EndPointClient {
     id: EndPointID,
     message_tx: Sender<Option<EndPointMessage>>,
     exit_tx: async_broadcast::Sender<()>,
+    video_frame_rx: Arc<Mutex<Option<tokio::sync::mpsc::Receiver<EndPointVideoFrame>>>>,
 }
 
 impl EndPointClient {
@@ -103,10 +106,13 @@ impl EndPointClient {
         let (message_tx, message_rx) = tokio::sync::mpsc::channel(180);
         let (sink, stream) = stream.split();
 
+        let (video_frame_tx, video_frame_rx) = tokio::sync::mpsc::channel(120);
+
         let client = EndPointClient {
             id: EndPointID(local_device_id, remote_device_id),
             message_tx,
             exit_tx: exit_tx.clone(),
+            video_frame_rx: Arc::new(Mutex::new(Some(video_frame_rx))),
         };
 
         serve_reader(
@@ -115,6 +121,7 @@ impl EndPointClient {
             exit_rx.clone(),
             stream,
             opening_key,
+            video_frame_tx,
         );
 
         serve_writer(client.id, exit_tx, exit_rx, sink, sealing_key, message_rx);
@@ -143,13 +150,30 @@ impl EndPointClient {
         Ok(rx)
     }
 
-    pub fn negotiate_finish(
-        &self,
+    pub async fn negotiate_finish(
+        &mut self,
         expected_frame_rate: u8,
-    ) -> CoreResult<Receiver<DesktopDecodeFrame>> {
-        let (frame_tx, frame_rx) = tokio::sync::mpsc::channel(180);
+    ) -> CoreResult<crossbeam::channel::Receiver<DesktopDecodeFrame>> {
+        let (frame_tx, frame_rx) = crossbeam::channel::bounded(120);
 
-        serve_video_decode(self.id, frame_tx);
+        let video_decode_tx = serve_video_decode(self.id, frame_tx);
+        if let Some(mut video_frame_rx) = self.video_frame_rx.lock().await.take() {
+            tokio::spawn(async move {
+                while let Some(video_frame) = video_frame_rx.recv().await {
+                    if let Err(err) = video_decode_tx.try_send(video_frame) {
+                        if err.is_disconnected() {
+                            tracing::error!("video decode tx was closed");
+                            return;
+                        }
+
+                        if err.is_full() {
+                            tracing::warn!("video decode tx is full!");
+                        }
+                    }
+                }
+            });
+        }
+
         serve_audio_decode(self.id);
 
         let req = EndPointMessage::NegotiateFinishedRequest(EndPointNegotiateFinishedRequest {
@@ -256,6 +280,7 @@ fn serve_reader(
     mut exit_rx: async_broadcast::Receiver<()>,
     mut stream: SplitStream<Framed<TcpStream, LengthDelimitedCodec>>,
     mut opening_key: OpeningKey<NonceValue>,
+    mut video_frame_tx: tokio::sync::mpsc::Sender<EndPointVideoFrame>,
 ) {
     tokio::spawn(async move {
         let span = tracing::info_span!("serve reader", id = ?client.id());
@@ -288,7 +313,7 @@ fn serve_reader(
 
             match open_packet(&mut opening_key, &mut endpoint_message_bytes) {
                 Ok(message) => {
-                    handle_message(client.clone(), message);
+                    handle_message(client.clone(), message, &video_frame_tx);
                 }
                 Err(err) => {
                     tracing::error!(?err, "open packet failed");
@@ -375,7 +400,11 @@ fn seal_packet(
     Ok(Bytes::from(packet_buffer))
 }
 
-fn handle_message(client: EndPointClient, message: EndPointMessage) {
+fn handle_message(
+    client: EndPointClient,
+    message: EndPointMessage,
+    video_frame_tx: &tokio::sync::mpsc::Sender<EndPointVideoFrame>,
+) {
     match message {
         EndPointMessage::Error => {
             // handle_error(active_device_id, passive_device_id);
@@ -394,7 +423,8 @@ fn handle_message(client: EndPointClient, message: EndPointMessage) {
             handle_negotiate_finished_request(client);
         }
         EndPointMessage::VideoFrame(video_frame) => {
-            handle_video_frame(client.id, video_frame);
+            // handle_video_frame(client.id, video_frame);
+            video_frame_tx.try_send(video_frame);
         }
         EndPointMessage::AudioFrame(audio_frame) => {
             handle_audio_frame(client.id, audio_frame);
