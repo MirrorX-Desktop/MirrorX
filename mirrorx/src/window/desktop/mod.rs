@@ -1,5 +1,7 @@
+mod desktop_render;
 mod state;
 
+use self::desktop_render::DesktopRender;
 use mirrorx_core::{
     api::endpoint::message::{InputEvent, KeyboardEvent, MouseEvent},
     component::input::key::{KeyboardKey, MouseKey},
@@ -19,15 +21,17 @@ use tauri_egui::{
         epaint::Shadow,
         mutex::{Mutex, RwLock},
         style::Margin,
-        Align, CentralPanel, Color32, ColorImage, FontId, Frame, Layout, PaintCallback, Pos2, Rect,
-        RichText, Rounding, Sense, Stroke, TextureHandle, TextureId, Ui, Vec2,
+        text::LayoutJob,
+        Align, CentralPanel, Color32, ColorImage, FontFamily, FontId, Frame, Layout, PaintCallback,
+        Pos2, Rect, RichText, Rounding, Sense, Stroke, TextureHandle, TextureId, Ui, Vec2,
+        WidgetText,
     },
 };
 
 pub struct DesktopWindow {
     state: State,
     state_updater: StateUpdater,
-    r: Arc<Mutex<RotatingTriangle>>,
+    desktop_render: Arc<Mutex<DesktopRender>>,
     toolbar_scale_available: bool,
 }
 
@@ -55,10 +59,13 @@ impl DesktopWindow {
 
         let state_updater = state.new_state_updater();
 
+        let desktop_render =
+            DesktopRender::new(gl_context.as_ref()).expect("create desktop render failed");
+
         Self {
             state,
             state_updater,
-            r: Arc::new(Mutex::new(RotatingTriangle::new(gl_context.as_ref()))),
+            desktop_render: Arc::new(Mutex::new(desktop_render)),
             toolbar_scale_available: true,
         }
     }
@@ -131,18 +138,19 @@ impl DesktopWindow {
                 ui.allocate_ui_at_rect(available_rect, |ui| {
                     tauri_egui::egui::ScrollArea::both()
                         .auto_shrink([false; 2])
-                        .show_viewport(ui, |ui, viewport| {
+                        .show(ui, |ui| {
                             ui.set_width(frame.width as f32);
                             ui.set_height(frame.height as f32);
 
-                            let rotating = self.r.clone();
+                            let desktop_render = self.desktop_render.clone();
 
                             let cb = tauri_egui::eframe::egui_glow::CallbackFn::new(
                                 move |_info, painter| {
-                                    rotating
-                                        .lock()
-                                        .paint(painter.gl(), frame.clone(), None)
-                                        .unwrap();
+                                    if let Err(err) =
+                                        desktop_render.lock().paint(painter.gl(), frame.clone())
+                                    {
+                                        tracing::error!(?err, "desktop render failed");
+                                    }
                                 },
                             );
 
@@ -178,13 +186,12 @@ impl DesktopWindow {
                     (available_height - desktop_size.1) / 2.0,
                 );
 
-                let rotating = self.r.clone();
+                let desktop_render = self.desktop_render.clone();
 
                 let cb = tauri_egui::eframe::egui_glow::CallbackFn::new(move |_info, painter| {
-                    rotating
-                        .lock()
-                        .paint(painter.gl(), frame.clone(), None)
-                        .unwrap();
+                    if let Err(err) = desktop_render.lock().paint(painter.gl(), frame.clone()) {
+                        tracing::error!(?err, "desktop render failed");
+                    }
                 });
 
                 let callback = tauri_egui::egui::PaintCallback {
@@ -236,12 +243,24 @@ impl DesktopWindow {
 
                     ui.style_mut().spacing.item_spacing = Vec2::new(6.0, 2.0);
                     ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
+                        // remote device id
                         ui.label(
                             RichText::new(self.state.format_remote_device_id())
-                                .font(FontId::proportional(20.0)),
+                                .font(FontId::monospace(22.0)),
                         );
+
                         ui.separator();
+
                         self.build_toolbar_button_scale(ui);
+
+                        ui.separator();
+
+                        // FPS
+
+                        ui.label(
+                            RichText::new(self.desktop_render.lock().frame_rate().to_string())
+                                .font(FontId::monospace(24.0)), // FontFamily::Name("LiquidCrystal".into()))),
+                        );
                     });
                 })
         });
@@ -285,6 +304,12 @@ impl tauri_egui::eframe::App for DesktopWindow {
             ctx.request_repaint_after(wait);
         } else {
             ctx.request_repaint();
+        }
+    }
+
+    fn on_exit(&mut self, gl: Option<&glow::Context>) {
+        if let Some(gl) = gl {
+            self.desktop_render.lock().destroy(gl);
         }
     }
 }
@@ -433,387 +458,4 @@ const fn map_key(key: tauri_egui::egui::Key) -> KeyboardKey {
         tauri_egui::egui::Key::F19 => KeyboardKey::Fn, // todo: temp
         tauri_egui::egui::Key::F20 => KeyboardKey::Fn, // todo: temp
     }
-}
-
-// const vertex_vertices: [f32; 12] = [
-//     1.0, -1.0, 0.0, -1.0, -1.0, 0.0, 1.0, 1.0, 0.0, -1.0, 1.0, 0.0,
-// ];
-
-#[rustfmt::skip]
-const vertex_vertices: [f32; 20] = [
-     1.0,  1.0, 0.0, 1.0, 1.0, 
-     1.0, -1.0, 0.0, 1.0, 0.0, 
-    -1.0, -1.0, 0.0, 0.0, 0.0, 
-    -1.0,  1.0, 0.0, 0.0, 1.0,
-];
-
-const vertex_vertices_u8: &[u8] = unsafe {
-    std::slice::from_raw_parts(
-        vertex_vertices.as_ptr() as *const u8,
-        vertex_vertices.len() * std::mem::size_of::<f32>(),
-    )
-};
-
-// const texture_vertices: [f32; 8] = [1.0, 0.0, 0.0, 0.0, 1.0, 1.0, 0.0, 1.0];
-
-#[rustfmt::skip]
-const indices_vertices: [u32; 6] = [
-    0, 1, 3, 
-    1, 2, 3,
-];
-
-const indices_u8: &[u8] = unsafe {
-    std::slice::from_raw_parts(
-        indices_vertices.as_ptr() as *const u8,
-        indices_vertices.len() * std::mem::size_of::<u32>(),
-    )
-};
-
-struct RotatingTriangle {
-    program: glow::Program,
-    y_texture: Option<NativeTexture>,
-    uv_texture: Option<NativeTexture>,
-    vao: NativeVertexArray,
-    vbo: NativeBuffer,
-    ebo: NativeBuffer,
-}
-
-#[allow(unsafe_code)] // we need unsafe code to use glow
-impl RotatingTriangle {
-    fn new(gl: &glow::Context) -> Self {
-        use glow::HasContext as _;
-
-        unsafe {
-            tracing::info!("OpenGL version: {:?}", gl.version());
-
-            let program = gl.create_program().expect("Cannot create program");
-
-            let vertex_shader_source = r#"
-            #version 330 core
-            layout (location = 0) in vec3 aPos;
-            layout (location = 1) in vec2 aTexCoord;
-
-            out vec2 texCoord;
-            
-            void main(void)
-            {
-                gl_Position = vec4(aPos, 1.0);
-                texCoord = vec2(aTexCoord.x, 1 - aTexCoord.y);
-            }"#;
-
-            let fragment_shader_source = r#"
-            #version 330 core
-
-            uniform sampler2D textureY;
-            uniform sampler2D textureUV;
-
-            in vec2 texCoord;
-            layout (location = 0) out vec4 fragColor;
-
-            const mat3 YCbCrToRGBmatrix = mat3(
-                1.164, 0.000, 1.857,
-                1.164,-0.217,-0.543,
-                1.164, 2.016, 0.000
-            );
-
-            void main(void)
-            {
-                vec3 yuv;
-                vec3 rgb;
-                yuv.x = texture(textureY, texCoord.st).r - 0.0625;
-                yuv.y = texture(textureUV, texCoord.st).r - 0.5;
-                yuv.z = texture(textureUV, texCoord.st).g - 0.5;
-                rgb = yuv * YCbCrToRGBmatrix;
-                fragColor = vec4(rgb, 1.0);
-            }"#;
-
-            // compile, link and attach vertex shader
-            let vertex_shader = gl
-                .create_shader(glow::VERTEX_SHADER)
-                .expect("Cannot create shader");
-            check_for_gl_error!(gl);
-
-            gl.shader_source(vertex_shader, vertex_shader_source);
-            check_for_gl_error!(gl);
-
-            gl.compile_shader(vertex_shader);
-            check_for_gl_error!(gl);
-
-            tracing::info!("{}", gl.get_shader_info_log(vertex_shader));
-
-            if !gl.get_shader_compile_status(vertex_shader) {
-                panic!(
-                    "Failed to compile vertex shader: {}",
-                    gl.get_shader_info_log(vertex_shader)
-                );
-            }
-
-            gl.attach_shader(program, vertex_shader);
-            check_for_gl_error!(gl);
-
-            // compile, link and attach vertex shader
-            let fragment_shader = gl
-                .create_shader(glow::FRAGMENT_SHADER)
-                .expect("Cannot create shader");
-            check_for_gl_error!(gl);
-
-            gl.shader_source(fragment_shader, fragment_shader_source);
-            check_for_gl_error!(gl);
-
-            gl.compile_shader(fragment_shader);
-            check_for_gl_error!(gl);
-
-            tracing::info!("{}", gl.get_shader_info_log(fragment_shader));
-
-            if !gl.get_shader_compile_status(fragment_shader) {
-                panic!(
-                    "Failed to compile fragment shader: {}",
-                    gl.get_shader_info_log(fragment_shader)
-                );
-            }
-
-            gl.attach_shader(program, fragment_shader);
-            check_for_gl_error!(gl);
-
-            gl.bind_attrib_location(program, 0, "aPos");
-            gl.bind_attrib_location(program, 1, "aTexCoord");
-
-            gl.link_program(program);
-            if !gl.get_program_link_status(program) {
-                panic!("{}", gl.get_program_info_log(program));
-            }
-
-            gl.detach_shader(program, vertex_shader);
-            check_for_gl_error!(gl);
-
-            gl.detach_shader(program, fragment_shader);
-            check_for_gl_error!(gl);
-
-            gl.delete_shader(vertex_shader);
-            gl.delete_shader(fragment_shader);
-
-            let ebo = gl.create_buffer().unwrap();
-            let vao = gl.create_vertex_array().unwrap();
-            let vbo = gl.create_buffer().unwrap();
-
-            gl.bind_vertex_array(Some(vao));
-            check_for_gl_error!(gl);
-
-            gl.bind_buffer(glow::ARRAY_BUFFER, Some(vbo));
-            check_for_gl_error!(gl);
-
-            gl.buffer_data_u8_slice(glow::ARRAY_BUFFER, vertex_vertices_u8, glow::STATIC_DRAW);
-            check_for_gl_error!(gl);
-
-            gl.vertex_attrib_pointer_f32(
-                0,
-                3,
-                glow::FLOAT,
-                false,
-                5 * std::mem::size_of::<f32>() as i32,
-                0,
-            );
-            check_for_gl_error!(gl);
-
-            gl.vertex_attrib_pointer_f32(
-                1,
-                2,
-                glow::FLOAT,
-                false,
-                5 * std::mem::size_of::<f32>() as i32,
-                3 * std::mem::size_of::<f32>() as i32,
-            );
-            check_for_gl_error!(gl);
-
-            gl.enable_vertex_attrib_array(0);
-            check_for_gl_error!(gl);
-
-            gl.enable_vertex_attrib_array(1);
-            check_for_gl_error!(gl);
-
-            gl.bind_buffer(glow::ELEMENT_ARRAY_BUFFER, Some(ebo));
-            check_for_gl_error!(gl);
-
-            gl.buffer_data_u8_slice(glow::ELEMENT_ARRAY_BUFFER, indices_u8, glow::STATIC_DRAW);
-            check_for_gl_error!(gl);
-
-            Self {
-                program,
-                y_texture: None,
-                uv_texture: None,
-                vao,
-                vbo,
-                ebo,
-            }
-        }
-    }
-
-    fn destroy(&self, gl: &glow::Context) {
-        use glow::HasContext as _;
-        unsafe {
-            gl.delete_program(self.program);
-            // gl.delete_vertex_array(self.vao);
-        }
-    }
-
-    fn paint(
-        &mut self,
-        gl: &glow::Context,
-        frame: DesktopDecodeFrame,
-        viewport: Option<Rect>,
-    ) -> Result<(), String> {
-        unsafe {
-            if self.y_texture.is_none() {
-                self.y_texture = Some(create_texture(
-                    gl,
-                    true,
-                    frame.width,
-                    frame.height,
-                    frame.luminance_stride,
-                ));
-            }
-
-            if self.uv_texture.is_none() {
-                self.uv_texture = Some(create_texture(
-                    gl,
-                    false,
-                    frame.width / 2,
-                    frame.height / 2,
-                    frame.chrominance_stride,
-                ));
-            }
-
-            gl.use_program(Some(self.program));
-            check_for_gl_error!(gl);
-
-            // disable srgb frame buffer since desktop frame has already adjust
-            // to Rec.709
-            gl.disable(glow::FRAMEBUFFER_SRGB);
-            check_for_gl_error!(gl);
-
-            gl.active_texture(glow::TEXTURE0);
-            check_for_gl_error!(gl);
-            gl.bind_texture(glow::TEXTURE_2D, self.y_texture);
-            check_for_gl_error!(gl);
-            gl.tex_sub_image_2d(
-                glow::TEXTURE_2D,
-                0,
-                viewport.map_or(0, |rect| rect.left() as _),
-                viewport.map_or(0, |rect| rect.top() as _),
-                frame.width,
-                frame.height,
-                glow::RED,
-                glow::UNSIGNED_BYTE,
-                glow::PixelUnpackData::Slice(&frame.luminance_bytes),
-            );
-            check_for_gl_error!(gl);
-
-            let y_uniform_location = gl.get_uniform_location(self.program, "textureY");
-            check_for_gl_error!(gl);
-            gl.uniform_1_i32(y_uniform_location.as_ref(), 0);
-            check_for_gl_error!(gl);
-
-            gl.active_texture(glow::TEXTURE1);
-            check_for_gl_error!(gl);
-            gl.bind_texture(glow::TEXTURE_2D, self.uv_texture);
-            check_for_gl_error!(gl);
-            gl.tex_sub_image_2d(
-                glow::TEXTURE_2D,
-                0,
-                viewport.map_or(0, |rect| rect.left() as _) / 2,
-                viewport.map_or(0, |rect| rect.top() as _) / 2,
-                frame.width / 2,
-                frame.height / 2,
-                glow::RG,
-                glow::UNSIGNED_BYTE,
-                glow::PixelUnpackData::Slice(&frame.chrominance_bytes),
-            );
-            check_for_gl_error!(gl);
-
-            let uv_uniform_location = gl.get_uniform_location(self.program, "textureUV");
-            check_for_gl_error!(gl);
-            gl.uniform_1_i32(uv_uniform_location.as_ref(), 1);
-            check_for_gl_error!(gl);
-
-            gl.bind_vertex_array(Some(self.vao));
-            check_for_gl_error!(gl);
-
-            // gl.viewport(
-            //     viewport.map_or(0, |rect| rect.left() as _),
-            //     viewport.map_or(0, |rect| rect.top() as _),
-            //     viewport.map_or(frame.width, |rect| rect.width() as _),
-            //     viewport.map_or(frame.height, |rect| rect.height() as _),
-            // );
-
-            gl.draw_elements(glow::TRIANGLES, 6, glow::UNSIGNED_INT, 0);
-            check_for_gl_error!(gl);
-
-            Ok(())
-        }
-    }
-}
-
-unsafe fn create_texture(
-    gl: &glow::Context,
-    is_luminance_texture: bool,
-    width: i32,
-    height: i32,
-    stride: i32,
-) -> NativeTexture {
-    let texture = gl.create_texture().unwrap();
-
-    gl.bind_texture(glow::TEXTURE_2D, Some(texture));
-    check_for_gl_error!(gl);
-
-    // gl.pixel_store_i32(glow::UNPACK_ROW_LENGTH, stride);
-    // check_for_gl_error!(gl);
-
-    let internal_format = if is_luminance_texture {
-        glow::RED
-    } else {
-        glow::RG
-    };
-
-    gl.tex_image_2d(
-        glow::TEXTURE_2D,
-        0,
-        internal_format as i32,
-        width,
-        height,
-        0,
-        internal_format,
-        glow::UNSIGNED_BYTE,
-        None,
-    );
-    check_for_gl_error!(gl);
-
-    gl.tex_parameter_i32(
-        glow::TEXTURE_2D,
-        glow::TEXTURE_MIN_FILTER,
-        glow::LINEAR as i32,
-    );
-    check_for_gl_error!(gl);
-
-    gl.tex_parameter_i32(
-        glow::TEXTURE_2D,
-        glow::TEXTURE_MAG_FILTER,
-        glow::LINEAR as i32,
-    );
-    check_for_gl_error!(gl);
-
-    gl.tex_parameter_i32(
-        glow::TEXTURE_2D,
-        glow::TEXTURE_WRAP_S,
-        glow::CLAMP_TO_EDGE as i32,
-    );
-    check_for_gl_error!(gl);
-
-    gl.tex_parameter_i32(
-        glow::TEXTURE_2D,
-        glow::TEXTURE_WRAP_T,
-        glow::CLAMP_TO_EDGE as i32,
-    );
-    check_for_gl_error!(gl);
-
-    texture
 }

@@ -1,14 +1,14 @@
-use crate::{event::PopupDialogInputRemotePasswordEvent, utility::format_device_id};
+use crate::{
+    event::PopupDialogInputRemotePasswordEvent, utility::format_device_id,
+    window::create_desktop_window,
+};
 use mirrorx_core::api::{
     config::{Config, DomainConfig},
-    signaling::{PublishMessage, ResourceType, SignalingClient, VisitReplyRequest},
+    signaling::{PublishMessage, ResourceType, SignalingClient},
 };
 use std::{collections::HashMap, path::PathBuf};
 use tauri::async_runtime::Mutex;
-use tauri_egui::{
-    eframe::{glow::HasContext, HardwareAcceleration},
-    EguiPluginHandle,
-};
+use tauri_egui::{egui::FontFamily, EguiPluginHandle};
 use tokio::sync::mpsc::Receiver;
 
 #[derive(Default)]
@@ -318,12 +318,11 @@ pub async fn signaling_reply_visit_request(
 }
 
 #[tauri::command]
-#[tracing::instrument(skip(app_handle, state, egui_plugin))]
+#[tracing::instrument(skip(state, egui_plugin))]
 pub async fn signaling_key_exchange(
     local_device_id: String,
     remote_device_id: String,
     password: String,
-    app_handle: tauri::AppHandle,
     state: tauri::State<'_, UIState>,
     egui_plugin: tauri::State<'_, EguiPluginHandle>,
 ) -> Result<(), String> {
@@ -357,10 +356,10 @@ pub async fn signaling_key_exchange(
     if let Err(err) = egui_plugin.create_window(
         window_label.clone(),
         Box::new(move |cc| {
-            // cc.egui_ctx.set_debug_on_hover(true);
             if let Some(gl_context) = cc.gl.as_ref() {
-                set_fonts(&cc.egui_ctx);
-                Box::new(crate::window::desktop::DesktopWindow::new(
+                Box::new(create_desktop_window(
+                    cc,
+                    gl_context.clone(),
                     local_device_id,
                     remote_device_id,
                     resp.opening_key_bytes,
@@ -368,7 +367,6 @@ pub async fn signaling_key_exchange(
                     resp.sealing_key_bytes,
                     resp.sealing_nonce_bytes,
                     resp.visit_credentials,
-                    gl_context.clone(),
                 ))
             } else {
                 panic!("get gl context failed");
@@ -424,82 +422,4 @@ fn start_signaling_publish_event_handle(
             }
         }
     });
-}
-
-fn set_fonts(ctx: &tauri_egui::egui::Context) {
-    let mut fonts = tauri_egui::egui::FontDefinitions::default();
-    fonts.font_data.insert(
-        "NotoSans".to_owned(),
-        tauri_egui::egui::FontData::from_static(include_bytes!(
-            "../assets/fonts/NotoSans-Regular.ttf"
-        )),
-    );
-    fonts.font_data.insert(
-        "NotoSansJP".to_owned(),
-        tauri_egui::egui::FontData::from_static(include_bytes!(
-            "../assets/fonts/NotoSansJP-Regular.otf"
-        )),
-    );
-    fonts.font_data.insert(
-        "NotoSansKR".to_owned(),
-        tauri_egui::egui::FontData::from_static(include_bytes!(
-            "../assets/fonts/NotoSansKR-Regular.otf"
-        )),
-    );
-    fonts.font_data.insert(
-        "NotoSansSC".to_owned(),
-        tauri_egui::egui::FontData::from_static(include_bytes!(
-            "../assets/fonts/NotoSansSC-Regular.otf"
-        )),
-    );
-    fonts.font_data.insert(
-        "NotoSansTC".to_owned(),
-        tauri_egui::egui::FontData::from_static(include_bytes!(
-            "../assets/fonts/NotoSansTC-Regular.otf"
-        )),
-    );
-    fonts.font_data.insert(
-        "NotoSansMono".to_owned(),
-        tauri_egui::egui::FontData::from_static(include_bytes!(
-            "../assets/fonts/NotoSansMono-Regular.ttf"
-        )),
-    );
-
-    let mut proportional_fonts = vec![
-        "NotoSans".to_owned(),
-        "NotoSansSC".to_owned(),
-        "NotoSansTC".to_owned(),
-        "NotoSansJP".to_owned(),
-        "NotoSansKR".to_owned(),
-    ];
-
-    let old_fonts = fonts
-        .families
-        .entry(tauri_egui::egui::FontFamily::Proportional)
-        .or_default();
-
-    proportional_fonts.append(old_fonts);
-
-    fonts.families.insert(
-        tauri_egui::egui::FontFamily::Proportional,
-        proportional_fonts.clone(),
-    );
-
-    let mut mono_fonts = vec!["NotoSansMono".to_owned()];
-
-    let old_fonts = fonts
-        .families
-        .entry(tauri_egui::egui::FontFamily::Monospace)
-        .or_default();
-
-    mono_fonts.append(old_fonts);
-
-    fonts
-        .families
-        .insert(tauri_egui::egui::FontFamily::Monospace, mono_fonts.clone());
-
-    // cc.egui_ctx.set_debug_on_hover(true);
-    // cc.egui_ctx.request_repaint_after(Duration::from_secs(1));
-
-    ctx.set_fonts(fonts);
 }
