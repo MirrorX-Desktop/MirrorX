@@ -28,7 +28,7 @@ pub struct DesktopWindow {
     state: State,
     state_updater: StateUpdater,
     r: Arc<Mutex<RotatingTriangle>>,
-    paint_callback: Option<PaintCallback>,
+    toolbar_scale_available: bool,
 }
 
 impl DesktopWindow {
@@ -59,7 +59,7 @@ impl DesktopWindow {
             state,
             state_updater,
             r: Arc::new(Mutex::new(RotatingTriangle::new(gl_context.as_ref()))),
-            paint_callback: None,
+            toolbar_scale_available: true,
         }
     }
 
@@ -114,92 +114,97 @@ impl DesktopWindow {
 
     fn build_desktop_texture(&mut self, ui: &mut Ui) {
         if let Some(frame) = self.state.frame() {
-            // let mut pic = frame.luminance_bytes.clone();
-            // pic.append(&mut frame.chrominance_bytes.clone());
-            // let dir = std::env::temp_dir().join("test_pic");
-            // tracing::info!(?dir, "pic wirte");
-            // let mut f = std::fs::File::create(dir).unwrap();
-            // f.write_all(&pic).unwrap();
-            // f.sync_all().unwrap();
-            // std::process::exit(0);
+            // when client area bigger than original desktop frame, disable scale button
+            self.toolbar_scale_available = ui.available_width() < frame.width as _
+                || ui.available_height() < frame.height as _;
 
-            if self.state.use_original_resolution() {
-                ui.style_mut().spacing.item_spacing = Vec2::ZERO;
-                tauri_egui::egui::ScrollArea::both()
-                    .max_width(frame.width as f32)
-                    .max_height(frame.height as f32)
-                    .auto_shrink([false; 2])
-                    .show_viewport(ui, |ui, _| {
-                        ui.set_width(frame.width as f32);
-                        ui.set_height(frame.height as f32);
-                        ui.style_mut().spacing.item_spacing = Vec2::ZERO;
+            if self.state.use_original_resolution()
+                && (ui.available_width() < frame.width as _
+                    || ui.available_height() < frame.height as _)
+            {
+                let left = ((ui.available_width() - frame.width as f32) / 2.0).max(0.0);
+                let top = ((ui.available_height() - frame.height as f32) / 2.0).max(0.0);
 
-                        let rotating = self.r.clone();
+                let mut available_rect = ui.available_rect_before_wrap();
+                available_rect.min = Pos2::new(left, top);
 
-                        let cb = tauri_egui::eframe::egui_glow::CallbackFn::new(
-                            move |_info, painter| {
-                                rotating.lock().paint(painter.gl(), frame.clone()).unwrap();
-                            },
-                        );
+                ui.allocate_ui_at_rect(available_rect, |ui| {
+                    tauri_egui::egui::ScrollArea::both()
+                        .auto_shrink([false; 2])
+                        .show_viewport(ui, |ui, viewport| {
+                            ui.set_width(frame.width as f32);
+                            ui.set_height(frame.height as f32);
 
-                        let callback = tauri_egui::egui::PaintCallback {
-                            rect: ui.available_rect_before_wrap(),
-                            callback: Arc::new(cb),
-                        };
+                            let rotating = self.r.clone();
 
-                        ui.painter().add(callback);
+                            let cb = tauri_egui::eframe::egui_glow::CallbackFn::new(
+                                move |_info, painter| {
+                                    rotating
+                                        .lock()
+                                        .paint(painter.gl(), frame.clone(), None)
+                                        .unwrap();
+                                },
+                            );
 
-                        // let events = &response.ctx.input().events;
-                        // let left_top = viewport.left_top();
-                        // emit_input(&self.state_updater, events, move |pos| {
-                        //     pos + left_top.to_vec2()
-                        // });
-                    });
-            } else {
-                ui.centered_and_justified(|ui| {
-                    let available_width = ui.available_width();
-                    let available_height = ui.available_height();
-                    let aspect_ratio = (frame.width as f32) / (frame.height as f32);
+                            let callback = tauri_egui::egui::PaintCallback {
+                                rect: ui.available_rect_before_wrap(),
+                                callback: Arc::new(cb),
+                            };
 
-                    let desktop_size = if (available_width / aspect_ratio) < available_height {
-                        (available_width, available_width / aspect_ratio)
-                    } else {
-                        (available_height * aspect_ratio, available_height)
-                    };
+                            ui.painter().add(callback);
 
-                    let scale_ratio = desktop_size.0 / (frame.width as f32);
-
-                    let space_around_image = Vec2::new(
-                        (available_width - desktop_size.0) / 2.0,
-                        (available_height - desktop_size.1) / 2.0,
-                    );
-
-                    let rotating = self.r.clone();
-
-                    let cb =
-                        tauri_egui::eframe::egui_glow::CallbackFn::new(move |_info, painter| {
-                            rotating.lock().paint(painter.gl(), frame.clone()).unwrap();
+                            // let events = &response.ctx.input().events;
+                            // let left_top = viewport.left_top();
+                            // emit_input(&self.state_updater, events, move |pos| {
+                            //     pos + left_top.to_vec2()
+                            // });
                         });
-
-                    let callback = tauri_egui::egui::PaintCallback {
-                        rect: Rect {
-                            min: space_around_image.to_pos2(),
-                            max: space_around_image.to_pos2() + desktop_size.into(),
-                        },
-                        callback: Arc::new(cb),
-                    };
-
-                    ui.painter().add(callback);
-
-                    // let response = ui.image(frame, desktop_size);
-                    // let events = &response.ctx.input().events;
-                    // emit_input(&self.state_updater, events, move |pos| {
-                    //     Pos2::new(
-                    //         (pos.x - space_around_image.x).max(0.0) / scale_ratio,
-                    //         (pos.y - space_around_image.y).max(0.0) / scale_ratio,
-                    //     )
-                    // });
                 });
+            } else {
+                let available_width = ui.available_width();
+                let available_height = ui.available_height();
+                let aspect_ratio = (frame.width as f32) / (frame.height as f32);
+
+                let desktop_size = if (available_width / aspect_ratio) < available_height {
+                    (available_width, available_width / aspect_ratio)
+                } else {
+                    (available_height * aspect_ratio, available_height)
+                };
+
+                let scale_ratio = desktop_size.0 / (frame.width as f32);
+
+                let space_around_image = Vec2::new(
+                    (available_width - desktop_size.0) / 2.0,
+                    (available_height - desktop_size.1) / 2.0,
+                );
+
+                let rotating = self.r.clone();
+
+                let cb = tauri_egui::eframe::egui_glow::CallbackFn::new(move |_info, painter| {
+                    rotating
+                        .lock()
+                        .paint(painter.gl(), frame.clone(), None)
+                        .unwrap();
+                });
+
+                let callback = tauri_egui::egui::PaintCallback {
+                    rect: Rect {
+                        min: space_around_image.to_pos2(),
+                        max: space_around_image.to_pos2() + desktop_size.into(),
+                    },
+                    callback: Arc::new(cb),
+                };
+
+                ui.painter().add(callback);
+
+                // let response = ui.image(frame, desktop_size);
+                // let events = &response.ctx.input().events;
+                // emit_input(&self.state_updater, events, move |pos| {
+                //     Pos2::new(
+                //         (pos.x - space_around_image.x).max(0.0) / scale_ratio,
+                //         (pos.y - space_around_image.y).max(0.0) / scale_ratio,
+                //     )
+                // });
             }
         } else {
             ui.centered_and_justified(|ui| {
@@ -244,17 +249,20 @@ impl DesktopWindow {
 
     fn build_toolbar_button_scale(&mut self, ui: &mut Ui) {
         // when use_original_resolution is true, the button should display 'fit size' icon
-        ui.visuals_mut().widgets.active.fg_stroke = Stroke::new(1.0, Color32::WHITE);
-        let title = if self.state.use_original_resolution() {
-            "原始"
-        } else {
-            "按比例"
-        };
-        let button = tauri_egui::egui::Button::new(title);
-        if ui.add(button).clicked() {
-            self.state_updater
-                .update_use_original_resolution(!self.state.use_original_resolution());
-        }
+        ui.add_enabled_ui(self.toolbar_scale_available, |ui| {
+            ui.visuals_mut().widgets.active.fg_stroke = Stroke::new(1.0, Color32::WHITE);
+            let title = if self.state.use_original_resolution() {
+                "适应窗口"
+            } else {
+                "原始比例"
+            };
+
+            let button = tauri_egui::egui::Button::new(title);
+            if ui.add(button).clicked() {
+                self.state_updater
+                    .update_use_original_resolution(!self.state.use_original_resolution());
+            }
+        });
     }
 }
 
@@ -648,7 +656,12 @@ impl RotatingTriangle {
         }
     }
 
-    fn paint(&mut self, gl: &glow::Context, frame: DesktopDecodeFrame) -> Result<(), String> {
+    fn paint(
+        &mut self,
+        gl: &glow::Context,
+        frame: DesktopDecodeFrame,
+        viewport: Option<Rect>,
+    ) -> Result<(), String> {
         unsafe {
             if self.y_texture.is_none() {
                 self.y_texture = Some(create_texture(
@@ -670,13 +683,11 @@ impl RotatingTriangle {
                 ));
             }
 
-            // gl.clear_color(1.0, 1.0, 1.0, 1.0);
-            // gl.clear(glow::COLOR_BUFFER_BIT | glow::DEPTH_BUFFER_BIT);
-
-            // gl.disable(glow::SCISSOR_TEST);
             gl.use_program(Some(self.program));
             check_for_gl_error!(gl);
 
+            // disable srgb frame buffer since desktop frame has already adjust
+            // to Rec.709
             gl.disable(glow::FRAMEBUFFER_SRGB);
             check_for_gl_error!(gl);
 
@@ -687,8 +698,8 @@ impl RotatingTriangle {
             gl.tex_sub_image_2d(
                 glow::TEXTURE_2D,
                 0,
-                0,
-                0,
+                viewport.map_or(0, |rect| rect.left() as _),
+                viewport.map_or(0, |rect| rect.top() as _),
                 frame.width,
                 frame.height,
                 glow::RED,
@@ -709,8 +720,8 @@ impl RotatingTriangle {
             gl.tex_sub_image_2d(
                 glow::TEXTURE_2D,
                 0,
-                0,
-                0,
+                viewport.map_or(0, |rect| rect.left() as _) / 2,
+                viewport.map_or(0, |rect| rect.top() as _) / 2,
                 frame.width / 2,
                 frame.height / 2,
                 glow::RG,
@@ -726,6 +737,13 @@ impl RotatingTriangle {
 
             gl.bind_vertex_array(Some(self.vao));
             check_for_gl_error!(gl);
+
+            // gl.viewport(
+            //     viewport.map_or(0, |rect| rect.left() as _),
+            //     viewport.map_or(0, |rect| rect.top() as _),
+            //     viewport.map_or(frame.width, |rect| rect.width() as _),
+            //     viewport.map_or(frame.height, |rect| rect.height() as _),
+            // );
 
             gl.draw_elements(glow::TRIANGLES, 6, glow::UNSIGNED_INT, 0);
             check_for_gl_error!(gl);
