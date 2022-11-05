@@ -30,15 +30,15 @@ static const float3x2 RGBtoUVCoeffMatrix =
 	// for BT.709 HDTV color conversion matrix
 	// https://mymusing.co/bt-709-yuv-to-rgb-conversion-color/
 	// Section: Computer RGB To YCbCr
-	-0.114572f,       0.5f, // -0.098397f,  0.429411f, // -0.117187f,  0.511414f,
-	-0.385428f, -0.454153f, // -0.331014f, -0.390037f, // -0.394226f, -0.464523f,
-	      0.5f, -0.045847f, //  0.429411f, -0.039374f, //  0.511414f, -0.046894f,
+	-0.100644f,  0.439214f,
+	-0.338570f, -0.398941f,
+	 0.439214f, -0.040273f,
 };
 
 float2 CalculateUV(float3 rgb)
 {
 	float2 uv = mul(rgb, RGBtoUVCoeffMatrix);
-	// uv += float2(0.5f, 0.5f);// 0.501960f = 128/255
+	uv += float2(0.5f, 0.5f);// 0.501960f = 128/255
 	return saturate(uv);
 }
 
