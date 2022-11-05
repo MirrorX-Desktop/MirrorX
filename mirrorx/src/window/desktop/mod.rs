@@ -6,7 +6,7 @@ use mirrorx_core::{
     DesktopDecodeFrame,
 };
 use state::{State, StateUpdater};
-use std::{sync::Arc, time::Duration};
+use std::{io::Write, sync::Arc, time::Duration};
 use tauri_egui::{
     eframe::{
         egui_glow::{self, check_for_gl_error},
@@ -114,6 +114,15 @@ impl DesktopWindow {
 
     fn build_desktop_texture(&mut self, ui: &mut Ui) {
         if let Some(frame) = self.state.frame() {
+            // let mut pic = frame.luminance_bytes.clone();
+            // pic.append(&mut frame.chrominance_bytes.clone());
+            // let dir = std::env::temp_dir().join("test_pic");
+            // tracing::info!(?dir, "pic wirte");
+            // let mut f = std::fs::File::create(dir).unwrap();
+            // f.write_all(&pic).unwrap();
+            // f.sync_all().unwrap();
+            // std::process::exit(0);
+
             if self.state.use_original_resolution() {
                 ui.style_mut().spacing.item_spacing = Vec2::ZERO;
                 tauri_egui::egui::ScrollArea::both()
@@ -494,29 +503,20 @@ impl RotatingTriangle {
             layout (location = 0) out vec4 fragColor;
 
             const mat3 YCbCrToRGBmatrix = mat3(
-            // 1.1643835616, 0.0000000000, 1.7927410714,
-            // 1.1643835616, -0.2132486143, -0.5329093286,
-            // 1.1643835616, 2.1124017857, 0.0000000000
-            1,0,1.5748
-            1,-0.1873,-0.4681
-            1,1.8556,0
+                1.164, 0.000, 1.857,
+                1.164,-0.217,-0.543,
+                1.164, 2.016, 0.000
             );
-            
-            const vec3 YCbCrToRGBzero = vec3(-0.972945075, 0.301482665, -1.133402218);
 
             void main(void)
             {
-            vec3 yuv;
-            vec3 rgb;
-            yuv.x = texture(textureY, texCoord.st).r; //-0.0625;
-            yuv.y = texture(textureUV, texCoord.st).r; // - 0.5;
-            yuv.z = texture(textureUV, texCoord.st).g; // - 0.5;
-            // rgb = mat3( 1,       1,         1,
-            //             0,       -0.39465,  2.03211,
-            //             1.13983, -0.58060,  0) * yuv;
-            rgb = yuv * YCbCrToRGBmatrix;//+ YCbCrToRGBzero;
-            // rgb = clamp(rgb, vec3(0.0, 0.0, 0.0), vec3(1.0, 1.0, 1.0));
-            fragColor = vec4(rgb, 1.0);
+                vec3 yuv;
+                vec3 rgb;
+                yuv.x = texture(textureY, texCoord.st).r - 0.0625;
+                yuv.y = texture(textureUV, texCoord.st).r - 0.5;
+                yuv.z = texture(textureUV, texCoord.st).g - 0.5;
+                rgb = yuv * YCbCrToRGBmatrix;
+                fragColor = vec4(rgb, 1.0);
             }"#;
 
             // compile, link and attach vertex shader
@@ -670,11 +670,14 @@ impl RotatingTriangle {
                 ));
             }
 
-            gl.clear_color(1.0, 1.0, 1.0, 1.0);
-            gl.clear(glow::COLOR_BUFFER_BIT | glow::DEPTH_BUFFER_BIT);
+            // gl.clear_color(1.0, 1.0, 1.0, 1.0);
+            // gl.clear(glow::COLOR_BUFFER_BIT | glow::DEPTH_BUFFER_BIT);
 
             // gl.disable(glow::SCISSOR_TEST);
             gl.use_program(Some(self.program));
+            check_for_gl_error!(gl);
+
+            gl.disable(glow::FRAMEBUFFER_SRGB);
             check_for_gl_error!(gl);
 
             gl.active_texture(glow::TEXTURE0);
