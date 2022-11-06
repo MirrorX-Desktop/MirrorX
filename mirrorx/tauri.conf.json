@@ -60,7 +60,8 @@
         "resizable": false,
         "title": "MirrorX",
         "width": 360,
-        "maximized": false
+        "maximized": false,
+        "url": "/"
       }
     ]
   }

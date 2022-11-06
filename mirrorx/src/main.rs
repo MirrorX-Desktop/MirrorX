@@ -43,7 +43,7 @@ async fn main() {
             api::set_config_device_password,
             api::signaling_visit_request,
             api::signaling_reply_visit_request,
-            api::signaling_key_exchange
+            api::signaling_key_exchange,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
