@@ -18,7 +18,7 @@ impl<R: Runtime> WindowExt for Window<R> {
             let id = self.ns_window().unwrap() as cocoa::base::id;
 
             let mut style_mask = id.styleMask();
-            style_mask.set(NSWindowStyleMask::NSFullSizeContentViewWindowMask, true);
+            style_mask.insert(NSWindowStyleMask::NSFullSizeContentViewWindowMask);
 
             id.setStyleMask_(style_mask);
 

@@ -12,6 +12,9 @@
 			width: 100%;
 			height: 100%;
 			margin: 0;
+			user-select: none;
+			-webkit-user-select: none;
+			-moz-user-select: none;
 		}
 
 		.title_move_region {
@@ -35,9 +38,8 @@
 </head>
 
 <body>
-	<div data-tauri-drag-region class="title_move_region">
-	</div>
-	<div class="content">%sveltekit.body%</div>
+	
+	<div data-tauri-drag-region class="content">%sveltekit.body%</div>
 
 </body>
 
