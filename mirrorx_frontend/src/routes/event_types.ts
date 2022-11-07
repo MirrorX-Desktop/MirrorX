@@ -9,6 +9,12 @@ export interface PopupDialogInputRemotePasswordEvent {
 	passive_device_id: string;
 }
 
+export interface GetCurrentDomainResponse {
+	name: string;
+	device_id: string;
+	password: string;
+}
+
 export type NotificationEvent = {
 	level: 'info' | 'success' | 'warning' | 'error';
 	title: string;

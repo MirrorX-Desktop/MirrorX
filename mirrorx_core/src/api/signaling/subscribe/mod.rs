@@ -2,12 +2,15 @@ mod key_exchange;
 
 use serde::Serialize;
 use signaling_proto::message::{publish_message::InnerPublishMessage, ResourceType};
+use signaling_proto::service::signaling_client::SignalingClient;
 use std::{path::PathBuf, time::Duration};
 use tokio::{
     select,
     sync::mpsc::{error::TryRecvError, Receiver, Sender},
 };
 use tonic::transport::Channel;
+
+use crate::api::config::entity::domain::Domain;
 
 #[derive(Debug, Clone, Serialize)]
 pub enum PublishMessage {
@@ -19,11 +22,8 @@ pub enum PublishMessage {
 }
 
 pub async fn subscribe(
-    client: &mut signaling_proto::service::signaling_client::SignalingClient<Channel>,
-    domain: String,
-    device_id: i64,
-    device_finger_print: String,
-    config_path: PathBuf,
+    client: &mut SignalingClient<Channel>,
+    domain: Domain,
     publish_message_tx: Sender<PublishMessage>,
     mut exit_tx: Receiver<()>,
 ) {
@@ -41,8 +41,8 @@ pub async fn subscribe(
 
             let mut server_stream = match subscribe_client
                 .subscribe(signaling_proto::message::SubscribeRequest {
-                    device_id,
-                    device_finger_print: device_finger_print.clone(),
+                    device_id: domain.device_id,
+                    device_finger_print: domain.finger_print.clone(),
                 })
                 .await
             {
@@ -116,15 +116,9 @@ pub async fn subscribe(
                     InnerPublishMessage::KeyExchangeRequest(key_exchange_request) => {
                         let mut client = subscribe_client.clone();
                         let domain = domain.clone();
-                        let config_path = config_path.clone();
+
                         tokio::spawn(async move {
-                            key_exchange::handle(
-                                &mut client,
-                                domain,
-                                config_path,
-                                &key_exchange_request,
-                            )
-                            .await;
+                            key_exchange::handle(&mut client, domain, &key_exchange_request).await;
                         });
                     }
                 }

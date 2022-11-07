@@ -3,13 +3,12 @@
     windows_subsystem = "windows"
 )]
 
-use tauri::Manager;
-
-mod api;
-mod event;
+mod command;
 mod platform;
 mod utility;
 mod window;
+
+use tauri::Manager;
 
 #[tracing::instrument]
 #[tokio::main]
@@ -18,7 +17,7 @@ async fn main() {
     tauri::async_runtime::set(tokio::runtime::Handle::current());
 
     tauri::Builder::default()
-        .manage(api::UIState::default())
+        .manage(command::UIState::new())
         .setup(|app| {
             app.wry_plugin(tauri_egui::EguiPluginBuilder::new(app.handle()));
 
@@ -32,18 +31,15 @@ async fn main() {
 
             Ok(())
         })
-        // invoke_handler should be called only once!
         .invoke_handler(tauri::generate_handler![
-            api::init_config,
-            api::init_signaling_client,
-            api::get_config_primary_domain,
-            api::get_config_device_id,
-            api::get_config_device_password,
-            api::generate_random_password,
-            api::set_config_device_password,
-            api::signaling_visit_request,
-            api::signaling_reply_visit_request,
-            api::signaling_key_exchange,
+            command::init_config,
+            command::init_signaling,
+            command::get_current_domain,
+            command::generate_random_password,
+            command::set_current_domain_device_password,
+            command::signaling_visit_request,
+            command::signaling_reply_visit_request,
+            command::signaling_key_exchange,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

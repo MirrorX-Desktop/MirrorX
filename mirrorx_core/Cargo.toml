@@ -46,7 +46,8 @@ either = "1.8.0"
 signaling_proto = { git = "https://github.com/MirrorX-Desktop/signaling.git" }
 uuid = { version = "1.2.1", features = ["v4"] }
 fxhash = "0.2.1"
-egui = "0.19"
+r2d2 = "0.8.10"
+r2d2_sqlite = "0.21.0"
 
 [target.x86_64-apple-darwin.dependencies]
 objc = { version = "0.2.7" }

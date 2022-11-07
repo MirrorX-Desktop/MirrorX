@@ -1,4 +1,4 @@
-use crate::utility::nonce_value::NonceValue;
+use crate::{api::config::entity::domain::Domain, utility::nonce_value::NonceValue};
 use hmac::Hmac;
 use prost::Message;
 use rand::RngCore;
@@ -10,13 +10,11 @@ use signaling_proto::message::{
     KeyExchangePassiveDeviceSecret, KeyExchangeReplyError, KeyExchangeReplyRequest,
     KeyExchangeRequest, KeyExchangeResult,
 };
-use std::path::PathBuf;
 use tonic::transport::Channel;
 
 pub async fn handle(
     client: &mut signaling_proto::service::signaling_client::SignalingClient<Channel>,
-    domain: String,
-    config_path: PathBuf,
+    domain: Domain,
     req: &KeyExchangeRequest,
 ) {
     // let reply = match key_agreement(config_path, domain, req).await {
@@ -56,12 +54,11 @@ pub async fn handle(
     // };
 
     let (active_device_id, passive_device_id, _, visit_credentials, sealing_key, opening_key) =
-        match key_agreement(config_path, domain, req).await {
+        match key_agreement(&domain, req).await {
             Ok((
                 secret,
                 active_device_id,
                 passive_device_id,
-                domain,
                 visit_credentials,
                 sealing_key,
                 opening_key,
@@ -75,7 +72,7 @@ pub async fn handle(
                 (
                     active_device_id,
                     passive_device_id,
-                    domain,
+                    domain.name,
                     visit_credentials,
                     sealing_key,
                     opening_key,
@@ -117,8 +114,7 @@ pub async fn handle(
 }
 
 async fn key_agreement(
-    config_path: PathBuf,
-    domain: String,
+    domain: &Domain,
     req: &KeyExchangeRequest,
 ) -> Result<
     (
@@ -126,27 +122,11 @@ async fn key_agreement(
         i64,
         i64,
         String,
-        String,
         SealingKey<NonceValue>,
         OpeningKey<NonceValue>,
     ),
     KeyExchangeReplyError,
 > {
-    let config = crate::api::config::read(&config_path)
-        .map_err(|err| {
-            tracing::error!(?err, "read config failed");
-            KeyExchangeReplyError::Internal
-        })?
-        .ok_or_else(|| {
-            tracing::error!("config is empty");
-            KeyExchangeReplyError::Internal
-        })?;
-
-    let domain_config = config.domain_configs.get(&domain).ok_or_else(|| {
-        tracing::error!("domain config is empty");
-        KeyExchangeReplyError::Internal
-    })?;
-
     if req.secret_nonce.len() != ring::aead::NONCE_LEN {
         return Err(KeyExchangeReplyError::InvalidArgs);
     }
@@ -154,7 +134,7 @@ async fn key_agreement(
     // generate secret opening key with salt
     let mut active_device_secret_opening_key = [0u8; 32];
     pbkdf2::pbkdf2::<Hmac<Sha256>>(
-        domain_config.device_password.as_bytes(),
+        domain.password.as_bytes(),
         &req.password_salt,
         10000,
         &mut active_device_secret_opening_key,
@@ -320,7 +300,6 @@ async fn key_agreement(
         secret_buffer,
         req.active_device_id,
         req.passive_device_id,
-        domain,
         active_device_secret.visit_credentials,
         sealing_key,
         opening_key,

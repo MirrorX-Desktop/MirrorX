@@ -6,7 +6,7 @@
 	import { onMount } from 'svelte';
 	import Fa from 'svelte-fa';
 	import LL from '../../i18n/i18n-svelte';
-	import type { NotificationEvent } from '../event_types';
+	import type { GetCurrentDomainResponse, NotificationEvent } from '../event_types';
 	import Connect from './connect.svelte';
 	import History from './history.svelte';
 	import Lan from './lan.svelte';
@@ -15,7 +15,7 @@
 	import NotificationCenter from '../widgets/notification_center.svelte';
 
 	var select_tab: string = 'connect';
-	var primary_domain: string;
+	var current_domain: GetCurrentDomainResponse;
 
 	onMount(async () => {
 		init();
@@ -26,10 +26,8 @@
 	const init = async () => {
 		try {
 			await invoke('init_config');
-			let domain: string = await invoke('get_config_primary_domain');
-			await invoke('init_signaling_client', { domain });
-
-			primary_domain = domain;
+			await invoke('init_signaling', { force: false });
+			current_domain = await invoke<GetCurrentDomainResponse>('get_current_domain');
 		} catch (error: any) {
 			let notification: NotificationEvent = {
 				level: 'error',
@@ -83,11 +81,11 @@
 	<div class="mx-2 flex flex-1 flex-col">
 		<div class="flex-none">
 			<div class="my-2 text-center text-4xl">
-				{#if primary_domain == undefined}
+				{#if current_domain == undefined}
 					<Fa class="w-full text-center" icon={faSpinner} spin={true} size={'sm'} />
 				{/if}
-				{#if primary_domain != undefined}
-					{primary_domain}
+				{#if current_domain != undefined}
+					{current_domain.name}
 				{/if}
 			</div>
 			<div class="btn-group my-3 flex flex-row">
@@ -106,14 +104,18 @@
 		</div>
 
 		<div class="flex-1">
-			{#if select_tab == 'connect'}
-				<Connect domain={primary_domain} />
-			{/if}
-			{#if select_tab == 'lan'}
-				<Lan />
-			{/if}
-			{#if select_tab == 'history'}
-				<History />
+			{#if current_domain != undefined}
+				{#if select_tab == 'connect'}
+					<Connect bind:domain={current_domain} />
+				{/if}
+				{#if select_tab == 'lan'}
+					<Lan />
+				{/if}
+				{#if select_tab == 'history'}
+					<History />
+				{/if}
+			{:else}
+				<Fa icon={faSpinner} spin />
 			{/if}
 		</div>
 

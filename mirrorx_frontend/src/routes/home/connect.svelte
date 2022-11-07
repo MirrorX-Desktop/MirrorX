@@ -14,30 +14,20 @@
 	import { onDestroy, onMount } from 'svelte';
 	import Fa from 'svelte-fa';
 	import LL from '../../i18n/i18n-svelte';
-	import type { NotificationEvent } from '../event_types';
+	import type { GetCurrentDomainResponse, NotificationEvent } from '../event_types';
 
-	export let domain: string;
+	export let domain: GetCurrentDomainResponse;
 
 	var input_remote_device_id_before: string = '';
 	var input_remote_device_id: string = '';
-	var device_id: string = '';
-	var device_password: string = '';
-	var device_password_display: string = '';
+	var device_password_display = domain.password;
 	var show_password = false;
 	var edit_password = false;
 	var random_password_generating = false;
 	let desktop_is_connecting = false;
 	var desktop_is_connecting_unlisten_fn: UnlistenFn | null;
 
-	$: {
-		if (domain) {
-			load_device_id(domain);
-			load_device_password(domain);
-		}
-	}
-
-	$: device_password_display_valid =
-		input_remote_device_id.length == 0 || /^\d{2}-\d{4}-\d{4}$/.test(input_remote_device_id);
+	$: remote_device_valid = input_remote_device_id.length == 0 || /^\d{2}-\d{4}-\d{4}$/.test(input_remote_device_id);
 
 	onMount(async () => {
 		desktop_is_connecting_unlisten_fn = await listen<string>('desktop_is_connecting', (event) => {
@@ -56,34 +46,6 @@
 			desktop_is_connecting_unlisten_fn();
 		}
 	});
-
-	const load_device_id = async (domain: string) => {
-		try {
-			console.log(domain);
-			device_id = await invoke('get_config_device_id', { domain });
-		} catch (error: any) {
-			let notification: NotificationEvent = {
-				level: 'error',
-				title: 'Error',
-				message: error.toString()
-			};
-			emit('notification', notification);
-		}
-	};
-
-	const load_device_password = async (domain: string) => {
-		try {
-			device_password = await invoke('get_config_device_password', { domain });
-			device_password_display = device_password;
-		} catch (error: any) {
-			let notification: NotificationEvent = {
-				level: 'error',
-				title: 'Error',
-				message: error.toString()
-			};
-			emit('notification', notification);
-		}
-	};
 
 	const on_remote_device_id_input = (
 		event: Event & {
@@ -141,15 +103,14 @@
 
 	const cancel_edit_password = () => {
 		edit_password = false;
-		device_password_display = device_password;
+		device_password_display = domain.password;
 	};
 
 	const commit_edit_password = async () => {
 		try {
-			await invoke('set_config_device_password', { domain, password: device_password_display });
-			await load_device_password(domain);
+			await invoke('set_current_domain_device_password', { password: device_password_display });
 			edit_password = false;
-			device_password_display = device_password;
+			domain.password = device_password_display;
 		} catch (error: any) {
 			let notification: NotificationEvent = {
 				level: 'error',
@@ -166,7 +127,7 @@
 				return;
 			}
 			emit('desktop_is_connecting', true);
-			await invoke('signaling_visit_request', { domain, remoteDeviceId: input_remote_device_id });
+			await invoke('signaling_visit_request', { remoteDeviceId: input_remote_device_id });
 		} catch (error: any) {
 			emit('desktop_is_connecting', false);
 			let notification: NotificationEvent = {
@@ -180,10 +141,10 @@
 </script>
 
 <slot>
-	{#if domain && device_id && device_id}
+	{#if domain && domain.device_id && domain.name && domain.password}
 		<div class="mx-2 flex h-full flex-col">
 			<div class="my-3 text-center text-3xl">{$LL.Pages.Connect.DeviceID()}</div>
-			<div class="my-3 text-center text-4xl">{device_id}</div>
+			<div class="my-3 text-center text-4xl">{domain.device_id}</div>
 			<div class="my-3 text-center text-3xl">{$LL.Pages.Connect.Password()}</div>
 			<div class="my-3 text-center">
 				{#if edit_password}
@@ -248,7 +209,7 @@
 			<div class="flex h-full flex-1 flex-col place-items-center justify-evenly">
 				<input
 					id="remote_device_id_input"
-					class="w-5/6 rounded border text-center text-4xl {device_password_display_valid
+					class="w-5/6 rounded border text-center text-4xl {remote_device_valid
 						? 'ring-blue-400 focus:outline-none focus:ring'
 						: 'outline-none ring ring-red-500'}"
 					type="text"

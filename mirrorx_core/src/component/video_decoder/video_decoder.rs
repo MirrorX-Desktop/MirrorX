@@ -3,18 +3,9 @@ use crate::{
     component::frame::DesktopDecodeFrame,
     core_error,
     error::CoreResult,
-    ffi::{
-        ffmpeg::{avcodec::*, avutil::*},
-        libyuv::{kYvuF709Constants, NV21ToARGBMatrix},
-    },
+    ffi::ffmpeg::{avcodec::*, avutil::*},
 };
-use bytes::BufMut;
-use egui::Color32;
-use std::{
-    ffi::{CStr, CString},
-    time::{Duration, Instant},
-};
-use tokio::sync::mpsc::{error::TrySendError, Sender};
+use std::ffi::{CStr, CString};
 
 pub struct VideoDecoder {
     decode_context: Option<DecodeContext>,
@@ -334,28 +325,28 @@ impl Drop for DecodeContext {
     }
 }
 
-unsafe fn convert_yuv_to_rgb(frame: *mut AVFrame) -> CoreResult<Vec<Color32>> {
-    let argb_stride = 4 * ((32 * (*frame).width + 31) / 32);
-    let argb_frame_size = (argb_stride as usize) * ((*frame).height as usize);
-    let mut color32_buffer = Vec::<Color32>::with_capacity(argb_frame_size / 4);
+// unsafe fn convert_yuv_to_rgb(frame: *mut AVFrame) -> CoreResult<Vec<Color32>> {
+//     let argb_stride = 4 * ((32 * (*frame).width + 31) / 32);
+//     let argb_frame_size = (argb_stride as usize) * ((*frame).height as usize);
+//     let mut color32_buffer = Vec::<Color32>::with_capacity(argb_frame_size / 4);
 
-    let ret = NV21ToARGBMatrix(
-        (*frame).data[0],
-        (*frame).linesize[0] as isize,
-        (*frame).data[1],
-        (*frame).linesize[1] as isize,
-        color32_buffer.as_mut_ptr() as *mut u8,
-        argb_stride as isize,
-        &kYvuF709Constants,
-        (*frame).width as isize,
-        (*frame).height as isize,
-    );
+//     let ret = NV21ToARGBMatrix(
+//         (*frame).data[0],
+//         (*frame).linesize[0] as isize,
+//         (*frame).data[1],
+//         (*frame).linesize[1] as isize,
+//         color32_buffer.as_mut_ptr() as *mut u8,
+//         argb_stride as isize,
+//         &kYvuF709Constants,
+//         (*frame).width as isize,
+//         (*frame).height as isize,
+//     );
 
-    if ret != 0 {
-        return Err(core_error!("NV21ToARGBMatrix returns error code: {}", ret));
-    }
+//     if ret != 0 {
+//         return Err(core_error!("NV21ToARGBMatrix returns error code: {}", ret));
+//     }
 
-    color32_buffer.set_len(argb_frame_size / 4);
+//     color32_buffer.set_len(argb_frame_size / 4);
 
-    Ok(color32_buffer)
-}
+//     Ok(color32_buffer)
+// }
