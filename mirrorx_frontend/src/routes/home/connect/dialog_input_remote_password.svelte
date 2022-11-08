@@ -1,56 +1,62 @@
 <script lang="ts">
 	import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
 	import { emit, listen, type UnlistenFn } from '@tauri-apps/api/event';
-	import { invoke } from '@tauri-apps/api/tauri';
+	import { invoke_signaling_key_exchange } from '../../../components/command';
 	import { onDestroy, onMount } from 'svelte';
 	import Fa from 'svelte-fa';
-	import type { NotificationEvent, PopupDialogInputRemotePasswordEvent } from '../event_types';
+	import { emitHomeNotification } from '../home_notification_center.svelte';
 
-	var event: PopupDialogInputRemotePasswordEvent | null;
+	var active_device_id: string = '';
+	var passive_device_id: string = '';
 	var show = false;
 	var input_password: string = '';
 	var show_password = false;
-	var popup_dialog_input_remote_password_unlisten_fn: UnlistenFn | null;
+	var unlisten_fn: UnlistenFn | null;
 
 	onMount(async () => {
-		popup_dialog_input_remote_password_unlisten_fn = await listen<PopupDialogInputRemotePasswordEvent>(
-			'popup_dialog_input_remote_password',
-			(ev) => {
-				event = ev.payload;
-				show = true;
-			}
-		);
+		unlisten_fn = await listen<{
+			active_device_id: string;
+			passive_device_id: string;
+		}>('popup_dialog_input_remote_password', (event) => {
+			active_device_id = event.payload.active_device_id;
+			passive_device_id = event.payload.passive_device_id;
+			show = true;
+		});
 	});
 
 	onDestroy(() => {
-		if (popup_dialog_input_remote_password_unlisten_fn) {
-			popup_dialog_input_remote_password_unlisten_fn();
+		if (unlisten_fn) {
+			unlisten_fn();
 		}
 	});
 
-	const decide = async (allow: boolean) => {
-		show = false;
-
+	const ok = async () => {
 		try {
-			await invoke('signaling_key_exchange', {
-				localDeviceId: event?.active_device_id,
-				remoteDeviceId: event?.passive_device_id,
+			show = false;
+			await invoke_signaling_key_exchange({
+				localDeviceId: active_device_id,
+				remoteDeviceId: passive_device_id,
 				password: input_password
 			});
 		} catch (error: any) {
-			let notification: NotificationEvent = {
-				level: 'error',
-				title: 'Error',
-				message: error.toString()
-			};
-			emit('notification', notification);
+			await emitHomeNotification({ level: 'error', title: 'Error', message: error.toString() });
+		} finally {
+			active_device_id = '';
+			passive_device_id = '';
+			input_password = '';
+			show_password = false;
+			console.log('emit desktop is connecting');
+			await emit('desktop_is_connecting', false);
 		}
+	};
 
-		event = null;
+	const cancel = async () => {
+		active_device_id = '';
+		passive_device_id = '';
 		input_password = '';
 		show_password = false;
 		console.log('emit desktop is connecting');
-		emit('desktop_is_connecting', false);
+		await emit('desktop_is_connecting', false);
 	};
 </script>
 
@@ -60,8 +66,8 @@
 		<div class="modal-box">
 			<h3 class="text-lg font-bold">Input Remote Password</h3>
 			<p class="py-4">
-				Remote Device '<span class="font-bold">{event?.passive_device_id}</span>' pass your visit request. Please input
-				remote device password
+				Remote Device '<span class="font-bold">{passive_device_id}</span>' pass your visit request. Please input remote
+				device password
 			</p>
 
 			<div class="input-group flex flex-row">
@@ -83,8 +89,8 @@
 			</div>
 
 			<div class="modal-action">
-				<button class="btn" on:click={() => decide(true)}>Ok</button>
-				<button class="btn" on:click={() => decide(false)}>Cancel</button>
+				<button class="btn" on:click={ok}>Ok</button>
+				<button class="btn" on:click={cancel}>Cancel</button>
 			</div>
 		</div>
 	</div>

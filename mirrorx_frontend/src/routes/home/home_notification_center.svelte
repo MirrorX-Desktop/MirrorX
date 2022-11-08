@@ -1,18 +1,31 @@
+<script context="module" lang="ts">
+	import { emit } from '@tauri-apps/api/event';
+
+	export interface HomeNotificationEvent {
+		level: 'info' | 'success' | 'warning' | 'error';
+		title: string;
+		message: string;
+	}
+
+	export async function emitHomeNotification(notification: HomeNotificationEvent) {
+		await emit('settings_notification', notification);
+	}
+</script>
+
 <script lang="ts">
 	import { faXmark } from '@fortawesome/free-solid-svg-icons';
-	import { listen } from '@tauri-apps/api/event';
-	import { onMount } from 'svelte';
+	import { listen, type UnlistenFn } from '@tauri-apps/api/event';
+	import { onDestroy, onMount } from 'svelte';
 	import Fa from 'svelte-fa';
 	import { v4 as uuidv4 } from 'uuid';
-	import type { NotificationEvent } from '../event_types';
 
-	var notifications: Array<{ level_color: string; title: string; message: string; id: string }> = [];
-
+	let notifications: Array<{ level_color: string; title: string; message: string; id: string }> = [];
+	let unlisten_fn: UnlistenFn | null = null;
 	$: notifications_reverse = notifications.reverse().slice(0, 2);
 
 	onMount(async () => {
-		await listen<string>('notification', (event) => {
-			let payload: NotificationEvent = JSON.parse(event.payload);
+		unlisten_fn = await listen<string>('notification', (event) => {
+			let payload: HomeNotificationEvent = JSON.parse(event.payload);
 
 			let level_color: string = '';
 			switch (payload.level) {
@@ -35,6 +48,12 @@
 
 			notifications = notifications;
 		});
+	});
+
+	onDestroy(() => {
+		if (unlisten_fn) {
+			unlisten_fn();
+		}
 	});
 </script>
 

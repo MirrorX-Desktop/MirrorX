@@ -4,7 +4,7 @@ use crate::{
 };
 use r2d2::{Pool, PooledConnection};
 use r2d2_sqlite::SqliteConnectionManager;
-use rusqlite::{params, Row};
+use rusqlite::{params, OptionalExtension, Row};
 use std::sync::Arc;
 
 #[derive(Clone)]
@@ -87,6 +87,17 @@ impl DomainRepository {
             .query_row_and_then::<Domain, CoreError, _, _>(COMMAND, [], parse_domain)
     }
 
+    pub fn domain_exist(&self, name: &str) -> CoreResult<bool> {
+        const COMMAND: &str = r"SELECT 1 FROM domains WHERE name = ?";
+
+        let res = self
+            .get_connection()?
+            .query_row(COMMAND, [name], |row| row.get::<_, u32>(0))
+            .optional()?;
+
+        Ok(res.is_some())
+    }
+
     pub fn get_domain_names(&self) -> CoreResult<Vec<String>> {
         const COMMAND: &str = r"SELECT name FROM domains";
 
@@ -125,7 +136,7 @@ impl DomainRepository {
     pub fn get_domains(&self, page: u32) -> CoreResult<(u32, Vec<Domain>)> {
         const SINGLE_PAGE_LIMIT: u32 = 6;
         const COUNT_COMMAND: &str = r"SELECT COUNT(*) FROM domains";
-        const PAGINATION_COMMAND: &str = r"SELECT * FROM domains OFFSET ? LIMIT ?";
+        const PAGINATION_COMMAND: &str = r"SELECT * FROM domains LIMIT ? OFFSET ?";
 
         let conn = self.get_connection()?;
 
@@ -134,7 +145,7 @@ impl DomainRepository {
 
         let mut stmt = conn.prepare(PAGINATION_COMMAND)?;
         let rows = stmt.query_and_then::<Domain, CoreError, _, _>(
-            [(page - 1) * SINGLE_PAGE_LIMIT, SINGLE_PAGE_LIMIT],
+            [SINGLE_PAGE_LIMIT, (page - 1) * SINGLE_PAGE_LIMIT],
             parse_domain,
         )?;
 

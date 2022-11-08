@@ -1,13 +1,18 @@
 use crate::{core_error, error::CoreResult};
 use signaling_proto::service::signaling_client::SignalingClient;
-use std::{convert::TryFrom, time::Duration};
+use std::time::Duration;
 use tonic::{
     codegen::CompressionEncoding,
     transport::{Channel, Uri},
 };
 
-pub async fn dial(uri: &str) -> CoreResult<SignalingClient<Channel>> {
-    let uri = Uri::try_from(uri).map_err(|_| core_error!("invalid uri format"))?;
+pub async fn dial<U>(uri: U) -> CoreResult<SignalingClient<Channel>>
+where
+    U: TryInto<Uri>,
+{
+    let uri = uri
+        .try_into()
+        .map_err(|_| core_error!("invalid uri format"))?;
 
     let channel = Channel::builder(uri)
         .tcp_nodelay(true)

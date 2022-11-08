@@ -10,26 +10,36 @@
 		faSpinner
 	} from '@fortawesome/free-solid-svg-icons';
 	import { emit, listen, type UnlistenFn } from '@tauri-apps/api/event';
-	import { invoke } from '@tauri-apps/api/tauri';
+	import {
+		invoke_generate_random_password,
+		invoke_set_current_domain_device_password,
+		invoke_signaling_visit_request
+	} from '../../../components/command';
+	import { current_domain, type CurrentDomain } from '../../../components/stores';
 	import { onDestroy, onMount } from 'svelte';
 	import Fa from 'svelte-fa';
-	import LL from '../../i18n/i18n-svelte';
-	import type { GetCurrentDomainResponse, NotificationEvent } from '../event_types';
+	import type { Unsubscriber } from 'svelte/store';
+	import LL from '../../../i18n/i18n-svelte';
+	import { emitHomeNotification } from '../home_notification_center.svelte';
 
-	export let domain: GetCurrentDomainResponse;
-
-	var input_remote_device_id_before: string = '';
-	var input_remote_device_id: string = '';
-	var device_password_display = domain.password;
-	var show_password = false;
-	var edit_password = false;
-	var random_password_generating = false;
+	let domain: CurrentDomain | null = null;
+	let domain_unsubscribe: Unsubscriber | null = null;
+	let input_remote_device_id_before: string = '';
+	let input_remote_device_id: string = '';
+	let show_password = false;
+	let edit_password = false;
+	let random_password_generating = false;
 	let desktop_is_connecting = false;
-	var desktop_is_connecting_unlisten_fn: UnlistenFn | null;
+	let desktop_is_connecting_unlisten_fn: UnlistenFn | null;
 
+	$: device_password_display = domain?.password ?? '';
 	$: remote_device_valid = input_remote_device_id.length == 0 || /^\d{2}-\d{4}-\d{4}$/.test(input_remote_device_id);
 
 	onMount(async () => {
+		domain_unsubscribe = current_domain.subscribe((value) => {
+			domain = value;
+		});
+
 		desktop_is_connecting_unlisten_fn = await listen<string>('desktop_is_connecting', (event) => {
 			let is_connecting: boolean = JSON.parse(event.payload);
 			desktop_is_connecting = is_connecting;
@@ -42,6 +52,10 @@
 	});
 
 	onDestroy(() => {
+		if (domain_unsubscribe) {
+			domain_unsubscribe();
+		}
+
 		if (desktop_is_connecting_unlisten_fn) {
 			desktop_is_connecting_unlisten_fn();
 		}
@@ -88,14 +102,9 @@
 	const generate_random_password = async () => {
 		try {
 			random_password_generating = true;
-			device_password_display = await invoke('generate_random_password');
+			device_password_display = await invoke_generate_random_password();
 		} catch (error: any) {
-			let notification: NotificationEvent = {
-				level: 'error',
-				title: 'Error',
-				message: error.toString()
-			};
-			emit('notification', notification);
+			await emitHomeNotification({ level: 'error', title: 'Error', message: error.toString() });
 		}
 
 		random_password_generating = false;
@@ -103,21 +112,19 @@
 
 	const cancel_edit_password = () => {
 		edit_password = false;
-		device_password_display = domain.password;
+		device_password_display = domain?.password ?? '';
 	};
 
 	const commit_edit_password = async () => {
 		try {
-			await invoke('set_current_domain_device_password', { password: device_password_display });
+			await invoke_set_current_domain_device_password({ password: device_password_display });
 			edit_password = false;
-			domain.password = device_password_display;
+			if (domain) {
+				domain.password = device_password_display;
+				current_domain.set(domain);
+			}
 		} catch (error: any) {
-			let notification: NotificationEvent = {
-				level: 'error',
-				title: 'Error',
-				message: error.toString()
-			};
-			emit('notification', notification);
+			await emitHomeNotification({ level: 'error', title: 'Error', message: error.toString() });
 		}
 	};
 
@@ -126,16 +133,11 @@
 			if (!/^\d{2}-\d{4}-\d{4}$/.test(input_remote_device_id)) {
 				return;
 			}
-			emit('desktop_is_connecting', true);
-			await invoke('signaling_visit_request', { remoteDeviceId: input_remote_device_id });
+			await emit('desktop_is_connecting', true);
+			await invoke_signaling_visit_request({ remoteDeviceId: input_remote_device_id });
 		} catch (error: any) {
-			emit('desktop_is_connecting', false);
-			let notification: NotificationEvent = {
-				level: 'error',
-				title: 'Error',
-				message: error.toString()
-			};
-			emit('notification', notification);
+			await emit('desktop_is_connecting', false);
+			await emitHomeNotification({ level: 'error', title: 'Error', message: error.toString() });
 		}
 	};
 </script>

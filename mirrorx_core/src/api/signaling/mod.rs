@@ -5,12 +5,14 @@ mod visit;
 mod visit_reply;
 
 use crate::{api::config::LocalStorage, core_error, error::CoreResult};
-use signaling_proto::message::{GetDomainRequest, RegisterRequest};
+
 use signaling_proto::service::signaling_client::SignalingClient;
 use tokio::sync::mpsc::Sender;
 use tonic::transport::Channel;
 
+pub use dial::dial;
 pub use key_exchange::{KeyExchangeRequest, KeyExchangeResponse};
+pub use signaling_proto::message::{GetDomainRequest, RegisterRequest};
 pub use subscribe::PublishMessage;
 pub use visit::{ResourceType, VisitRequest, VisitResponse};
 pub use visit_reply::VisitReplyRequest;

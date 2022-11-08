@@ -40,6 +40,10 @@ async fn main() {
             command::signaling_visit_request,
             command::signaling_reply_visit_request,
             command::signaling_key_exchange,
+            command::get_domains,
+            command::add_domain,
+            command::delete_domain,
+            command::switch_primary_domain,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
