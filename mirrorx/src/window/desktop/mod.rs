@@ -5,26 +5,14 @@ use self::desktop_render::DesktopRender;
 use mirrorx_core::{
     api::endpoint::message::{InputEvent, KeyboardEvent, MouseEvent},
     component::input::key::{KeyboardKey, MouseKey},
-    DesktopDecodeFrame,
 };
 use state::{State, StateUpdater};
-use std::{io::Write, sync::Arc, time::Duration};
+use std::{sync::Arc, time::Duration};
 use tauri_egui::{
-    eframe::{
-        egui_glow::{self, check_for_gl_error},
-        glow::{
-            self, Context, HasContext, NativeBuffer, NativeShader, NativeTexture,
-            NativeUniformLocation, NativeVertexArray,
-        },
-    },
+    eframe::glow::{self, Context},
     egui::{
-        epaint::Shadow,
-        mutex::{Mutex, RwLock},
-        style::Margin,
-        text::LayoutJob,
-        Align, CentralPanel, Color32, ColorImage, FontFamily, FontId, Frame, Layout, PaintCallback,
-        Pos2, Rect, RichText, Rounding, Sense, Stroke, TextureHandle, TextureId, Ui, Vec2,
-        WidgetText,
+        epaint::Shadow, mutex::Mutex, style::Margin, Align, CentralPanel, Color32, FontId, Frame,
+        Layout, Pos2, Rect, RichText, Rounding, Sense, Stroke, Ui, Vec2,
     },
 };
 
@@ -138,7 +126,7 @@ impl DesktopWindow {
                 ui.allocate_ui_at_rect(available_rect, |ui| {
                     tauri_egui::egui::ScrollArea::both()
                         .auto_shrink([false; 2])
-                        .show(ui, |ui| {
+                        .show_viewport(ui, |ui, view_port| {
                             ui.set_width(frame.width as f32);
                             ui.set_height(frame.height as f32);
 
@@ -161,11 +149,12 @@ impl DesktopWindow {
 
                             ui.painter().add(callback);
 
-                            // let events = &response.ctx.input().events;
-                            // let left_top = viewport.left_top();
-                            // emit_input(&self.state_updater, events, move |pos| {
-                            //     pos + left_top.to_vec2()
-                            // });
+                            let input = ui.ctx().input();
+                            let events = input.events.as_slice();
+                            let left_top = view_port.left_top();
+                            emit_input(&self.state_updater, events, move |pos| {
+                                pos + left_top.to_vec2()
+                            });
                         });
                 });
             } else {
@@ -204,18 +193,18 @@ impl DesktopWindow {
 
                 ui.painter().add(callback);
 
-                // let response = ui.image(frame, desktop_size);
-                // let events = &response.ctx.input().events;
-                // emit_input(&self.state_updater, events, move |pos| {
-                //     Pos2::new(
-                //         (pos.x - space_around_image.x).max(0.0) / scale_ratio,
-                //         (pos.y - space_around_image.y).max(0.0) / scale_ratio,
-                //     )
-                // });
+                let input = ui.ctx().input();
+                let events = input.events.as_slice();
+                emit_input(&self.state_updater, events, move |pos| {
+                    Pos2::new(
+                        (pos.x - space_around_image.x).max(0.0) / scale_ratio,
+                        (pos.y - space_around_image.y).max(0.0) / scale_ratio,
+                    )
+                });
             }
         } else {
             ui.centered_and_justified(|ui| {
-                let (rect, response) = ui
+                let (rect, _) = ui
                     .allocate_exact_size(Vec2::new(160.0, 80.0), Sense::focusable_noninteractive());
 
                 ui.allocate_ui_at_rect(rect, |ui| {
@@ -228,7 +217,7 @@ impl DesktopWindow {
 
     fn build_toolbar(&mut self, ui: &mut Ui) {
         // put the toolbar at central top
-        let (mut rect, response) = ui.allocate_exact_size(Vec2::new(240.0, 35.0), Sense::click());
+        let (mut rect, _) = ui.allocate_at_least(Vec2::new(220.0, 35.0), Sense::click());
         rect.set_center(Pos2::new(ui.max_rect().width() / 2.0, 50.0));
 
         ui.allocate_ui_at_rect(rect, |ui| {
@@ -240,7 +229,6 @@ impl DesktopWindow {
                 .stroke(Stroke::new(1.0, Color32::GRAY))
                 .show(ui, |ui| {
                     ui.set_min_size(rect.size());
-
                     ui.style_mut().spacing.item_spacing = Vec2::new(6.0, 2.0);
                     ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
                         // remote device id
@@ -261,7 +249,7 @@ impl DesktopWindow {
                             RichText::new(self.desktop_render.lock().frame_rate().to_string())
                                 .font(FontId::monospace(24.0)), // FontFamily::Name("LiquidCrystal".into()))),
                         );
-                    });
+                    })
                 })
         });
     }
