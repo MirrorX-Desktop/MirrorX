@@ -71,7 +71,7 @@
 </script>
 
 <slot>
-	<input type="checkbox" id="dialog_visit_request" class="modal-toggle" bind:checked={show} />
+	<input type="checkbox" id="dialog_add_domain" class="modal-toggle" bind:checked={show} />
 	<div class="modal">
 		<div class="modal-box w-96">
 			<h3 class="text-lg font-bold">Add Domain</h3>

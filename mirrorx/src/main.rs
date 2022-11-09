@@ -44,6 +44,7 @@ async fn main() {
             command::add_domain,
             command::delete_domain,
             command::switch_primary_domain,
+            command::set_domain_remarks,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

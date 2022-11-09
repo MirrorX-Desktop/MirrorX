@@ -36,7 +36,7 @@
 				message: error.toString() as string
 			});
 		} finally {
-			show = false;
+			cancel();
 		}
 	};
 
@@ -46,7 +46,7 @@
 </script>
 
 <slot>
-	<input type="checkbox" id="dialog_visit_request" class="modal-toggle" checked={show} />
+	<input type="checkbox" id="dialog_delete_confirm" class="modal-toggle" checked={show} />
 	<div class="modal">
 		<div class="modal-box w-96">
 			<h3 class="text-lg font-bold">Delete Domain</h3>

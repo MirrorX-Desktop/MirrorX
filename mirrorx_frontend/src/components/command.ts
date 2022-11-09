@@ -40,7 +40,7 @@ export function invoke_signaling_reply_visit_request(args: {
 	return invoke('signaling_reply_visit_request', args);
 }
 
-export function invoke_get_domains(args: { page: number }): Promise<{
+export function invoke_get_domains(args: { page: number; limit: number }): Promise<{
 	total: number;
 	current_domain_name: string;
 	domains: Array<{
@@ -48,6 +48,7 @@ export function invoke_get_domains(args: { page: number }): Promise<{
 		name: string;
 		addr: string;
 		device_id: string;
+		finger_print: string;
 		remarks: string;
 	}>;
 }> {
@@ -64,4 +65,8 @@ export function invoke_delete_domain(args: { id: number }): Promise<void> {
 
 export function invoke_switch_primary_domain(args: { id: number }): Promise<void> {
 	return invoke('switch_primary_domain', args);
+}
+
+export function invoke_set_domain_remarks(args: { id: number; remarks: string }): Promise<void> {
+	return invoke('set_domain_remarks', args);
 }

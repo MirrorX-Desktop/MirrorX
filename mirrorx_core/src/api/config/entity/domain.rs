@@ -118,7 +118,7 @@ impl DomainRepository {
 
         let domain = self
             .get_connection()?
-            .query_row_and_then(COMMAND, [name], |row| parse_domain(row))?;
+            .query_row_and_then(COMMAND, [name], parse_domain)?;
 
         Ok(domain)
     }
@@ -126,15 +126,14 @@ impl DomainRepository {
     pub fn get_domain_by_id(&self, domain_id: i64) -> CoreResult<Domain> {
         const COMMAND: &str = r"SELECT * FROM domains WHERE id = ?";
 
-        let domain = self
-            .get_connection()?
-            .query_row_and_then(COMMAND, [domain_id], |row| parse_domain(row))?;
+        let domain =
+            self.get_connection()?
+                .query_row_and_then(COMMAND, [domain_id], parse_domain)?;
 
         Ok(domain)
     }
 
-    pub fn get_domains(&self, page: u32) -> CoreResult<(u32, Vec<Domain>)> {
-        const SINGLE_PAGE_LIMIT: u32 = 6;
+    pub fn get_domains(&self, page: u32, limit: u32) -> CoreResult<(u32, Vec<Domain>)> {
         const COUNT_COMMAND: &str = r"SELECT COUNT(*) FROM domains";
         const PAGINATION_COMMAND: &str = r"SELECT * FROM domains LIMIT ? OFFSET ?";
 
@@ -144,10 +143,8 @@ impl DomainRepository {
             .query_row_and_then::<u32, CoreError, _, _>(COUNT_COMMAND, [], |row| Ok(row.get(0)?))?;
 
         let mut stmt = conn.prepare(PAGINATION_COMMAND)?;
-        let rows = stmt.query_and_then::<Domain, CoreError, _, _>(
-            [SINGLE_PAGE_LIMIT, (page - 1) * SINGLE_PAGE_LIMIT],
-            parse_domain,
-        )?;
+        let rows = stmt
+            .query_and_then::<Domain, CoreError, _, _>([limit, (page - 1) * limit], parse_domain)?;
 
         let mut domains = Vec::new();
         for row in rows {

@@ -19,14 +19,19 @@ pub struct DomainModel {
     pub name: String,
     pub addr: String,
     pub device_id: String,
+    pub finger_print: String,
     pub remarks: String,
 }
 
 #[tauri::command]
 #[tracing::instrument(skip(state))]
-pub async fn get_domains(page: u32, state: tauri::State<'_, UIState>) -> CoreResult<Response> {
+pub async fn get_domains(
+    page: u32,
+    limit: u32,
+    state: tauri::State<'_, UIState>,
+) -> CoreResult<Response> {
     let storage = LocalStorage::current()?;
-    let (total, domains) = storage.domain().get_domains(page)?;
+    let (total, domains) = storage.domain().get_domains(page, limit)?;
 
     let domains: Vec<DomainModel> = domains
         .iter()
@@ -35,6 +40,7 @@ pub async fn get_domains(page: u32, state: tauri::State<'_, UIState>) -> CoreRes
             name: entity.name.to_owned(),
             addr: entity.addr.to_owned(),
             device_id: format_device_id(entity.device_id),
+            finger_print: entity.finger_print.to_owned(),
             remarks: entity.remarks.to_owned(),
         })
         .collect();

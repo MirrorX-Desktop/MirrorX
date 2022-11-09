@@ -1,11 +1,6 @@
 <script lang="ts">
 	import { emit, listen, type UnlistenFn } from '@tauri-apps/api/event';
-	import {
-		invoke_get_current_domain,
-		invoke_init_signaling,
-		invoke_switch_primary_domain
-	} from '../../../components/command';
-	import { current_domain } from '../../../components/stores';
+	import { invoke_switch_primary_domain } from '../../../components/command';
 	import { onDestroy, onMount } from 'svelte';
 	import { emitSettingsNotification } from '../settings_notification_center.svelte';
 	import type { SwitchPrimaryDomainEvent } from './event';
@@ -41,7 +36,7 @@
 				message: error.toString() as string
 			});
 		} finally {
-			show = false;
+			no();
 		}
 	};
 
@@ -51,11 +46,11 @@
 </script>
 
 <slot>
-	<input type="checkbox" id="dialog_visit_request" class="modal-toggle" checked={show} />
+	<input type="checkbox" id="dialog_switch_primary_domain" class="modal-toggle" checked={show} />
 	<div class="modal">
 		<div class="modal-box w-96">
-			<h3 class="text-lg font-bold">Delete Domain</h3>
-			<div class="py-4">Do you really want to delete domain <span class="font-bold">{domain_name}</span>?</div>
+			<h3 class="text-lg font-bold">Switch Primary Domain</h3>
+			<div class="py-4">Do you want to set <span class="font-bold">{domain_name}</span> as primary domain?</div>
 			<div class="modal-action">
 				<button class="btn" on:click={yes}>Yes</button>
 				<button class="btn" on:click={no}>No</button>

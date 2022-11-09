@@ -1,5 +1,6 @@
 mod key_exchange;
 
+use scopeguard::defer;
 use serde::Serialize;
 use signaling_proto::message::{publish_message::InnerPublishMessage, ResourceType};
 use signaling_proto::service::signaling_client::SignalingClient;
@@ -29,6 +30,10 @@ pub async fn subscribe(
 ) {
     let mut subscribe_client = client.clone();
     tokio::spawn(async move {
+        defer! {
+            tracing::info!("subscribe exit");
+        }
+
         loop {
             match exit_tx.try_recv() {
                 Ok(_) => return,

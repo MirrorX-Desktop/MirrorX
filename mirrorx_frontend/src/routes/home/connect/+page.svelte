@@ -211,7 +211,7 @@
 			<div class="flex h-full flex-1 flex-col place-items-center justify-evenly">
 				<input
 					id="remote_device_id_input"
-					class="w-5/6 rounded border text-center text-4xl {remote_device_valid
+					class="w-5/6 rounded border p-2 text-center text-3xl {remote_device_valid
 						? 'ring-blue-400 focus:outline-none focus:ring'
 						: 'outline-none ring ring-red-500'}"
 					type="text"
