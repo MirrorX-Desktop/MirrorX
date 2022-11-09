@@ -48,16 +48,12 @@ impl AudioDuplicator {
                     // receive None means duplicate_context has error occurred,
                     // set self.duplicate_context to None to let it re-initialize
                     self.duplicate_context = None;
-                    return Err(core_error!(
-                        "audio duplicator duplicate audio samples failed"
-                    ));
+                    return Err(core_error!("audio duplicator callback has error occurred"));
                 }
             },
             None => {
                 self.duplicate_context = None;
-                return Err(core_error!(
-                    "audio duplicator duplicate audio samples failed"
-                ));
+                return Err(core_error!("audio duplicator channel was closed"));
             }
         };
 

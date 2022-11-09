@@ -36,7 +36,7 @@ use tokio::{
     net::TcpStream,
     select,
     sync::{
-        mpsc::{Receiver, Sender},
+        mpsc::{error::TrySendError, Receiver, Sender},
         Mutex,
     },
 };
@@ -219,9 +219,13 @@ impl EndPointClient {
     }
 
     fn send_message(&self, message: EndPointMessage) -> CoreResult<()> {
-        self.message_tx
-            .try_send(Some(message))
-            .map_err(|_| core_error!("message send failed"))
+        self.message_tx.try_send(Some(message)).map_err(|err| {
+            if let TrySendError::Full(_) = err {
+                core_error!("endpoint message send failed, channel is full")
+            } else {
+                core_error!("endpoint message send failed, channel was closed")
+            }
+        })
     }
 
     pub fn close(&self) {
@@ -280,7 +284,7 @@ fn serve_reader(
     mut exit_rx: async_broadcast::Receiver<()>,
     mut stream: SplitStream<Framed<TcpStream, LengthDelimitedCodec>>,
     mut opening_key: OpeningKey<NonceValue>,
-    mut video_frame_tx: tokio::sync::mpsc::Sender<EndPointVideoFrame>,
+    video_frame_tx: tokio::sync::mpsc::Sender<EndPointVideoFrame>,
 ) {
     tokio::spawn(async move {
         let span = tracing::info_span!("serve reader", id = ?client.id());
@@ -424,7 +428,9 @@ fn handle_message(
         }
         EndPointMessage::VideoFrame(video_frame) => {
             // handle_video_frame(client.id, video_frame);
-            video_frame_tx.try_send(video_frame);
+            if let Err(err) = video_frame_tx.try_send(video_frame) {
+                tracing::error!(%err, "endpoint video frame message channel send failed");
+            }
         }
         EndPointMessage::AudioFrame(audio_frame) => {
             handle_audio_frame(client.id, audio_frame);

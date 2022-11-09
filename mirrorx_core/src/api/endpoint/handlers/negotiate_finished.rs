@@ -204,7 +204,7 @@ fn spawn_audio_capture_and_encode_process(client: EndPointClient) {
 
         loop {
             if let Err(err) = audio_duplicator.capture_samples().await {
-                tracing::error!(?err, "audio duplicator capture sample failed");
+                tracing::error!(?err, "audio duplicator capture samples failed");
                 client.close();
                 return;
             }
