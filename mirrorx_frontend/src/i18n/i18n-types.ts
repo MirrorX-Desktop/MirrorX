@@ -14,122 +14,534 @@ export type Translation = RootTranslation
 export type Translations = RootTranslation
 
 type RootTranslation = {
-	/**
-	 * D​o​m​a​i​n
-	 */
-	Domain: string
-	/**
-	 * C​o​n​n​e​c​t
-	 */
-	Connect: string
-	/**
-	 * L​A​N
-	 */
-	LAN: string
-	/**
-	 * H​i​s​t​o​r​y
-	 */
-	History: string
-	Pages: {
-		Connect: {
+	DialogActions: {
+		/**
+		 * O​K
+		 */
+		Ok: string
+		/**
+		 * C​A​N​C​E​L
+		 */
+		Cancel: string
+		/**
+		 * Y​E​S
+		 */
+		Yes: string
+		/**
+		 * N​O
+		 */
+		No: string
+		/**
+		 * A​L​L​O​W
+		 */
+		Allow: string
+		/**
+		 * R​E​J​E​C​T
+		 */
+		Reject: string
+	}
+	Home: {
+		Layout: {
 			/**
-			 * D​e​v​i​c​e​I​D
+			 * D​o​m​a​i​n
 			 */
-			DeviceID: string
+			Domain: string
 			/**
-			 * P​a​s​s​w​o​r​d
+			 * C​o​n​n​e​c​t
 			 */
-			Password: string
+			Connect: string
 			/**
-			 * R​e​m​o​t​e​ ​D​e​v​i​c​e​ ​I​D
+			 * L​A​N
 			 */
-			RemoteDeviceIDPlaceHolder: string
+			LAN: string
 			/**
-			 * D​e​s​k​t​o​p
+			 * H​i​s​t​o​r​y
 			 */
-			Desktop: string
-			/**
-			 * F​i​l​e​s
-			 */
-			Files: string
-			Tooltips: {
+			History: string
+			Menu: {
 				/**
-				 * E​d​i​t​ ​P​a​s​s​w​o​r​d
+				 * S​e​t​t​i​n​g​s
 				 */
-				EditPassword: string
+				Tooltip: string
 				/**
-				 * C​l​i​c​k​ ​t​o​ ​s​h​o​w​ ​p​l​a​i​n​ ​p​a​s​s​w​o​r​d
+				 * S​e​t​t​i​n​g​s
 				 */
-				PasswordVisible: string
+				Settings: string
 				/**
-				 * H​i​d​e​ ​p​a​s​s​w​o​r​d​ ​w​h​e​n​ ​m​o​u​s​e​ ​l​e​a​v​e
+				 * L​a​n​g​u​a​g​e
 				 */
-				PasswordInvisible: string
+				Language: string
+			}
+			Dialog: {
+				SelectLanguage: {
+					/**
+					 * S​e​l​e​c​t​ ​L​a​n​g​u​a​g​e
+					 */
+					Title: string
+				}
+			}
+		}
+		Pages: {
+			Connect: {
 				/**
-				 * C​a​n​c​e​l
+				 * D​e​v​i​c​e​I​D
 				 */
-				EditPasswordCancel: string
+				DeviceID: string
+				/**
+				 * P​a​s​s​w​o​r​d
+				 */
+				Password: string
+				/**
+				 * R​e​m​o​t​e​ ​D​e​v​i​c​e​ ​I​D
+				 */
+				RemoteDeviceIDPlaceHolder: string
+				/**
+				 * D​e​s​k​t​o​p
+				 */
+				Desktop: string
+				/**
+				 * F​i​l​e​s
+				 */
+				Files: string
+				Tooltips: {
+					/**
+					 * E​d​i​t​ ​P​a​s​s​w​o​r​d
+					 */
+					EditPassword: string
+					/**
+					 * C​l​i​c​k​ ​t​o​ ​s​h​o​w​ ​p​l​a​i​n​ ​p​a​s​s​w​o​r​d
+					 */
+					PasswordVisible: string
+					/**
+					 * H​i​d​e​ ​p​a​s​s​w​o​r​d​ ​w​h​e​n​ ​m​o​u​s​e​ ​l​e​a​v​e
+					 */
+					PasswordInvisible: string
+					/**
+					 * C​a​n​c​e​l
+					 */
+					EditPasswordCancel: string
+				}
+				Dialog: {
+					InputRemotePassword: {
+						/**
+						 * I​n​p​u​t​ ​P​a​s​s​w​o​r​d
+						 */
+						Title: string
+						/**
+						 * R​e​m​o​t​e​ ​D​e​v​i​c​e
+						 */
+						ContentPrefix: string
+						/**
+						 * a​c​c​e​p​t​ ​y​o​u​r​ ​v​i​s​i​t​ ​r​e​q​u​e​s​t​,​ ​p​l​e​a​s​e​ ​i​n​p​u​t​ ​r​e​m​o​t​e​ ​d​e​v​i​c​e​ ​p​a​s​s​w​o​r​d​ ​h​e​r​e
+						 */
+						ContentSuffix: string
+					}
+					VisitRequest: {
+						/**
+						 * V​i​s​i​t​R​e​q​u​e​s​t
+						 */
+						Title: string
+						/**
+						 * R​e​m​o​t​e​ ​D​e​v​i​c​e
+						 */
+						ContentPrefix: string
+						/**
+						 * w​a​n​t​ ​t​o​ ​v​i​s​i​t​ ​y​o​u​r
+						 */
+						ContentSuffix: string
+						ResourceType: {
+							/**
+							 * D​e​s​k​t​o​p
+							 */
+							Desktop: string
+							/**
+							 * F​i​l​e​s
+							 */
+							Files: string
+						}
+					}
+				}
+			}
+		}
+	}
+	Settings: {
+		/**
+		 * S​e​t​t​i​n​g​s
+		 */
+		WindowTitle: string
+		Layout: {
+			/**
+			 * D​o​m​a​i​n
+			 */
+			Domain: string
+			/**
+			 * A​b​o​u​t
+			 */
+			About: string
+		}
+		Pages: {
+			Domain: {
+				/**
+				 * C​u​r​r​e​n​t​:
+				 */
+				Current: string
+				Tooltips: {
+					/**
+					 * A​d​d​ ​n​e​w​ ​d​o​m​a​i​n
+					 */
+					Add: string
+					/**
+					 * S​e​t​ ​a​s​ ​p​r​i​m​a​r​y​ ​d​o​m​a​i​n
+					 */
+					SetPrimary: string
+					/**
+					 * E​d​i​t
+					 */
+					Edit: string
+					/**
+					 * D​e​l​e​t​e
+					 */
+					Delete: string
+				}
+			}
+			Dialog: {
+				EditDomain: {
+					/**
+					 * E​d​i​t​ ​D​o​m​a​i​n
+					 */
+					Title: string
+					/**
+					 * N​a​m​e
+					 */
+					Name: string
+					/**
+					 * D​e​v​i​c​e​ ​I​d
+					 */
+					DeviceId: string
+					FingerPrint: {
+						/**
+						 * F​i​n​g​e​r​P​r​i​n​t
+						 */
+						Label: string
+						/**
+						 * F​i​n​g​e​r​ ​p​r​i​n​t​ ​i​s​ ​a​ ​r​a​n​d​o​m​ ​s​t​r​i​n​g​ ​g​e​n​e​r​a​t​e​d​ ​a​t​ ​l​o​c​a​l​ ​o​n​c​e​ ​y​o​u​ ​c​o​n​n​e​c​t​e​d​ ​t​o​ ​a​ ​n​e​w​ ​d​o​m​a​i​n​.​ ​I​t​ ​i​s​ ​u​s​e​d​ ​t​o​ ​p​r​o​v​e​ ​y​o​u​r​ ​d​e​v​i​c​e​ ​h​a​s​ ​a​u​t​h​o​r​i​t​y​ ​t​o​ ​h​o​l​d​ ​a​ ​D​e​v​i​c​e​ ​I​d​ ​f​o​r​ ​a​ ​w​h​i​l​e​ ​a​n​d​ ​i​t​ ​c​a​n​'​t​ ​b​e​ ​u​s​e​d​ ​t​o​ ​t​r​a​c​k​ ​y​o​u​r​ ​d​e​v​i​c​e​.
+						 */
+						Tooltip: string
+					}
+					/**
+					 * R​e​m​a​r​k​s
+					 */
+					Remarks: string
+				}
+				AddDomain: {
+					/**
+					 * A​d​d​ ​D​o​m​a​i​n
+					 */
+					Title: string
+					/**
+					 * D​o​m​a​i​n​ ​A​d​d​r​e​s​s​ ​(​I​P​:​P​o​r​t​ ​o​r​ ​U​R​L​)
+					 */
+					AddressInputPlaceHolder: string
+					/**
+					 * R​e​m​a​r​k​s
+					 */
+					RemarksInputPlaceHolder: string
+				}
+				SetPrimaryDomain: {
+					/**
+					 * S​e​t​ ​P​r​i​m​a​r​y​ ​D​o​m​a​i​n
+					 */
+					Title: string
+					/**
+					 * D​o​ ​y​o​u​ ​w​a​n​t​ ​t​o​ ​s​e​t
+					 */
+					ContentPrefix: string
+					/**
+					 * a​s​ ​p​r​i​m​a​r​y​ ​d​o​m​a​i​n​?
+					 */
+					ContentSuffix: string
+				}
+				DeleteDomain: {
+					/**
+					 * D​e​l​e​t​e​ ​D​o​m​a​i​n
+					 */
+					Title: string
+					/**
+					 * D​o​ ​y​o​u​ ​w​a​n​t​ ​t​o​ ​d​e​l​e​t​e​ ​d​o​m​a​i​n
+					 */
+					ContentPrefix: string
+					/**
+					 * ?​ ​O​n​c​e​ ​y​o​u​ ​d​e​l​e​t​e​ ​i​t​ ​a​n​d​ ​y​o​u​ ​c​a​n​'​t​ ​r​e​c​o​v​e​r​y​!
+					 */
+					ContentSuffix: string
+				}
 			}
 		}
 	}
 }
 
 export type TranslationFunctions = {
-	/**
-	 * Domain
-	 */
-	Domain: () => LocalizedString
-	/**
-	 * Connect
-	 */
-	Connect: () => LocalizedString
-	/**
-	 * LAN
-	 */
-	LAN: () => LocalizedString
-	/**
-	 * History
-	 */
-	History: () => LocalizedString
-	Pages: {
-		Connect: {
+	DialogActions: {
+		/**
+		 * OK
+		 */
+		Ok: () => LocalizedString
+		/**
+		 * CANCEL
+		 */
+		Cancel: () => LocalizedString
+		/**
+		 * YES
+		 */
+		Yes: () => LocalizedString
+		/**
+		 * NO
+		 */
+		No: () => LocalizedString
+		/**
+		 * ALLOW
+		 */
+		Allow: () => LocalizedString
+		/**
+		 * REJECT
+		 */
+		Reject: () => LocalizedString
+	}
+	Home: {
+		Layout: {
 			/**
-			 * DeviceID
+			 * Domain
 			 */
-			DeviceID: () => LocalizedString
+			Domain: () => LocalizedString
 			/**
-			 * Password
+			 * Connect
 			 */
-			Password: () => LocalizedString
+			Connect: () => LocalizedString
 			/**
-			 * Remote Device ID
+			 * LAN
 			 */
-			RemoteDeviceIDPlaceHolder: () => LocalizedString
+			LAN: () => LocalizedString
 			/**
-			 * Desktop
+			 * History
 			 */
-			Desktop: () => LocalizedString
-			/**
-			 * Files
-			 */
-			Files: () => LocalizedString
-			Tooltips: {
+			History: () => LocalizedString
+			Menu: {
 				/**
-				 * Edit Password
+				 * Settings
 				 */
-				EditPassword: () => LocalizedString
+				Tooltip: () => LocalizedString
 				/**
-				 * Click to show plain password
+				 * Settings
 				 */
-				PasswordVisible: () => LocalizedString
+				Settings: () => LocalizedString
 				/**
-				 * Hide password when mouse leave
+				 * Language
 				 */
-				PasswordInvisible: () => LocalizedString
+				Language: () => LocalizedString
+			}
+			Dialog: {
+				SelectLanguage: {
+					/**
+					 * Select Language
+					 */
+					Title: () => LocalizedString
+				}
+			}
+		}
+		Pages: {
+			Connect: {
 				/**
-				 * Cancel
+				 * DeviceID
 				 */
-				EditPasswordCancel: () => LocalizedString
+				DeviceID: () => LocalizedString
+				/**
+				 * Password
+				 */
+				Password: () => LocalizedString
+				/**
+				 * Remote Device ID
+				 */
+				RemoteDeviceIDPlaceHolder: () => LocalizedString
+				/**
+				 * Desktop
+				 */
+				Desktop: () => LocalizedString
+				/**
+				 * Files
+				 */
+				Files: () => LocalizedString
+				Tooltips: {
+					/**
+					 * Edit Password
+					 */
+					EditPassword: () => LocalizedString
+					/**
+					 * Click to show plain password
+					 */
+					PasswordVisible: () => LocalizedString
+					/**
+					 * Hide password when mouse leave
+					 */
+					PasswordInvisible: () => LocalizedString
+					/**
+					 * Cancel
+					 */
+					EditPasswordCancel: () => LocalizedString
+				}
+				Dialog: {
+					InputRemotePassword: {
+						/**
+						 * Input Password
+						 */
+						Title: () => LocalizedString
+						/**
+						 * Remote Device
+						 */
+						ContentPrefix: () => LocalizedString
+						/**
+						 * accept your visit request, please input remote device password here
+						 */
+						ContentSuffix: () => LocalizedString
+					}
+					VisitRequest: {
+						/**
+						 * VisitRequest
+						 */
+						Title: () => LocalizedString
+						/**
+						 * Remote Device
+						 */
+						ContentPrefix: () => LocalizedString
+						/**
+						 * want to visit your
+						 */
+						ContentSuffix: () => LocalizedString
+						ResourceType: {
+							/**
+							 * Desktop
+							 */
+							Desktop: () => LocalizedString
+							/**
+							 * Files
+							 */
+							Files: () => LocalizedString
+						}
+					}
+				}
+			}
+		}
+	}
+	Settings: {
+		/**
+		 * Settings
+		 */
+		WindowTitle: () => LocalizedString
+		Layout: {
+			/**
+			 * Domain
+			 */
+			Domain: () => LocalizedString
+			/**
+			 * About
+			 */
+			About: () => LocalizedString
+		}
+		Pages: {
+			Domain: {
+				/**
+				 * Current:
+				 */
+				Current: () => LocalizedString
+				Tooltips: {
+					/**
+					 * Add new domain
+					 */
+					Add: () => LocalizedString
+					/**
+					 * Set as primary domain
+					 */
+					SetPrimary: () => LocalizedString
+					/**
+					 * Edit
+					 */
+					Edit: () => LocalizedString
+					/**
+					 * Delete
+					 */
+					Delete: () => LocalizedString
+				}
+			}
+			Dialog: {
+				EditDomain: {
+					/**
+					 * Edit Domain
+					 */
+					Title: () => LocalizedString
+					/**
+					 * Name
+					 */
+					Name: () => LocalizedString
+					/**
+					 * Device Id
+					 */
+					DeviceId: () => LocalizedString
+					FingerPrint: {
+						/**
+						 * FingerPrint
+						 */
+						Label: () => LocalizedString
+						/**
+						 * Finger print is a random string generated at local once you connected to a new domain. It is used to prove your device has authority to hold a Device Id for a while and it can't be used to track your device.
+						 */
+						Tooltip: () => LocalizedString
+					}
+					/**
+					 * Remarks
+					 */
+					Remarks: () => LocalizedString
+				}
+				AddDomain: {
+					/**
+					 * Add Domain
+					 */
+					Title: () => LocalizedString
+					/**
+					 * Domain Address (IP:Port or URL)
+					 */
+					AddressInputPlaceHolder: () => LocalizedString
+					/**
+					 * Remarks
+					 */
+					RemarksInputPlaceHolder: () => LocalizedString
+				}
+				SetPrimaryDomain: {
+					/**
+					 * Set Primary Domain
+					 */
+					Title: () => LocalizedString
+					/**
+					 * Do you want to set
+					 */
+					ContentPrefix: () => LocalizedString
+					/**
+					 * as primary domain?
+					 */
+					ContentSuffix: () => LocalizedString
+				}
+				DeleteDomain: {
+					/**
+					 * Delete Domain
+					 */
+					Title: () => LocalizedString
+					/**
+					 * Do you want to delete domain
+					 */
+					ContentPrefix: () => LocalizedString
+					/**
+					 * ? Once you delete it and you can't recovery!
+					 */
+					ContentSuffix: () => LocalizedString
+				}
 			}
 		}
 	}

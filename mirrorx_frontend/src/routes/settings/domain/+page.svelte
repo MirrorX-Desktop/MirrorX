@@ -20,7 +20,7 @@
 	import { emitSettingsNotification } from '../settings_notification_center.svelte';
 	import { invoke_get_domains } from '../../../components/command';
 	import DialogSwitchPrimaryDomain from './dialog_switch_primary_domain.svelte';
-	import { identity } from 'svelte/internal';
+	import LL from '$lib/i18n/i18n-svelte';
 	import DialogEditDomain from './dialog_edit_domain.svelte';
 
 	const SINGLE_PAGE_LIMIT: number = 6;
@@ -121,13 +121,15 @@
 </script>
 
 <slot>
-	<div class="mx-2 flex h-full flex-col">
+	<div class="mx-2 flex h-full flex-col ">
 		<div class="flex flex-row items-center justify-between py-3">
 			<div>
-				<span class="text-2xl">Current:</span>
+				<span class="text-2xl">{$LL.Settings.Pages.Domain.Current()}</span>
 				<span class="text-2xl">{resp?.current_domain_name ?? ''}</span>
 			</div>
-			<button class="btn btn-xs" on:click={show_add_domain_dialog}><Fa icon={faPlus} /></button>
+			<div class="tooltip tooltip-left" data-tip={$LL.Settings.Pages.Domain.Tooltips.Add()}>
+				<button class="btn btn-xs" on:click={show_add_domain_dialog}><Fa icon={faPlus} /></button>
+			</div>
 		</div>
 		<hr />
 
@@ -149,7 +151,8 @@
 									<div class="btn-group ">
 										{#if domain.name != resp.current_domain_name}
 											<button
-												class="btn btn-xs"
+												class="btn btn-xs tooltip tooltip-bottom"
+												data-tip={$LL.Settings.Pages.Domain.Tooltips.SetPrimary()}
 												on:click={() => show_switch_primary_domain_dialog(domain.id, domain.name)}
 											>
 												<Fa icon={faThumbTack} />
@@ -157,7 +160,8 @@
 										{/if}
 
 										<button
-											class="btn btn-xs"
+											class="btn btn-xs tooltip tooltip-bottom"
+											data-tip={$LL.Settings.Pages.Domain.Tooltips.Edit()}
 											on:click={() =>
 												show_edit_domain_dialog(
 													domain.id,
@@ -171,7 +175,11 @@
 										</button>
 
 										{#if domain.name != resp.current_domain_name && domain.name != 'MirrorX.cloud'}
-											<button class="btn btn-xs" on:click={() => show_delete_confirm_dialog(domain.id, domain.name)}>
+											<button
+												class="btn btn-xs tooltip tooltip-bottom"
+												data-tip={$LL.Settings.Pages.Domain.Tooltips.Delete()}
+												on:click={() => show_delete_confirm_dialog(domain.id, domain.name)}
+											>
 												<Fa icon={faTrashCan} />
 											</button>
 										{/if}

@@ -4,6 +4,7 @@
 	import { onDestroy, onMount } from 'svelte';
 	import { emitSettingsNotification } from '../settings_notification_center.svelte';
 	import type { SwitchPrimaryDomainEvent } from './event';
+	import LL from '$lib/i18n/i18n-svelte';
 
 	let show: boolean = false;
 	let unlisten_fn: UnlistenFn | null = null;
@@ -49,11 +50,15 @@
 	<input type="checkbox" id="dialog_switch_primary_domain" class="modal-toggle" checked={show} />
 	<div class="modal">
 		<div class="modal-box w-96">
-			<h3 class="text-lg font-bold">Switch Primary Domain</h3>
-			<div class="py-4">Do you want to set <span class="font-bold">{domain_name}</span> as primary domain?</div>
+			<h3 class="text-lg font-bold">{$LL.Settings.Pages.Dialog.SetPrimaryDomain.Title()}</h3>
+			<div class="py-4">
+				{$LL.Settings.Pages.Dialog.SetPrimaryDomain.ContentPrefix()}
+				<span class="font-bold">{domain_name}</span>
+				{$LL.Settings.Pages.Dialog.SetPrimaryDomain.ContentSuffix()}
+			</div>
 			<div class="modal-action">
-				<button class="btn" on:click={yes}>Yes</button>
-				<button class="btn" on:click={no}>No</button>
+				<button class="btn" on:click={yes}>{$LL.DialogActions.Yes()}</button>
+				<button class="btn" on:click={no}>{$LL.DialogActions.No()}</button>
 			</div>
 		</div>
 	</div>

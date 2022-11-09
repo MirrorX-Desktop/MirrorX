@@ -6,6 +6,7 @@
 	import Fa from 'svelte-fa';
 	import { emitSettingsNotification } from '../settings_notification_center.svelte';
 	import type { EditDomainEvent } from './event';
+	import LL from '$lib/i18n/i18n-svelte';
 
 	let show: boolean = false;
 	let domain_id: number = 0;
@@ -55,52 +56,45 @@
 <slot>
 	<input type="checkbox" id="dialog_visit_request" class="modal-toggle" bind:checked={show} />
 	<div class="modal">
-		<div class="modal-box overflow-visible">
-			<h3 class="text-lg font-bold">Edit Domain</h3>
+		<div class="modal-box max-w-min overflow-hidden">
+			<h3 class="text-lg font-bold">{$LL.Settings.Pages.Dialog.EditDomain.Title()}</h3>
 			<div class="py-4">
 				<div class="pb-2">
 					<table class="table w-full">
 						<tbody>
 							<tr>
-								<th class="w-1/2 text-right">Name</th>
+								<th class="w-1/3 text-right">{$LL.Settings.Pages.Dialog.EditDomain.Name()}</th>
 								<td class="text-center">{domain_name}</td>
 							</tr>
 							<tr>
-								<th class="text-right">Device Id</th>
+								<th class="text-right">{$LL.Settings.Pages.Dialog.EditDomain.DeviceId()}</th>
 								<td class="text-center">{domain_device_id}</td>
 							</tr>
 							<tr>
-								<th class="whitespace-normal">
-									<div class="flex items-center gap-1">
-										<span>FingerPrint</span>
-										<div
-											class="tooltip tooltip-bottom"
-											data-tip="Fingerprint is a random string and will not track your device"
+								<th class="whitespace-normal text-right">
+									<div
+										class="tooltip tooltip-right flex items-center justify-end gap-1"
+										data-tip={$LL.Settings.Pages.Dialog.EditDomain.FingerPrint.Tooltip()}
+									>
+										<span class="min-w-fit break-normal"
+											>{$LL.Settings.Pages.Dialog.EditDomain.FingerPrint.Label()}</span
 										>
-											<Fa icon={faCircleExclamation} />
-										</div>
+										<Fa icon={faCircleExclamation} />
 									</div>
 								</th>
-								<td>{domain_finger_print}</td>
+								<td class="text-center">{domain_finger_print}</td>
 							</tr>
 							<tr>
-								<th class="text-right" style="z-index:0!important">Remarks</th>
-								<td
-									><input
-										type="text"
-										bind:value={domain_remarks}
-										placeholder="Remarks"
-										class="w-full rounded border p-2"
-									/></td
-								>
+								<th class="text-right" style="z-index:0!important">{$LL.Settings.Pages.Dialog.EditDomain.Remarks()}</th>
+								<td><input type="text" bind:value={domain_remarks} class="w-full rounded border p-2" /></td>
 							</tr>
 						</tbody>
 					</table>
 				</div>
 			</div>
 			<div class="modal-action">
-				<button class="btn" on:click={ok}>Ok</button>
-				<button class="btn" on:click={cancel}>Cancel</button>
+				<button class="btn" on:click={ok}>{$LL.DialogActions.Ok()}</button>
+				<button class="btn" on:click={cancel}>{$LL.DialogActions.Cancel()}</button>
 			</div>
 		</div>
 	</div>

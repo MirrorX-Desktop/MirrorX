@@ -5,6 +5,7 @@
 	import { onDestroy, onMount } from 'svelte';
 	import { emitSettingsNotification } from '../settings_notification_center.svelte';
 	import type { DeleteConfirmEvent } from './event';
+	import LL from '$lib/i18n/i18n-svelte';
 
 	let show: boolean = false;
 	let unlisten_fn: UnlistenFn | null = null;
@@ -26,7 +27,7 @@
 		}
 	});
 
-	const ok = async () => {
+	const yes = async () => {
 		try {
 			await invoke_delete_domain({ id: domain_id });
 			await emit('settings:domain:update_domains');
@@ -36,11 +37,11 @@
 				message: error.toString() as string
 			});
 		} finally {
-			cancel();
+			no();
 		}
 	};
 
-	const cancel = () => {
+	const no = () => {
 		show = false;
 	};
 </script>
@@ -49,11 +50,15 @@
 	<input type="checkbox" id="dialog_delete_confirm" class="modal-toggle" checked={show} />
 	<div class="modal">
 		<div class="modal-box w-96">
-			<h3 class="text-lg font-bold">Delete Domain</h3>
-			<div class="py-4">Do you really want to delete domain <span class="font-bold">{domain_name}</span>?</div>
+			<h3 class="text-lg font-bold">{$LL.Settings.Pages.Dialog.DeleteDomain.Title()}</h3>
+			<div class="py-4">
+				{$LL.Settings.Pages.Dialog.DeleteDomain.ContentPrefix()}
+				<span class="font-bold">{domain_name}</span>
+				{$LL.Settings.Pages.Dialog.DeleteDomain.ContentSuffix()}
+			</div>
 			<div class="modal-action">
-				<button class="btn" on:click={ok}>Ok</button>
-				<button class="btn" on:click={cancel}>Cancel</button>
+				<button class="btn" on:click={yes}>{$LL.DialogActions.Yes()}</button>
+				<button class="btn" on:click={no}>{$LL.DialogActions.No()}</button>
 			</div>
 		</div>
 	</div>

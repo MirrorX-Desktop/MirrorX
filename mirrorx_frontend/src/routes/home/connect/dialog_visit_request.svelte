@@ -3,6 +3,7 @@
 	import { invoke_signaling_reply_visit_request } from '../../../components/command';
 	import { onDestroy, onMount } from 'svelte';
 	import { emitHomeNotification } from '../home_notification_center.svelte';
+	import LL from '$lib/i18n/i18n-svelte';
 
 	let active_device_id: string = '';
 	let passive_device_id: string = '';
@@ -67,20 +68,28 @@
 	<input type="checkbox" id="dialog_visit_request" class="modal-toggle" bind:checked={show} />
 	<div class="modal">
 		<div class="modal-box">
-			<h3 class="text-lg font-bold">Visit Request</h3>
-			<p class="py-4">
-				Remote Device '<span class="font-bold">{active_device_id}</span>' want to visit your
-				<span class="font-bold">{resource_type}</span>
-			</p>
+			<h3 class="text-lg font-bold">{$LL.Home.Pages.Connect.Dialog.VisitRequest.Title()}</h3>
+			<div class="py-4">
+				<p class="py-1 text-lg">{$LL.Home.Pages.Connect.Dialog.VisitRequest.ContentPrefix()}</p>
+				<p class="py-1 text-center text-xl font-bold">{passive_device_id}</p>
+				<p class="py-1 text-lg">
+					{$LL.Home.Pages.Connect.Dialog.VisitRequest.ContentSuffix()}
+					<span class="font-bold">
+						{resource_type == 'desktop'
+							? $LL.Home.Pages.Connect.Dialog.VisitRequest.ResourceType.Desktop()
+							: $LL.Home.Pages.Connect.Dialog.VisitRequest.ResourceType.Files()}
+					</span>
+				</p>
+			</div>
 			<div class="modal-action">
 				<button class="btn" on:click={() => decide(true)}>
-					Allow (
+					{$LL.DialogActions.Allow()} (
 					<span class="countdown">
 						<span style="--value:{countdown};" />
 					</span>
 					)
 				</button>
-				<button class="btn" on:click={() => decide(false)}>Reject</button>
+				<button class="btn" on:click={() => decide(false)}>{$LL.DialogActions.Reject()}</button>
 			</div>
 		</div>
 	</div>

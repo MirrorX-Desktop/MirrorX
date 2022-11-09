@@ -5,6 +5,7 @@
 	import { onDestroy, onMount } from 'svelte';
 	import Fa from 'svelte-fa';
 	import { emitHomeNotification } from '../home_notification_center.svelte';
+	import LL from '$lib/i18n/i18n-svelte';
 
 	var active_device_id: string = '';
 	var passive_device_id: string = '';
@@ -64,12 +65,12 @@
 	<input type="checkbox" id="dialog_input_remote_password" class="modal-toggle" bind:checked={show} />
 	<div class="modal">
 		<div class="modal-box">
-			<h3 class="text-lg font-bold">Input Remote Password</h3>
-			<p class="py-4">
-				Remote Device '<span class="font-bold">{passive_device_id}</span>' pass your visit request. Please input remote
-				device password
-			</p>
-
+			<h3 class="text-lg font-bold">{$LL.Home.Pages.Connect.Dialog.InputRemotePassword.Title()}</h3>
+			<div class="py-4">
+				<p class="py-1 text-lg">{$LL.Home.Pages.Connect.Dialog.InputRemotePassword.ContentPrefix()}</p>
+				<p class="py-1 text-center text-xl font-bold">{passive_device_id}</p>
+				<p class="py-1 text-lg">{$LL.Home.Pages.Connect.Dialog.InputRemotePassword.ContentSuffix()}</p>
+			</div>
 			<div class="input-group flex flex-row">
 				<input
 					type={show_password ? 'text' : 'password'}
@@ -89,8 +90,8 @@
 			</div>
 
 			<div class="modal-action">
-				<button class="btn" on:click={ok}>Ok</button>
-				<button class="btn" on:click={cancel}>Cancel</button>
+				<button class="btn" on:click={ok}>{$LL.DialogActions.Ok()}</button>
+				<button class="btn" on:click={cancel}>{$LL.DialogActions.Cancel()}</button>
 			</div>
 		</div>
 	</div>

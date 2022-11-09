@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { faSpinner, faSliders } from '@fortawesome/free-solid-svg-icons';
+	import { faSpinner, faSliders, faGear, faLanguage } from '@fortawesome/free-solid-svg-icons';
 	import { WebviewWindow } from '@tauri-apps/api/window';
 	import { onDestroy, onMount } from 'svelte';
 	import Fa from 'svelte-fa';
@@ -11,7 +11,8 @@
 	import { page } from '$app/stores';
 	import { current_domain, type CurrentDomain } from '../../components/stores';
 	import { invoke_get_current_domain, invoke_init_config, invoke_init_signaling } from '../../components/command';
-	import { listen, type UnlistenFn } from '@tauri-apps/api/event';
+	import { emit, listen, type UnlistenFn } from '@tauri-apps/api/event';
+	import DialogSelectLanguage from './dialog_select_language.svelte';
 
 	let domain: CurrentDomain | null = null;
 	let domain_unsubscribe: Unsubscriber | null = null;
@@ -57,6 +58,10 @@
 		}
 	};
 
+	const show_select_language_dialog = async () => {
+		await emit('home:show_select_language_dialog');
+	};
+
 	const open_settings_window = () => {
 		const webview = new WebviewWindow('window_settings', {
 			url: '/settings/domain',
@@ -65,7 +70,8 @@
 			maxWidth: 680,
 			height: 580,
 			center: true,
-			title: 'Settings'
+
+			title: $LL.Settings.WindowTitle()
 		});
 		// since the webview window is created asynchronously,
 		// Tauri emits the `tauri://created` and `tauri://error` to notify you of the creation response
@@ -82,7 +88,7 @@
 	<div data-tauri-drag-region class="mx-2 flex flex-col">
 		<div data-tauri-drag-region class=" z-10 mt-2 mb-2 flex flex-row items-center justify-between">
 			<button class="btn btn-xs invisible"><Fa icon={faSliders} /></button>
-			<div class="text-2xl">{$LL.Domain()}</div>
+			<div class="text-2xl">{$LL.Home.Layout.Domain()}</div>
 
 			<div class="dropdown dropdown-end">
 				<!-- svelte-ignore a11y-label-has-associated-control -->
@@ -91,7 +97,19 @@
 
 				<!-- svelte-ignore a11y-no-noninteractive-tabindex -->
 				<ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-box w-52 p-2 shadow">
-					<li><button on:click={open_settings_window}>Edit Domain</button></li>
+					<li>
+						<button on:mouseup={open_settings_window}>
+							<Fa class="h-5 w-5" icon={faGear} />
+							{$LL.Home.Layout.Menu.Settings()}
+						</button>
+					</li>
+
+					<li>
+						<button on:mouseup={show_select_language_dialog}>
+							<Fa class="h-5 w-5" icon={faLanguage} />
+							{$LL.Home.Layout.Menu.Language()}
+						</button>
+					</li>
 				</ul>
 			</div>
 		</div>
@@ -108,13 +126,13 @@
 			</div>
 			<div class="btn-group my-3 flex flex-row">
 				<a href="/home/connect" class="btn flex-1 {$page.url.pathname == '/home/connect' ? 'btn-active' : undefined}">
-					{$LL.Connect()}
+					{$LL.Home.Layout.Connect()}
 				</a>
 				<a href="/home/lan" class="btn flex-1 {$page.url.pathname == '/home/lan' ? 'btn-active' : undefined}">
-					{$LL.LAN()}
+					{$LL.Home.Layout.LAN()}
 				</a>
 				<a href="/home/history" class="btn flex-1 {$page.url.pathname == '/home/history' ? 'btn-active' : undefined}">
-					{$LL.History()}
+					{$LL.Home.Layout.History()}
 				</a>
 			</div>
 		</div>
@@ -135,4 +153,5 @@
 
 <DialogVisitRequest />
 <DialogInputRemotePassword />
+<DialogSelectLanguage />
 <HomeNotificationCenter />
