@@ -34,6 +34,7 @@ async fn main() {
         .invoke_handler(tauri::generate_handler![
             command::init_config,
             command::init_signaling,
+            command::init_language,
             command::get_current_domain,
             command::generate_random_password,
             command::set_current_domain_device_password,
@@ -45,6 +46,8 @@ async fn main() {
             command::delete_domain,
             command::switch_primary_domain,
             command::set_domain_remarks,
+            command::set_language,
+            command::get_language,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

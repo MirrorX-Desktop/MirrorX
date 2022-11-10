@@ -81,7 +81,7 @@ const en: BaseTranslation = {
 					DeviceId: 'Device Id',
 					FingerPrint: {
 						Label: 'FingerPrint',
-						Tooltip: `Finger print is a random string generated at local once you connected to a new domain. It is used to prove your device has authority to hold a Device Id for a while and it can't be used to track your device.`
+						Tooltip: `Finger print is a random string generated at local once you connected to a new domain. It is used to prove your device has authority to hold a Device Id that Domain allocated for you for a while and it can't be used to track your device.`
 					},
 					Remarks: 'Remarks'
 				},

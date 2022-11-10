@@ -8,3 +8,7 @@ export interface PopupDialogInputRemotePasswordEvent {
 	active_device_id: string;
 	passive_device_id: string;
 }
+
+export interface UpdateLanguageEvent {
+	language: string;
+}

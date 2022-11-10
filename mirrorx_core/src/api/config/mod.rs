@@ -1,9 +1,8 @@
 pub mod entity;
 
-use self::entity::domain::DomainRepository;
+use self::entity::{domain::DomainRepository, kv::KVRepository};
 use crate::{core_error, error::CoreResult};
 use once_cell::sync::{Lazy, OnceCell};
-use r2d2::PooledConnection;
 use r2d2_sqlite::SqliteConnectionManager;
 use std::{path::Path, sync::Arc};
 
@@ -11,6 +10,7 @@ static mut REPOSITORY_CELL: Lazy<OnceCell<LocalStorage>> = Lazy::new(OnceCell::n
 
 pub struct LocalStorage {
     domain: DomainRepository,
+    kv: KVRepository,
 }
 
 impl LocalStorage {
@@ -30,13 +30,15 @@ impl LocalStorage {
         let pool = r2d2::Pool::new(manager)
             .map_err(|err| core_error!("init sqlite connection pool failed ({})", err))?;
 
-        let pool = Arc::new(pool);
-
-        let domain_repository = DomainRepository::new(pool);
+        let domain_repository = DomainRepository::new(pool.clone());
         domain_repository.ensure_table()?;
+
+        let kv_repository = KVRepository::new(pool);
+        kv_repository.ensure_table()?;
 
         let repository = Self {
             domain: domain_repository,
+            kv: kv_repository,
         };
 
         unsafe {
@@ -51,5 +53,9 @@ impl LocalStorage {
 
     pub fn domain(&self) -> &DomainRepository {
         &self.domain
+    }
+
+    pub fn kv(&self) -> &KVRepository {
+        &self.kv
     }
 }

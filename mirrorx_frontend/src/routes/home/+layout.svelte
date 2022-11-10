@@ -3,20 +3,29 @@
 	import { WebviewWindow } from '@tauri-apps/api/window';
 	import { onDestroy, onMount } from 'svelte';
 	import Fa from 'svelte-fa';
-	import LL from '../../i18n/i18n-svelte';
+	import LL, { setLocale } from '../../i18n/i18n-svelte';
 	import DialogInputRemotePassword from './connect/dialog_input_remote_password.svelte';
 	import DialogVisitRequest from './connect/dialog_visit_request.svelte';
 	import HomeNotificationCenter, { emitHomeNotification } from './home_notification_center.svelte';
 	import type { Unsubscriber } from 'svelte/store';
 	import { page } from '$app/stores';
 	import { current_domain, type CurrentDomain } from '../../components/stores';
-	import { invoke_get_current_domain, invoke_init_config, invoke_init_signaling } from '../../components/command';
+	import {
+		invoke_get_current_domain,
+		invoke_get_language,
+		invoke_init_config,
+		invoke_init_language,
+		invoke_init_signaling
+	} from '../../components/command';
 	import { emit, listen, type UnlistenFn } from '@tauri-apps/api/event';
 	import DialogSelectLanguage from './dialog_select_language.svelte';
+	import type { UpdateLanguageEvent } from '$lib/components/rust_event';
+	import type { Locales } from '$lib/i18n/i18n-types';
 
 	let domain: CurrentDomain | null = null;
 	let domain_unsubscribe: Unsubscriber | null = null;
-	let unlisten_fn: UnlistenFn | null = null;
+	let switch_primary_unlisten_fn: UnlistenFn | null = null;
+	let update_language_unlisten_fn: UnlistenFn | null = null;
 
 	onMount(async () => {
 		domain_unsubscribe = current_domain.subscribe((value) => {
@@ -24,9 +33,10 @@
 			domain = value;
 		});
 
-		unlisten_fn = await listen('home:switch_primary_domain', switch_primary_domain);
-
-		init();
+		switch_primary_unlisten_fn = await listen('home:switch_primary_domain', switch_primary_domain);
+		update_language_unlisten_fn = await listen<UpdateLanguageEvent>('update_language', (event) =>
+			setLocale(event.payload.language as Locales)
+		);
 	});
 
 	onDestroy(() => {
@@ -34,20 +44,31 @@
 			domain_unsubscribe();
 		}
 
-		if (unlisten_fn) {
-			unlisten_fn();
+		if (switch_primary_unlisten_fn) {
+			switch_primary_unlisten_fn();
+		}
+
+		if (update_language_unlisten_fn) {
+			update_language_unlisten_fn();
 		}
 	});
 
-	const init = async () => {
+	(async function () {
 		try {
 			await invoke_init_config();
+			console.log('finish init config');
+			await invoke_init_language();
+			console.log('finish init language');
 			current_domain.set(await invoke_get_current_domain());
+			console.log('finish init current domain');
 			await invoke_init_signaling({ force: false });
+			console.log('finish init signaling');
+			setLocale((await invoke_get_language()) as Locales);
+			console.log('finish set locale');
 		} catch (error: any) {
 			await emitHomeNotification({ level: 'error', title: 'Error', message: error.toString() });
 		}
-	};
+	})();
 
 	const switch_primary_domain = async () => {
 		try {

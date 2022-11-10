@@ -9,20 +9,27 @@
 	import Fa from 'svelte-fa';
 	import { faXmark } from '@fortawesome/free-solid-svg-icons';
 	import LL from '$lib/i18n/i18n-svelte';
+	import { emitHomeNotification } from './home_notification_center.svelte';
+	import { invoke_get_domains, invoke_get_language, invoke_set_language } from '$lib/components/command';
 
 	let show: boolean = false;
 	let language: string = 'en';
 	let unlisten_fn: UnlistenFn | null = null;
 
 	$: {
-		let language_locale = locales.find((v) => v === (language as Locales));
-		if (language_locale) {
-			setLocale(language_locale);
-			emit('global:update_language', language);
-		} else {
-			console.log(`unknown locale ${language}`);
-		}
-		show = false;
+		(async function () {
+			try {
+				await invoke_set_language({ language });
+			} catch (error: any) {
+				await emitHomeNotification({
+					level: 'error',
+					title: 'Error',
+					message: error.toString()
+				});
+			} finally {
+				show = false;
+			}
+		})();
 	}
 
 	const localeAndDisplayNames: Array<{ code: string; name: string }> = [
@@ -34,6 +41,8 @@
 		unlisten_fn = await listen<string>('home:show_select_language_dialog', (event) => {
 			show = true;
 		});
+
+		invoke_get_language().then((v) => (language = v));
 	});
 
 	onDestroy(() => {

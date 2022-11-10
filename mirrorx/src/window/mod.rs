@@ -5,7 +5,7 @@ use once_cell::sync::Lazy;
 use std::{collections::HashMap, sync::Arc};
 use tauri_egui::{
     eframe::CreationContext,
-    egui::{FontData, FontDefinitions, FontFamily, FontTweak},
+    egui::{FontData, FontDefinitions, FontFamily},
 };
 
 static PROPORTIONAL_FONTS: Lazy<HashMap<&str, &[u8]>> = Lazy::new(|| {

@@ -2291,6 +2291,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "language-tags"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d4345964bb142484797b161f473a503a434de77149dd8c7427788c6e13379388"
+
+[[package]]
 name = "lazy_static"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2551,6 +2557,7 @@ dependencies = [
  "cocoa",
  "crossbeam",
  "egui_extras",
+ "language-tags",
  "mirrorx_core",
  "objc",
  "once_cell",
@@ -2558,6 +2565,7 @@ dependencies = [
  "serde",
  "serde_json",
  "strum_macros 0.24.3",
+ "sys-locale",
  "tauri",
  "tauri-build",
  "tauri-egui",
@@ -4467,6 +4475,19 @@ name = "sync_wrapper"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "20518fe4a4c9acf048008599e464deb21beeae3d3578418951a189c235a7a9a8"
+
+[[package]]
+name = "sys-locale"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3358acbb4acd4146138b9bda219e904a6bb5aaaa237f8eed06f4d6bc1580ecee"
+dependencies = [
+ "js-sys",
+ "libc",
+ "wasm-bindgen",
+ "web-sys",
+ "winapi",
+]
 
 [[package]]
 name = "system-deps"

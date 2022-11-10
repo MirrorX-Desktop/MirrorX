@@ -2,25 +2,22 @@
 	import SettingsNotificationCenter from './settings_notification_center.svelte';
 	import { page } from '$app/stores';
 	import LL, { setLocale } from '$lib/i18n/i18n-svelte';
-	import { emit, listen, type UnlistenFn } from '@tauri-apps/api/event';
+	import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 	import { onDestroy, onMount } from 'svelte';
-	import { locales } from '$lib/i18n/i18n-util';
 	import type { Locales } from '$lib/i18n/i18n-types';
 	import { WebviewWindow } from '@tauri-apps/api/window';
+	import type { UpdateLanguageEvent } from '$lib/components/rust_event';
+	import { invoke_get_language } from '$lib/components/command';
 
 	let unlisten_fn: UnlistenFn | null = null;
 
 	onMount(async () => {
-		unlisten_fn = await listen<string>('global:update_language', (event) => {
-			let language = event.payload;
-			let language_locale = locales.find((v) => v === (language as Locales));
-			if (language_locale) {
-				const thisWindow = WebviewWindow.getByLabel('window_settings');
-				setLocale(language_locale);
-				thisWindow?.setTitle($LL.Settings.WindowTitle());
-			} else {
-				console.log(`unknown locale ${language}`);
-			}
+		setLocale((await invoke_get_language()) as Locales);
+
+		unlisten_fn = await listen<UpdateLanguageEvent>('update_language', (event) => {
+			setLocale(event.payload.language as Locales);
+			const thisWindow = WebviewWindow.getByLabel('window_settings');
+			thisWindow?.setTitle($LL.Settings.WindowTitle());
 		});
 	});
 

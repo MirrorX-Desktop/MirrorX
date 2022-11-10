@@ -1,12 +1,4 @@
-use std::net::{SocketAddr, ToSocketAddrs};
-
-use mirrorx_core::{
-    api::config::{entity::domain::Domain, LocalStorage},
-    core_error,
-    error::CoreResult,
-    signaling_proto::message::GetDomainRequest,
-};
-use tauri::http::Uri;
+use mirrorx_core::{api::config::LocalStorage, error::CoreResult};
 
 #[tauri::command]
 #[tracing::instrument]

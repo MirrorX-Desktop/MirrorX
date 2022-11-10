@@ -20,11 +20,11 @@ pub struct Domain {
 }
 
 pub struct DomainRepository {
-    pool: Arc<Pool<SqliteConnectionManager>>,
+    pool: Pool<SqliteConnectionManager>,
 }
 
 impl DomainRepository {
-    pub fn new(pool: Arc<Pool<SqliteConnectionManager>>) -> Self {
+    pub fn new(pool: Pool<SqliteConnectionManager>) -> Self {
         Self { pool }
     }
 

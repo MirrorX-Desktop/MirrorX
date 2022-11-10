@@ -81,7 +81,7 @@ const zh_Hans: Translation = {
 					DeviceId: '设备ID',
 					FingerPrint: {
 						Label: '指纹',
-						Tooltip: `Finger print is a random string generated at local once you connected to a new domain. It is used to prove your device has authority to hold a Device Id for a while and it can't be used to track your device.`
+						Tooltip: `指纹是一串在你连接到新的域时在本地随机生成的字符串。它用来证明你的设备有权利持有域分配给你的设备ID一段时间并且不会被用来追踪你的设备。`
 					},
 					Remarks: '备注'
 				},

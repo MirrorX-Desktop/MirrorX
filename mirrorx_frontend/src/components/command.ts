@@ -1,11 +1,15 @@
 import { invoke } from '@tauri-apps/api';
 
 export function invoke_init_config(): Promise<void> {
-	return invoke<void>('init_config');
+	return invoke('init_config');
 }
 
 export function invoke_init_signaling(args: { force: boolean }): Promise<void> {
-	return invoke<void>('init_signaling', args);
+	return invoke('init_signaling', args);
+}
+
+export function invoke_init_language(): Promise<void> {
+	return invoke('init_language');
 }
 
 export function invoke_get_current_domain(): Promise<{ name: string; device_id: string; password: string }> {
@@ -69,4 +73,12 @@ export function invoke_switch_primary_domain(args: { id: number }): Promise<void
 
 export function invoke_set_domain_remarks(args: { id: number; remarks: string }): Promise<void> {
 	return invoke('set_domain_remarks', args);
+}
+
+export function invoke_set_language(args: { language: string }): Promise<void> {
+	return invoke('set_language', args);
+}
+
+export function invoke_get_language(): Promise<string> {
+	return invoke('get_language');
 }

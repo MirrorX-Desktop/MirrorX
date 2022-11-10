@@ -224,7 +224,7 @@ type RootTranslation = {
 						 */
 						Label: string
 						/**
-						 * F​i​n​g​e​r​ ​p​r​i​n​t​ ​i​s​ ​a​ ​r​a​n​d​o​m​ ​s​t​r​i​n​g​ ​g​e​n​e​r​a​t​e​d​ ​a​t​ ​l​o​c​a​l​ ​o​n​c​e​ ​y​o​u​ ​c​o​n​n​e​c​t​e​d​ ​t​o​ ​a​ ​n​e​w​ ​d​o​m​a​i​n​.​ ​I​t​ ​i​s​ ​u​s​e​d​ ​t​o​ ​p​r​o​v​e​ ​y​o​u​r​ ​d​e​v​i​c​e​ ​h​a​s​ ​a​u​t​h​o​r​i​t​y​ ​t​o​ ​h​o​l​d​ ​a​ ​D​e​v​i​c​e​ ​I​d​ ​f​o​r​ ​a​ ​w​h​i​l​e​ ​a​n​d​ ​i​t​ ​c​a​n​'​t​ ​b​e​ ​u​s​e​d​ ​t​o​ ​t​r​a​c​k​ ​y​o​u​r​ ​d​e​v​i​c​e​.
+						 * F​i​n​g​e​r​ ​p​r​i​n​t​ ​i​s​ ​a​ ​r​a​n​d​o​m​ ​s​t​r​i​n​g​ ​g​e​n​e​r​a​t​e​d​ ​a​t​ ​l​o​c​a​l​ ​o​n​c​e​ ​y​o​u​ ​c​o​n​n​e​c​t​e​d​ ​t​o​ ​a​ ​n​e​w​ ​d​o​m​a​i​n​.​ ​I​t​ ​i​s​ ​u​s​e​d​ ​t​o​ ​p​r​o​v​e​ ​y​o​u​r​ ​d​e​v​i​c​e​ ​h​a​s​ ​a​u​t​h​o​r​i​t​y​ ​t​o​ ​h​o​l​d​ ​a​ ​D​e​v​i​c​e​ ​I​d​ ​t​h​a​t​ ​D​o​m​a​i​n​ ​a​l​l​o​c​a​t​e​d​ ​f​o​r​ ​y​o​u​ ​f​o​r​ ​a​ ​w​h​i​l​e​ ​a​n​d​ ​i​t​ ​c​a​n​'​t​ ​b​e​ ​u​s​e​d​ ​t​o​ ​t​r​a​c​k​ ​y​o​u​r​ ​d​e​v​i​c​e​.
 						 */
 						Tooltip: string
 					}
@@ -491,7 +491,7 @@ export type TranslationFunctions = {
 						 */
 						Label: () => LocalizedString
 						/**
-						 * Finger print is a random string generated at local once you connected to a new domain. It is used to prove your device has authority to hold a Device Id for a while and it can't be used to track your device.
+						 * Finger print is a random string generated at local once you connected to a new domain. It is used to prove your device has authority to hold a Device Id that Domain allocated for you for a while and it can't be used to track your device.
 						 */
 						Tooltip: () => LocalizedString
 					}
