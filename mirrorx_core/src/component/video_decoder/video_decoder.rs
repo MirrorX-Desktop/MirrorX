@@ -199,61 +199,61 @@ impl DecodeContext {
             (*decode_ctx.codec_ctx).color_trc = AVCOL_TRC_BT709;
             (*decode_ctx.codec_ctx).colorspace = AVCOL_SPC_BT709;
 
-            let mut hw_device_type = av_hwdevice_find_type_by_name(
-                CString::new(if cfg!(target_os = "windows") {
-                    "d3d11va"
-                } else {
-                    "videotoolbox"
-                })?
-                .as_ptr(),
-            );
+            // let mut hw_device_type = av_hwdevice_find_type_by_name(
+            //     CString::new(if cfg!(target_os = "windows") {
+            //         "d3d11va"
+            //     } else {
+            //         "videotoolbox"
+            //     })?
+            //     .as_ptr(),
+            // );
 
-            if hw_device_type == AV_HWDEVICE_TYPE_NONE {
-                tracing::error!("current environment does't support hardware decode");
+            // if hw_device_type == AV_HWDEVICE_TYPE_NONE {
+            //     tracing::error!("current environment does't support hardware decode");
 
-                let mut devices = Vec::new();
-                loop {
-                    hw_device_type = av_hwdevice_iterate_types(hw_device_type);
-                    if hw_device_type == AV_HWDEVICE_TYPE_NONE {
-                        break;
-                    }
+            //     let mut devices = Vec::new();
+            //     loop {
+            //         hw_device_type = av_hwdevice_iterate_types(hw_device_type);
+            //         if hw_device_type == AV_HWDEVICE_TYPE_NONE {
+            //             break;
+            //         }
 
-                    let device_name = av_hwdevice_get_type_name(hw_device_type);
+            //         let device_name = av_hwdevice_get_type_name(hw_device_type);
 
-                    devices.push(
-                        CStr::from_ptr(device_name)
-                            .to_str()
-                            .map_or("unknown", |v| v),
-                    );
-                }
+            //         devices.push(
+            //             CStr::from_ptr(device_name)
+            //                 .to_str()
+            //                 .map_or("unknown", |v| v),
+            //         );
+            //     }
 
-                tracing::info!(?devices, "support hw device");
-                tracing::info!("init software decoder");
+            //     tracing::info!(?devices, "support hw device");
+            //     tracing::info!("init software decoder");
 
-                decode_ctx.parser_ctx = av_parser_init((*codec).id);
-                if decode_ctx.parser_ctx.is_null() {
-                    return Err(core_error!("av_parser_init returns null"));
-                }
-            } else {
-                let mut hwdevice_ctx = std::ptr::null_mut();
-
-                let ret = av_hwdevice_ctx_create(
-                    &mut hwdevice_ctx,
-                    hw_device_type,
-                    std::ptr::null(),
-                    std::ptr::null_mut(),
-                    0,
-                );
-
-                if ret < 0 {
-                    return Err(core_error!(
-                        "av_hwdevice_ctx_create returns error code: {}",
-                        ret,
-                    ));
-                }
-
-                (*decode_ctx.codec_ctx).hw_device_ctx = av_buffer_ref(hwdevice_ctx);
+            decode_ctx.parser_ctx = av_parser_init((*codec).id);
+            if decode_ctx.parser_ctx.is_null() {
+                return Err(core_error!("av_parser_init returns null"));
             }
+            // } else {
+            //     let mut hwdevice_ctx = std::ptr::null_mut();
+
+            //     let ret = av_hwdevice_ctx_create(
+            //         &mut hwdevice_ctx,
+            //         hw_device_type,
+            //         std::ptr::null(),
+            //         std::ptr::null_mut(),
+            //         0,
+            //     );
+
+            //     if ret < 0 {
+            //         return Err(core_error!(
+            //             "av_hwdevice_ctx_create returns error code: {}",
+            //             ret,
+            //         ));
+            //     }
+
+            //     (*decode_ctx.codec_ctx).hw_device_ctx = av_buffer_ref(hwdevice_ctx);
+            // }
 
             decode_ctx.packet = av_packet_alloc();
             if decode_ctx.packet.is_null() {
