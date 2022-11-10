@@ -161,7 +161,8 @@
 							type="text"
 							placeholder={''}
 							maxlength="20"
-							bind:value={device_password_display}
+							value={device_password_display}
+							on:change={(event) => (device_password_display = event.currentTarget.value)}
 						/>
 
 						<button class="btn btn-square flex-none" on:click={commit_edit_password}>
