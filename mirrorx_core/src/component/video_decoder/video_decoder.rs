@@ -1,6 +1,6 @@
 use crate::{
     api::endpoint::message::EndPointVideoFrame,
-    component::frame::DesktopDecodeFrame,
+    component::frame::{DesktopDecodeFrame, DesktopDecodeFrameFormat},
     core_error,
     error::CoreResult,
     ffi::ffmpeg::{avcodec::*, avutil::*},
@@ -51,11 +51,14 @@ impl VideoDecoder {
             };
 
             if !decode_context.parser_ctx.is_null() {
+                let mut out_data: *mut u8 = std::ptr::null_mut();
+                let mut out_size = 0;
+
                 let ret = av_parser_parse2(
                     (decode_context).parser_ctx,
                     (decode_context).codec_ctx,
-                    &mut (*(decode_context).packet).data,
-                    &mut (*(decode_context).packet).size,
+                    &mut out_data,
+                    &mut out_size,
                     video_frame.buffer.as_ptr(),
                     video_frame.buffer.len() as i32,
                     AV_NOPTS_VALUE,
@@ -65,6 +68,13 @@ impl VideoDecoder {
 
                 if ret < 0 {
                     return Err(core_error!("av_parser_parse2 returns error code: {}", ret));
+                }
+
+                if !out_data.is_null() && out_size > 0 {
+                    (*(decode_context).packet).data = out_data;
+                    (*(decode_context).packet).size = out_size;
+                } else {
+                    return Ok(());
                 }
             } else {
                 (*(decode_context).packet).data = video_frame.buffer.as_mut_ptr();
@@ -123,21 +133,62 @@ impl VideoDecoder {
                     (decode_context).hw_decode_frame
                 };
 
+                let (plane_data, line_sizes, format) = match (*tmp_frame).format {
+                    AV_PIX_FMT_NV12 => (
+                        vec![
+                            std::slice::from_raw_parts(
+                                (*tmp_frame).data[0],
+                                ((*tmp_frame).linesize[0] * (*tmp_frame).height) as usize,
+                            )
+                            .to_vec(),
+                            std::slice::from_raw_parts(
+                                (*tmp_frame).data[1],
+                                ((*tmp_frame).linesize[1] * (*tmp_frame).height / 2) as usize,
+                            )
+                            .to_vec(),
+                        ],
+                        vec![(*tmp_frame).linesize[0], (*tmp_frame).linesize[1]],
+                        DesktopDecodeFrameFormat::NV12,
+                    ),
+                    AV_PIX_FMT_YUV420P | AV_PIX_FMT_YUVJ420P => (
+                        vec![
+                            std::slice::from_raw_parts(
+                                (*tmp_frame).data[0],
+                                ((*tmp_frame).linesize[0] * (*tmp_frame).height) as usize,
+                            )
+                            .to_vec(),
+                            std::slice::from_raw_parts(
+                                (*tmp_frame).data[1],
+                                ((*tmp_frame).linesize[1] * (*tmp_frame).height / 2) as usize,
+                            )
+                            .to_vec(),
+                            std::slice::from_raw_parts(
+                                (*tmp_frame).data[2],
+                                ((*tmp_frame).linesize[2] * (*tmp_frame).height / 2) as usize,
+                            )
+                            .to_vec(),
+                        ],
+                        vec![
+                            (*tmp_frame).linesize[0],
+                            (*tmp_frame).linesize[1],
+                            (*tmp_frame).linesize[2],
+                        ],
+                        DesktopDecodeFrameFormat::YUV420P,
+                    ),
+                    _ => {
+                        return Err(core_error!(
+                            "unsupported format, pix_format: {}",
+                            (*tmp_frame).format
+                        ));
+                    }
+                };
+
                 let desktop_decode_frame = DesktopDecodeFrame {
                     width: (*tmp_frame).width,
                     height: (*tmp_frame).height,
-                    luminance_bytes: std::slice::from_raw_parts(
-                        (*tmp_frame).data[0],
-                        ((*tmp_frame).linesize[0] * (*tmp_frame).height) as usize,
-                    )
-                    .to_vec(),
-                    luminance_stride: (*tmp_frame).linesize[0],
-                    chrominance_bytes: std::slice::from_raw_parts(
-                        (*tmp_frame).data[1],
-                        ((*tmp_frame).linesize[1] * (*tmp_frame).height / 2) as usize,
-                    )
-                    .to_vec(),
-                    chrominance_stride: (*tmp_frame).linesize[1],
+                    plane_data,
+                    line_sizes,
+                    format,
                 };
 
                 if let Err(err) = self.render_frame_tx.try_send(desktop_decode_frame) {
@@ -179,7 +230,7 @@ impl DecodeContext {
         unsafe {
             let mut decode_ctx = DecodeContext::default();
 
-            let codec = avcodec_find_decoder(AV_CODEC_ID_H264);
+            let codec = avcodec_find_decoder_by_name(CString::new("h264").unwrap().as_ptr()); //avcodec_find_decoder(AV_CODEC_ID_H264);
 
             if codec.is_null() {
                 return Err(core_error!("avcodec_find_decoder returns null"));
@@ -198,6 +249,7 @@ impl DecodeContext {
             (*decode_ctx.codec_ctx).color_primaries = AVCOL_PRI_BT709;
             (*decode_ctx.codec_ctx).color_trc = AVCOL_TRC_BT709;
             (*decode_ctx.codec_ctx).colorspace = AVCOL_SPC_BT709;
+            (*decode_ctx.codec_ctx).flags2 |= AV_CODEC_FLAG2_LOCAL_HEADER;
 
             // let mut hw_device_type = av_hwdevice_find_type_by_name(
             //     CString::new(if cfg!(target_os = "windows") {

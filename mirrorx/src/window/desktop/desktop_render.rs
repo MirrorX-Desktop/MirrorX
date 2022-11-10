@@ -1,4 +1,4 @@
-use mirrorx_core::DesktopDecodeFrame;
+use mirrorx_core::{component::frame::DesktopDecodeFrameFormat, DesktopDecodeFrame};
 use tauri_egui::eframe::{egui_glow::check_for_gl_error, glow::*};
 
 #[rustfmt::skip]
@@ -31,8 +31,7 @@ const VERTICES_INDICES_SLICE: &[u8] = unsafe {
 
 pub struct DesktopRender {
     program: Program,
-    y_texture: Option<NativeTexture>,
-    uv_texture: Option<NativeTexture>,
+    textures: Vec<NativeTexture>,
     vao: NativeVertexArray,
     vbo: NativeBuffer,
     ebo: NativeBuffer,
@@ -67,8 +66,14 @@ impl DesktopRender {
             let fragment_shader_source = r#"
             #version 330 core
 
-            uniform sampler2D textureY;
-            uniform sampler2D textureUV;
+            uniform int use_nv12;
+
+            uniform sampler2D nv12_textureY;
+            uniform sampler2D nv12_textureUV;
+
+            uniform sampler2D yuv420p_textureY;
+            uniform sampler2D yuv420p_textureU;
+            uniform sampler2D yuv420p_textureV;
 
             in vec2 texCoord;
             layout (location = 0) out vec4 fragColor;
@@ -83,9 +88,16 @@ impl DesktopRender {
             {
                 vec3 yuv;
                 vec3 rgb;
-                yuv.x = texture(textureY, texCoord.st).r - 0.0625;
-                yuv.y = texture(textureUV, texCoord.st).r - 0.5;
-                yuv.z = texture(textureUV, texCoord.st).g - 0.5;
+                if (use_nv12 == 1) {
+                    yuv.x = texture(nv12_textureY, texCoord).r - 0.0625;
+                    yuv.y = texture(nv12_textureUV, texCoord).r - 0.5;
+                    yuv.z = texture(nv12_textureUV, texCoord).g - 0.5;
+                } else {
+                    yuv.x = texture(yuv420p_textureY, texCoord).r - 0.0625;
+                    yuv.y = texture(yuv420p_textureU, texCoord).r - 0.5;
+                    yuv.z = texture(yuv420p_textureV, texCoord).r - 0.5;
+                }
+                
                 rgb = yuv * YCbCrToRGBmatrix;
                 fragColor = vec4(rgb, 1.0);
             }"#;
@@ -211,8 +223,7 @@ impl DesktopRender {
 
             Ok(Self {
                 program,
-                y_texture: None,
-                uv_texture: None,
+                textures: Vec::new(),
                 vao,
                 vbo,
                 ebo,
@@ -244,13 +255,8 @@ impl DesktopRender {
             gl.delete_buffer(self.ebo);
             check_for_gl_error!(gl);
 
-            if let Some(texture) = self.y_texture.take() {
-                gl.delete_texture(texture);
-                check_for_gl_error!(gl);
-            }
-
-            if let Some(texture) = self.uv_texture.take() {
-                gl.delete_texture(texture);
+            for texture in self.textures.iter_mut() {
+                gl.delete_texture(*texture);
                 check_for_gl_error!(gl);
             }
         }
@@ -262,24 +268,51 @@ impl DesktopRender {
         }
 
         unsafe {
-            if self.y_texture.is_none() {
-                self.y_texture = Some(create_texture(
-                    gl,
-                    true,
-                    frame.width,
-                    frame.height,
-                    frame.luminance_stride,
-                )?);
-            }
+            if self.textures.is_empty() {
+                match frame.format {
+                    DesktopDecodeFrameFormat::NV12 => {
+                        self.textures.push(create_texture(
+                            gl,
+                            true,
+                            frame.width,
+                            frame.height,
+                            frame.line_sizes[0],
+                        )?);
 
-            if self.uv_texture.is_none() {
-                self.uv_texture = Some(create_texture(
-                    gl,
-                    false,
-                    frame.width / 2,
-                    frame.height / 2,
-                    frame.chrominance_stride,
-                )?);
+                        self.textures.push(create_texture(
+                            gl,
+                            false,
+                            frame.width / 2,
+                            frame.height / 2,
+                            frame.line_sizes[1],
+                        )?);
+                    }
+                    DesktopDecodeFrameFormat::YUV420P => {
+                        self.textures.push(create_texture(
+                            gl,
+                            true,
+                            frame.width,
+                            frame.height,
+                            frame.line_sizes[0],
+                        )?);
+
+                        self.textures.push(create_texture(
+                            gl,
+                            false,
+                            frame.width / 2,
+                            frame.height / 2,
+                            frame.line_sizes[1],
+                        )?);
+
+                        self.textures.push(create_texture(
+                            gl,
+                            false,
+                            frame.width / 2,
+                            frame.height / 2,
+                            frame.line_sizes[2],
+                        )?);
+                    }
+                }
             };
 
             if self.frame_count_instant.is_none() {
@@ -294,54 +327,21 @@ impl DesktopRender {
             gl.disable(FRAMEBUFFER_SRGB);
             check_for_gl_error!(gl);
 
-            gl.active_texture(TEXTURE0);
+            let use_nv12_value = match frame.format {
+                DesktopDecodeFrameFormat::NV12 => {
+                    self.upload_nv12(gl, &frame);
+                    1
+                }
+                DesktopDecodeFrameFormat::YUV420P => {
+                    self.upload_yuv420p(gl, &frame);
+                    0
+                }
+            };
+
+            let use_nv12_uniform_location = gl.get_uniform_location(self.program, "use_nv12");
             check_for_gl_error!(gl);
 
-            gl.bind_texture(TEXTURE_2D, self.y_texture);
-            check_for_gl_error!(gl);
-
-            gl.tex_sub_image_2d(
-                TEXTURE_2D,
-                0,
-                0,
-                0,
-                frame.width,
-                frame.height,
-                RED,
-                UNSIGNED_BYTE,
-                PixelUnpackData::Slice(&frame.luminance_bytes),
-            );
-            check_for_gl_error!(gl);
-
-            let y_uniform_location = gl.get_uniform_location(self.program, "textureY");
-            check_for_gl_error!(gl);
-
-            gl.uniform_1_i32(y_uniform_location.as_ref(), 0);
-            check_for_gl_error!(gl);
-
-            gl.active_texture(TEXTURE1);
-            check_for_gl_error!(gl);
-
-            gl.bind_texture(TEXTURE_2D, self.uv_texture);
-            check_for_gl_error!(gl);
-
-            gl.tex_sub_image_2d(
-                TEXTURE_2D,
-                0,
-                0,
-                0,
-                frame.width / 2,
-                frame.height / 2,
-                RG,
-                UNSIGNED_BYTE,
-                PixelUnpackData::Slice(&frame.chrominance_bytes),
-            );
-            check_for_gl_error!(gl);
-
-            let uv_uniform_location = gl.get_uniform_location(self.program, "textureUV");
-            check_for_gl_error!(gl);
-
-            gl.uniform_1_i32(uv_uniform_location.as_ref(), 1);
+            gl.uniform_1_i32(use_nv12_uniform_location.as_ref(), use_nv12_value);
             check_for_gl_error!(gl);
 
             gl.bind_vertex_array(Some(self.vao));
@@ -362,6 +362,140 @@ impl DesktopRender {
 
             Ok(())
         }
+    }
+
+    unsafe fn upload_nv12(&mut self, gl: &Context, frame: &DesktopDecodeFrame) {
+        // upload Y plane
+        gl.active_texture(TEXTURE0);
+        check_for_gl_error!(gl);
+
+        gl.bind_texture(TEXTURE_2D, Some(self.textures[0]));
+        check_for_gl_error!(gl);
+
+        gl.tex_sub_image_2d(
+            TEXTURE_2D,
+            0,
+            0,
+            0,
+            frame.width,
+            frame.height,
+            RED,
+            UNSIGNED_BYTE,
+            PixelUnpackData::Slice(&frame.plane_data[0]),
+        );
+        check_for_gl_error!(gl);
+
+        let y_uniform_location = gl.get_uniform_location(self.program, "nv12_textureY");
+        check_for_gl_error!(gl);
+
+        gl.uniform_1_i32(y_uniform_location.as_ref(), 0);
+        check_for_gl_error!(gl);
+
+        // upload UV plane
+        gl.active_texture(TEXTURE1);
+        check_for_gl_error!(gl);
+
+        gl.bind_texture(TEXTURE_2D, Some(self.textures[1]));
+        check_for_gl_error!(gl);
+
+        gl.tex_sub_image_2d(
+            TEXTURE_2D,
+            0,
+            0,
+            0,
+            frame.width / 2,
+            frame.height / 2,
+            RG,
+            UNSIGNED_BYTE,
+            PixelUnpackData::Slice(&frame.plane_data[1]),
+        );
+        check_for_gl_error!(gl);
+
+        let uv_uniform_location = gl.get_uniform_location(self.program, "nv12_textureUV");
+        check_for_gl_error!(gl);
+
+        gl.uniform_1_i32(uv_uniform_location.as_ref(), 1);
+        check_for_gl_error!(gl);
+    }
+
+    unsafe fn upload_yuv420p(&mut self, gl: &Context, frame: &DesktopDecodeFrame) {
+        // upload Y plane
+        gl.active_texture(TEXTURE0);
+        check_for_gl_error!(gl);
+
+        gl.bind_texture(TEXTURE_2D, Some(self.textures[0]));
+        check_for_gl_error!(gl);
+
+        gl.tex_sub_image_2d(
+            TEXTURE_2D,
+            0,
+            0,
+            0,
+            frame.width,
+            frame.height,
+            RED,
+            UNSIGNED_BYTE,
+            PixelUnpackData::Slice(&frame.plane_data[0]),
+        );
+        check_for_gl_error!(gl);
+
+        let y_uniform_location = gl.get_uniform_location(self.program, "yuv420p_textureY");
+        check_for_gl_error!(gl);
+
+        gl.uniform_1_i32(y_uniform_location.as_ref(), 0);
+        check_for_gl_error!(gl);
+
+        // upload U plane
+        gl.active_texture(TEXTURE1);
+        check_for_gl_error!(gl);
+
+        gl.bind_texture(TEXTURE_2D, Some(self.textures[1]));
+        check_for_gl_error!(gl);
+
+        gl.tex_sub_image_2d(
+            TEXTURE_2D,
+            0,
+            0,
+            0,
+            frame.width / 2,
+            frame.height / 2,
+            RED,
+            UNSIGNED_BYTE,
+            PixelUnpackData::Slice(&frame.plane_data[1]),
+        );
+        check_for_gl_error!(gl);
+
+        let u_uniform_location = gl.get_uniform_location(self.program, "yuv_420p_textureU");
+        check_for_gl_error!(gl);
+
+        gl.uniform_1_i32(u_uniform_location.as_ref(), 1);
+        check_for_gl_error!(gl);
+
+        // upload V plane
+        gl.active_texture(TEXTURE2);
+        check_for_gl_error!(gl);
+
+        gl.bind_texture(TEXTURE_2D, Some(self.textures[2]));
+        check_for_gl_error!(gl);
+
+        gl.tex_sub_image_2d(
+            TEXTURE_2D,
+            0,
+            0,
+            0,
+            frame.width / 2,
+            frame.height / 2,
+            RED,
+            UNSIGNED_BYTE,
+            PixelUnpackData::Slice(&frame.plane_data[2]),
+        );
+        check_for_gl_error!(gl);
+
+        let v_uniform_location = gl.get_uniform_location(self.program, "yuv420p_textureV");
+        check_for_gl_error!(gl);
+
+        gl.uniform_1_i32(v_uniform_location.as_ref(), 2);
+        check_for_gl_error!(gl);
     }
 }
 

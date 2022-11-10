@@ -74,14 +74,18 @@ impl AudioDuplicator {
     }
 }
 
+impl Drop for AudioDuplicator {
+    fn drop(&mut self) {
+        let _ = self.audio_stream.pause();
+    }
+}
+
 struct EncodeContext {
     enc: *mut OpusEncoder,
     enc_buffer: Vec<u8>,
     frame_size: u16,
     initial_params: OnceCell<(u32, AudioSampleFormat, u8, u16)>, // sample_rate, sample_format, channels, frame_size
 }
-
-unsafe impl Send for EncodeContext {}
 
 impl EncodeContext {
     pub fn new(sample_rate: u32, channels: u8, frame_size: u16) -> CoreResult<Self> {
