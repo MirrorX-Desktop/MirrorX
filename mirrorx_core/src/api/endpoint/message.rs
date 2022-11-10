@@ -20,7 +20,7 @@ pub enum EndPointMessage {
     NegotiateFinishedRequest(EndPointNegotiateFinishedRequest),
     VideoFrame(EndPointVideoFrame),
     AudioFrame(EndPointAudioFrame),
-    Input(EndPointInput),
+    InputCommand(EndPointInput),
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]

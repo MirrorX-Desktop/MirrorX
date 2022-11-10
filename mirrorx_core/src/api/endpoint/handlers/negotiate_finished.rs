@@ -1,4 +1,5 @@
 use crate::api::endpoint::PASSIVE_ENDPOINTS_MONITORS;
+use crate::error::CoreError;
 use crate::{
     api::endpoint::EndPointClient,
     component::{
@@ -192,21 +193,26 @@ fn spawn_desktop_capture_and_encode_process(client: EndPointClient) {
 }
 
 fn spawn_audio_capture_and_encode_process(client: EndPointClient) {
-    tokio::spawn(async move {
+    tokio::task::spawn_blocking(move || loop {
         let mut audio_duplicator = match AudioDuplicator::new(client.clone()) {
             Ok(duplicator) => duplicator,
             Err(err) => {
-                tracing::error!(?err, "audio duplicator initialize failed");
+                tracing::error!(?err, "audio capture and encode process initialize failed");
                 client.close();
                 return;
             }
         };
 
-        loop {
-            if let Err(err) = audio_duplicator.capture_samples().await {
-                tracing::error!(?err, "audio duplicator capture samples failed");
+        if let Err(err) = audio_duplicator.capture_samples() {
+            if let CoreError::OutgoingMessageChannelDisconnect = err {
+                tracing::info!("audio capture and encode process exit");
                 client.close();
                 return;
+            } else {
+                tracing::error!(
+                    ?err,
+                    "audio capture and encode process has an error occurred, process will initialize a new duplicator"
+                );
             }
         }
     });

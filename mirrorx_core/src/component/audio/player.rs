@@ -15,6 +15,7 @@ use tokio::sync::mpsc::{
     Receiver, Sender,
 };
 
+#[derive(Default)]
 pub struct AudioPlayer {
     sample_rate: u32,
     channels: u8,
@@ -23,19 +24,7 @@ pub struct AudioPlayer {
     playback_context: Option<PlaybackContext>,
 }
 
-unsafe impl Send for AudioPlayer {}
-
 impl AudioPlayer {
-    pub fn new() -> Self {
-        AudioPlayer {
-            sample_rate: 0,
-            channels: 0,
-            frame_size: 0,
-            decode_context: None,
-            playback_context: None,
-        }
-    }
-
     pub fn play_samples(&mut self, audio_frame: EndPointAudioFrame) -> CoreResult<()> {
         if let Some((sample_rate, _, channels, frame_size)) = audio_frame.params {
             tracing::info!(
@@ -191,39 +180,9 @@ impl PlaybackContext {
                         samples.len().min(data.len()),
                     )
                 }
+            } else {
+                let _ = callback_exit_tx.send(());
             }
-            // match audio_sample_rx.read_chunk(data.len().min(audio_sample_rx.slots())) {
-            //     Ok(chunk) => {
-            //         let (c1, c2) = chunk.as_slices();
-            //         let c1_copy_length = c1.len().min(data.len());
-            //         unsafe {
-            //             std::ptr::copy_nonoverlapping(
-            //                 c1.as_ptr(),
-            //                 data.as_mut_ptr(),
-            //                 c1_copy_length,
-            //             );
-            //         }
-
-            //         let remaining = data.len() - c1_copy_length;
-            //         let mut c2_copy_length = 0;
-            //         if remaining > 0 && !c2.is_empty() {
-            //             c2_copy_length = remaining.min(c2.len());
-            //             unsafe {
-            //                 std::ptr::copy_nonoverlapping(
-            //                     c2.as_ptr(),
-            //                     data[c1_copy_length..].as_mut_ptr(),
-            //                     c2_copy_length,
-            //                 );
-            //             }
-            //         }
-
-            //         chunk.commit(c1_copy_length + c2_copy_length)
-            //     }
-            //     Err(err) => {
-            //         tracing::error!(?err, "audio sample rx required invalid slots capacity");
-            //         let _ = callback_exit_tx.send(());
-            //     }
-            // };
         };
 
         let err_callback = move |err| {
@@ -254,43 +213,6 @@ impl PlaybackContext {
         if let Err(TrySendError::Closed(_)) = self.audio_sample_tx.try_send(buffer.to_vec()) {
             return false;
         }
-
-        // while !(buffer).is_empty() {
-        //     match self
-        //         .audio_sample_tx
-        //         .write_chunk_uninit(buffer.len().min(self.audio_sample_tx.slots()))
-        //     {
-        //         Ok(mut chunk) => {
-        //             let (c1, c2) = chunk.as_mut_slices();
-
-        //             let mut it = buffer.iter();
-        //             let mut iterated = 0;
-        //             'outer: for &(ptr, len) in &[
-        //                 (c1.as_mut_ptr() as *mut f32, c1.len()),
-        //                 (c2.as_mut_ptr() as *mut f32, c2.len()),
-        //             ] {
-        //                 for i in 0..len {
-        //                     match it.next() {
-        //                         Some(item) => {
-        //                             unsafe {
-        //                                 ptr.add(i).write(*item);
-        //                             }
-        //                             iterated += 1;
-        //                         }
-        //                         None => break 'outer,
-        //                     }
-        //                 }
-        //             }
-
-        //             unsafe { chunk.commit(iterated) }
-        //             buffer = &buffer[iterated..];
-        //         }
-        //         Err(err) => {
-        //             tracing::error!(?err, "audio sample tx required invalid slots capacity");
-        //             return false;
-        //         }
-        //     }
-        // }
 
         true
     }

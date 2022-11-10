@@ -10,74 +10,66 @@ use crate::{
 };
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::InputCallbackInfo;
+use crossbeam::channel::Receiver;
 use once_cell::sync::OnceCell;
-use tokio::sync::mpsc::{error::TrySendError, Receiver};
 
 pub struct AudioDuplicator {
     encode_context: Option<EncodeContext>,
-    duplicate_context: Option<DuplicateContext>,
+    audio_stream: cpal::Stream,
+    audio_frame_rx: Receiver<Option<AudioEncodeFrame>>,
     client: EndPointClient,
 }
 
-unsafe impl Send for AudioDuplicator {}
-
 impl AudioDuplicator {
     pub fn new(client: EndPointClient) -> CoreResult<Self> {
+        let (audio_stream, audio_frame_rx) = new_cpal_stream_and_rx()?;
+
         Ok(AudioDuplicator {
             encode_context: None,
-            duplicate_context: None,
+            audio_stream,
+            audio_frame_rx,
             client,
         })
     }
 
-    pub async fn capture_samples(&mut self) -> CoreResult<()> {
-        if self.duplicate_context.is_none() {
-            let duplicate_context = DuplicateContext::new()?;
-            self.duplicate_context = Some(duplicate_context);
-        }
+    pub fn capture_samples(&mut self) -> CoreResult<()> {
+        self.audio_stream.play()?;
 
-        let duplicator_context = match self.duplicate_context.as_mut() {
-            Some(duplicator_context) => duplicator_context,
-            None => return Err(core_error!("audio duplicator initialize failed")),
-        };
-
-        let audio_encode_frame = match duplicator_context.receive_samples().await {
-            Some(frame) => match frame {
-                Some(frame) => frame,
-                None => {
-                    // receive None means duplicate_context has error occurred,
-                    // set self.duplicate_context to None to let it re-initialize
-                    self.duplicate_context = None;
-                    return Err(core_error!("audio duplicator callback has error occurred"));
+        loop {
+            let audio_encode_frame = match self.audio_frame_rx.recv() {
+                Ok(frame) => match frame {
+                    Some(frame) => frame,
+                    None => {
+                        return Err(core_error!("audio duplicator callback has error occurred"));
+                    }
+                },
+                Err(err) => {
+                    return Err(core_error!(
+                        "audio duplicator channel recv failed ({})",
+                        err
+                    ));
                 }
-            },
-            None => {
-                self.duplicate_context = None;
-                return Err(core_error!("audio duplicator channel was closed"));
+            };
+
+            if let Some((sample_rate, channels)) = audio_encode_frame.initial_encoder_params {
+                let encode_context = EncodeContext::new(
+                    sample_rate,
+                    channels,
+                    (audio_encode_frame.buffer.len() / (channels as usize)) as u16,
+                )?;
+
+                self.encode_context = Some(encode_context);
             }
-        };
 
-        if let Some((sample_rate, channels)) = audio_encode_frame.initial_encoder_params {
-            let encode_context = EncodeContext::new(
-                sample_rate,
-                channels,
-                (audio_encode_frame.buffer.len() / (channels as usize)) as u16,
-            )?;
-
-            self.encode_context = Some(encode_context);
-        }
-
-        if let Some(encode_context) = &mut self.encode_context {
-            let params = encode_context.initial_params.take();
-            let buffer = encode_context.encode(&audio_encode_frame.buffer)?;
-
-            self.client.send_audio_frame(params, buffer)?;
-
-            Ok(())
-        } else {
-            Err(core_error!(
-                "audio duplicator encode context not initialized"
-            ))
+            if let Some(encode_context) = &mut self.encode_context {
+                let params = encode_context.initial_params.take();
+                let buffer = encode_context.encode(&audio_encode_frame.buffer)?;
+                self.client.send_audio_frame(params, buffer)?;
+            } else {
+                return Err(core_error!(
+                    "audio duplicator encode context not initialized"
+                ));
+            }
         }
     }
 }
@@ -160,74 +152,45 @@ impl Drop for EncodeContext {
     }
 }
 
-struct DuplicateContext {
-    stream: cpal::Stream,
-    audio_encode_frame_rx: Receiver<Option<AudioEncodeFrame>>,
-}
+pub fn new_cpal_stream_and_rx() -> CoreResult<(cpal::Stream, Receiver<Option<AudioEncodeFrame>>)> {
+    let host = cpal::default_host();
 
-unsafe impl Send for DuplicateContext {}
+    let device = match host.default_output_device() {
+        Some(device) => device,
+        None => {
+            return Err(core_error!("default audio output device not exist"));
+        }
+    };
 
-impl DuplicateContext {
-    pub fn new() -> CoreResult<Self> {
-        let host = cpal::default_host();
+    tracing::info!(name = ?device.name(), "select default audio output device");
 
-        let device = match host.default_output_device() {
-            Some(device) => device,
-            None => {
-                return Err(core_error!("default audio output device not exist"));
-            }
+    let output_config = device.default_output_config()?.config();
+
+    let mut initial_encoder_params = once_cell::unsync::OnceCell::with_value((
+        output_config.sample_rate.0,
+        output_config.channels as u8,
+    ));
+
+    let (audio_encode_frame_tx, audio_encode_frame_rx) = crossbeam::channel::bounded(64);
+    let err_callback_tx = audio_encode_frame_tx.clone();
+
+    let input_callback = move |data: &[f32], _: &InputCallbackInfo| {
+        let audio_encode_frame = AudioEncodeFrame {
+            initial_encoder_params: initial_encoder_params.take(),
+            buffer: data.to_vec(),
         };
 
-        tracing::info!(name = ?device.name(), "select default audio output device");
+        if let Err(err) = audio_encode_frame_tx.try_send(Some(audio_encode_frame)) {
+            tracing::warn!("audio encode frame tx try send failed!");
+        }
+    };
 
-        let output_config = device.default_output_config()?.config();
+    let err_callback = move |err| {
+        tracing::error!(?err, "error occurred on the output input stream");
+        let _ = err_callback_tx.try_send(None);
+    };
 
-        let mut initial_encoder_params = once_cell::unsync::OnceCell::with_value((
-            output_config.sample_rate.0,
-            output_config.channels as u8,
-        ));
+    let stream = device.build_input_stream(&output_config, input_callback, err_callback)?;
 
-        let (audio_encode_frame_tx, audio_encode_frame_rx) = tokio::sync::mpsc::channel(64);
-        let err_callback_tx = audio_encode_frame_tx.clone();
-
-        let input_callback = move |data: &[f32], _: &InputCallbackInfo| {
-            let audio_encode_frame = AudioEncodeFrame {
-                initial_encoder_params: initial_encoder_params.take(),
-                buffer: data.to_vec(),
-            };
-
-            if let Err(TrySendError::Full(_)) =
-                audio_encode_frame_tx.try_send(Some(audio_encode_frame))
-            {
-                tracing::warn!("audio encode frame tx is full!");
-            }
-        };
-
-        let err_callback = move |err| {
-            tracing::error!(?err, "error occurred on the output input stream");
-            let _ = err_callback_tx.try_send(None);
-        };
-
-        let stream = device.build_input_stream(&output_config, input_callback, err_callback)?;
-        stream.play()?;
-
-        Ok(DuplicateContext {
-            stream,
-            audio_encode_frame_rx,
-        })
-    }
-
-    pub async fn receive_samples(&mut self) -> Option<Option<AudioEncodeFrame>> {
-        self.audio_encode_frame_rx.recv().await
-    }
-
-    pub fn pause(&self) {
-        let _ = self.stream.pause();
-    }
-}
-
-impl Drop for DuplicateContext {
-    fn drop(&mut self) {
-        self.pause()
-    }
+    Ok((stream, audio_encode_frame_rx))
 }

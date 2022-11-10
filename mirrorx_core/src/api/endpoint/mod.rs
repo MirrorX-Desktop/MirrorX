@@ -11,12 +11,10 @@ use self::{
     message::*,
 };
 use crate::{
-    api::endpoint::handlers::{
-        audio_frame::handle_audio_frame, negotiate_finished::handle_negotiate_finished_request,
-    },
+    api::endpoint::handlers::negotiate_finished::handle_negotiate_finished_request,
     component::{desktop::monitor::Monitor, frame::DesktopDecodeFrame},
     core_error,
-    error::CoreResult,
+    error::{CoreError, CoreResult},
     utility::nonce_value::NonceValue,
 };
 use bincode::{
@@ -29,14 +27,14 @@ use futures::{
     stream::{SplitSink, SplitStream},
     SinkExt, StreamExt,
 };
-use once_cell::sync::{Lazy, OnceCell};
+use once_cell::sync::Lazy;
 use ring::aead::{OpeningKey, SealingKey};
-use std::{cell::UnsafeCell, sync::Arc, time::Duration};
+use std::{sync::Arc, time::Duration};
 use tokio::{
     net::TcpStream,
     select,
     sync::{
-        mpsc::{error::TrySendError, Receiver, Sender},
+        mpsc::{error::TrySendError, Sender},
         Mutex,
     },
 };
@@ -82,6 +80,7 @@ pub struct EndPointClient {
     message_tx: Sender<Option<EndPointMessage>>,
     exit_tx: async_broadcast::Sender<()>,
     video_frame_rx: Arc<Mutex<Option<tokio::sync::mpsc::Receiver<EndPointVideoFrame>>>>,
+    audio_decode_rx: Arc<Mutex<Option<crossbeam::channel::Receiver<EndPointAudioFrame>>>>,
 }
 
 impl EndPointClient {
@@ -107,12 +106,14 @@ impl EndPointClient {
         let (sink, stream) = stream.split();
 
         let (video_frame_tx, video_frame_rx) = tokio::sync::mpsc::channel(120);
+        let (audio_frame_tx, audio_frame_rx) = crossbeam::channel::bounded(120);
 
         let client = EndPointClient {
             id: EndPointID(local_device_id, remote_device_id),
             message_tx,
             exit_tx: exit_tx.clone(),
             video_frame_rx: Arc::new(Mutex::new(Some(video_frame_rx))),
+            audio_decode_rx: Arc::new(Mutex::new(Some(audio_frame_rx))),
         };
 
         serve_reader(
@@ -122,6 +123,7 @@ impl EndPointClient {
             stream,
             opening_key,
             video_frame_tx,
+            audio_frame_tx,
         );
 
         serve_writer(client.id, exit_tx, exit_rx, sink, sealing_key, message_rx);
@@ -154,9 +156,9 @@ impl EndPointClient {
         &mut self,
         expected_frame_rate: u8,
     ) -> CoreResult<crossbeam::channel::Receiver<DesktopDecodeFrame>> {
-        let (frame_tx, frame_rx) = crossbeam::channel::bounded(120);
+        let (video_render_tx, video_render_rx) = crossbeam::channel::bounded(120);
 
-        let video_decode_tx = serve_video_decode(self.id, frame_tx);
+        let video_decode_tx = serve_video_decode(self.id, video_render_tx);
         if let Some(mut video_frame_rx) = self.video_frame_rx.lock().await.take() {
             tokio::spawn(async move {
                 while let Some(video_frame) = video_frame_rx.recv().await {
@@ -174,7 +176,9 @@ impl EndPointClient {
             });
         }
 
-        serve_audio_decode(self.id);
+        if let Some(audio_decode_rx) = self.audio_decode_rx.lock().await.take() {
+            serve_audio_decode(self.id, audio_decode_rx);
+        }
 
         let req = EndPointMessage::NegotiateFinishedRequest(EndPointNegotiateFinishedRequest {
             expected_frame_rate,
@@ -182,11 +186,11 @@ impl EndPointClient {
 
         self.send_message(req)?;
 
-        Ok(frame_rx)
+        Ok(video_render_rx)
     }
 
-    pub fn input(&self, events: Vec<InputEvent>) -> CoreResult<()> {
-        let req = EndPointMessage::Input(EndPointInput { events });
+    pub fn send_input_command(&self, events: Vec<InputEvent>) -> CoreResult<()> {
+        let req = EndPointMessage::InputCommand(EndPointInput { events });
         self.send_message(req)
     }
 
@@ -219,13 +223,14 @@ impl EndPointClient {
     }
 
     fn send_message(&self, message: EndPointMessage) -> CoreResult<()> {
-        self.message_tx.try_send(Some(message)).map_err(|err| {
-            if let TrySendError::Full(_) = err {
-                core_error!("endpoint message send failed, channel is full")
-            } else {
-                core_error!("endpoint message send failed, channel was closed")
+        if let Err(err) = self.message_tx.try_send(Some(message)) {
+            match err {
+                TrySendError::Full(_) => Err(CoreError::OutgoingMessageChannelFull),
+                TrySendError::Closed(_) => Err(CoreError::OutgoingMessageChannelDisconnect),
             }
-        })
+        } else {
+            Ok(())
+        }
     }
 
     pub fn close(&self) {
@@ -285,6 +290,7 @@ fn serve_reader(
     mut stream: SplitStream<Framed<TcpStream, LengthDelimitedCodec>>,
     mut opening_key: OpeningKey<NonceValue>,
     video_frame_tx: tokio::sync::mpsc::Sender<EndPointVideoFrame>,
+    audio_frame_tx: crossbeam::channel::Sender<EndPointAudioFrame>,
 ) {
     tokio::spawn(async move {
         let span = tracing::info_span!("serve reader", id = ?client.id());
@@ -317,7 +323,7 @@ fn serve_reader(
 
             match open_packet(&mut opening_key, &mut endpoint_message_bytes) {
                 Ok(message) => {
-                    handle_message(client.clone(), message, &video_frame_tx);
+                    handle_message(client.clone(), message, &video_frame_tx, &audio_frame_tx);
                 }
                 Err(err) => {
                     tracing::error!(?err, "open packet failed");
@@ -408,6 +414,7 @@ fn handle_message(
     client: EndPointClient,
     message: EndPointMessage,
     video_frame_tx: &tokio::sync::mpsc::Sender<EndPointVideoFrame>,
+    audio_frame_tx: &crossbeam::channel::Sender<EndPointAudioFrame>,
 ) {
     match message {
         EndPointMessage::Error => {
@@ -433,9 +440,11 @@ fn handle_message(
             }
         }
         EndPointMessage::AudioFrame(audio_frame) => {
-            handle_audio_frame(client.id, audio_frame);
+            if let Err(err) = audio_frame_tx.try_send(audio_frame) {
+                tracing::error!(%err, "endpoint audio frame message channel send failed");
+            }
         }
-        EndPointMessage::Input(input_event) => {
+        EndPointMessage::InputCommand(input_event) => {
             for event in input_event.events {
                 match event {
                     InputEvent::Mouse(event) => {

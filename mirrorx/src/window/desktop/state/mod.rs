@@ -195,7 +195,7 @@ impl State {
                 }
                 Event::Input { input_series } => {
                     if let Some(client) = &self.endpoint_client {
-                        if let Err(err) = client.input(input_series) {
+                        if let Err(err) = client.send_input_command(input_series) {
                             tracing::error!(?err, "endpoint input failed");
                         }
                     }

@@ -12,6 +12,12 @@ pub enum CoreError {
         line: String,
     },
 
+    #[error("outgoing message channel is full")]
+    OutgoingMessageChannelFull,
+
+    #[error("outgoing message channel is disconnect")]
+    OutgoingMessageChannelDisconnect,
+
     #[error("io error ({0:?})")]
     IO(#[from] io::Error),
 
