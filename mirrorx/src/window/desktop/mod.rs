@@ -2,10 +2,12 @@ mod desktop_render;
 mod state;
 
 use self::desktop_render::DesktopRender;
+use egui_extras::RetainedImage;
 use mirrorx_core::{
     api::endpoint::message::{InputEvent, KeyboardEvent, MouseEvent},
     component::input::key::{KeyboardKey, MouseKey},
 };
+use once_cell::sync::Lazy;
 use state::{State, StateUpdater};
 use std::{sync::Arc, time::Duration};
 use tauri_egui::{
@@ -15,6 +17,14 @@ use tauri_egui::{
         Layout, Pos2, Rect, RichText, Rounding, Sense, Stroke, Ui, Vec2,
     },
 };
+
+static ICON_MAXIMIZE: Lazy<RetainedImage> = Lazy::new(|| {
+    RetainedImage::from_color_image("fa_maximize", egui_extras::image::load_svg_bytes(br#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Pro 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license (Commercial License) Copyright 2022 Fonticons, Inc. --><path d="M168 32H24C10.7 32 0 42.7 0 56V200c0 9.7 5.8 18.5 14.8 22.2s19.3 1.7 26.2-5.2l40-40 79 79L81 335 41 295c-6.9-6.9-17.2-8.9-26.2-5.2S0 302.3 0 312V456c0 13.3 10.7 24 24 24H168c9.7 0 18.5-5.8 22.2-14.8s1.7-19.3-5.2-26.2l-40-40 79-79 79 79-40 40c-6.9 6.9-8.9 17.2-5.2 26.2s12.5 14.8 22.2 14.8H424c13.3 0 24-10.7 24-24V312c0-9.7-5.8-18.5-14.8-22.2s-19.3-1.7-26.2 5.2l-40 40-79-79 79-79 40 40c6.9 6.9 17.2 8.9 26.2 5.2s14.8-12.5 14.8-22.2V56c0-13.3-10.7-24-24-24H280c-9.7 0-18.5 5.8-22.2 14.8s-1.7 19.3 5.2 26.2l40 40-79 79-79-79 40-40c6.9-6.9 8.9-17.2 5.2-26.2S177.7 32 168 32z"/></svg>"#).unwrap())
+});
+
+static ICON_ARROWS_LEFT_RIGHT_TO_LINE: Lazy<RetainedImage> = Lazy::new(|| {
+    RetainedImage::from_color_image("fa_arrows-left-right-to-line", egui_extras::image::load_svg_bytes(br#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Pro 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license (Commercial License) Copyright 2022 Fonticons, Inc. --><path d="M32 64c17.7 0 32 14.3 32 32l0 320c0 17.7-14.3 32-32 32s-32-14.3-32-32V96C0 78.3 14.3 64 32 64zm214.6 73.4c12.5 12.5 12.5 32.8 0 45.3L205.3 224l229.5 0-41.4-41.4c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l96 96c12.5 12.5 12.5 32.8 0 45.3l-96 96c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L434.7 288l-229.5 0 41.4 41.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0l-96-96c-12.5-12.5-12.5-32.8 0-45.3l96-96c12.5-12.5 32.8-12.5 45.3 0zM640 96V416c0 17.7-14.3 32-32 32s-32-14.3-32-32V96c0-17.7 14.3-32 32-32s32 14.3 32 32z"/></svg>"#).unwrap())
+});
 
 pub struct DesktopWindow {
     state: State,
@@ -258,13 +268,19 @@ impl DesktopWindow {
         // when use_original_resolution is true, the button should display 'fit size' icon
         ui.add_enabled_ui(self.toolbar_scale_available, |ui| {
             ui.visuals_mut().widgets.active.fg_stroke = Stroke::new(1.0, Color32::WHITE);
-            let title = if self.state.use_original_resolution() {
-                "适应窗口"
+            let button = if self.state.use_original_resolution() {
+                tauri_egui::egui::ImageButton::new(
+                    ICON_ARROWS_LEFT_RIGHT_TO_LINE.texture_id(ui.ctx()),
+                    Vec2::new(6.4 * 3.0, 5.12 * 3.0),
+                )
             } else {
-                "原始比例"
-            };
+                tauri_egui::egui::ImageButton::new(
+                    ICON_MAXIMIZE.texture_id(ui.ctx()),
+                    Vec2::new(4.48 * 3.0, 5.12 * 3.0),
+                )
+            }
+            .tint(Color32::GRAY);
 
-            let button = tauri_egui::egui::Button::new(title);
             if ui.add(button).clicked() {
                 self.state_updater
                     .update_use_original_resolution(!self.state.use_original_resolution());

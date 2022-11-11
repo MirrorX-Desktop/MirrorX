@@ -177,13 +177,13 @@ impl PlaybackContext {
                     )
                 }
             } else {
-                let _ = callback_exit_tx.send(());
+                let _ = callback_exit_tx.try_send(());
             }
         };
 
         let err_callback = move |err| {
             tracing::error!(?err, "error occurred on the output audio stream");
-            let _ = err_callback_exit_tx.send(());
+            let _ = err_callback_exit_tx.try_send(());
         };
 
         let stream = device.build_output_stream(&stream_config, input_callback, err_callback)?;
