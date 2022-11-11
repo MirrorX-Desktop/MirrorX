@@ -33,13 +33,17 @@ impl AudioPlayer {
                 frame_size
             );
 
-            let decode_context = DecodeContext::new(sample_rate, channels, frame_size)?;
-            let playback_context =
-                PlaybackContext::new(sample_rate, channels, frame_size as usize)?;
-
             self.sample_rate = sample_rate;
             self.channels = channels;
             self.frame_size = frame_size;
+        }
+
+        if self.decode_context.is_none() {
+            let decode_context =
+                DecodeContext::new(self.sample_rate, self.channels, self.frame_size)?;
+            let playback_context =
+                PlaybackContext::new(self.sample_rate, self.channels, self.frame_size as usize)?;
+
             self.decode_context = Some(decode_context);
             self.playback_context = Some(playback_context);
         }

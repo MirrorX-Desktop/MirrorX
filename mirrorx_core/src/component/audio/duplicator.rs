@@ -184,7 +184,10 @@ pub fn new_cpal_stream_and_rx() -> CoreResult<(cpal::Stream, Receiver<Option<Aud
             buffer: data.to_vec(),
         };
 
-        if let Err(err) = audio_encode_frame_tx.try_send(Some(audio_encode_frame)) {
+        if audio_encode_frame_tx
+            .try_send(Some(audio_encode_frame))
+            .is_err()
+        {
             tracing::warn!("audio encode frame tx try send failed!");
         }
     };

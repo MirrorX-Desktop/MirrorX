@@ -187,7 +187,7 @@ fn spawn_desktop_capture_and_encode_process(client: EndPointClient) {
                                 client.close();
                                 return;
                             } else {
-                                tracing::error!("video encode failed");
+                                tracing::error!(?err, "video encode failed");
                             }
                         }
                     }
