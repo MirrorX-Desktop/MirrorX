@@ -157,7 +157,7 @@ fn spawn_desktop_capture_and_encode_process(client: EndPointClient) {
                     }
                 }
                 Err(err) => {
-                    tracing::error!(?err, "dekstop duplicator capture failed");
+                    tracing::error!(?err, "desktop duplicator capture failed");
                     break;
                 }
             };
@@ -188,7 +188,6 @@ fn spawn_desktop_capture_and_encode_process(client: EndPointClient) {
                                 return;
                             } else {
                                 tracing::error!("video encode failed");
-                                break;
                             }
                         }
                     }
@@ -225,7 +224,6 @@ fn spawn_audio_capture_and_encode_process(client: EndPointClient) {
                             ?err,
                             "audio capture or encode process has an error occurred"
                         );
-                        break;
                     }
                 }
             }
