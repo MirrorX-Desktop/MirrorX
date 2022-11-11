@@ -21,7 +21,7 @@ pub fn serve_audio_decode(
                     }
                 }
                 Err(_) => {
-                    tracing::info!("audio decode process exit");
+                    tracing::error!("audio decode process exit");
                     return;
                 }
             }

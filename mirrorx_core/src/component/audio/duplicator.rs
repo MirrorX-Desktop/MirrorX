@@ -24,6 +24,8 @@ impl AudioDuplicator {
     pub fn new(client: EndPointClient) -> CoreResult<Self> {
         let (audio_stream, audio_frame_rx) = new_cpal_stream_and_rx()?;
 
+        audio_stream.play()?;
+
         Ok(AudioDuplicator {
             encode_context: None,
             audio_stream,
@@ -33,43 +35,40 @@ impl AudioDuplicator {
     }
 
     pub fn capture_samples(&mut self) -> CoreResult<()> {
-        self.audio_stream.play()?;
-
-        loop {
-            let audio_encode_frame = match self.audio_frame_rx.recv() {
-                Ok(frame) => match frame {
-                    Some(frame) => frame,
-                    None => {
-                        return Err(core_error!("audio duplicator callback has error occurred"));
-                    }
-                },
-                Err(err) => {
-                    return Err(core_error!(
-                        "audio duplicator channel recv failed ({})",
-                        err
-                    ));
+        let audio_encode_frame = match self.audio_frame_rx.recv() {
+            Ok(frame) => match frame {
+                Some(frame) => frame,
+                None => {
+                    return Err(core_error!("audio duplicator callback has error occurred"));
                 }
-            };
-
-            if let Some((sample_rate, channels)) = audio_encode_frame.initial_encoder_params {
-                let encode_context = EncodeContext::new(
-                    sample_rate,
-                    channels,
-                    (audio_encode_frame.buffer.len() / (channels as usize)) as u16,
-                )?;
-
-                self.encode_context = Some(encode_context);
-            }
-
-            if let Some(encode_context) = &mut self.encode_context {
-                let params = encode_context.initial_params.take();
-                let buffer = encode_context.encode(&audio_encode_frame.buffer)?;
-                self.client.send_audio_frame(params, buffer)?;
-            } else {
+            },
+            Err(err) => {
                 return Err(core_error!(
-                    "audio duplicator encode context not initialized"
+                    "audio duplicator channel recv failed ({})",
+                    err
                 ));
             }
+        };
+
+        if let Some((sample_rate, channels)) = audio_encode_frame.initial_encoder_params {
+            let encode_context = EncodeContext::new(
+                sample_rate,
+                channels,
+                (audio_encode_frame.buffer.len() / (channels as usize)) as u16,
+            )?;
+
+            self.encode_context = Some(encode_context);
+        }
+
+        if let Some(encode_context) = &mut self.encode_context {
+            let params = encode_context.initial_params.take();
+            let buffer = encode_context.encode(&audio_encode_frame.buffer)?;
+            self.client.send_audio_frame(params, buffer)?;
+            Ok(())
+        } else {
+            Err(core_error!(
+                "audio duplicator encode context not initialized"
+            ))
         }
     }
 }

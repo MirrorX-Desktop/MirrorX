@@ -105,8 +105,8 @@ impl EndPointClient {
         let (message_tx, message_rx) = tokio::sync::mpsc::channel(180);
         let (sink, stream) = stream.split();
 
-        let (video_frame_tx, video_frame_rx) = tokio::sync::mpsc::channel(120);
-        let (audio_frame_tx, audio_frame_rx) = crossbeam::channel::bounded(120);
+        let (video_frame_tx, video_frame_rx) = tokio::sync::mpsc::channel(180);
+        let (audio_frame_tx, audio_frame_rx) = crossbeam::channel::bounded(180);
 
         let client = EndPointClient {
             id: EndPointID(local_device_id, remote_device_id),
