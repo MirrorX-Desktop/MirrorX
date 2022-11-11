@@ -9,17 +9,19 @@ use dispatch::ffi::{dispatch_queue_create, dispatch_release, DISPATCH_QUEUE_SERI
 use once_cell::unsync::OnceCell;
 use scopeguard::defer;
 use std::{ffi::CString, ops::Deref, time::Duration};
+use tokio::sync::mpsc::Sender;
 
 pub struct Duplicator {
     display_stream: CGDisplayStreamRef,
 }
 
 unsafe impl Send for Duplicator {}
+unsafe impl Sync for Duplicator {}
 
 impl Duplicator {
     pub fn new(
         monitor_id: Option<String>,
-        capture_frame_tx: crossbeam::channel::Sender<DesktopEncodeFrame>,
+        capture_frame_tx: Sender<DesktopEncodeFrame>,
     ) -> CoreResult<(Self, String)> {
         unsafe {
             let screens = NSScreen::screens()?;
@@ -125,7 +127,7 @@ impl Duplicator {
 
 unsafe fn frame_available_handler(
     capture_time: Duration,
-    capture_frame_tx: *mut crossbeam::channel::Sender<DesktopEncodeFrame>,
+    capture_frame_tx: *mut Sender<DesktopEncodeFrame>,
     status: CGDisplayStreamFrameStatus,
     _display_time: u64,
     frame_surface: IOSurfaceRef,
@@ -190,8 +192,8 @@ unsafe fn frame_available_handler(
         chrominance_stride: chrominance_stride as i32,
     };
 
-    if let Err(err) = (*capture_frame_tx).send(capture_frame) {
-        tracing::error!(?err, "capture frame tx send failed");
+    if let Err(err) = (*capture_frame_tx).try_send(capture_frame) {
+        tracing::error!("desktop capture frame tx send failed");
     }
 
     let dropped_frames = CGDisplayStreamUpdateGetDropCount(update_ref);

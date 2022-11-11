@@ -34,7 +34,7 @@ use tokio::{
     net::TcpStream,
     select,
     sync::{
-        mpsc::{error::TrySendError, Sender},
+        mpsc::{error::TrySendError, Receiver, Sender},
         Mutex,
     },
 };
@@ -79,8 +79,8 @@ pub struct EndPointClient {
     id: EndPointID,
     message_tx: Sender<Option<EndPointMessage>>,
     exit_tx: async_broadcast::Sender<()>,
-    video_frame_rx: Arc<Mutex<Option<tokio::sync::mpsc::Receiver<EndPointVideoFrame>>>>,
-    audio_decode_rx: Arc<Mutex<Option<crossbeam::channel::Receiver<EndPointAudioFrame>>>>,
+    video_frame_rx: Arc<Mutex<Option<Receiver<EndPointVideoFrame>>>>,
+    audio_decode_rx: Arc<Mutex<Option<Receiver<EndPointAudioFrame>>>>,
 }
 
 impl EndPointClient {
@@ -106,7 +106,7 @@ impl EndPointClient {
         let (sink, stream) = stream.split();
 
         let (video_frame_tx, video_frame_rx) = tokio::sync::mpsc::channel(180);
-        let (audio_frame_tx, audio_frame_rx) = crossbeam::channel::bounded(180);
+        let (audio_frame_tx, audio_frame_rx) = tokio::sync::mpsc::channel(180);
 
         let client = EndPointClient {
             id: EndPointID(local_device_id, remote_device_id),
@@ -155,21 +155,20 @@ impl EndPointClient {
     pub async fn negotiate_finish(
         &mut self,
         expected_frame_rate: u8,
-    ) -> CoreResult<crossbeam::channel::Receiver<DesktopDecodeFrame>> {
-        let (video_render_tx, video_render_rx) = crossbeam::channel::bounded(120);
+    ) -> CoreResult<Receiver<DesktopDecodeFrame>> {
+        let (video_render_tx, video_render_rx) = tokio::sync::mpsc::channel(120);
 
         let video_decode_tx = serve_video_decode(self.id, video_render_tx);
         if let Some(mut video_frame_rx) = self.video_frame_rx.lock().await.take() {
             tokio::spawn(async move {
                 while let Some(video_frame) = video_frame_rx.recv().await {
                     if let Err(err) = video_decode_tx.try_send(video_frame) {
-                        if err.is_disconnected() {
-                            tracing::error!("video decode tx was closed");
-                            return;
-                        }
-
-                        if err.is_full() {
-                            tracing::warn!("video decode tx is full!");
+                        match err {
+                            TrySendError::Full(_) => tracing::warn!("video decode tx is full!"),
+                            TrySendError::Closed(_) => {
+                                tracing::error!("video decode tx was closed");
+                                return;
+                            }
                         }
                     }
                 }
@@ -289,8 +288,8 @@ fn serve_reader(
     mut exit_rx: async_broadcast::Receiver<()>,
     mut stream: SplitStream<Framed<TcpStream, LengthDelimitedCodec>>,
     mut opening_key: OpeningKey<NonceValue>,
-    video_frame_tx: tokio::sync::mpsc::Sender<EndPointVideoFrame>,
-    audio_frame_tx: crossbeam::channel::Sender<EndPointAudioFrame>,
+    video_frame_tx: Sender<EndPointVideoFrame>,
+    audio_frame_tx: Sender<EndPointAudioFrame>,
 ) {
     tokio::spawn(async move {
         let span = tracing::info_span!("serve reader", id = ?client.id());
@@ -413,17 +412,15 @@ fn seal_packet(
 fn handle_message(
     client: EndPointClient,
     message: EndPointMessage,
-    video_frame_tx: &tokio::sync::mpsc::Sender<EndPointVideoFrame>,
-    audio_frame_tx: &crossbeam::channel::Sender<EndPointAudioFrame>,
+    video_frame_tx: &Sender<EndPointVideoFrame>,
+    audio_frame_tx: &Sender<EndPointAudioFrame>,
 ) {
     match message {
         EndPointMessage::Error => {
             // handle_error(active_device_id, passive_device_id);
         }
         EndPointMessage::NegotiateDesktopParamsRequest(req) => {
-            tokio::task::spawn_blocking(move || {
-                handle_negotiate_desktop_params_request(client, req)
-            });
+            tokio::spawn(async move { handle_negotiate_desktop_params_request(client, req) });
         }
         EndPointMessage::NegotiateDesktopParamsResponse(resp) => {
             if let Some((_, tx)) = NEGOTIATE_DESKTOP_PARAMS_RESPONSE_RECEIVERS.remove(&client.id) {

@@ -27,10 +27,6 @@ pub enum Event {
         new_state: VisitState,
     },
 
-    UpdateRenderFrameReceiver {
-        render_rx: crossbeam::channel::Receiver<DesktopDecodeFrame>,
-    },
-
     UpdateUseOriginalResolution {
         use_original_resolution: bool,
     },

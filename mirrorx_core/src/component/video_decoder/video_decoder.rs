@@ -5,18 +5,19 @@ use crate::{
     error::CoreResult,
     ffi::ffmpeg::{avcodec::*, avutil::*},
 };
-use std::ffi::{CStr, CString};
+use std::ffi::CString;
+use tokio::sync::mpsc::Sender;
 
 pub struct VideoDecoder {
     decode_context: Option<DecodeContext>,
-    render_frame_tx: crossbeam::channel::Sender<DesktopDecodeFrame>,
+    render_frame_tx: Sender<DesktopDecodeFrame>,
     last_pts: i64,
 }
 
 unsafe impl Send for VideoDecoder {}
 
 impl VideoDecoder {
-    pub fn new(render_frame_tx: crossbeam::channel::Sender<DesktopDecodeFrame>) -> VideoDecoder {
+    pub fn new(render_frame_tx: Sender<DesktopDecodeFrame>) -> VideoDecoder {
         unsafe {
             // av_log_set_level(AV_LOG_TRACE);
             // av_log_set_flags(AV_LOG_SKIP_REPEATED);
@@ -202,12 +203,13 @@ impl VideoDecoder {
                 };
 
                 if let Err(err) = self.render_frame_tx.try_send(desktop_decode_frame) {
-                    if err.is_full() {
-                        tracing::warn!("video render tx is full!");
-                    }
-
-                    if err.is_disconnected() {
-                        return Err(core_error!("video render tx has closed"));
+                    match err {
+                        tokio::sync::mpsc::error::TrySendError::Full(_) => {
+                            tracing::warn!("video render tx is full!")
+                        }
+                        tokio::sync::mpsc::error::TrySendError::Closed(_) => {
+                            return Err(core_error!("video render tx has closed"))
+                        }
                     }
                 }
 

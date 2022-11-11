@@ -11,16 +11,15 @@ use mirrorx_core::{
     DesktopDecodeFrame,
 };
 use ring::aead::{BoundKey, OpeningKey, SealingKey};
-use std::sync::Mutex;
+use ringbuffer::RingBufferExt;
+use ringbuffer::RingBufferRead;
+use ringbuffer::RingBufferWrite;
 use std::{sync::Arc, time::Duration};
-use tauri_egui::{
-    eframe::{
-        egui_glow::{self, check_for_gl_error},
-        glow::{self, HasContext, NativeTexture},
-    },
-    egui::{ColorImage, TextureHandle, TextureId},
+use tauri_egui::egui::TextureHandle;
+use tokio::sync::{
+    mpsc::{Receiver, Sender},
+    Mutex,
 };
-use tokio::sync::mpsc::{Receiver, Sender};
 
 pub use updater::StateUpdater;
 
@@ -59,8 +58,10 @@ pub struct State {
 
     last_error: Option<CoreError>,
 
-    render_rx: Option<crossbeam::channel::Receiver<DesktopDecodeFrame>>,
+    render_rx: Option<Receiver<DesktopDecodeFrame>>,
     current_frame: Option<DesktopDecodeFrame>,
+
+    ring_buffer: Arc<Mutex<ringbuffer::ConstGenericRingBuffer<DesktopDecodeFrame, 256>>>,
 }
 
 impl State {
@@ -106,6 +107,7 @@ impl State {
             last_error: None,
             render_rx: None,
             current_frame: None,
+            ring_buffer: Arc::new(Mutex::new(ringbuffer::ConstGenericRingBuffer::new())),
         }
     }
 
@@ -146,8 +148,15 @@ impl State {
     }
 
     pub fn frame(&mut self) -> Option<DesktopDecodeFrame> {
-        if let Some(rx) = &mut self.render_rx {
-            while let Ok(frame) = rx.try_recv() {
+        // if let Some(rx) = &mut self.render_rx {
+        //     while let Ok(frame) = rx.try_recv() {
+        //         self.current_frame = Some(frame);
+        //     }
+        // }
+
+        // self.current_frame.clone()
+        if let Ok(mut rb) = self.ring_buffer.try_lock() {
+            if let Some(frame) = rb.dequeue() {
                 self.current_frame = Some(frame);
             }
         }
@@ -185,7 +194,6 @@ impl State {
                 }
                 Event::UpdateEndPointClient { client } => self.endpoint_client = Some(client),
                 Event::UpdateVisitState { new_state } => self.visit_state = new_state,
-                Event::UpdateRenderFrameReceiver { render_rx } => self.render_rx = Some(render_rx),
                 Event::UpdateUseOriginalResolution {
                     use_original_resolution,
                 } => self.use_original_resolution = use_original_resolution,
@@ -361,10 +369,25 @@ impl State {
         if let Some(client) = &self.endpoint_client {
             let mut client = client.clone();
             let tx = self.tx.clone();
+            let ring_buffer = self.ring_buffer.clone();
+
             tokio::spawn(async move {
                 match client.negotiate_finish(expected_frame_rate).await {
-                    Ok(render_rx) => {
-                        send_event!(tx, Event::UpdateRenderFrameReceiver { render_rx });
+                    Ok(mut render_rx) => {
+                        tokio::spawn(async move {
+                            loop {
+                                match render_rx.recv().await {
+                                    Some(frame) => {
+                                        let mut rb = ring_buffer.lock().await;
+                                        rb.enqueue(frame);
+                                    }
+                                    None => {
+                                        tracing::info!("render tx closed");
+                                        return;
+                                    }
+                                }
+                            }
+                        });
 
                         send_event!(
                             tx,

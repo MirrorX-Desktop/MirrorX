@@ -8,10 +8,12 @@ use crate::{
         OPUS_APPLICATION_RESTRICTED_LOWDELAY,
     },
 };
-use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
-use cpal::InputCallbackInfo;
-use crossbeam::channel::Receiver;
+use cpal::{
+    traits::{DeviceTrait, HostTrait, StreamTrait},
+    InputCallbackInfo,
+};
 use once_cell::sync::OnceCell;
+use tokio::sync::mpsc::Receiver;
 
 pub struct AudioDuplicator {
     encode_context: Option<EncodeContext>,
@@ -19,6 +21,8 @@ pub struct AudioDuplicator {
     audio_frame_rx: Receiver<Option<AudioEncodeFrame>>,
     client: EndPointClient,
 }
+
+unsafe impl Send for AudioDuplicator {}
 
 impl AudioDuplicator {
     pub fn new(client: EndPointClient) -> CoreResult<Self> {
@@ -35,7 +39,7 @@ impl AudioDuplicator {
     }
 
     pub fn capture_samples(&mut self) -> CoreResult<()> {
-        let audio_encode_frame = match self.audio_frame_rx.recv() {
+        let audio_encode_frame = match self.audio_frame_rx.try_recv() {
             Ok(frame) => match frame {
                 Some(frame) => frame,
                 None => {
@@ -174,7 +178,7 @@ pub fn new_cpal_stream_and_rx() -> CoreResult<(cpal::Stream, Receiver<Option<Aud
         output_config.channels as u8,
     ));
 
-    let (audio_encode_frame_tx, audio_encode_frame_rx) = crossbeam::channel::bounded(64);
+    let (audio_encode_frame_tx, audio_encode_frame_rx) = tokio::sync::mpsc::channel(180);
     let err_callback_tx = audio_encode_frame_tx.clone();
 
     let input_callback = move |data: &[f32], _: &InputCallbackInfo| {

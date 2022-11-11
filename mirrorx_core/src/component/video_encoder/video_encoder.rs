@@ -13,6 +13,8 @@ pub struct VideoEncoder {
     client: EndPointClient,
 }
 
+unsafe impl Send for VideoEncoder {}
+
 impl VideoEncoder {
     pub fn new(encoder_type: EncoderType, client: EndPointClient) -> CoreResult<VideoEncoder> {
         let encode_config = encoder_type.create_config();
@@ -136,6 +138,9 @@ struct EncodeContext {
     frame: *mut AVFrame,
     packet: *mut AVPacket,
 }
+
+unsafe impl Send for EncodeContext {}
+unsafe impl Sync for EncodeContext {}
 
 impl EncodeContext {
     pub fn new(

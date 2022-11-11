@@ -10,6 +10,7 @@ use cpal::{
     traits::{DeviceTrait, HostTrait, StreamTrait},
     BufferSize, OutputCallbackInfo, SampleRate,
 };
+use tokio::sync::mpsc::{error::TryRecvError, Receiver, Sender};
 
 #[derive(Default)]
 pub struct AudioPlayer {
@@ -19,6 +20,8 @@ pub struct AudioPlayer {
     decode_context: Option<DecodeContext>,
     playback_context: Option<PlaybackContext>,
 }
+
+unsafe impl Send for AudioPlayer {}
 
 impl AudioPlayer {
     pub fn play_samples(&mut self, audio_frame: EndPointAudioFrame) -> CoreResult<()> {
@@ -137,8 +140,8 @@ impl Drop for DecodeContext {
 
 struct PlaybackContext {
     stream: cpal::Stream,
-    audio_sample_tx: crossbeam::channel::Sender<Vec<f32>>,
-    callback_exit_rx: crossbeam::channel::Receiver<()>,
+    audio_sample_tx: Sender<Vec<f32>>,
+    callback_exit_rx: Receiver<()>,
 }
 
 impl PlaybackContext {
@@ -163,8 +166,8 @@ impl PlaybackContext {
         };
         tracing::info!(?stream_config, "select audio stream config");
 
-        let (audio_sample_tx, audio_sample_rx) = crossbeam::channel::bounded::<Vec<f32>>(180);
-        let (callback_exit_tx, callback_exit_rx) = crossbeam::channel::bounded(1);
+        let (audio_sample_tx, mut audio_sample_rx) = tokio::sync::mpsc::channel::<Vec<f32>>(180);
+        let (callback_exit_tx, callback_exit_rx) = tokio::sync::mpsc::channel(1);
         let err_callback_exit_tx = callback_exit_tx.clone();
 
         let input_callback = move |data: &mut [f32], _: &OutputCallbackInfo| {
@@ -200,7 +203,7 @@ impl PlaybackContext {
         match self.callback_exit_rx.try_recv() {
             Ok(_) => return false,
             Err(err) => {
-                if err.is_disconnected() {
+                if err == TryRecvError::Disconnected {
                     return false;
                 }
             }

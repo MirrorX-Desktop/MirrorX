@@ -2,19 +2,20 @@ use crate::{
     api::endpoint::{message::EndPointVideoFrame, EndPointID},
     component::{frame::DesktopDecodeFrame, video_decoder::video_decoder::VideoDecoder},
 };
+use tokio::sync::mpsc::Sender;
 
 pub fn serve_video_decode(
     id: EndPointID,
-    render_tx: crossbeam::channel::Sender<DesktopDecodeFrame>,
-) -> crossbeam::channel::Sender<EndPointVideoFrame> {
-    let (tx, rx) = crossbeam::channel::bounded(120);
+    render_tx: Sender<DesktopDecodeFrame>,
+) -> Sender<EndPointVideoFrame> {
+    let (tx, mut rx) = tokio::sync::mpsc::channel(120);
 
-    tokio::task::spawn_blocking(move || {
+    tokio::spawn(async move {
         tracing::info!(?id, "video decode process");
 
         let mut decoder = VideoDecoder::new(render_tx);
 
-        while let Ok(video_frame) = rx.recv() {
+        while let Some(video_frame) = rx.recv().await {
             let instant = std::time::Instant::now();
             if let Err(err) = decoder.decode(video_frame) {
                 tracing::error!(?err, "decode video frame failed");

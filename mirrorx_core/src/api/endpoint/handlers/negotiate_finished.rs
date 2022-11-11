@@ -24,9 +24,9 @@ pub fn handle_negotiate_finished_request(client: EndPointClient) {
 
 #[cfg(target_os = "macos")]
 fn spawn_desktop_capture_and_encode_process(client: EndPointClient) {
-    let (capture_frame_tx, capture_frame_rx) = crossbeam::channel::bounded(180);
+    let (capture_frame_tx, mut capture_frame_rx) = tokio::sync::mpsc::channel(180);
 
-    tokio::task::spawn_blocking(move || {
+    tokio::spawn(async move {
         tracing::info_span!("desktop_capture_and_encode_process", id = ?client.id());
 
         defer! {
@@ -85,8 +85,8 @@ fn spawn_desktop_capture_and_encode_process(client: EndPointClient) {
         }
 
         loop {
-            match capture_frame_rx.recv() {
-                Ok(capture_frame) => {
+            match capture_frame_rx.recv().await {
+                Some(capture_frame) => {
                     if let Err(err) = encoder.encode(capture_frame) {
                         if let CoreError::OutgoingMessageChannelDisconnect = err {
                             tracing::info!("desktop capture and encode process exit");
@@ -98,8 +98,8 @@ fn spawn_desktop_capture_and_encode_process(client: EndPointClient) {
                         }
                     }
                 }
-                Err(err) => {
-                    tracing::error!(?err, "capture frame rx recv error");
+                None => {
+                    tracing::error!("capture frame rx recv error");
                     break;
                 }
             }
@@ -205,28 +205,30 @@ fn spawn_desktop_capture_and_encode_process(client: EndPointClient) {
 }
 
 fn spawn_audio_capture_and_encode_process(client: EndPointClient) {
-    tokio::task::spawn_blocking(move || loop {
-        let mut audio_duplicator = match AudioDuplicator::new(client.clone()) {
-            Ok(duplicator) => duplicator,
-            Err(err) => {
-                tracing::error!(?err, "audio capture and encode process initialize failed");
-                client.close();
-                return;
-            }
-        };
-
+    tokio::spawn(async move {
         loop {
-            if let Err(err) = audio_duplicator.capture_samples() {
-                if let CoreError::OutgoingMessageChannelDisconnect = err {
-                    tracing::info!("audio capture and encode process exit");
+            let mut audio_duplicator = match AudioDuplicator::new(client.clone()) {
+                Ok(duplicator) => duplicator,
+                Err(err) => {
+                    tracing::error!(?err, "audio capture and encode process initialize failed");
                     client.close();
                     return;
-                } else {
-                    tracing::error!(
-                        ?err,
-                        "audio capture or encode process has an error occurred"
-                    );
-                    break;
+                }
+            };
+
+            loop {
+                if let Err(err) = audio_duplicator.capture_samples() {
+                    if let CoreError::OutgoingMessageChannelDisconnect = err {
+                        tracing::info!("audio capture and encode process exit");
+                        client.close();
+                        return;
+                    } else {
+                        tracing::error!(
+                            ?err,
+                            "audio capture or encode process has an error occurred"
+                        );
+                        break;
+                    }
                 }
             }
         }
