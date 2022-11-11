@@ -13,16 +13,14 @@ pub struct VideoEncoder {
     client: EndPointClient,
 }
 
-unsafe impl Send for VideoEncoder {}
-
 impl VideoEncoder {
     pub fn new(encoder_type: EncoderType, client: EndPointClient) -> CoreResult<VideoEncoder> {
         let encode_config = encoder_type.create_config();
 
-        unsafe {
-            av_log_set_level(AV_LOG_TRACE);
-            // av_log_set_flags(AV_LOG_SKIP_REPEATED);
-        }
+        // unsafe {
+        // av_log_set_level(AV_LOG_INFO);
+        // av_log_set_flags(AV_LOG_SKIP_REPEATED);
+        // }
         Ok(VideoEncoder {
             encode_config,
             encode_context: std::ptr::null_mut(),
@@ -138,9 +136,6 @@ struct EncodeContext {
     frame: *mut AVFrame,
     packet: *mut AVPacket,
 }
-
-unsafe impl Send for EncodeContext {}
-unsafe impl Sync for EncodeContext {}
 
 impl EncodeContext {
     pub fn new(

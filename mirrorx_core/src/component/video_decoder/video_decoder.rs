@@ -7,14 +7,11 @@ use crate::{
 };
 use std::ffi::CString;
 use tokio::sync::mpsc::Sender;
-
 pub struct VideoDecoder {
     decode_context: Option<DecodeContext>,
     render_frame_tx: Sender<DesktopDecodeFrame>,
     last_pts: i64,
 }
-
-unsafe impl Send for VideoDecoder {}
 
 impl VideoDecoder {
     pub fn new(render_frame_tx: Sender<DesktopDecodeFrame>) -> VideoDecoder {

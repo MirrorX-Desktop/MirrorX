@@ -10,12 +10,12 @@ pub fn serve_video_decode(
 ) -> Sender<EndPointVideoFrame> {
     let (tx, mut rx) = tokio::sync::mpsc::channel(120);
 
-    tokio::spawn(async move {
+    tokio::task::spawn_blocking(move || {
         tracing::info!(?id, "video decode process");
 
         let mut decoder = VideoDecoder::new(render_tx);
 
-        while let Some(video_frame) = rx.recv().await {
+        while let Some(video_frame) = rx.blocking_recv() {
             let instant = std::time::Instant::now();
             if let Err(err) = decoder.decode(video_frame) {
                 tracing::error!(?err, "decode video frame failed");

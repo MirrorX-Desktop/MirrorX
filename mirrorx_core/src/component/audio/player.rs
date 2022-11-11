@@ -21,8 +21,6 @@ pub struct AudioPlayer {
     playback_context: Option<PlaybackContext>,
 }
 
-unsafe impl Send for AudioPlayer {}
-
 impl AudioPlayer {
     pub fn play_samples(&mut self, audio_frame: EndPointAudioFrame) -> CoreResult<()> {
         if let Some((sample_rate, _, channels, frame_size)) = audio_frame.params {
@@ -86,6 +84,13 @@ impl DecodeContext {
     pub fn new(sample_rate: u32, channels: u8, frame_size: u16) -> CoreResult<Self> {
         unsafe {
             let mut error_code = 0;
+            tracing::info!(
+                ?sample_rate,
+                ?channels,
+                ?frame_size,
+                "create audio decode context"
+            );
+
             let dec = opus_decoder_create(sample_rate as i32, channels as isize, &mut error_code);
 
             if dec.is_null() {
@@ -174,19 +179,21 @@ impl PlaybackContext {
         let (callback_exit_tx, callback_exit_rx) = tokio::sync::mpsc::channel(1);
         let err_callback_exit_tx = callback_exit_tx.clone();
 
-        let input_callback = move |data: &mut [f32], _: &OutputCallbackInfo| {
-            if let Ok(samples) = audio_sample_rx.try_recv() {
-                unsafe {
+        let input_callback =
+            move |data: &mut [f32], _: &OutputCallbackInfo| match audio_sample_rx.try_recv() {
+                Ok(samples) => unsafe {
                     std::ptr::copy_nonoverlapping(
                         samples.as_ptr(),
                         data.as_mut_ptr(),
                         samples.len().min(data.len()),
                     )
+                },
+                Err(err) => {
+                    if err == TryRecvError::Disconnected {
+                        let _ = callback_exit_tx.try_send(());
+                    }
                 }
-            } else {
-                let _ = callback_exit_tx.try_send(());
-            }
-        };
+            };
 
         let err_callback = move |err| {
             tracing::error!(?err, "error occurred on the output audio stream");
@@ -215,14 +222,10 @@ impl PlaybackContext {
 
         self.audio_sample_tx.try_send(buffer.to_vec()).is_ok()
     }
-
-    pub fn pause(&self) {
-        let _ = self.stream.pause();
-    }
 }
 
 impl Drop for PlaybackContext {
     fn drop(&mut self) {
-        self.pause()
+        let _ = self.stream.pause();
     }
 }

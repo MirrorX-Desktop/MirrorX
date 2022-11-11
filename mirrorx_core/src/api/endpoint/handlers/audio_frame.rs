@@ -5,24 +5,22 @@ use crate::{
 use tokio::sync::mpsc::Receiver;
 
 pub fn serve_audio_decode(id: EndPointID, mut decode_rx: Receiver<EndPointAudioFrame>) {
-    tokio::spawn(async move {
+    tokio::task::spawn_blocking(move || loop {
+        tracing::info!(?id, "audio decode process");
+
+        let mut audio_player = AudioPlayer::default();
+
         loop {
-            tracing::info!(?id, "audio decode process");
-
-            let mut audio_player = AudioPlayer::default();
-
-            loop {
-                match decode_rx.recv().await {
-                    Some(audio_frame) => {
-                        if let Err(err) = audio_player.play_samples(audio_frame) {
-                            tracing::error!(?err, "audio decoder process play samples failed, process will initialize a new player");
-                            break;
-                        }
+            match decode_rx.blocking_recv() {
+                Some(audio_frame) => {
+                    if let Err(err) = audio_player.play_samples(audio_frame) {
+                        tracing::error!(?err, "audio decoder process play samples failed, process will initialize a new player");
+                        break;
                     }
-                    None => {
-                        tracing::error!("audio decode process exit");
-                        return;
-                    }
+                }
+                None => {
+                    tracing::error!("audio decode process exit");
+                    return;
                 }
             }
         }

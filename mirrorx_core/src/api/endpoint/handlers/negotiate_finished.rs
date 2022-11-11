@@ -26,7 +26,7 @@ pub fn handle_negotiate_finished_request(client: EndPointClient) {
 fn spawn_desktop_capture_and_encode_process(client: EndPointClient) {
     let (capture_frame_tx, mut capture_frame_rx) = tokio::sync::mpsc::channel(180);
 
-    tokio::spawn(async move {
+    tokio::task::spawn_blocking(move || {
         tracing::info_span!("desktop_capture_and_encode_process", id = ?client.id());
 
         defer! {
@@ -85,7 +85,7 @@ fn spawn_desktop_capture_and_encode_process(client: EndPointClient) {
         }
 
         loop {
-            match capture_frame_rx.recv().await {
+            match capture_frame_rx.blocking_recv() {
                 Some(capture_frame) => {
                     if let Err(err) = encoder.encode(capture_frame) {
                         if let CoreError::OutgoingMessageChannelDisconnect = err {
@@ -119,7 +119,7 @@ fn spawn_desktop_capture_and_encode_process(client: EndPointClient) {
 
     let (capture_frame_tx, mut capture_frame_rx) = tokio::sync::mpsc::channel(180);
 
-    tokio::spawn(async move {
+    tokio::task::spawn_blocking(move || {
         defer! {
             tracing::info!( "desktop capture process exit");
         }
@@ -151,7 +151,7 @@ fn spawn_desktop_capture_and_encode_process(client: EndPointClient) {
         loop {
             match duplicator.capture() {
                 Ok(capture_frame) => {
-                    if let Err(_) = capture_frame_tx.send(capture_frame).await {
+                    if let Err(_) = capture_frame_tx.blocking_send(capture_frame) {
                         tracing::error!("capture frame tx closed");
                         return;
                     }
@@ -164,7 +164,7 @@ fn spawn_desktop_capture_and_encode_process(client: EndPointClient) {
         }
     });
 
-    tokio::spawn(async move {
+    tokio::task::spawn_blocking(move || {
         loop {
             // defer! {
             //     tracing::info!(?active_device_id, ?passive_device_id, "video encode process exit");
@@ -179,7 +179,7 @@ fn spawn_desktop_capture_and_encode_process(client: EndPointClient) {
             };
 
             loop {
-                match capture_frame_rx.recv().await {
+                match capture_frame_rx.blocking_recv() {
                     Some(capture_frame) => {
                         if let Err(err) = encoder.encode(capture_frame) {
                             if let CoreError::OutgoingMessageChannelDisconnect = err {
@@ -202,29 +202,27 @@ fn spawn_desktop_capture_and_encode_process(client: EndPointClient) {
 }
 
 fn spawn_audio_capture_and_encode_process(client: EndPointClient) {
-    tokio::spawn(async move {
+    tokio::task::spawn_blocking(move || loop {
+        let mut audio_duplicator = match AudioDuplicator::new(client.clone()) {
+            Ok(duplicator) => duplicator,
+            Err(err) => {
+                tracing::error!(?err, "audio capture and encode process initialize failed");
+                client.close();
+                return;
+            }
+        };
+
         loop {
-            let mut audio_duplicator = match AudioDuplicator::new(client.clone()) {
-                Ok(duplicator) => duplicator,
-                Err(err) => {
-                    tracing::error!(?err, "audio capture and encode process initialize failed");
+            if let Err(err) = audio_duplicator.capture_samples() {
+                if let CoreError::OutgoingMessageChannelDisconnect = err {
+                    tracing::info!("audio capture and encode process exit");
                     client.close();
                     return;
-                }
-            };
-
-            loop {
-                if let Err(err) = audio_duplicator.capture_samples().await {
-                    if let CoreError::OutgoingMessageChannelDisconnect = err {
-                        tracing::info!("audio capture and encode process exit");
-                        client.close();
-                        return;
-                    } else {
-                        tracing::error!(
-                            ?err,
-                            "audio capture or encode process has an error occurred"
-                        );
-                    }
+                } else {
+                    tracing::error!(
+                        ?err,
+                        "audio capture or encode process has an error occurred"
+                    );
                 }
             }
         }

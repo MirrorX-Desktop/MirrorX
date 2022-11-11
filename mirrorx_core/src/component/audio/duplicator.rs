@@ -38,8 +38,8 @@ impl AudioDuplicator {
         })
     }
 
-    pub async fn capture_samples(&mut self) -> CoreResult<()> {
-        let audio_encode_frame = match self.audio_frame_rx.recv().await {
+    pub fn capture_samples(&mut self) -> CoreResult<()> {
+        let audio_encode_frame = match self.audio_frame_rx.blocking_recv() {
             Some(frame) => match frame {
                 Some(frame) => frame,
                 None => {
