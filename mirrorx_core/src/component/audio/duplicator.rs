@@ -38,19 +38,16 @@ impl AudioDuplicator {
         })
     }
 
-    pub fn capture_samples(&mut self) -> CoreResult<()> {
-        let audio_encode_frame = match self.audio_frame_rx.try_recv() {
-            Ok(frame) => match frame {
+    pub async fn capture_samples(&mut self) -> CoreResult<()> {
+        let audio_encode_frame = match self.audio_frame_rx.recv().await {
+            Some(frame) => match frame {
                 Some(frame) => frame,
                 None => {
                     return Err(core_error!("audio duplicator callback has error occurred"));
                 }
             },
-            Err(err) => {
-                return Err(core_error!(
-                    "audio duplicator channel recv failed ({})",
-                    err
-                ));
+            None => {
+                return Err(core_error!("audio duplicator channel closed"));
             }
         };
 

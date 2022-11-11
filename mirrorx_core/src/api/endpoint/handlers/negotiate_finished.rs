@@ -117,9 +117,9 @@ fn spawn_desktop_capture_and_encode_process(client: EndPointClient) {
         }
     };
 
-    let (capture_frame_tx, capture_frame_rx) = crossbeam::channel::bounded(180);
+    let (capture_frame_tx, mut capture_frame_rx) = tokio::sync::mpsc::channel(180);
 
-    tokio::task::spawn_blocking(move || {
+    tokio::spawn(async move {
         defer! {
             tracing::info!( "desktop capture process exit");
         }
@@ -151,53 +151,51 @@ fn spawn_desktop_capture_and_encode_process(client: EndPointClient) {
         loop {
             match duplicator.capture() {
                 Ok(capture_frame) => {
-                    if let Err(err) = capture_frame_tx.try_send(capture_frame) {
-                        if err.is_full() {
-                            tracing::warn!("capture frame tx is full!");
-                        } else {
-                            tracing::info!("capture frame tx closed, capture process will exit");
-                            break;
-                        }
+                    if let Err(_) = capture_frame_tx.send(capture_frame).await {
+                        tracing::error!("capture frame tx closed");
+                        return;
                     }
                 }
                 Err(err) => {
-                    tracing::error!(?err, "dekstop duplicator capture loop exit");
+                    tracing::error!(?err, "dekstop duplicator capture failed");
                     break;
                 }
             };
         }
     });
 
-    tokio::task::spawn_blocking(move || loop {
-        // defer! {
-        //     tracing::info!(?active_device_id, ?passive_device_id, "video encode process exit");
-        // }
-
-        let mut encoder = match VideoEncoder::new(EncoderType::Libx264, client.clone()) {
-            Ok(encoder) => encoder,
-            Err(err) => {
-                tracing::error!(?err, "video encoder initialize failed");
-                return;
-            }
-        };
-
+    tokio::spawn(async move {
         loop {
-            match capture_frame_rx.recv() {
-                Ok(capture_frame) => {
-                    if let Err(err) = encoder.encode(capture_frame) {
-                        if let CoreError::OutgoingMessageChannelDisconnect = err {
-                            tracing::info!("desktop capture and encode process exit");
-                            client.close();
-                            return;
-                        } else {
-                            tracing::error!("video encode failed");
-                            break;
+            // defer! {
+            //     tracing::info!(?active_device_id, ?passive_device_id, "video encode process exit");
+            // }
+
+            let mut encoder = match VideoEncoder::new(EncoderType::Libx264, client.clone()) {
+                Ok(encoder) => encoder,
+                Err(err) => {
+                    tracing::error!(?err, "video encoder initialize failed");
+                    return;
+                }
+            };
+
+            loop {
+                match capture_frame_rx.recv().await {
+                    Some(capture_frame) => {
+                        if let Err(err) = encoder.encode(capture_frame) {
+                            if let CoreError::OutgoingMessageChannelDisconnect = err {
+                                tracing::info!("desktop capture and encode process exit");
+                                client.close();
+                                return;
+                            } else {
+                                tracing::error!("video encode failed");
+                                break;
+                            }
                         }
                     }
-                }
-                Err(err) => {
-                    tracing::error!(?err, "capture frame rx recv error");
-                    break;
+                    None => {
+                        tracing::error!("capture frame channel closed");
+                        return;
+                    }
                 }
             }
         }
@@ -217,7 +215,7 @@ fn spawn_audio_capture_and_encode_process(client: EndPointClient) {
             };
 
             loop {
-                if let Err(err) = audio_duplicator.capture_samples() {
+                if let Err(err) = audio_duplicator.capture_samples().await {
                     if let CoreError::OutgoingMessageChannelDisconnect = err {
                         tracing::info!("audio capture and encode process exit");
                         client.close();
