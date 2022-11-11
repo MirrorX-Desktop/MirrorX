@@ -5,7 +5,7 @@ use mirrorx_core::{
     DesktopDecodeFrame,
 };
 use strum_macros::AsRefStr;
-use tauri_egui::egui::ColorImage;
+use tokio::sync::mpsc::Receiver;
 
 #[derive(AsRefStr)]
 pub enum Event {
@@ -35,8 +35,8 @@ pub enum Event {
         err: CoreError,
     },
 
-    Input {
-        input_series: Vec<InputEvent>,
+    SetRenderFrameReceiver {
+        render_rx: Receiver<DesktopDecodeFrame>,
     },
 
     EmitNegotiateDesktopParams,

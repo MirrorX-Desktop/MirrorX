@@ -13,15 +13,15 @@
 	import { invoke_get_domains, invoke_get_language, invoke_set_language } from '$lib/components/command';
 
 	let show: boolean = false;
-	let language: string = 'en';
+	let language: string = '';
 	let unlisten_fn: UnlistenFn | null = null;
 
 	$: {
-		(async function () {
+		if (language && language.length > 0) {
 			try {
-				await invoke_set_language({ language });
+				invoke_set_language({ language });
 			} catch (error: any) {
-				await emitHomeNotification({
+				emitHomeNotification({
 					level: 'error',
 					title: 'Error',
 					message: error.toString()
@@ -29,7 +29,7 @@
 			} finally {
 				show = false;
 			}
-		})();
+		}
 	}
 
 	const localeAndDisplayNames: Array<{ code: string; name: string }> = [

@@ -1,5 +1,4 @@
 mod event;
-mod updater;
 
 use crate::{send_event, utility::format_device_id};
 use event::Event;
@@ -11,17 +10,8 @@ use mirrorx_core::{
     DesktopDecodeFrame,
 };
 use ring::aead::{BoundKey, OpeningKey, SealingKey};
-use ringbuffer::RingBufferExt;
-use ringbuffer::RingBufferRead;
-use ringbuffer::RingBufferWrite;
-use std::{sync::Arc, time::Duration};
-use tauri_egui::egui::TextureHandle;
-use tokio::sync::{
-    mpsc::{Receiver, Sender},
-    Mutex,
-};
-
-pub use updater::StateUpdater;
+use std::time::Duration;
+use tokio::sync::mpsc::{Receiver, Sender};
 
 #[macro_export]
 macro_rules! send_event {
@@ -44,24 +34,14 @@ pub struct State {
     tx: Sender<Event>,
     rx: Receiver<Event>,
 
-    // window_id: WindowId,
-    local_device_id: i64,
-    format_local_device_id: String,
-    remote_device_id: i64,
     format_remote_device_id: String,
-
     visit_state: VisitState,
     endpoint_client: Option<EndPointClient>,
-    desktop_texture: Option<TextureHandle>,
-    frame_count: i64,
-    use_original_resolution: bool,
-
+    desktop_frame_scaled: bool,
+    desktop_frame_scalable: bool,
     last_error: Option<CoreError>,
-
     render_rx: Option<Receiver<DesktopDecodeFrame>>,
     current_frame: Option<DesktopDecodeFrame>,
-
-    ring_buffer: Arc<Mutex<ringbuffer::ConstGenericRingBuffer<DesktopDecodeFrame, 256>>>,
 }
 
 impl State {
@@ -89,38 +69,20 @@ impl State {
             }
         );
 
-        let mut format_local_device_id = format_device_id(local_device_id);
         let mut format_remote_device_id = format_device_id(remote_device_id);
 
         Self {
             tx,
             rx,
-            local_device_id,
-            format_local_device_id,
-            remote_device_id,
             format_remote_device_id,
             visit_state: VisitState::Connecting,
             endpoint_client: None,
-            desktop_texture: None,
-            use_original_resolution: true,
-            frame_count: 0,
+            desktop_frame_scaled: true,
+            desktop_frame_scalable: true,
             last_error: None,
             render_rx: None,
             current_frame: None,
-            ring_buffer: Arc::new(Mutex::new(ringbuffer::ConstGenericRingBuffer::new())),
         }
-    }
-
-    pub fn local_device_id(&self) -> i64 {
-        self.local_device_id
-    }
-
-    pub fn format_local_device_id(&self) -> &str {
-        self.format_local_device_id.as_ref()
-    }
-
-    pub fn remote_device_id(&self) -> i64 {
-        self.remote_device_id
     }
 
     pub fn format_remote_device_id(&self) -> &str {
@@ -135,41 +97,40 @@ impl State {
         &self.visit_state
     }
 
-    pub fn desktop_texture(&self) -> Option<&TextureHandle> {
-        self.desktop_texture.as_ref()
-    }
-
-    pub fn use_original_resolution(&self) -> bool {
-        self.use_original_resolution
+    pub fn desktop_frame_scaled(&self) -> bool {
+        self.desktop_frame_scaled
     }
 
     pub fn last_error(&self) -> Option<&CoreError> {
         self.last_error.as_ref()
     }
 
-    pub fn frame(&mut self) -> Option<DesktopDecodeFrame> {
-        // if let Some(rx) = &mut self.render_rx {
-        //     while let Ok(frame) = rx.try_recv() {
-        //         self.current_frame = Some(frame);
-        //     }
-        // }
-
-        // self.current_frame.clone()
-        if let Ok(mut rb) = self.ring_buffer.try_lock() {
-            if let Some(frame) = rb.dequeue() {
+    pub fn current_frame(&mut self) -> Option<DesktopDecodeFrame> {
+        if let Some(rx) = &mut self.render_rx {
+            while let Ok(frame) = rx.try_recv() {
                 self.current_frame = Some(frame);
             }
         }
 
         self.current_frame.clone()
     }
+
+    pub fn desktop_frame_scalable(&self) -> bool {
+        self.desktop_frame_scalable
+    }
 }
 
 impl State {
-    pub fn new_state_updater(&self) -> StateUpdater {
-        StateUpdater::new(self.tx.clone())
+    pub fn set_desktop_frame_scaled(&mut self, scaled: bool) {
+        self.desktop_frame_scaled = scaled
     }
 
+    pub fn set_desktop_frame_scalable(&mut self, scalable: bool) {
+        self.desktop_frame_scalable = scalable
+    }
+}
+
+impl State {
     pub fn handle_event(&mut self, ctx: &tauri_egui::egui::Context) {
         while let Ok(event) = self.rx.try_recv() {
             match event {
@@ -196,22 +157,17 @@ impl State {
                 Event::UpdateVisitState { new_state } => self.visit_state = new_state,
                 Event::UpdateUseOriginalResolution {
                     use_original_resolution,
-                } => self.use_original_resolution = use_original_resolution,
+                } => self.desktop_frame_scaled = use_original_resolution,
                 Event::UpdateError { err } => {
                     tracing::error!(?err, "update error event");
                     self.last_error = Some(err);
                 }
-                Event::Input { input_series } => {
-                    if let Some(client) = &self.endpoint_client {
-                        if let Err(err) = client.send_input_command(input_series) {
-                            tracing::error!(?err, "endpoint input failed");
-                        }
-                    }
-                }
+
                 Event::EmitNegotiateDesktopParams => self.emit_negotiate_desktop_params(),
                 Event::EmitNegotiateFinish {
                     expected_frame_rate,
                 } => self.emit_negotiate_finish(expected_frame_rate),
+                Event::SetRenderFrameReceiver { render_rx } => self.render_rx = Some(render_rx),
             }
         }
     }
@@ -369,25 +325,11 @@ impl State {
         if let Some(client) = &self.endpoint_client {
             let mut client = client.clone();
             let tx = self.tx.clone();
-            let ring_buffer = self.ring_buffer.clone();
 
             tokio::spawn(async move {
                 match client.negotiate_finish(expected_frame_rate).await {
-                    Ok(mut render_rx) => {
-                        tokio::spawn(async move {
-                            loop {
-                                match render_rx.recv().await {
-                                    Some(frame) => {
-                                        let mut rb = ring_buffer.lock().await;
-                                        rb.enqueue(frame);
-                                    }
-                                    None => {
-                                        tracing::info!("render tx closed");
-                                        return;
-                                    }
-                                }
-                            }
-                        });
+                    Ok(render_rx) => {
+                        send_event!(tx, Event::SetRenderFrameReceiver { render_rx });
 
                         send_event!(
                             tx,

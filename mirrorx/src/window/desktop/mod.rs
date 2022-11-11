@@ -8,7 +8,7 @@ use mirrorx_core::{
     component::input::key::{KeyboardKey, MouseKey},
 };
 use once_cell::sync::Lazy;
-use state::{State, StateUpdater};
+use state::State;
 use std::{sync::Arc, time::Duration};
 use tauri_egui::{
     eframe::glow::{self, Context},
@@ -28,9 +28,7 @@ static ICON_ARROWS_LEFT_RIGHT_TO_LINE: Lazy<RetainedImage> = Lazy::new(|| {
 
 pub struct DesktopWindow {
     state: State,
-    state_updater: StateUpdater,
     desktop_render: Arc<Mutex<DesktopRender>>,
-    toolbar_scale_available: bool,
 }
 
 impl DesktopWindow {
@@ -55,16 +53,12 @@ impl DesktopWindow {
             visit_credentials,
         );
 
-        let state_updater = state.new_state_updater();
-
         let desktop_render =
             DesktopRender::new(gl_context.as_ref()).expect("create desktop render failed");
 
         Self {
             state,
-            state_updater,
             desktop_render: Arc::new(Mutex::new(desktop_render)),
-            toolbar_scale_available: true,
         }
     }
 
@@ -118,12 +112,14 @@ impl DesktopWindow {
     }
 
     fn build_desktop_texture(&mut self, ui: &mut Ui) {
-        if let Some(frame) = self.state.frame() {
+        if let Some(frame) = self.state.current_frame() {
             // when client area bigger than original desktop frame, disable scale button
-            self.toolbar_scale_available = ui.available_width() < frame.width as _
-                || ui.available_height() < frame.height as _;
+            self.state.set_desktop_frame_scalable(
+                ui.available_width() < frame.width as _
+                    || ui.available_height() < frame.height as _,
+            );
 
-            if self.state.use_original_resolution()
+            if self.state.desktop_frame_scaled()
                 && (ui.available_width() < frame.width as _
                     || ui.available_height() < frame.height as _)
             {
@@ -162,9 +158,7 @@ impl DesktopWindow {
                             let input = ui.ctx().input();
                             let events = input.events.as_slice();
                             let left_top = view_port.left_top();
-                            emit_input(&self.state_updater, events, move |pos| {
-                                pos + left_top.to_vec2()
-                            });
+                            self.emit_input(events, move |pos| pos + left_top.to_vec2());
                         });
                 });
             } else {
@@ -205,7 +199,7 @@ impl DesktopWindow {
 
                 let input = ui.ctx().input();
                 let events = input.events.as_slice();
-                emit_input(&self.state_updater, events, move |pos| {
+                self.emit_input(events, move |pos| {
                     Pos2::new(
                         (pos.x - space_around_image.x).max(0.0) / scale_ratio,
                         (pos.y - space_around_image.y).max(0.0) / scale_ratio,
@@ -266,9 +260,9 @@ impl DesktopWindow {
 
     fn build_toolbar_button_scale(&mut self, ui: &mut Ui) {
         // when use_original_resolution is true, the button should display 'fit size' icon
-        ui.add_enabled_ui(self.toolbar_scale_available, |ui| {
+        ui.add_enabled_ui(self.state.desktop_frame_scalable(), |ui| {
             // ui.visuals_mut().widgets.active.fg_stroke = Stroke::new(1.0, Color32::WHITE);
-            let button = if self.state.use_original_resolution() {
+            let button = if self.state.desktop_frame_scaled() {
                 tauri_egui::egui::ImageButton::new(
                     ICON_ARROWS_LEFT_RIGHT_TO_LINE.texture_id(ui.ctx()),
                     Vec2::new(18.0, 18.0),
@@ -282,17 +276,90 @@ impl DesktopWindow {
             .tint(ui.visuals().noninteractive().fg_stroke.color);
 
             if ui.add(button).clicked() {
-                self.state_updater
-                    .update_use_original_resolution(!self.state.use_original_resolution());
+                self.state
+                    .set_desktop_frame_scaled(!self.state.desktop_frame_scaled());
             }
         });
     }
 }
 
+impl DesktopWindow {
+    fn emit_input(&self, events: &[tauri_egui::egui::Event], pos_calc_fn: impl Fn(Pos2) -> Pos2) {
+        if let Some(client) = self.state.endpoint_client() {
+            let mut input_series = Vec::new();
+            for event in events.iter() {
+                match event {
+                    tauri_egui::egui::Event::PointerMoved(pos) => {
+                        let mouse_pos = pos_calc_fn(*pos);
+                        input_series.push(InputEvent::Mouse(MouseEvent::Move(
+                            MouseKey::None,
+                            mouse_pos.x,
+                            mouse_pos.y,
+                        )));
+                    }
+                    tauri_egui::egui::Event::PointerButton {
+                        pos,
+                        button,
+                        pressed,
+                        modifiers,
+                    } => {
+                        let mouse_pos = pos_calc_fn(*pos);
+
+                        let mouse_key = match button {
+                            tauri_egui::egui::PointerButton::Primary => MouseKey::Left,
+                            tauri_egui::egui::PointerButton::Secondary => MouseKey::Right,
+                            tauri_egui::egui::PointerButton::Middle => MouseKey::Wheel,
+                            tauri_egui::egui::PointerButton::Extra1 => MouseKey::SideBack,
+                            tauri_egui::egui::PointerButton::Extra2 => MouseKey::SideForward,
+                        };
+
+                        let mouse_event = if *pressed {
+                            MouseEvent::Down(mouse_key, mouse_pos.x, mouse_pos.y)
+                        } else {
+                            MouseEvent::Up(mouse_key, mouse_pos.x, mouse_pos.y)
+                        };
+
+                        input_series.push(InputEvent::Mouse(mouse_event));
+                    }
+                    tauri_egui::egui::Event::Scroll(scroll_vector) => {
+                        input_series
+                            .push(InputEvent::Mouse(MouseEvent::ScrollWheel(scroll_vector.y)));
+                    }
+                    tauri_egui::egui::Event::Key {
+                        key,
+                        pressed,
+                        modifiers,
+                    } => {
+                        // todo: modifiers order
+                        let keyboard_event = if *pressed {
+                            KeyboardEvent::KeyDown(map_key(*key))
+                        } else {
+                            KeyboardEvent::KeyUp(map_key(*key))
+                        };
+
+                        input_series.push(InputEvent::Keyboard(keyboard_event));
+                    }
+                    tauri_egui::egui::Event::Text(text) => {
+                        tracing::info!(?text, "input text");
+                    }
+                    _ => {}
+                }
+            }
+
+            if !input_series.is_empty() {
+                tracing::info!(?input_series, "input series");
+                if let Err(err) = client.send_input_command(input_series) {
+                    tracing::error!(?err, "endpoint input failed");
+                }
+            }
+        }
+    }
+}
+
 impl tauri_egui::eframe::App for DesktopWindow {
-    fn update(&mut self, ctx: &tauri_egui::egui::Context, frame: &mut tauri_egui::eframe::Frame) {
+    fn update(&mut self, ctx: &tauri_egui::egui::Context, _: &mut tauri_egui::eframe::Frame) {
         let update_instant = std::time::Instant::now();
-        // self.build_panel(ui);
+
         self.state.handle_event(ctx);
 
         CentralPanel::default()
@@ -315,76 +382,6 @@ impl tauri_egui::eframe::App for DesktopWindow {
         if let Some(gl) = gl {
             self.desktop_render.lock().destroy(gl);
         }
-    }
-}
-
-fn emit_input(
-    state_updater: &StateUpdater,
-    events: &[tauri_egui::egui::Event],
-    pos_calc_fn: impl Fn(Pos2) -> Pos2,
-) {
-    let mut input_series = Vec::new();
-    for event in events.iter() {
-        match event {
-            tauri_egui::egui::Event::PointerMoved(pos) => {
-                let mouse_pos = pos_calc_fn(*pos);
-                input_series.push(InputEvent::Mouse(MouseEvent::Move(
-                    MouseKey::None,
-                    mouse_pos.x,
-                    mouse_pos.y,
-                )));
-            }
-            tauri_egui::egui::Event::PointerButton {
-                pos,
-                button,
-                pressed,
-                modifiers,
-            } => {
-                let mouse_pos = pos_calc_fn(*pos);
-
-                let mouse_key = match button {
-                    tauri_egui::egui::PointerButton::Primary => MouseKey::Left,
-                    tauri_egui::egui::PointerButton::Secondary => MouseKey::Right,
-                    tauri_egui::egui::PointerButton::Middle => MouseKey::Wheel,
-                    tauri_egui::egui::PointerButton::Extra1 => MouseKey::SideBack,
-                    tauri_egui::egui::PointerButton::Extra2 => MouseKey::SideForward,
-                };
-
-                let mouse_event = if *pressed {
-                    MouseEvent::Down(mouse_key, mouse_pos.x, mouse_pos.y)
-                } else {
-                    MouseEvent::Up(mouse_key, mouse_pos.x, mouse_pos.y)
-                };
-
-                input_series.push(InputEvent::Mouse(mouse_event));
-            }
-            tauri_egui::egui::Event::Scroll(scroll_vector) => {
-                input_series.push(InputEvent::Mouse(MouseEvent::ScrollWheel(scroll_vector.y)));
-            }
-            tauri_egui::egui::Event::Key {
-                key,
-                pressed,
-                modifiers,
-            } => {
-                // todo: modifiers order
-                let keyboard_event = if *pressed {
-                    KeyboardEvent::KeyDown(map_key(*key))
-                } else {
-                    KeyboardEvent::KeyUp(map_key(*key))
-                };
-
-                input_series.push(InputEvent::Keyboard(keyboard_event));
-            }
-            tauri_egui::egui::Event::Text(text) => {
-                tracing::info!(?text, "input text");
-            }
-            _ => {}
-        }
-    }
-
-    if !input_series.is_empty() {
-        tracing::info!(?input_series, "input series");
-        state_updater.input(input_series);
     }
 }
 
