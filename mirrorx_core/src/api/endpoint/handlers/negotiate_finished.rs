@@ -88,8 +88,10 @@ fn spawn_desktop_capture_and_encode_process(client: EndPointClient) {
             match capture_frame_rx.recv() {
                 Ok(capture_frame) => {
                     if let Err(err) = encoder.encode(capture_frame) {
-                        if let CoreError::OutgoingMessageChannelFull = err {
-                            continue;
+                        if let CoreError::OutgoingMessageChannelDisconnect = err {
+                            tracing::info!("desktop capture and encode process exit");
+                            client.close();
+                            return;
                         } else {
                             tracing::error!("video encode failed");
                             break;
@@ -183,8 +185,10 @@ fn spawn_desktop_capture_and_encode_process(client: EndPointClient) {
             match capture_frame_rx.recv() {
                 Ok(capture_frame) => {
                     if let Err(err) = encoder.encode(capture_frame) {
-                        if let CoreError::OutgoingMessageChannelFull = err {
-                            continue;
+                        if let CoreError::OutgoingMessageChannelDisconnect = err {
+                            tracing::info!("desktop capture and encode process exit");
+                            client.close();
+                            return;
                         } else {
                             tracing::error!("video encode failed");
                             break;
@@ -213,8 +217,10 @@ fn spawn_audio_capture_and_encode_process(client: EndPointClient) {
 
         loop {
             if let Err(err) = audio_duplicator.capture_samples() {
-                if let CoreError::OutgoingMessageChannelFull = err {
+                if let CoreError::OutgoingMessageChannelDisconnect = err {
                     tracing::info!("audio capture and encode process exit");
+                    client.close();
+                    return;
                 } else {
                     tracing::error!(
                         ?err,
