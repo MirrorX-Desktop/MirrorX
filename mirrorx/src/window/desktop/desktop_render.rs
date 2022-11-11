@@ -78,10 +78,16 @@ impl DesktopRender {
             in vec2 texCoord;
             layout (location = 0) out vec4 fragColor;
 
+            // const mat3 YCbCrToRGBmatrix = mat3(
+            //     1.164, 0.000, 1.857,
+            //     1.164,-0.217,-0.543,
+            //     1.164, 2.016, 0.000
+            // );
+
             const mat3 YCbCrToRGBmatrix = mat3(
-                1.164, 0.000, 1.857,
-                1.164,-0.217,-0.543,
-                1.164, 2.016, 0.000
+                1.000,   0.000,   1.570,
+                1.000,  -0.187,  -0.467,
+                1.000,   1.856,   0.000
             );
 
             void main(void)
@@ -273,7 +279,7 @@ impl DesktopRender {
                     DesktopDecodeFrameFormat::NV12 => {
                         self.textures.push(create_texture(
                             gl,
-                            true,
+                            RED,
                             frame.width,
                             frame.height,
                             frame.line_sizes[0],
@@ -281,7 +287,7 @@ impl DesktopRender {
 
                         self.textures.push(create_texture(
                             gl,
-                            false,
+                            RG,
                             frame.width / 2,
                             frame.height / 2,
                             frame.line_sizes[1],
@@ -290,7 +296,7 @@ impl DesktopRender {
                     DesktopDecodeFrameFormat::YUV420P => {
                         self.textures.push(create_texture(
                             gl,
-                            true,
+                            RED,
                             frame.width,
                             frame.height,
                             frame.line_sizes[0],
@@ -298,7 +304,7 @@ impl DesktopRender {
 
                         self.textures.push(create_texture(
                             gl,
-                            false,
+                            RED,
                             frame.width / 2,
                             frame.height / 2,
                             frame.line_sizes[1],
@@ -306,7 +312,7 @@ impl DesktopRender {
 
                         self.textures.push(create_texture(
                             gl,
-                            false,
+                            RED,
                             frame.width / 2,
                             frame.height / 2,
                             frame.line_sizes[2],
@@ -465,7 +471,7 @@ impl DesktopRender {
         );
         check_for_gl_error!(gl);
 
-        let u_uniform_location = gl.get_uniform_location(self.program, "yuv_420p_textureU");
+        let u_uniform_location = gl.get_uniform_location(self.program, "yuv420p_textureU");
         check_for_gl_error!(gl);
 
         gl.uniform_1_i32(u_uniform_location.as_ref(), 1);
@@ -501,7 +507,7 @@ impl DesktopRender {
 
 unsafe fn create_texture(
     gl: &Context,
-    is_luminance_texture: bool,
+    texture_format: u32,
     width: i32,
     height: i32,
     stride: i32,
@@ -516,16 +522,14 @@ unsafe fn create_texture(
     // gl.pixel_store_i32(UNPACK_ROW_LENGTH, stride);
     // check_for_gl_error!(gl);
 
-    let internal_format = if is_luminance_texture { RED } else { RG };
-
     gl.tex_image_2d(
         TEXTURE_2D,
         0,
-        internal_format as i32,
+        texture_format as i32,
         width,
         height,
         0,
-        internal_format,
+        texture_format,
         UNSIGNED_BYTE,
         None,
     );
