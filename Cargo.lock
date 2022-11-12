@@ -63,17 +63,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "allo-isolate"
-version = "0.1.14-beta.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "692305cf262038708c09c56dd7c7d5387578b032456b427331703fffaa682c49"
-dependencies = [
- "anyhow",
- "atomic",
- "chrono",
-]
-
-[[package]]
 name = "alloc-no-stdlib"
 version = "2.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -225,15 +214,6 @@ dependencies = [
  "gobject-sys",
  "libc",
  "system-deps 6.0.3",
-]
-
-[[package]]
-name = "atomic"
-version = "0.5.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b88d82667eca772c4aa12f0f1348b3ae643424c8876448f3f7bd5787032e234c"
-dependencies = [
- "autocfg",
 ]
 
 [[package]]
@@ -411,12 +391,6 @@ checksum = "ba3569f383e8f1598449f1a423e72e99569137b47740b1da11ef19af3d5c3223"
 dependencies = [
  "memchr",
 ]
-
-[[package]]
-name = "build-target"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "832133bbabbbaa9fbdba793456a2827627a7d2b8fb96032fa1e7666d7895832b"
 
 [[package]]
 name = "bumpalo"
@@ -655,16 +629,6 @@ checksum = "35ed6e9d84f0b51a7f52daf1c7d71dd136fd7a3f41a8462b8cdb8c78d920fad4"
 dependencies = [
  "bytes",
  "memchr",
-]
-
-[[package]]
-name = "console_error_panic_hook"
-version = "0.1.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a06aeb73f470f66dcdbf7223caeebb85984942f22f1adb2a088cf9668146bbbc"
-dependencies = [
- "cfg-if",
- "wasm-bindgen",
 ]
 
 [[package]]
@@ -1340,33 +1304,6 @@ dependencies = [
  "pin-project",
  "spin 0.9.4",
 ]
-
-[[package]]
-name = "flutter_rust_bridge"
-version = "1.48.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b8ae1e29bf5e6fdead0d698a717340531b206e4d13474b6c6c6e95a62b78950d"
-dependencies = [
- "allo-isolate",
- "anyhow",
- "build-target",
- "bytemuck",
- "chrono",
- "console_error_panic_hook",
- "flutter_rust_bridge_macros",
- "js-sys",
- "lazy_static",
- "parking_lot",
- "threadpool",
- "wasm-bindgen",
- "web-sys",
-]
-
-[[package]]
-name = "flutter_rust_bridge_macros"
-version = "1.49.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d0a4086ff226bcfc6436513504e1a35273556aaebe884c32174028c29a904ea0"
 
 [[package]]
 name = "fnv"
@@ -2662,7 +2599,6 @@ dependencies = [
  "dashmap",
  "dispatch",
  "either",
- "flutter_rust_bridge",
  "futures",
  "fxhash",
  "hex",
@@ -2674,7 +2610,6 @@ dependencies = [
  "objc-foundation",
  "objc_id",
  "once_cell",
- "os_info",
  "pbkdf2",
  "prost",
  "r2d2",

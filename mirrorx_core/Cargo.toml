@@ -14,7 +14,6 @@ chrono = "0.4.22"
 rand = "0.8.5"
 serde = { version = "1.0.145", features = ["derive"] }
 serde_bytes = "0.11.7"
-flutter_rust_bridge = "1.48.0"
 anyhow = "1.0.65"
 rusqlite = { version = "0.28.0", features = ["bundled"] }
 bytes = "1.2.1"
@@ -36,7 +35,6 @@ thiserror = "1.0.35"
 hex = "0.4.3"
 cpal = "0.14.1"
 rtrb = "0.2.2"
-os_info = { version = "3.5.1", default-features = false }
 async-broadcast = "0.4.1"
 tonic = { version = "0.8.1", features = ["gzip"] }
 prost = "0.11.0"
