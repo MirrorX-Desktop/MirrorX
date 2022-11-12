@@ -97,7 +97,7 @@ not support yet
 
 ## Thanks
 
-### Thanks these awesome open source project that make MirrorX becomes true.
+### Thanks these awesome open source projects that make MirrorX becomes true.
 
 (listed partial with in no particular order, thanks all the authors of dependencies in Cargo.toml and package.json)
 
