@@ -3,7 +3,7 @@
 </h1>
 
 <p align="center">
-Secure, Fast and Light remote desktop & file manager tool
+安全、快速与轻量的远程桌面&文件管理工具
 </p>
 
 <p align="center">
@@ -19,17 +19,17 @@ Secure, Fast and Light remote desktop & file manager tool
 [English](https://github.com/MirrorX-Desktop/MirrorX/blob/master/README.md)
 [简体中文](https://github.com/MirrorX-Desktop/MirrorX/blob/master/README_CN.md)
 
-MirrorX is a remote desktop control tool powered by [Rust](https://github.com/rust-lang/rust). With fully open-source client and server, native E2EE support, users can build SECURITY and FAST remote control network, which is fully under control of users.
+MirrorX 是一个使用 [Rust](https://github.com/rust-lang/rust) 构建的远程桌面控制软件。配合完全开源的客户端与服务端、原生支持的端到端加密，用户可以构造快速且安全的远程控制网络，并且完全处于用户控制之下。
 
-> **MirrorX is on the early stage with active developing now. Please forgive us that we cannot make any backward compatibility commitments at this time.**
+> **MirrorX 项目还处于早期积极开发阶段。请原谅我们暂时还无法做出任何向后兼容的承诺**
 
-## Component
+## 组件
 
 - [MirrorX Client](https://github.com/MirrorX-Desktop/MirrorX)
 - [MirrorX Signaling Server](https://github.com/MirrorX-Desktop/signaling)
 - [MirrorX Endpoints Server](https://github.com/MirrorX-Desktop/endpoints)
 
-## Available Platform
+## 可用平台
 
 - [x] macOS
 - [x] Windows
@@ -38,66 +38,66 @@ MirrorX is a remote desktop control tool powered by [Rust](https://github.com/ru
 - [ ] iOS
 - [ ] Web
 
-## How to build
+## 如何构造
 
-### Prerequisite
+### 先决条件
 
 1. `nodejs && npm && yarn`
-2. For Windows: `Visual Studio 2019+ && Desktop Development with C++ workloads`
+2. 对于 Windows: `Visual Studio 2019+ && C++桌面开发`
 
-### For Windows
+### 对于 Windows
 
-1. Make sure you have installed Visual Studio 2019+ and install Desktop Development with C++ workloads.
-2. Launch Developer PowerShell for VS with `Administorator priviliges`.
-3. Switch terminal location to `MirrorX\third` and run PowerShell script:
+1. 请确保你已提前安装 Visual Studio 2019+ 和 C++桌面开发工作负载。
+2. 以管理员身份运行 Developer PowerShell for VS。
+3. 切换目录到 `MirrorX\third` 并运行 PowerShell 脚本：
 
 ```PowerShell
 PS > Set-Location MirrorX\third
 PS C:\MirrorX\third> .\build_dependencies.ps1
 ```
 
-4. After script install and compile, install `tauri-cli`:
+4. 在脚本安装与编译完成后，安装 `tauri-cli`:
 
 ```PowerShell
 PS > cargo install tauri-cli
 ```
 
-5. Switch terminal location to MirrorX root dir and run:
+5. 切换目录到 MirrorX 的根目录并且运行：
 
 ```PowerShell
 PS > cargo tauri dev
 ```
 
-### For MacOS
+### 对于 MacOS
 
-1. Switch terminal location to `MirrorX/third` and run shell script:
+1. 切换目录到 `MirrorX/third` 并运行 shell 脚本：
 
 ```console
 $ cd MirrorX/third
 $ ./build_dependencies.sh
 ```
 
-2. After script install and compile, install `tauri-cli`:
+2. 在脚本安装与编译完成后，安装 `tauri-cli`：
 
 ```console
 $ cargo install tauri-cli
 ```
 
-3. Switch terminal location to MirrorX root dir and run:
+3. 切换到 MirrorX 根目录并运行：
 
 ```console
 $ cargo tauri dev
 ```
 
-### Other Platforms
+### 其它平台
 
-not support yet
+暂不支持
 
-## Thanks
+## 感谢
 
-### Thanks these awesome open source project that make MirrorX becomes true.
+### 感谢那些令人惊叹的开源项目使得 MirrorX 得以成真.
 
-(listed partial with in no particular order, thanks all the authors of dependencies in Cargo.toml and package.json)
+(排名不分先后，仅列出部分项目, 感谢所有在 Cargo.toml 和 package.json 中依赖的库的作者)
 
 1. [Rust](https://github.com/rust-lang/rust)
 2. [Tokio](https://github.com/tokio-rs/tokio)
