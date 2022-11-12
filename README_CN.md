@@ -17,16 +17,13 @@
 </p>
 
 <p align="center">
-
-[English](https://github.com/MirrorX-Desktop/MirrorX/blob/master/README.md)
-
-[简体中文](https://github.com/MirrorX-Desktop/MirrorX/blob/master/README_CN.md)
-
+    <a href="https://github.com/MirrorX-Desktop/MirrorX/blob/master/README.md">English</a>
+    <a href="https://github.com/MirrorX-Desktop/MirrorX/blob/master/README_CN.md">简体中文</a>
 <p align="center">
 
 MirrorX 是一个使用 [Rust](https://github.com/rust-lang/rust) 构建的远程桌面控制软件。配合完全开源的客户端与服务端、原生支持的端到端加密，用户可以构造快速且安全的远程控制网络，并且完全处于用户控制之下。
 
-> **MirrorX 项目还处于早期积极开发阶段。请原谅我们暂时还无法做出任何向后兼容的承诺**
+> **MirrorX 项目还处于早期积极开发阶段。请原谅我们暂时还无法做出任何向后兼容的承诺。**
 
 ## 组件
 
