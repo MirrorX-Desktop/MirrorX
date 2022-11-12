@@ -81,11 +81,7 @@ pub async fn handle(
             Err(err) => {
                 tracing::error!(?err, "key agreement failed");
 
-                let reply = build_reply(
-                    req.active_device_id,
-                    req.passive_device_id,
-                    Err(KeyExchangeReplyError::Internal),
-                );
+                let reply = build_reply(req.active_device_id, req.passive_device_id, Err(err));
 
                 if let Err(err) = client.key_exchange_reply(reply).await {
                     tracing::error!(?req.active_device_id, ?req.passive_device_id, ?err, "reply key exchange request failed");

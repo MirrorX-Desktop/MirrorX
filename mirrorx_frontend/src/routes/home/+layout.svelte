@@ -66,7 +66,7 @@
 			setLocale((await invoke_get_language()) as Locales);
 			console.log('finish set locale');
 		} catch (error: any) {
-			await emitHomeNotification({ level: 'error', title: 'Error', message: error.toString() });
+			emitHomeNotification({ level: 'error', title: 'Error', message: error.toString() });
 		}
 	})();
 
@@ -75,7 +75,7 @@
 			current_domain.set(await invoke_get_current_domain());
 			await invoke_init_signaling({ force: true });
 		} catch (error: any) {
-			await emitHomeNotification({ level: 'error', title: 'Error', message: error.toString() });
+			emitHomeNotification({ level: 'error', title: 'Error', message: error.toString() });
 		}
 	};
 

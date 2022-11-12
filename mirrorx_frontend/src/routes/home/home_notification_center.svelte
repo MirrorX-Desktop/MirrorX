@@ -7,8 +7,8 @@
 		message: string;
 	}
 
-	export async function emitHomeNotification(notification: HomeNotificationEvent) {
-		await emit('settings_notification', notification);
+	export function emitHomeNotification(notification: HomeNotificationEvent) {
+		emit('home_notification', notification);
 	}
 </script>
 
@@ -24,7 +24,7 @@
 	$: notifications_reverse = notifications.reverse().slice(0, 2);
 
 	onMount(async () => {
-		unlisten_fn = await listen<string>('notification', (event) => {
+		unlisten_fn = await listen<string>('home_notification', (event) => {
 			let payload: HomeNotificationEvent = JSON.parse(event.payload);
 
 			let level_color: string = '';
@@ -58,7 +58,7 @@
 </script>
 
 <slot>
-	<div class="toast toast-top toast-center w-full">
+	<div class="toast toast-top toast-center w-full {notifications.length > 0 ? 'z-50' : 'z-0'}">
 		<div class="stack">
 			{#each notifications_reverse as notification}
 				<div

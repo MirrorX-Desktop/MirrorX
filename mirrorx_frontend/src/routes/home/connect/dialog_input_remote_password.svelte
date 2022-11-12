@@ -40,13 +40,22 @@
 				password: input_password
 			});
 		} catch (error: any) {
-			await emitHomeNotification({ level: 'error', title: 'Error', message: error.toString() });
+			console.log(error);
+			let err: string = error.toString();
+			if (err.includes('Internal')) {
+				err = 'Remote Device Internal Error';
+			} else if (err.includes('InvalidArgs')) {
+				err = 'Invalid Request Args Used at Key Exchange';
+			} else if (err.includes('InvalidPassword')) {
+				err = 'Incorrect Password';
+			}
+
+			emitHomeNotification({ level: 'error', title: 'Error', message: err.toString() });
 		} finally {
 			active_device_id = '';
 			passive_device_id = '';
 			input_password = '';
 			show_password = false;
-			console.log('emit desktop is connecting');
 			await emit('desktop_is_connecting', false);
 		}
 	};

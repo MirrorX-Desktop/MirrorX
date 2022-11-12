@@ -51,7 +51,7 @@
 				passiveDeviceId: passive_device_id
 			});
 		} catch (error: any) {
-			await emitHomeNotification({ level: 'error', title: 'Error', message: error.toString() });
+			emitHomeNotification({ level: 'error', title: 'Error', message: error.toString() });
 		} finally {
 			clearCountdown();
 		}

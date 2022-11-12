@@ -58,7 +58,7 @@ pub fn create_desktop_window(
 ) -> DesktopWindow {
     set_fonts(&cc.egui_ctx);
 
-    cc.egui_ctx.set_debug_on_hover(true);
+    // cc.egui_ctx.set_debug_on_hover(true);
 
     crate::window::desktop::DesktopWindow::new(
         local_device_id,

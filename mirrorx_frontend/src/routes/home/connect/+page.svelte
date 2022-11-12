@@ -104,7 +104,7 @@
 			random_password_generating = true;
 			device_password_display = await invoke_generate_random_password();
 		} catch (error: any) {
-			await emitHomeNotification({ level: 'error', title: 'Error', message: error.toString() });
+			emitHomeNotification({ level: 'error', title: 'Error', message: error.toString() });
 		}
 
 		random_password_generating = false;
@@ -124,7 +124,7 @@
 				current_domain.set(domain);
 			}
 		} catch (error: any) {
-			await emitHomeNotification({ level: 'error', title: 'Error', message: error.toString() });
+			emitHomeNotification({ level: 'error', title: 'Error', message: error.toString() });
 		}
 	};
 
@@ -137,7 +137,7 @@
 			await invoke_signaling_visit_request({ remoteDeviceId: input_remote_device_id });
 		} catch (error: any) {
 			await emit('desktop_is_connecting', false);
-			await emitHomeNotification({ level: 'error', title: 'Error', message: error.toString() });
+			emitHomeNotification({ level: 'error', title: 'Error', message: error.toString() });
 		}
 	};
 </script>
