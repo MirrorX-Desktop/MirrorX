@@ -7,8 +7,8 @@
 		message: string;
 	}
 
-	export function emitHomeNotification(notification: HomeNotificationEvent) {
-		emit('home_notification', notification);
+	export function emitHomeNotification(notification: HomeNotificationEvent): Promise<void> {
+		return emit('home_notification', notification);
 	}
 </script>
 

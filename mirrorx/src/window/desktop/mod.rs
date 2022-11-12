@@ -29,6 +29,9 @@ static ICON_ARROWS_LEFT_RIGHT_TO_LINE: Lazy<RetainedImage> = Lazy::new(|| {
 pub struct DesktopWindow {
     state: State,
     desktop_render: Arc<Mutex<DesktopRender>>,
+    press_alt: bool,
+    press_ctrl: bool,
+    press_shift: bool,
 }
 
 impl DesktopWindow {
@@ -59,6 +62,9 @@ impl DesktopWindow {
         Self {
             state,
             desktop_render: Arc::new(Mutex::new(desktop_render)),
+            press_alt: false,
+            press_ctrl: false,
+            press_shift: false,
         }
     }
 
@@ -158,7 +164,7 @@ impl DesktopWindow {
                             let input = ui.ctx().input();
                             let events = input.events.as_slice();
                             let left_top = view_port.left_top();
-                            self.emit_input(events, move |pos| pos + left_top.to_vec2());
+                            self.emit_input(events, move |pos| Some(pos + left_top.to_vec2()));
                         });
                 });
             } else {
@@ -200,10 +206,18 @@ impl DesktopWindow {
                 let input = ui.ctx().input();
                 let events = input.events.as_slice();
                 self.emit_input(events, move |pos| {
-                    Pos2::new(
-                        (pos.x - space_around_image.x).max(0.0) / scale_ratio,
-                        (pos.y - space_around_image.y).max(0.0) / scale_ratio,
-                    )
+                    if (space_around_image.x <= pos.x
+                        && pos.x <= space_around_image.x + desktop_size.0)
+                        && (space_around_image.y <= pos.y
+                            && pos.y <= space_around_image.y + desktop_size.1)
+                    {
+                        Some(Pos2::new(
+                            (pos.x - space_around_image.x).max(0.0) / scale_ratio,
+                            (pos.y - space_around_image.y).max(0.0) / scale_ratio,
+                        ))
+                    } else {
+                        None
+                    }
                 });
             }
         } else {
@@ -284,18 +298,23 @@ impl DesktopWindow {
 }
 
 impl DesktopWindow {
-    fn emit_input(&self, events: &[tauri_egui::egui::Event], pos_calc_fn: impl Fn(Pos2) -> Pos2) {
+    fn emit_input(
+        &mut self,
+        events: &[tauri_egui::egui::Event],
+        pos_calc_fn: impl Fn(Pos2) -> Option<Pos2>,
+    ) {
         if let Some(client) = self.state.endpoint_client() {
             let mut input_series = Vec::new();
             for event in events.iter() {
                 match event {
                     tauri_egui::egui::Event::PointerMoved(pos) => {
-                        let mouse_pos = pos_calc_fn(*pos);
-                        input_series.push(InputEvent::Mouse(MouseEvent::Move(
-                            MouseKey::None,
-                            mouse_pos.x,
-                            mouse_pos.y,
-                        )));
+                        if let Some(mouse_pos) = pos_calc_fn(*pos) {
+                            input_series.push(InputEvent::Mouse(MouseEvent::Move(
+                                MouseKey::None,
+                                mouse_pos.x,
+                                mouse_pos.y,
+                            )));
+                        }
                     }
                     tauri_egui::egui::Event::PointerButton {
                         pos,
@@ -303,7 +322,9 @@ impl DesktopWindow {
                         pressed,
                         modifiers,
                     } => {
-                        let mouse_pos = pos_calc_fn(*pos);
+                        let Some(mouse_pos) = pos_calc_fn(*pos)else{
+                            continue;
+                        };
 
                         let mouse_key = match button {
                             tauri_egui::egui::PointerButton::Primary => MouseKey::Left,
@@ -330,14 +351,59 @@ impl DesktopWindow {
                         pressed,
                         modifiers,
                     } => {
-                        // todo: modifiers order
-                        let keyboard_event = if *pressed {
-                            KeyboardEvent::KeyDown(map_key(*key))
-                        } else {
-                            KeyboardEvent::KeyUp(map_key(*key))
-                        };
+                        tracing::info!(?key, ?pressed, ?modifiers, "modifiers");
 
-                        input_series.push(InputEvent::Keyboard(keyboard_event));
+                        // todo: mac command map
+
+                        if *pressed {
+                            if modifiers.alt {
+                                self.press_alt = true;
+                                input_series.push(InputEvent::Keyboard(KeyboardEvent::KeyDown(
+                                    KeyboardKey::LeftAlt,
+                                )))
+                            }
+
+                            if modifiers.ctrl {
+                                self.press_ctrl = true;
+                                input_series.push(InputEvent::Keyboard(KeyboardEvent::KeyDown(
+                                    KeyboardKey::LeftControl,
+                                )))
+                            }
+
+                            if modifiers.shift {
+                                self.press_ctrl = true;
+                                input_series.push(InputEvent::Keyboard(KeyboardEvent::KeyDown(
+                                    KeyboardKey::LeftShift,
+                                )))
+                            }
+
+                            input_series
+                                .push(InputEvent::Keyboard(KeyboardEvent::KeyDown(map_key(*key))));
+                        } else {
+                            input_series
+                                .push(InputEvent::Keyboard(KeyboardEvent::KeyUp(map_key(*key))));
+
+                            if self.press_alt && !modifiers.alt {
+                                self.press_alt = false;
+                                input_series.push(InputEvent::Keyboard(KeyboardEvent::KeyUp(
+                                    KeyboardKey::LeftAlt,
+                                )))
+                            }
+
+                            if self.press_ctrl && !modifiers.ctrl {
+                                self.press_ctrl = false;
+                                input_series.push(InputEvent::Keyboard(KeyboardEvent::KeyUp(
+                                    KeyboardKey::LeftControl,
+                                )))
+                            }
+
+                            if self.press_shift && !modifiers.shift {
+                                self.press_shift = false;
+                                input_series.push(InputEvent::Keyboard(KeyboardEvent::KeyUp(
+                                    KeyboardKey::LeftShift,
+                                )))
+                            }
+                        }
                     }
                     tauri_egui::egui::Event::Text(text) => {
                         tracing::info!(?text, "input text");

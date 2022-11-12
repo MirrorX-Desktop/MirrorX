@@ -5,7 +5,7 @@ use crate::{
     error::CoreResult,
     ffi::ffmpeg::{avcodec::*, avutil::*},
 };
-use std::ffi::CString;
+use std::ffi::{CStr, CString};
 use tokio::sync::mpsc::Sender;
 pub struct VideoDecoder {
     decode_context: Option<DecodeContext>,
@@ -15,10 +15,10 @@ pub struct VideoDecoder {
 
 impl VideoDecoder {
     pub fn new(render_frame_tx: Sender<DesktopDecodeFrame>) -> VideoDecoder {
-        unsafe {
-            // av_log_set_level(AV_LOG_TRACE);
-            // av_log_set_flags(AV_LOG_SKIP_REPEATED);
-        }
+        // unsafe {
+        // av_log_set_level(AV_LOG_TRACE);
+        // av_log_set_flags(AV_LOG_SKIP_REPEATED);
+        // }
 
         VideoDecoder {
             decode_context: None,
@@ -42,44 +42,14 @@ impl VideoDecoder {
                     Some(DecodeContext::new(video_frame.width, video_frame.height)?);
             }
 
-            let decode_context = if let Some(decode_context) = self.decode_context.as_ref() {
-                decode_context
-            } else {
+            let Some(decode_context)= self.decode_context.as_ref() else{
                 return Err(core_error!("decode context is null"));
             };
 
-            // if !decode_context.parser_ctx.is_null() {
-            //     let mut out_data: *mut u8 = std::ptr::null_mut();
-            //     let mut out_size = 0;
-
-            //     let ret = av_parser_parse2(
-            //         (decode_context).parser_ctx,
-            //         (decode_context).codec_ctx,
-            //         &mut out_data,
-            //         &mut out_size,
-            //         video_frame.buffer.as_ptr(),
-            //         video_frame.buffer.len() as i32,
-            //         AV_NOPTS_VALUE,
-            //         AV_NOPTS_VALUE,
-            //         0,
-            //     );
-
-            //     if ret < 0 {
-            //         return Err(core_error!("av_parser_parse2 returns error code: {}", ret));
-            //     }
-
-            //     if !out_data.is_null() && out_size > 0 {
-            //         (*(decode_context).packet).data = out_data;
-            //         (*(decode_context).packet).size = out_size;
-            //     } else {
-            //         return Ok(());
-            //     }
-            // } else {
             (*(decode_context).packet).data = video_frame.buffer.as_mut_ptr();
             (*(decode_context).packet).size = video_frame.buffer.len() as i32;
             (*(decode_context).packet).pts = video_frame.pts;
             (*(decode_context).packet).dts = video_frame.pts;
-            // }
 
             let mut ret = avcodec_send_packet((decode_context).codec_ctx, (decode_context).packet);
 
@@ -109,17 +79,17 @@ impl VideoDecoder {
                     ));
                 }
 
-                let tmp_frame = if !(decode_context).parser_ctx.is_null() {
-                    (decode_context).decode_frame
+                let tmp_frame = if !(*decode_context.codec_ctx).hw_device_ctx.is_null() {
+                    decode_context.decode_frame
                 } else {
-                    let transfer_instant = std::time::Instant::now();
+                    // let transfer_instant = std::time::Instant::now();
                     let ret = av_hwframe_transfer_data(
                         (decode_context).hw_decode_frame,
                         (decode_context).decode_frame,
                         0,
                     );
-                    let cost = transfer_instant.elapsed();
-                    tracing::info!(?cost, "hardware decode frame transfer cost");
+                    // let cost = transfer_instant.elapsed();
+                    // tracing::info!(?cost, "hardware decode frame transfer cost");
 
                     if ret < 0 {
                         return Err(core_error!(
@@ -181,16 +151,6 @@ impl VideoDecoder {
                     }
                 };
 
-                // let mut dumpyuv = Vec::new();
-                // dumpyuv.extend_from_slice(&plane_data[0]);
-                // dumpyuv.extend_from_slice(&plane_data[1]);
-                // dumpyuv.extend_from_slice(&plane_data[2]);
-
-                // if let Err(err) = std::fs::write("/Users/chenbaiyu/workspace/dump", &dumpyuv) {
-                //     tracing::error!(?err);
-                // }
-                // std::process::exit(0);
-
                 let desktop_decode_frame = DesktopDecodeFrame {
                     width: (*tmp_frame).width,
                     height: (*tmp_frame).height,
@@ -216,19 +176,8 @@ impl VideoDecoder {
     }
 }
 
-impl Drop for VideoDecoder {
-    fn drop(&mut self) {
-        // if !self.decode_context.is_null() {
-        //     unsafe {
-        //         let _ = Box::from_raw(self.decode_context);
-        //     }
-        // }
-    }
-}
-
 struct DecodeContext {
     codec_ctx: *mut AVCodecContext,
-    parser_ctx: *mut AVCodecParserContext,
     packet: *mut AVPacket,
     decode_frame: *mut AVFrame,
     hw_decode_frame: *mut AVFrame,
@@ -239,7 +188,7 @@ impl DecodeContext {
         unsafe {
             let mut decode_ctx = DecodeContext::default();
 
-            let codec = avcodec_find_decoder_by_name(CString::new("h264").unwrap().as_ptr()); //avcodec_find_decoder(AV_CODEC_ID_H264); //
+            let codec = avcodec_find_decoder(AV_CODEC_ID_H264);
 
             if codec.is_null() {
                 return Err(core_error!("avcodec_find_decoder returns null"));
@@ -258,63 +207,58 @@ impl DecodeContext {
             // (*decode_ctx.codec_ctx).color_primaries = AVCOL_PRI_BT709;
             // (*decode_ctx.codec_ctx).color_trc = AVCOL_TRC_BT709;
             // (*decode_ctx.codec_ctx).colorspace = AVCOL_SPC_BT709;
-            (*decode_ctx.codec_ctx).flags2 |= AV_CODEC_FLAG2_LOCAL_HEADER;
+            // (*decode_ctx.codec_ctx).flags2 |= AV_CODEC_FLAG2_LOCAL_HEADER;
 
-            // let mut hw_device_type = av_hwdevice_find_type_by_name(
-            //     CString::new(if cfg!(target_os = "windows") {
-            //         "d3d11va"
-            //     } else {
-            //         "videotoolbox"
-            //     })?
-            //     .as_ptr(),
-            // );
+            let mut hw_device_type = av_hwdevice_find_type_by_name(
+                CString::new(if cfg!(target_os = "windows") {
+                    "d3d11va"
+                } else {
+                    "videotoolbox"
+                })?
+                .as_ptr(),
+            );
 
-            // if hw_device_type == AV_HWDEVICE_TYPE_NONE {
-            //     tracing::error!("current environment does't support hardware decode");
+            if hw_device_type == AV_HWDEVICE_TYPE_NONE {
+                tracing::error!("current environment does't support hardware decode");
 
-            //     let mut devices = Vec::new();
-            //     loop {
-            //         hw_device_type = av_hwdevice_iterate_types(hw_device_type);
-            //         if hw_device_type == AV_HWDEVICE_TYPE_NONE {
-            //             break;
-            //         }
+                let mut devices = Vec::new();
+                loop {
+                    hw_device_type = av_hwdevice_iterate_types(hw_device_type);
+                    if hw_device_type == AV_HWDEVICE_TYPE_NONE {
+                        break;
+                    }
 
-            //         let device_name = av_hwdevice_get_type_name(hw_device_type);
+                    let device_name = av_hwdevice_get_type_name(hw_device_type);
 
-            //         devices.push(
-            //             CStr::from_ptr(device_name)
-            //                 .to_str()
-            //                 .map_or("unknown", |v| v),
-            //         );
-            //     }
+                    devices.push(
+                        CStr::from_ptr(device_name)
+                            .to_str()
+                            .map_or("unknown", |v| v),
+                    );
+                }
 
-            //     tracing::info!(?devices, "support hw device");
-            //     tracing::info!("init software decoder");
+                tracing::info!(?devices, "current environment support hw device");
+                tracing::info!("use software decoder");
+            } else {
+                let mut hwdevice_ctx = std::ptr::null_mut();
 
-            decode_ctx.parser_ctx = av_parser_init((*codec).id);
-            if decode_ctx.parser_ctx.is_null() {
-                return Err(core_error!("av_parser_init returns null"));
+                let ret = av_hwdevice_ctx_create(
+                    &mut hwdevice_ctx,
+                    hw_device_type,
+                    std::ptr::null(),
+                    std::ptr::null_mut(),
+                    0,
+                );
+
+                if ret < 0 {
+                    return Err(core_error!(
+                        "av_hwdevice_ctx_create returns error code: {}",
+                        ret,
+                    ));
+                }
+
+                (*decode_ctx.codec_ctx).hw_device_ctx = av_buffer_ref(hwdevice_ctx);
             }
-            // } else {
-            //     let mut hwdevice_ctx = std::ptr::null_mut();
-
-            //     let ret = av_hwdevice_ctx_create(
-            //         &mut hwdevice_ctx,
-            //         hw_device_type,
-            //         std::ptr::null(),
-            //         std::ptr::null_mut(),
-            //         0,
-            //     );
-
-            //     if ret < 0 {
-            //         return Err(core_error!(
-            //             "av_hwdevice_ctx_create returns error code: {}",
-            //             ret,
-            //         ));
-            //     }
-
-            //     (*decode_ctx.codec_ctx).hw_device_ctx = av_buffer_ref(hwdevice_ctx);
-            // }
 
             decode_ctx.packet = av_packet_alloc();
             if decode_ctx.packet.is_null() {
@@ -345,7 +289,6 @@ impl Default for DecodeContext {
     fn default() -> Self {
         Self {
             codec_ctx: std::ptr::null_mut(),
-            parser_ctx: std::ptr::null_mut(),
             packet: std::ptr::null_mut(),
             decode_frame: std::ptr::null_mut(),
             hw_decode_frame: std::ptr::null_mut(),
@@ -362,10 +305,6 @@ impl Drop for DecodeContext {
 
             if !self.hw_decode_frame.is_null() {
                 av_frame_free(&mut self.hw_decode_frame);
-            }
-
-            if !self.parser_ctx.is_null() {
-                av_parser_close(self.parser_ctx);
             }
 
             if !self.decode_frame.is_null() {

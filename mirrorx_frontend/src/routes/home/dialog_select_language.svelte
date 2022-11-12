@@ -17,19 +17,21 @@
 	let unlisten_fn: UnlistenFn | null = null;
 
 	$: {
-		if (language && language.length > 0) {
-			try {
-				invoke_set_language({ language });
-			} catch (error: any) {
-				emitHomeNotification({
-					level: 'error',
-					title: 'Error',
-					message: error.toString()
-				});
-			} finally {
-				show = false;
+		(async function () {
+			if (language && language.length > 0) {
+				try {
+					await invoke_set_language({ language });
+				} catch (error: any) {
+					await emitHomeNotification({
+						level: 'error',
+						title: 'Error',
+						message: error.toString()
+					});
+				} finally {
+					show = false;
+				}
 			}
-		}
+		})();
 	}
 
 	const localeAndDisplayNames: Array<{ code: string; name: string }> = [

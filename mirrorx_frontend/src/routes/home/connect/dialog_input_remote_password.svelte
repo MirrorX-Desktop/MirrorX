@@ -50,7 +50,7 @@
 				err = 'Incorrect Password';
 			}
 
-			emitHomeNotification({ level: 'error', title: 'Error', message: err.toString() });
+			await emitHomeNotification({ level: 'error', title: 'Error', message: err.toString() });
 		} finally {
 			active_device_id = '';
 			passive_device_id = '';
