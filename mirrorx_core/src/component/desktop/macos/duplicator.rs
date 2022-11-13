@@ -1,5 +1,7 @@
 use crate::{
-    component::{desktop::monitor::NSScreen, frame::DesktopEncodeFrame},
+    component::{
+        desktop::monitor::NSScreen, frame::DesktopEncodeFrame, video_encoder::config::EncoderType,
+    },
     core_error,
     error::CoreResult,
     ffi::os::macos::{core_graphics::*, core_video::*, io_surface::*},
@@ -161,7 +163,7 @@ unsafe fn frame_available_handler(
         }
     }
 
-    CVPixelBufferLockBaseAddress(pixel_buffer, 1);
+    CVPixelBufferLockBaseAddress(pixel_buffer, 0);
 
     let width = CVPixelBufferGetWidth(pixel_buffer);
     let height = CVPixelBufferGetHeight(pixel_buffer);
@@ -180,7 +182,7 @@ unsafe fn frame_available_handler(
     )
     .to_vec();
 
-    CVPixelBufferUnlockBaseAddress(pixel_buffer, 1);
+    CVPixelBufferUnlockBaseAddress(pixel_buffer, 0);
 
     let capture_frame = DesktopEncodeFrame {
         capture_time,

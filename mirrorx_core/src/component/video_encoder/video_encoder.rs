@@ -17,10 +17,10 @@ impl VideoEncoder {
     pub fn new(encoder_type: EncoderType, client: EndPointClient) -> CoreResult<VideoEncoder> {
         let encode_config = encoder_type.create_config();
 
-        // unsafe {
-        // av_log_set_level(AV_LOG_INFO);
-        // av_log_set_flags(AV_LOG_SKIP_REPEATED);
-        // }
+        unsafe {
+            av_log_set_level(AV_LOG_INFO);
+            av_log_set_flags(AV_LOG_SKIP_REPEATED);
+        }
         Ok(VideoEncoder {
             encode_config,
             encode_context: std::ptr::null_mut(),
@@ -58,6 +58,9 @@ impl VideoEncoder {
                     ret
                 ));
             }
+
+            let pix_format = (*(*self.encode_context).frame).format;
+            tracing::info!(?pix_format, "pix_format");
 
             (*(*self.encode_context).frame).data[0] =
                 capture_frame.luminance_bytes.as_ptr() as *mut _;
@@ -186,7 +189,7 @@ impl EncodeContext {
 
             encoder_config.apply_option(encoder_context.codec_ctx)?;
 
-            let mut ret = av_frame_get_buffer(encoder_context.frame, 1);
+            let mut ret = av_frame_get_buffer(encoder_context.frame, 64);
             if ret < 0 {
                 return Err(core_error!(
                     "av_frame_get_buffer returns error code: {}",
@@ -195,7 +198,7 @@ impl EncodeContext {
             }
 
             let packet_size =
-                av_image_get_buffer_size((*encoder_context.codec_ctx).pix_fmt, width, height, 32);
+                av_image_get_buffer_size((*encoder_context.codec_ctx).pix_fmt, width, height, 64);
 
             ret = av_new_packet(encoder_context.packet, packet_size);
             if ret < 0 {

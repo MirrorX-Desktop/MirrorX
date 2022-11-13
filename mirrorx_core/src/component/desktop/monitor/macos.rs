@@ -55,7 +55,7 @@ pub fn get_active_monitors(take_screen_shot: bool) -> CoreResult<Vec<Monitor>> {
 
             displays.push(Monitor {
                 id: display_id.to_string(),
-                name: ns_screen.localizedName(),
+                name: String::default(), //ns_screen.localizedName(),
                 refresh_rate: (ns_screen.maximumFramesPerSecond().min(u8::MAX as isize)) as u8,
                 width: monitor_width as u16,
                 height: monitor_height as u16,

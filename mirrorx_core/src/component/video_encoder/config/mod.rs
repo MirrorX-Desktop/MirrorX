@@ -13,6 +13,7 @@ use crate::{
 use std::ffi::CString;
 
 #[allow(unused)]
+#[derive(Clone)]
 pub enum EncoderType {
     Libx264,
     H264VideoToolbox,

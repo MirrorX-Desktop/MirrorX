@@ -4,6 +4,9 @@ use core_foundation::{
 };
 use std::os::raw::c_void;
 
+pub static kCVPixelFormatType_420YpCbCr8Planar: u32 = four_char_code('y', '4', '2', '0');
+pub static kCVPixelFormatType_420YpCbCr8PlanarFullRange: u32 = four_char_code('f', '4', '2', '0');
+
 pub static kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange: u32 =
     four_char_code('4', '2', '0', 'v');
 pub static kCVPixelFormatType_420YpCbCr8BiPlanarFullRange: u32 = four_char_code('4', '2', '0', 'f');

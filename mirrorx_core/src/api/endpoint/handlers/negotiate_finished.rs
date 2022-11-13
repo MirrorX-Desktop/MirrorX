@@ -73,6 +73,8 @@ fn spawn_desktop_capture_and_encode_process(client: EndPointClient) {
             }
         };
 
+        tracing::info!(?select_monitor.width,?select_monitor.height,"select monitor");
+
         PASSIVE_ENDPOINTS_MONITORS.insert(client.id, select_monitor);
 
         if let Err(err) = duplicator.start() {
