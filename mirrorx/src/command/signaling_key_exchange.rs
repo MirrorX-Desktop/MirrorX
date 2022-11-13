@@ -6,6 +6,7 @@ use tauri_egui::EguiPluginHandle;
 #[tauri::command]
 #[tracing::instrument(skip(state, egui_plugin))]
 pub async fn signaling_key_exchange(
+    addr: String,
     local_device_id: String,
     remote_device_id: String,
     password: String,
@@ -45,6 +46,7 @@ pub async fn signaling_key_exchange(
                     resp.sealing_key_bytes,
                     resp.sealing_nonce_bytes,
                     resp.visit_credentials,
+                    addr,
                 ))
             } else {
                 panic!("get gl context failed");

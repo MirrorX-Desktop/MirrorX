@@ -90,8 +90,9 @@ impl EndPointClient {
         opening_key: OpeningKey<NonceValue>,
         sealing_key: SealingKey<NonceValue>,
         visit_credentials: String,
+        addr: &str,
     ) -> CoreResult<Self> {
-        let mut stream = connect("192.168.0.101:28001").await?;
+        let mut stream = connect(&format!("{}:29000", addr)).await?;
 
         handshake(
             &mut stream,

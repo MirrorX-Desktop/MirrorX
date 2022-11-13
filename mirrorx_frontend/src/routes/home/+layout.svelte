@@ -57,14 +57,18 @@
 		try {
 			await invoke_init_config();
 			console.log('finish init config');
-			await invoke_init_language();
-			console.log('finish init language');
-			current_domain.set(await invoke_get_current_domain());
-			console.log('finish init current domain');
+
 			await invoke_init_signaling({ force: false });
 			console.log('finish init signaling');
+
+			await invoke_init_language();
+			console.log('finish init language');
+
 			setLocale((await invoke_get_language()) as Locales);
 			console.log('finish set locale');
+
+			current_domain.set(await invoke_get_current_domain());
+			console.log('finish init current domain');
 		} catch (error: any) {
 			await emitHomeNotification({ level: 'error', title: 'Error', message: error.toString() });
 		}

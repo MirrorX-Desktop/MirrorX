@@ -53,6 +53,7 @@ impl State {
         sealing_key: Vec<u8>,
         sealing_nonce: Vec<u8>,
         visit_credentials: String,
+        addr: String,
     ) -> Self {
         let (tx, rx) = tokio::sync::mpsc::channel(360);
 
@@ -66,6 +67,7 @@ impl State {
                 sealing_key,
                 sealing_nonce,
                 visit_credentials,
+                addr,
             }
         );
 
@@ -142,6 +144,7 @@ impl State {
                     sealing_key,
                     sealing_nonce,
                     visit_credentials,
+                    addr,
                 } => {
                     self.connect_endpoint(
                         local_device_id,
@@ -151,6 +154,7 @@ impl State {
                         opening_key,
                         opening_nonce,
                         visit_credentials,
+                        addr,
                     );
                 }
                 Event::UpdateEndPointClient { client } => self.endpoint_client = Some(client),
@@ -182,6 +186,7 @@ impl State {
         opening_key: Vec<u8>,
         opening_nonce: Vec<u8>,
         visit_credentials: String,
+        addr: String,
     ) {
         let res = || -> CoreResult<(SealingKey<NonceValue>, OpeningKey<NonceValue>)> {
             let unbound_sealing_key =
@@ -213,6 +218,7 @@ impl State {
                         opening_key,
                         sealing_key,
                         visit_credentials,
+                        &addr,
                     )
                     .await
                     {

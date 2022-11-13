@@ -3,11 +3,13 @@ use crate::utility::format_device_id;
 use super::UIState;
 use mirrorx_core::{api::signaling::ResourceType, core_error, error::CoreResult};
 use serde::Serialize;
+use tauri::http::Uri;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct PopupDialogInputRemotePasswordEvent {
     pub active_device_id: String,
     pub passive_device_id: String,
+    pub addr: String,
 }
 
 #[tauri::command]
@@ -23,6 +25,14 @@ pub async fn signaling_visit_request(
     let domain = domain
         .as_ref()
         .ok_or_else(|| core_error!("current domain is empty"))?;
+
+    let Ok(uri)= Uri::try_from(&domain.addr)else{
+        return Err(core_error!("invalid domain addr"));
+    };
+
+    let Some(host)= uri.host()else{
+        return Err(core_error!("domain addr does not contains host"));
+    };
 
     let signaling_provider = state.signaling_client.lock().await;
     let signaling_provider = signaling_provider
@@ -43,6 +53,7 @@ pub async fn signaling_visit_request(
             PopupDialogInputRemotePasswordEvent {
                 active_device_id: format_device_id(domain.device_id),
                 passive_device_id: format_device_id(remote_device_id),
+                addr: host.to_string(),
             },
         ) {
             tracing::error!(

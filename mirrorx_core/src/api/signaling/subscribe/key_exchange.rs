@@ -10,48 +10,32 @@ use signaling_proto::message::{
     KeyExchangePassiveDeviceSecret, KeyExchangeReplyError, KeyExchangeReplyRequest,
     KeyExchangeRequest, KeyExchangeResult,
 };
-use tonic::transport::Channel;
+use tonic::transport::{Channel, Uri};
 
 pub async fn handle(
     client: &mut signaling_proto::service::signaling_client::SignalingClient<Channel>,
     domain: Domain,
     req: &KeyExchangeRequest,
 ) {
-    // let reply = match key_agreement(config_path, domain, req).await {
-    //     Ok((
-    //         secret_buffer,
-    //         active_device_id,
-    //         passive_device_id,
-    //         domain,
-    //         visit_credentials,
-    //         sealing_key,
-    //         opening_key,
-    //     )) => {
-    //         if let Err(err) = build_endpoint(
-    //             passive_device_id,
-    //             active_device_id,
-    //             domain,
-    //             visit_credentials,
-    //             opening_key,
-    //             sealing_key,
-    //         )
-    //         .await
-    //         {
-    //             tracing::error!(?err, "build endpoint failed");
-    //             Either::Right(KeyExchangeReplyError::Internal)
-    //         } else {
-    //             Either::Left(secret_buffer)
-    //         }
-    //     }
-    //     Err(err) => {
-    //         if let CoreError::KeyExchangeReplyError(err) = err {
-    //             Either::Right(err)
-    //         } else {
-    //             tracing::error!(?err, "handle key agreement failed");
-    //             Either::Right(KeyExchangeReplyError::Internal)
-    //         }
-    //     }
-    // };
+    let Ok(uri) = Uri::try_from(&domain.addr)else{
+let reply = build_reply(req.active_device_id, req.passive_device_id, Err(KeyExchangeReplyError::Internal));
+
+                if let Err(err) = client.key_exchange_reply(reply).await {
+                    tracing::error!(?req.active_device_id, ?req.passive_device_id, ?err, "reply key exchange request failed");
+                }
+
+                return;
+    };
+
+    let Some(host) = uri.host() else{
+        let reply = build_reply(req.active_device_id, req.passive_device_id, Err(KeyExchangeReplyError::Internal));
+
+                if let Err(err) = client.key_exchange_reply(reply).await {
+                    tracing::error!(?req.active_device_id, ?req.passive_device_id, ?err, "reply key exchange request failed");
+                }
+
+                return;
+    };
 
     let (active_device_id, passive_device_id, _, visit_credentials, sealing_key, opening_key) =
         match key_agreement(&domain, req).await {
@@ -97,6 +81,7 @@ pub async fn handle(
         opening_key,
         sealing_key,
         visit_credentials,
+        host,
     )
     .await
     {

@@ -146,7 +146,13 @@
 	{#if domain && domain.device_id && domain.name && domain.password}
 		<div class="mx-2 flex h-full flex-col">
 			<div class="my-3 text-center text-3xl">{$LL.Home.Pages.Connect.DeviceID()}</div>
-			<div class="my-3 text-center text-4xl">{domain.device_id}</div>
+			<div class="my-3 text-center text-4xl">
+				{#if domain}
+					{domain.device_id}
+				{:else}
+					<Fa class="w-full text-center" icon={faSpinner} spin={true} size={'sm'} />
+				{/if}
+			</div>
 			<div class="my-3 text-center text-3xl">{$LL.Home.Pages.Connect.Password()}</div>
 			<div class="my-3 text-center">
 				{#if edit_password}

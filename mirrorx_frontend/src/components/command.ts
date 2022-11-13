@@ -29,6 +29,7 @@ export function invoke_signaling_visit_request(args: { remoteDeviceId: string })
 }
 
 export function invoke_signaling_key_exchange(args: {
+	addr: string;
 	localDeviceId: string;
 	remoteDeviceId: string;
 	password: string;

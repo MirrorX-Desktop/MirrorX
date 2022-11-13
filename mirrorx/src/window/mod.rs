@@ -55,6 +55,7 @@ pub fn create_desktop_window(
     sealing_key: Vec<u8>,
     sealing_nonce: Vec<u8>,
     visit_credentials: String,
+    addr: String,
 ) -> DesktopWindow {
     set_fonts(&cc.egui_ctx);
 
@@ -68,6 +69,7 @@ pub fn create_desktop_window(
         sealing_key,
         sealing_nonce,
         visit_credentials,
+        addr,
         gl_context,
     )
 }

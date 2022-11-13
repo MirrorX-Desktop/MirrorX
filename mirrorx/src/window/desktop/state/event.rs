@@ -17,6 +17,7 @@ pub enum Event {
         sealing_key: Vec<u8>,
         sealing_nonce: Vec<u8>,
         visit_credentials: String,
+        addr: String,
     },
 
     UpdateEndPointClient {

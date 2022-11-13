@@ -9,6 +9,7 @@
 
 	var active_device_id: string = '';
 	var passive_device_id: string = '';
+	var addr: string = '';
 	var show = false;
 	var input_password: string = '';
 	var show_password = false;
@@ -18,9 +19,11 @@
 		unlisten_fn = await listen<{
 			active_device_id: string;
 			passive_device_id: string;
+			addr: string;
 		}>('popup_dialog_input_remote_password', (event) => {
 			active_device_id = event.payload.active_device_id;
 			passive_device_id = event.payload.passive_device_id;
+			addr = event.payload.addr;
 			show = true;
 		});
 	});
@@ -35,6 +38,7 @@
 		try {
 			show = false;
 			await invoke_signaling_key_exchange({
+				addr,
 				localDeviceId: active_device_id,
 				remoteDeviceId: passive_device_id,
 				password: input_password
@@ -54,6 +58,7 @@
 		} finally {
 			active_device_id = '';
 			passive_device_id = '';
+			addr = '';
 			input_password = '';
 			show_password = false;
 			await emit('desktop_is_connecting', false);
@@ -63,6 +68,7 @@
 	const cancel = async () => {
 		active_device_id = '';
 		passive_device_id = '';
+		addr = '';
 		input_password = '';
 		show_password = false;
 		console.log('emit desktop is connecting');

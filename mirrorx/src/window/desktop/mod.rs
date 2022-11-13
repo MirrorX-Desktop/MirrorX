@@ -44,6 +44,7 @@ impl DesktopWindow {
         sealing_key: Vec<u8>,
         sealing_nonce: Vec<u8>,
         visit_credentials: String,
+        addr: String,
         gl_context: Arc<Context>,
     ) -> Self {
         let state = State::new(
@@ -54,6 +55,7 @@ impl DesktopWindow {
             sealing_key,
             sealing_nonce,
             visit_credentials,
+            addr,
         );
 
         let desktop_render =
