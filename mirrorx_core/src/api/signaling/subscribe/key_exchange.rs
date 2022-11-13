@@ -1,4 +1,7 @@
-use crate::{api::config::entity::domain::Domain, utility::nonce_value::NonceValue};
+use crate::{
+    api::config::{entity::domain::Domain, LocalStorage},
+    utility::nonce_value::NonceValue,
+};
 use hmac::Hmac;
 use prost::Message;
 use rand::RngCore;
@@ -14,26 +17,26 @@ use tonic::transport::{Channel, Uri};
 
 pub async fn handle(
     client: &mut signaling_proto::service::signaling_client::SignalingClient<Channel>,
-    domain: Domain,
+    domain_id: i64,
     req: &KeyExchangeRequest,
 ) {
+    let Ok(storage)= LocalStorage::current()else{
+                send_key_exchange_reply(client, req.active_device_id, req.passive_device_id, Err(KeyExchangeReplyError::Internal)).await;
+                return;
+    };
+
+    let Ok(domain) = storage.domain().get_domain_by_id(domain_id)else{
+       send_key_exchange_reply(client, req.active_device_id, req.passive_device_id, Err(KeyExchangeReplyError::Internal)).await;
+                return;
+    };
+
     let Ok(uri) = Uri::try_from(&domain.addr)else{
-let reply = build_reply(req.active_device_id, req.passive_device_id, Err(KeyExchangeReplyError::Internal));
-
-                if let Err(err) = client.key_exchange_reply(reply).await {
-                    tracing::error!(?req.active_device_id, ?req.passive_device_id, ?err, "reply key exchange request failed");
-                }
-
+send_key_exchange_reply(client, req.active_device_id, req.passive_device_id, Err(KeyExchangeReplyError::Internal)).await;
                 return;
     };
 
     let Some(host) = uri.host() else{
-        let reply = build_reply(req.active_device_id, req.passive_device_id, Err(KeyExchangeReplyError::Internal));
-
-                if let Err(err) = client.key_exchange_reply(reply).await {
-                    tracing::error!(?req.active_device_id, ?req.passive_device_id, ?err, "reply key exchange request failed");
-                }
-
+   send_key_exchange_reply(client, req.active_device_id, req.passive_device_id, Err(KeyExchangeReplyError::Internal)).await;
                 return;
     };
 
@@ -47,11 +50,13 @@ let reply = build_reply(req.active_device_id, req.passive_device_id, Err(KeyExch
                 sealing_key,
                 opening_key,
             )) => {
-                let reply = build_reply(active_device_id, passive_device_id, Ok(secret));
-                if let Err(err) = client.key_exchange_reply(reply).await {
-                    tracing::error!(?req.active_device_id, ?req.passive_device_id, ?err, "reply key exchange request failed");
-                    return;
-                }
+                send_key_exchange_reply(
+                    client,
+                    req.active_device_id,
+                    req.passive_device_id,
+                    Ok(secret),
+                )
+                .await;
 
                 (
                     active_device_id,
@@ -65,11 +70,13 @@ let reply = build_reply(req.active_device_id, req.passive_device_id, Err(KeyExch
             Err(err) => {
                 tracing::error!(?err, "key agreement failed");
 
-                let reply = build_reply(req.active_device_id, req.passive_device_id, Err(err));
-
-                if let Err(err) = client.key_exchange_reply(reply).await {
-                    tracing::error!(?req.active_device_id, ?req.passive_device_id, ?err, "reply key exchange request failed");
-                }
+                send_key_exchange_reply(
+                    client,
+                    req.active_device_id,
+                    req.passive_device_id,
+                    Err(err),
+                )
+                .await;
 
                 return;
             }
@@ -111,6 +118,8 @@ async fn key_agreement(
     if req.secret_nonce.len() != ring::aead::NONCE_LEN {
         return Err(KeyExchangeReplyError::InvalidArgs);
     }
+
+    tracing::info!(?domain.password,"domain password");
 
     // generate secret opening key with salt
     let mut active_device_secret_opening_key = [0u8; 32];
@@ -287,21 +296,31 @@ async fn key_agreement(
     ))
 }
 
-fn build_reply(
+async fn send_key_exchange_reply(
+    client: &mut signaling_proto::service::signaling_client::SignalingClient<Channel>,
     active_device_id: i64,
     passive_device_id: i64,
     reply: Result<Vec<u8>, KeyExchangeReplyError>,
-) -> KeyExchangeReplyRequest {
+) {
     let inner_key_exchange_result = match reply {
         Ok(secret) => InnerKeyExchangeResult::Secret(secret),
         Err(err) => InnerKeyExchangeResult::Error(err.into()),
     };
 
-    KeyExchangeReplyRequest {
+    let reply = KeyExchangeReplyRequest {
         active_device_id,
         passive_device_id,
         key_exchange_result: Some(KeyExchangeResult {
             inner_key_exchange_result: Some(inner_key_exchange_result),
         }),
+    };
+
+    if let Err(err) = client.key_exchange_reply(reply).await {
+        tracing::error!(
+            ?active_device_id,
+            ?passive_device_id,
+            ?err,
+            "reply key exchange request failed"
+        );
     }
 }

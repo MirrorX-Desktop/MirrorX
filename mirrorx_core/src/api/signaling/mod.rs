@@ -54,7 +54,15 @@ impl SignalingProvider {
 
         let (exit_tx, exit_rx) = tokio::sync::mpsc::channel(1);
 
-        subscribe::subscribe(&mut client, domain.clone(), publish_message_tx, exit_rx).await;
+        subscribe::subscribe(
+            &mut client,
+            domain.id,
+            domain.device_id,
+            domain.finger_print.clone(),
+            publish_message_tx,
+            exit_rx,
+        )
+        .await;
 
         Ok((
             Self {
