@@ -378,6 +378,9 @@ impl DesktopRender {
         gl.bind_texture(TEXTURE_2D, Some(self.textures[0]));
         check_for_gl_error!(gl);
 
+        gl.pixel_store_i32(UNPACK_ROW_LENGTH, frame.line_sizes[0]);
+        check_for_gl_error!(gl);
+
         gl.tex_sub_image_2d(
             TEXTURE_2D,
             0,
@@ -402,6 +405,9 @@ impl DesktopRender {
         check_for_gl_error!(gl);
 
         gl.bind_texture(TEXTURE_2D, Some(self.textures[1]));
+        check_for_gl_error!(gl);
+
+        gl.pixel_store_i32(UNPACK_ROW_LENGTH, frame.line_sizes[1]);
         check_for_gl_error!(gl);
 
         gl.tex_sub_image_2d(
@@ -432,6 +438,9 @@ impl DesktopRender {
         gl.bind_texture(TEXTURE_2D, Some(self.textures[0]));
         check_for_gl_error!(gl);
 
+        gl.pixel_store_i32(UNPACK_ROW_LENGTH, frame.line_sizes[0]);
+        check_for_gl_error!(gl);
+
         gl.tex_sub_image_2d(
             TEXTURE_2D,
             0,
@@ -458,6 +467,9 @@ impl DesktopRender {
         gl.bind_texture(TEXTURE_2D, Some(self.textures[1]));
         check_for_gl_error!(gl);
 
+        gl.pixel_store_i32(UNPACK_ROW_LENGTH, frame.line_sizes[1]);
+        check_for_gl_error!(gl);
+
         gl.tex_sub_image_2d(
             TEXTURE_2D,
             0,
@@ -482,6 +494,9 @@ impl DesktopRender {
         check_for_gl_error!(gl);
 
         gl.bind_texture(TEXTURE_2D, Some(self.textures[2]));
+        check_for_gl_error!(gl);
+
+        gl.pixel_store_i32(UNPACK_ROW_LENGTH, frame.line_sizes[2]);
         check_for_gl_error!(gl);
 
         gl.tex_sub_image_2d(
@@ -518,9 +533,6 @@ unsafe fn create_texture(
 
     gl.bind_texture(TEXTURE_2D, Some(texture));
     check_for_gl_error!(gl);
-
-    // gl.pixel_store_i32(UNPACK_ROW_LENGTH, stride);
-    // check_for_gl_error!(gl);
 
     gl.tex_image_2d(
         TEXTURE_2D,

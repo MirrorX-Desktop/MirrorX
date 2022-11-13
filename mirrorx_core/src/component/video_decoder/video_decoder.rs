@@ -15,10 +15,10 @@ pub struct VideoDecoder {
 
 impl VideoDecoder {
     pub fn new(render_frame_tx: Sender<DesktopDecodeFrame>) -> VideoDecoder {
-        // unsafe {
-        // av_log_set_level(AV_LOG_TRACE);
-        // av_log_set_flags(AV_LOG_SKIP_REPEATED);
-        // }
+        unsafe {
+            av_log_set_level(AV_LOG_TRACE);
+            av_log_set_flags(AV_LOG_SKIP_REPEATED);
+        }
 
         VideoDecoder {
             decode_context: None,
