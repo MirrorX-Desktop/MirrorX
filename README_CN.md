@@ -40,12 +40,13 @@ MirrorX 是一个使用 [Rust](https://github.com/rust-lang/rust) 构建的远�
 - [ ] iOS
 - [ ] Web
 
-## 如何构造
+## 如何构建
 
 ### 先决条件
 
-1. `nodejs && npm && yarn`
-2. 对于 Windows: `Visual Studio 2019+ && C++桌面开发`
+1. 已安装 `nodejs && npm && yarn`
+2. `ProtoBuf Compiler (protoc)` 可在环境变量中查找
+3. 对于 Windows：已安装 `Visual Studio 2019+ && C++桌面开发`
 
 ### 对于 Windows
 

@@ -44,8 +44,9 @@ MirrorX is a remote desktop control tool powered by [Rust](https://github.com/ru
 
 ### Prerequisite
 
-1. `nodejs && npm && yarn`
-2. For Windows: `Visual Studio 2019+ && Desktop Development with C++ workloads`
+1. Installed `nodejs && npm && yarn`
+2. `ProtoBuf Compiler (protoc)` can be find at your PATH
+3. For Windows: Installed `Visual Studio 2019+ && Desktop Development with C++ workloads`
 
 ### For Windows
 
