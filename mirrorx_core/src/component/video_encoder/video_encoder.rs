@@ -29,10 +29,6 @@ impl VideoEncoder {
     }
 
     pub fn encode(&mut self, capture_frame: DesktopEncodeFrame) -> CoreResult<()> {
-        // if self.tx.is_closed() {
-        //     return Err(core_error!("message tx has closed"));
-        // }
-
         unsafe {
             let mut ret: i32;
 
@@ -58,9 +54,6 @@ impl VideoEncoder {
                     ret
                 ));
             }
-
-            let pix_format = (*(*self.encode_context).frame).format;
-            tracing::info!(?pix_format, "pix_format");
 
             (*(*self.encode_context).frame).data[0] =
                 capture_frame.luminance_bytes.as_ptr() as *mut _;
@@ -189,7 +182,7 @@ impl EncodeContext {
 
             encoder_config.apply_option(encoder_context.codec_ctx)?;
 
-            let mut ret = av_frame_get_buffer(encoder_context.frame, 64);
+            let mut ret = av_frame_get_buffer(encoder_context.frame, 0);
             if ret < 0 {
                 return Err(core_error!(
                     "av_frame_get_buffer returns error code: {}",
@@ -198,7 +191,7 @@ impl EncodeContext {
             }
 
             let packet_size =
-                av_image_get_buffer_size((*encoder_context.codec_ctx).pix_fmt, width, height, 64);
+                av_image_get_buffer_size((*encoder_context.codec_ctx).pix_fmt, width, height, 1);
 
             ret = av_new_packet(encoder_context.packet, packet_size);
             if ret < 0 {
