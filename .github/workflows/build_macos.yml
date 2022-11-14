@@ -179,7 +179,8 @@ jobs:
         key: ${{ runner.os }}-FFmpeg-${{ steps.get-commit-hash.outputs.hash }}
         
   build-FFmpeg:
-    if: needs.clone-FFmpeg.outputs.update-build == 'true'
+    if: |
+      always() && needs.clone-FFmpeg.outputs.update-build == 'true'
     runs-on: macos-latest
     needs: [clone-FFmpeg]
     steps:
