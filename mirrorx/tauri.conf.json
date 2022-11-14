@@ -6,7 +6,7 @@
     "distDir": "../mirrorx_frontend/build"
   },
   "package": {
-    "productName": "mirrorx",
+    "productName": "MirrorX",
     "version": "0.1.0"
   },
   "tauri": {
@@ -28,7 +28,7 @@
         "assets/icons/icon.icns",
         "assets/icons/icon.ico"
       ],
-      "identifier": "com.tauri.dev",
+      "identifier": "cloud.mirrorx",
       "longDescription": "",
       "macOS": {
         "entitlements": null,
