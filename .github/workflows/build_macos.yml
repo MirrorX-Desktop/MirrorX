@@ -299,7 +299,7 @@ jobs:
       with:
         crate: tauri-cli
     - name: checkout repository
-      run: actions/checkout@v2.5.0
+      uses: actions/checkout@v2.5.0
     - name: cache cargo build
       uses: actions/cache@v3
       with:
