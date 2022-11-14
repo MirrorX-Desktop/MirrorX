@@ -192,6 +192,8 @@ jobs:
         key: ${{ runner.os }}-FFmpeg-${{needs.clone-FFmpeg.outputs.hash-tag}}-${{needs.build-x264.outputs.hash-tag}}-${{needs.build-x265.outputs.hash-tag}}
     - name: set up nasm
       uses: ilammy/setup-nasm@v1.4.0
+    - name: show ls
+      run: ls -la 
     - name: configure
       working-directory: ./FFmpeg
       run: |
