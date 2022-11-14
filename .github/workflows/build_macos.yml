@@ -130,6 +130,8 @@ jobs:
     steps:
     - name: clone FFMPEG 5.1 release
       run: git clone https://github.com/FFmpeg/FFmpeg.git -b release/5.1 --depth=1
+    - name: set up nasm
+      uses: ilammy/setup-nasm@v1.4.0
     - name: configure
       working-directory: ./FFmpeg
       run: |
