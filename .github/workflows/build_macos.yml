@@ -180,7 +180,7 @@ jobs:
   build-FFmpeg:
     if: ${{ (needs.clone-FFmpeg.outputs.cache-hit != 'true') || (needs.build-x264.outputs.update-build == 'true') || (needs.build-x265.outputs.update-build == 'true') }}
     runs-on: macos-latest
-    needs: [build-x264, build-x265, clone-FFmpeg]
+    needs: [clone-FFmpeg, build-x264, build-x265]
     steps:
     - name: cache FFmpeg
       id: cache-FFmpeg
