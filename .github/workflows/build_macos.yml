@@ -192,6 +192,10 @@ jobs:
     if: |
       always() && needs.clone-FFmpeg.outputs.cache-hit != 'true'
     runs-on: macos-latest
+    outputs:
+      fmpeg-hash-tag: ${{needs.clone-FFmpeg.outputs.ffmpeg-hash-tag}}-${{needs.clone-FFmpeg.outputs.x264-hash-tag}}-${{needs.clone-FFmpeg.outputs.x265-hash-tag}}
+      x264-hash-tag: ${{needs.clone-x264.outputs.x264-hash-tag}}
+      x265-hash-tag: ${{needs.clone-x265.outputs.x265-hash-tag}}
     needs: [clone-FFmpeg, build-x264, build-x265]
     steps:
     - name: get cached libx264
@@ -269,8 +273,10 @@ jobs:
       run: make clean
 
   build_mirrorx:
+    if: |
+      always()
     runs-on: macos-latest
-    needs: [build-FFmpeg]
+    needs: [build-FFmpeg, build-opus]
     steps:
     - name: set up node.js
       uses: actions/setup-node@v3.5.1
@@ -304,6 +310,28 @@ jobs:
           ~/.cargo/git/db/
           target/
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+    - name: get cache libx264
+      uses: actions/cache@v3
+      with:
+        path: ${{github.workspace}}/artifacts/x264
+        key: ${{ runner.os }}-libx264-${{ needs.build-FFmpeg.outputs.x264-hash-tag }}
+    - name: get cache libx265
+      uses: actions/cache@v3
+      with:
+        path: ${{github.workspace}}/artifacts/x265
+        key: ${{ runner.os }}-libx265-${{ needs.build-FFmpeg.outputs.x265-hash-tag }}
+    - name: get cache libopus
+      uses: actions/cache@v3
+      with:
+        path: ${{github.workspace}}/artifacts/opus
+        key: ${{ runner.os }}-libopus-${{ needs.build-opus.outputs.hash-tag }}
+    - name: get cache FFmpeg
+      uses: actions/cache@v3
+      with:
+        path: ${{github.workspace}}/artifacts/FFmpeg
+        key: ${{ runner.os }}-FFmpeg-${{ needs.build-FFmpeg.outputs.ffmpeg-hash-tag }}
+    - name: ls
+      run: ls -la
     - name: build release
       run: cargo tauri release
       
