@@ -14,15 +14,16 @@ jobs:
       uses: ilammy/setup-nasm@v1.4.0
     - name: configure
       working-directory: ./x264
-      run: ./configure \
-        --enable-pic \
-        --enable-static \
-        --enable-strip \
-        --disable-cli \
-        --disable-opencl
+      run: ./configure --enable-pic --enable-static --enable-strip --disable-cli --disable-opencl
     - name: make
       working-directory: ./x264
-      run: make && make install && make clean
+      run: make
+    - name: make install
+      working-directory: ./x264
+      run: make install
+    - name: make clean
+      working-directory: ./x264
+      run: make clean
       
   build_x265:
     runs-on: macos-latest
@@ -33,13 +34,13 @@ jobs:
       uses: ilammy/setup-nasm@v1.4.0
     - name: cmake configure
       working-directory: ./x265_git
-      run: cmake ./source \
-        -DENABLE_SHARED=OFF \
-        -DENABLE_CLI=OFF \
-        -DENABLE_PIC=ON \
+      run: cmake ./source -DENABLE_SHARED=OFF -DENABLE_CLI=OFF -DENABLE_PIC=ON
     - name: cmake
       working-directory: ./x265_git
-      run: cmake --build . --config Release && cmake --install .
+      run: cmake --build . --config Release
+    - name: cmake install
+      working-directory: ./x265_git
+      run: cmake --install .
   
   build_opus:
     runs-on: macos-latest
@@ -52,16 +53,21 @@ jobs:
       run: brew install automake
     - name: setup libtool
       run: brew install libtool
+    - name: autogen
+      working-directory: ./opus
+      run: ./autogen.sh
     - name: configure
       working-directory: ./opus
-      run: ./autogen.sh && ./configure \
-        --enable-static \
-        --disable-shared \
-        --disable-doc \
-        --disable-extra-programs
+      run: ./configure --host=x86_64 --enable-static --disable-shared --disable-doc --disable-extra-programs
     - name: make
       working-directory: ./opus
-      run: make && make install && make clean
+      run: make
+    - name: make install
+      working-directory: ./opus
+      run: make install
+    - name: make clean
+      working-directory: ./opus
+      run: make clean
   
   build_ffmpeg:
     runs-on: macos-latest
@@ -104,5 +110,12 @@ jobs:
         --enable-parser=h264 \
         --enable-parser=h265
     - name: make
-      run: make && make install && make clean
+      working-directory: ./FFmpeg
+      run: make
+    - name: make install
+      working-directory: ./FFmpeg
+      run: make install
+    - name: make clean
+      working-directory: ./FFmpeg
+      run: make clean
 
