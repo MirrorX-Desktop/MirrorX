@@ -4,15 +4,88 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
-
+  build_x264:
     runs-on: macos-latest
-
+    steps:
+    - name: clone libx264 latest release
+      run: git clone https://github.com/mirror/x264.git -b stable --depth=1
+    - name: configure
+      run: cd x264 && ./configure --prefix=./artifacts \
+        --enable-pic \
+        --enable-static \
+        --enable-strip \
+        --disable-cli \
+        --disable-opencl
+    - name: make
+      run: make && make install && make clean
+      
+  build_x265:
+    runs-on: macos-latest
+    steps:
+    - name: clone libx265 latest release
+      run: git clone https://bitbucket.org/multicoreware/x265_git.git -b stable --depth=1
+    - name: cmake configure
+      run: cd x265_git && cmake ./source \
+        -DCMAKE_INSTALL_PREFIX=./artifacts \
+        -DENABLE_SHARED=OFF \
+        -DENABLE_CLI=OFF \
+        -DENABLE_PIC=ON
+    - name: cmake
+      run: cmake --build . --config Release && cmake --install .
+  
+  build_opus:
+    runs-on: macos-latest
+    steps:
+    - name: clone libopus lates release
+      run: git clone https://github.com/xiph/opus.git -b 1.1.2 --depth=1
+    - name: configure # autoconf automake libtool
+      run: cd opus && ./autogen.sh && ./configure --prefix=./artifacts \
+        --enable-static \
+        --disable-shared \
+        --disable-doc \
+        --disable-extra-programs
+    - name: make
+      run: make && make install && make clean
+  
+  build_ffmpeg:
+    runs-on: macos-latest
+    needs: [build_x264, build_x265]
     steps:
     - name: clone FFMPEG 5.1 release
       run: git clone https://github.com/FFmpeg/FFmpeg.git -b release/5.1 --depth=1
     - name: configure
-      run: cd FFmpeg && ./configure --prefix=./artific
+      run: cd FFmpeg && ./configure --prefix=./artifacts \
+        --disable-all \
+        --disable-autodetect \
+        --arch=x86_64 \
+        --pkg-config-flags=--static \
+        --enable-stripping \
+        --disable-debug \
+        --enable-pic \
+        --enable-hardcoded-tables \
+        --enable-gpl \
+        --enable-version3 \
+        --enable-avdevice \
+        --enable-avcodec \
+        --enable-avformat \
+        --disable-doc \
+        --disable-htmlpages \
+        --disable-manpages \
+        --disable-podpages \
+        --disable-txtpages \
+        --disable-network \
+        --enable-libx264 \
+        --enable-videotoolbox \
+        --enable-audiotoolbox \
+        --enable-encoder=libx264 \
+        --enable-decoder=h264 \
+        --enable-encoder=h264_videotoolbox \
+        --enable-encoder=hevc_videotoolbox \
+        --enable-hwaccel=h264_videotoolbox \
+        --enable-hwaccel=hevc_videotoolbox \
+        --enable-hwaccel=vp9_videotoolbox \
+        --enable-parser=h264 \
+        --enable-parser=h265
     - name: make
       run: make && make install && make clean
 
