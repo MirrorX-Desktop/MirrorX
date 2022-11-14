@@ -27,8 +27,6 @@ jobs:
     steps:
     - name: clone libx265 latest release
       run: git clone https://bitbucket.org/multicoreware/x265_git.git -b stable --depth=1
-    - name: set up cmake
-      uses: lukka/run-cmake@v10.0
     - name: cmake configure
       run: cd x265_git && cmake ./source \
         -DCMAKE_INSTALL_PREFIX=./artifacts \
@@ -45,7 +43,13 @@ jobs:
     steps:
     - name: clone libopus lates release
       run: git clone https://github.com/xiph/opus.git -b 1.1.2 --depth=1
-    - name: configure # autoconf automake libtool
+    - name: setup autoconf
+      run: brew install autoconf
+    - name: setup automake
+      run: brew install automake
+    - name: setup libtool
+      run: brew install libtool
+    - name: configure
       run: cd opus && ./autogen.sh && ./configure --prefix=./artifacts \
         --enable-static \
         --disable-shared \
