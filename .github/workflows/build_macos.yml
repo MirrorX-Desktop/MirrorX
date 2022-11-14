@@ -213,8 +213,9 @@ jobs:
       run: git clone https://github.com/FFmpeg/FFmpeg.git -b release/5.1 --depth=1
     - name: set up nasm
       uses: ilammy/setup-nasm@v1.4.0
-    - name: show ls
-      run: ls -la 
+    - name: set env
+      run: |
+        export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:${{github.workspace}}/artifacts/x264/lib/pkgconfig:${{github.workspace}}/artifacts/x265/lib/pkgconfig      
     - name: configure
       working-directory: ./FFmpeg
       run: |
@@ -227,6 +228,7 @@ jobs:
         --disable-all \
         --disable-autodetect \
         --arch=x86_64 \
+        --pkg-config-flags=--static \
         --enable-stripping \
         --disable-debug \
         --enable-pic \
