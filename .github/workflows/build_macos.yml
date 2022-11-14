@@ -158,7 +158,6 @@ jobs:
   
   clone-FFmpeg:
     runs-on: macos-latest
-    needs: [build-x264, build-x265]
     outputs:
       cache-hit: ${{ steps.cache-FFmpeg.outputs.cache-hit }}
       hash-tag: ${{ steps.get-commit-hash.outputs.hash }}
@@ -179,7 +178,7 @@ jobs:
         key: ${{ runner.os }}-FFmpeg-${{ steps.get-commit-hash.outputs.hash }}
         
   build-FFmpeg:
-    if: needs.clone-FFmpeg.outputs.cache-hit != 'true' || needs.build-x264.outputs.update-build == 'true' || needs.build-x265.outputs.update-build == 'true'
+    if: ${{ (needs.clone-FFmpeg.outputs.cache-hit != 'true') || (needs.build-x264.outputs.update-build == 'true') || (needs.build-x265.outputs.update-build == 'true') }}
     runs-on: macos-latest
     needs: [build-x264, build-x265, clone-FFmpeg]
     steps:
