@@ -30,6 +30,9 @@ jobs:
     if: needs.clone-x264.outputs.cache-hit != 'true'
     runs-on: macos-latest
     needs: [clone-x264]
+    outputs:
+      update-build: ${{ needs.clone-x264.outputs.cache-hit != 'true' }}
+      hash-tag: ${{ needs.clone-x264.outputs.hash-tag }}
     steps:
     - name: cache libx264
       id: cache-libx264
@@ -77,6 +80,9 @@ jobs:
     if: needs.clone-x265.outputs.cache-hit != 'true'
     runs-on: macos-latest
     needs: [clone-x265]
+    outputs:
+      update-build: ${{ needs.clone-x265.outputs.cache-hit != 'true' }}
+      hash-tag: ${{ needs.clone-x265.outputs.hash-tag }}
     steps:
     - name: cache libx265
       id: cache-libx265
@@ -152,6 +158,7 @@ jobs:
   
   clone-FFmpeg:
     runs-on: macos-latest
+    needs: [build-x264, build-x265]
     outputs:
       cache-hit: ${{ steps.cache-FFmpeg.outputs.cache-hit }}
       hash-tag: ${{ steps.get-commit-hash.outputs.hash }}
@@ -172,7 +179,7 @@ jobs:
         key: ${{ runner.os }}-FFmpeg-${{ steps.get-commit-hash.outputs.hash }}
         
   build-FFmpeg:
-    if: needs.clone-FFmpeg.outputs.cache-hit != 'true'
+    if: needs.clone-FFmpeg.outputs.cache-hit != 'true' || needs.build-x264.outputs.update-build == 'true' || needs.build-x265.outputs.update-build == 'true'
     runs-on: macos-latest
     needs: [build-x264, build-x265, clone-FFmpeg]
     steps:
@@ -181,7 +188,7 @@ jobs:
       uses: actions/cache@v3
       with:
         path: ${{github.workspace}}/artifacts/FFmpeg
-        key: ${{ runner.os }}-FFmpeg-${{ jobs.clone-FFmpeg.outputs.hash-tag }}
+        key: ${{ runner.os }}-FFmpeg-${{needs.clone-FFmpeg.outputs.hash-tag}}${{needs.build-x264.outputs.hash-tag}}${{needs.build-x265.outputs.hash-tag}}
     - name: set up nasm
       uses: ilammy/setup-nasm@v1.4.0
     - name: configure
