@@ -16,20 +16,20 @@ fn link_ffmpeg() {
         println!("cargo:rustc-link-lib=framework=AppKit");
         println!("cargo:rustc-link-lib=framework=IOSurface");
 
-        println!("cargo:rustc-link-search=./third/dependencies_build/ffmpeg/lib");
+        println!("cargo:rustc-link-search=./artifacts/FFmpeg/lib");
         println!("cargo:rustc-link-lib=avcodec");
         println!("cargo:rustc-link-lib=avformat");
         println!("cargo:rustc-link-lib=avutil");
         println!("cargo:rustc-link-lib=avdevice");
 
-        println!("cargo:rustc-link-search=./third/dependencies_build/x264/lib");
+        println!("cargo:rustc-link-search=./artifacts/x264/lib");
         println!("cargo:rustc-link-lib=x264");
 
-        println!("cargo:rustc-link-search=./third/dependencies_build/opus/lib");
+        println!("cargo:rustc-link-search=./artifacts/opus/lib");
         println!("cargo:rustc-link-lib=opus");
 
-        println!("cargo:rustc-link-search=./third/dependencies_build/libyuv/lib");
-        println!("cargo:rustc-link-lib=static=yuv");
+        // println!("cargo:rustc-link-search=./third/dependencies_build/libyuv/lib");
+        // println!("cargo:rustc-link-lib=static=yuv");
     }
 
     #[cfg(target_os = "windows")]
