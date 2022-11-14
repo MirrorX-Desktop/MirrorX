@@ -1,4 +1,4 @@
-name: FFMPEG_macos
+name: FFmpeg_macos
 
 on:
   workflow_dispatch:
@@ -12,7 +12,7 @@ jobs:
     - name: clone FFMPEG 5.1 release
       run: git clone https://github.com/FFmpeg/FFmpeg.git -b release/5.1 --depth=1
     - name: configure
-      run: cd FFMPEG && ./configure --prefix=./artific
+      run: cd FFmpeg && ./configure --prefix=./artific
     - name: make
       run: make && make install && make clean
 
