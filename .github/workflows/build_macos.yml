@@ -215,7 +215,7 @@ jobs:
       uses: ilammy/setup-nasm@v1.4.0
     - name: set env
       run: |
-        export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:${{github.workspace}}/artifacts/x264/lib/pkgconfig:${{github.workspace}}/artifacts/x265/lib/pkgconfig      
+        echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH:${{github.workspace}}/artifacts/x264/lib/pkgconfig:${{github.workspace}}/artifacts/x265/lib/pkgconfig" >> $GITHUB_ENV      
     - name: list pkg-config
       run: |
         pkg-config --list-all
