@@ -7,6 +7,7 @@ jobs:
   build_x264:
     runs-on: macos-latest
     steps:
+
     - name: clone libx264 latest release
       run: git clone https://github.com/mirror/x264.git -b stable --depth=1
     - name: configure
@@ -16,6 +17,8 @@ jobs:
         --enable-strip \
         --disable-cli \
         --disable-opencl
+    - name: set up nasm
+      uses: ilammy/setup-nasm@v1.4.0
     - name: make
       run: make && make install && make clean
       
@@ -24,12 +27,16 @@ jobs:
     steps:
     - name: clone libx265 latest release
       run: git clone https://bitbucket.org/multicoreware/x265_git.git -b stable --depth=1
+    - name: set up cmake
+      uses: lukka/run-cmake@v10.0
     - name: cmake configure
       run: cd x265_git && cmake ./source \
         -DCMAKE_INSTALL_PREFIX=./artifacts \
         -DENABLE_SHARED=OFF \
         -DENABLE_CLI=OFF \
         -DENABLE_PIC=ON
+    - name: set up nasm
+      uses: ilammy/setup-nasm@v1.4.0
     - name: cmake
       run: cmake --build . --config Release && cmake --install .
   
