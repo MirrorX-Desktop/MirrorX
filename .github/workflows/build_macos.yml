@@ -221,10 +221,6 @@ jobs:
       run: |
         ./configure \
         --prefix=${{github.workspace}}/artifacts/FFmpeg \
-        --extra-cflags=-l${{github.workspace}}/artifacts/x264/include \
-        --extra-cflags=-l${{github.workspace}}/artifacts/x265/include \
-        --extra-ldflags=-L${{github.workspace}}/artifacts/x264/lib \
-        --extra-ldflags=-L${{github.workspace}}/artifacts/x265/lib \
         --disable-all \
         --disable-autodetect \
         --arch=x86_64 \
