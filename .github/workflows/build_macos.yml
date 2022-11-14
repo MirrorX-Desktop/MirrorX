@@ -20,7 +20,7 @@ jobs:
       id: cache-libx264
       uses: actions/cache@v3
       with:
-        path: ./artifacts/x264
+        path: ${{github.workspace}}/artifacts/x264
         key: ${{ runner.os }}-libx264-${{ steps.get-commit-hash.outputs.hash }}
     - name: check if need compile
       if: steps.cache-libx264.outputs.cache-hit != 'true'
@@ -120,12 +120,32 @@ jobs:
     steps:
     - name: clone FFMPEG 5.1 release
       run: git clone https://github.com/FFmpeg/FFmpeg.git -b release/5.1 --depth=1
+    - name: get repository commit hash
+      working-directory: ./FFmpeg
+      id: get-commit-hash
+      run: |
+        echo "::set-output name=hash::$(git rev-parse --short HEAD)"
+      shell: bash
+    - name: cache FFmpeg
+      id: cache-FFmpeg
+      uses: actions/cache@v3
+      with:
+        path: ${{github.workspace}}/artifacts/FFmpeg
+        key: ${{ runner.os }}-FFmpeg-${{ steps.get-commit-hash.outputs.hash }}
+    - name: check if need compile
+      if: steps.cache-FFmpeg.outputs.cache-hit != 'true'
+      run: echo 'repository is newer, compile libopus'
     - name: set up nasm
       uses: ilammy/setup-nasm@v1.4.0
     - name: configure
       working-directory: ./FFmpeg
       run: |
         ./configure \
+        --prefix=${{github.workspace}}/artifacts/FFmpeg \
+        --extra-cflags=${{github.workspace}}/artifacts/x264/include \
+        --extra-cflags=${{github.workspace}}/artifacts/x265/include \
+        --extra-ldflags=-L ${{github.workspace}}/artifacts/x264/lib \
+        --extra-ldflags=-L ${{github.workspace}}/artifacts/x265/lib \
         --disable-all \
         --disable-autodetect \
         --arch=x86_64 \
@@ -146,17 +166,20 @@ jobs:
         --disable-txtpages \
         --disable-network \
         --enable-libx264 \
+        --enable-libx265 \
         --enable-videotoolbox \
         --enable-audiotoolbox \
         --enable-encoder=libx264 \
+        --enable-encoder=libx265 \
         --enable-decoder=h264 \
+        --enable-decoder=hevc \
         --enable-encoder=h264_videotoolbox \
         --enable-encoder=hevc_videotoolbox \
         --enable-hwaccel=h264_videotoolbox \
         --enable-hwaccel=hevc_videotoolbox \
         --enable-hwaccel=vp9_videotoolbox \
         --enable-parser=h264 \
-        --enable-parser=h265
+        --enable-parser=hevc
     - name: make
       working-directory: ./FFmpeg
       run: make
