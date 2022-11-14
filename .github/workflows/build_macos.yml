@@ -33,7 +33,7 @@ jobs:
       uses: ilammy/setup-nasm@v1.4.0
     - name: configure
       working-directory: ./x264
-      run: ./configure --enable-pic --enable-static --enable-strip --disable-cli --disable-opencl
+      run: ./configure --prefix=${{GITHUB_WORKSPACE}}/artifacts/x264 --enable-pic --enable-static --enable-strip --disable-cli --disable-opencl
     - name: make
       working-directory: ./x264
       run: make
@@ -71,7 +71,7 @@ jobs:
       uses: ilammy/setup-nasm@v1.4.0
     - name: cmake configure
       working-directory: ./x265_git
-      run: cmake ./source -DENABLE_SHARED=OFF -DENABLE_CLI=OFF -DENABLE_PIC=ON
+      run: cmake ./source -DCMAKE_INSTALL_PREFIX=${{GITHUB_WORKSPACE}}/artifacts/x265 -DENABLE_SHARED=OFF -DENABLE_CLI=OFF -DENABLE_PIC=ON
     - name: cmake
       working-directory: ./x265_git
       run: cmake --build . --config Release
@@ -113,7 +113,7 @@ jobs:
       run: ./autogen.sh
     - name: configure
       working-directory: ./opus
-      run: ./configure --host=x86_64 --enable-static --disable-shared --disable-doc --disable-extra-programs
+      run: ./configure --host=x86_64 --prefix=${{GITHUB_WORKSPACE}}/artifacts/opus --enable-static --disable-shared --disable-doc --disable-extra-programs
     - name: make
       working-directory: ./opus
       run: make
