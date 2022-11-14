@@ -216,6 +216,9 @@ jobs:
     - name: set env
       run: |
         export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:${{github.workspace}}/artifacts/x264/lib/pkgconfig:${{github.workspace}}/artifacts/x265/lib/pkgconfig      
+    - name: list pkg-config
+      run: |
+        pkg-config --list-all
     - name: configure
       working-directory: ./FFmpeg
       run: |
