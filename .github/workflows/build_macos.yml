@@ -51,13 +51,16 @@ jobs:
     - name: make clean
       working-directory: ./x264
       run: make clean
-      
-  build_x265:
+  
+  clone-x265:
     runs-on: macos-latest
+    outputs:
+      cache-hit: ${{ steps.cache-libx265.outputs.cache-hit }}
+      hash-tag: ${{ steps.get-commit-hash.outputs.hash }}
     steps:
-    - name: clone libx265 latest release
+    - name: clone repository
       run: git clone https://bitbucket.org/multicoreware/x265_git.git -b stable --depth=1
-    - name: get repository commit hash
+    - name: get commit hash
       working-directory: ./x265_git
       id: get-commit-hash
       run: |
@@ -69,9 +72,18 @@ jobs:
       with:
         path: ${{github.workspace}}/artifacts/x265
         key: ${{ runner.os }}-libx265-${{ steps.get-commit-hash.outputs.hash }}
-    - name: check if need compile
-      if: steps.cache-libx265.outputs.cache-hit != 'true'
-      run: echo 'repository is newer, compile libx265'
+        
+  build-x265:
+    if: needs.clone-x265.outputs.cache-hit != 'true'
+    runs-on: macos-latest
+    needs: [clone-x265]
+    steps:
+    - name: cache libx265
+      id: cache-libx265
+      uses: actions/cache@v3
+      with:
+        path: ${{github.workspace}}/artifacts/x265
+        key: ${{ runner.os }}-libx265-${{ needs.clone-x265.outputs.hash-tag }}
     - name: set up nasm
       uses: ilammy/setup-nasm@v1.4.0
     - name: cmake configure
@@ -83,27 +95,39 @@ jobs:
     - name: cmake install
       working-directory: ./x265_git
       run: cmake --install .
-  
-  build_opus:
+      
+  clone-opus:
     runs-on: macos-latest
+    outputs:
+      cache-hit: ${{ steps.cache-libopus.outputs.cache-hit }}
+      hash-tag: ${{ steps.get-commit-hash.outputs.hash }}
     steps:
-    - name: clone libopus lates release
+    - name: clone repository
       run: git clone https://github.com/xiph/opus.git -b 1.1.2 --depth=1
-    - name: get repository commit hash
+    - name: get commit hash
       working-directory: ./opus
       id: get-commit-hash
       run: |
         echo "::set-output name=hash::$(git rev-parse --short HEAD)"
       shell: bash
-    - name: cache opus
+    - name: cache libopus
       id: cache-libopus
       uses: actions/cache@v3
       with:
         path: ${{github.workspace}}/artifacts/opus
         key: ${{ runner.os }}-libopus-${{ steps.get-commit-hash.outputs.hash }}
-    - name: check if need compile
-      if: steps.cache-libopus.outputs.cache-hit != 'true'
-      run: echo 'repository is newer, compile libopus'
+        
+  build-opus:
+    if: needs.clone-opus.outputs.cache-hit != 'true'
+    runs-on: macos-latest
+    needs: [clone-opus]
+    steps:
+    - name: cache libopus
+      id: cache-libopus
+      uses: actions/cache@v3
+      with:
+        path: ${{github.workspace}}/artifacts/opus
+        key: ${{ runner.os }}-libx265-${{ needs.clone-opus.outputs.hash-tag }}
     - name: setup autoconf
       run: brew install autoconf
     - name: setup automake
@@ -126,13 +150,15 @@ jobs:
       working-directory: ./opus
       run: make clean
   
-  build_ffmpeg:
+  clone-FFmpeg:
     runs-on: macos-latest
-    needs: [build-x264, build_x265]
+    outputs:
+      cache-hit: ${{ steps.cache-FFmpeg.outputs.cache-hit }}
+      hash-tag: ${{ steps.get-commit-hash.outputs.hash }}
     steps:
-    - name: clone FFMPEG 5.1 release
+    - name: clone repository
       run: git clone https://github.com/FFmpeg/FFmpeg.git -b release/5.1 --depth=1
-    - name: get repository commit hash
+    - name: get commit hash
       working-directory: ./FFmpeg
       id: get-commit-hash
       run: |
@@ -142,11 +168,20 @@ jobs:
       id: cache-FFmpeg
       uses: actions/cache@v3
       with:
-        path: ${{github.workspace}}/artifacts/FFmpeg
+        path: ${{github.workspace}}/artifacts/ffmpeg
         key: ${{ runner.os }}-FFmpeg-${{ steps.get-commit-hash.outputs.hash }}
-    - name: check if need compile
-      if: steps.cache-FFmpeg.outputs.cache-hit != 'true'
-      run: echo 'repository is newer, compile libopus'
+        
+  build-FFmpeg:
+    if: needs.clone-FFmpeg.outputs.cache-hit != 'true'
+    runs-on: macos-latest
+    needs: [build-x264, build-x265, clone-FFmpeg]
+    steps:
+    - name: cache FFmpeg
+      id: cache-FFmpeg
+      uses: actions/cache@v3
+      with:
+        path: ${{github.workspace}}/artifacts/FFmpeg
+        key: ${{ runner.os }}-FFmpeg-${{ jobs.clone-FFmpeg.outputs.hash-tag }}
     - name: set up nasm
       uses: ilammy/setup-nasm@v1.4.0
     - name: configure
