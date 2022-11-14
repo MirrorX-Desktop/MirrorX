@@ -20,7 +20,7 @@ jobs:
       id: cache-libx264
       uses: actions/cache@v3
       with:
-        path: ${{GITHUB_WORKSPACE}}/artifacts/x264
+        path: ${{_PATH}}/artifacts/x264
         key: ${{ runner.os }}-libx264-${{ steps.get-commit-hash.outputs.hash }}
     - name: check if need compile
       if: steps.cache-libx264.outputs.cache-hit != 'true'
@@ -55,7 +55,7 @@ jobs:
       id: cache-libx265
       uses: actions/cache@v3
       with:
-        path: ${{GITHUB_WORKSPACE}}/artifacts/x265
+        path: ${{_PATH}}/artifacts/x265
         key: ${{ runner.os }}-libx265-${{ steps.get-commit-hash.outputs.hash }}
     - name: check if need compile
       if: steps.cache-libx265.outputs.cache-hit != 'true'
@@ -87,7 +87,7 @@ jobs:
       id: cache-libopus
       uses: actions/cache@v3
       with:
-        path: ${{GITHUB_WORKSPACE}}/artifacts/opus
+        path: ${{_PATH}}/artifacts/opus
         key: ${{ runner.os }}-libopus-${{ steps.get-commit-hash.outputs.hash }}
     - name: check if need compile
       if: steps.cache-libopus.outputs.cache-hit != 'true'
