@@ -198,12 +198,12 @@ jobs:
       uses: actions/cache@v3
       with:
         path: ${{github.workspace}}/artifacts/x264
-        key: ${{ runner.os }}-FFmpeg-${{needs.clone-FFmpeg.outputs.x264-hash-tag}}
+        key: ${{ runner.os }}-libx264-${{needs.clone-FFmpeg.outputs.x264-hash-tag}}
     - name: get cached libx265
       uses: actions/cache@v3
       with:
         path: ${{github.workspace}}/artifacts/x265
-        key: ${{ runner.os }}-FFmpeg-${{needs.clone-FFmpeg.outputs.x265-hash-tag}}
+        key: ${{ runner.os }}-libx265-${{needs.clone-FFmpeg.outputs.x265-hash-tag}}
     - name: cache FFmpeg
       uses: actions/cache@v3
       with:
