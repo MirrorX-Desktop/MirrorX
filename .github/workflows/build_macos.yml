@@ -281,7 +281,7 @@ jobs:
     - name: set up node.js
       uses: actions/setup-node@v3.5.1
     - name: set up yarn
-      uses: corepack enalbe && corepack prepare yarn@stable --activate
+      run: corepack enalbe && corepack prepare yarn@stable --activate
     - name: download protoc
       uses: dsaltares/fetch-gh-release-asset@master
       with:
