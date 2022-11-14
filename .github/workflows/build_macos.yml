@@ -1,4 +1,4 @@
-name: FFmpeg_macos
+name: build_macos
 
 on:
   workflow_dispatch:
@@ -15,7 +15,6 @@ jobs:
     - name: configure
       working-directory: ./x264
       run: ./configure \
-        --prefix=${{GITHUB_WORKSPACE}}/x264/artifacts \
         --enable-pic \
         --enable-static \
         --enable-strip \
@@ -35,7 +34,6 @@ jobs:
       working-directory: ./x265_git
       run: cmake \
         ./source \
-        -DCMAKE_INSTALL_PREFIX=${{GITHUB_WORKSPACE}}/x265_git/artifacts \
         -DENABLE_SHARED=OFF \
         -DENABLE_CLI=OFF \
         -DENABLE_PIC=ON \
@@ -56,7 +54,6 @@ jobs:
     - name: configure
       working-directory: ./opus
       run: ./autogen.sh && ./configure \
-        --prefix=${{GITHUB_WORKSPACE}}/opus/artifacts \
         --enable-static \
         --disable-shared \
         --disable-doc \
@@ -73,7 +70,6 @@ jobs:
     - name: configure
       working-directory: ./FFmpeg
       run: ./configure \
-        --prefix=${{GITHUB_WORKSPACE}}/FFmpeg/artifacts \
         --disable-all \
         --disable-autodetect \
         --arch=x86_64 \
