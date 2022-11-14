@@ -28,6 +28,7 @@ jobs:
         key: ${{ runner.os }}-libx264-${{ steps.get-commit-hash.outputs.hash }}
     - name: check if need compile
       if: steps.cache-libx264.outputs.cache-hit != 'true'
+      run: echo 'repository is newer, compile libx264'
     - name: set up nasm
       uses: ilammy/setup-nasm@v1.4.0
     - name: configure
@@ -65,6 +66,7 @@ jobs:
         key: ${{ runner.os }}-libx265-${{ steps.get-commit-hash.outputs.hash }}
     - name: check if need compile
       if: steps.cache-libx265.outputs.cache-hit != 'true'
+      run: echo 'repository is newer, compile libx265'
     - name: set up nasm
       uses: ilammy/setup-nasm@v1.4.0
     - name: cmake configure
@@ -89,7 +91,7 @@ jobs:
         echo "::set-output name=hash::$(git rev-parse --short HEAD)"
       shell: bash
     - name: cache opus
-      id: cache-opus
+      id: cache-libopus
       uses: actions/cache@v3
       with:
         path: |
@@ -98,7 +100,8 @@ jobs:
           /usr/local/include/opus
         key: ${{ runner.os }}-libopus-${{ steps.get-commit-hash.outputs.hash }}
     - name: check if need compile
-      if: steps.cache-libx265.outputs.cache-hit != 'true'
+      if: steps.cache-libopus.outputs.cache-hit != 'true'
+      run: echo 'repository is newer, compile libopus'
     - name: setup autoconf
       run: brew install autoconf
     - name: setup automake
