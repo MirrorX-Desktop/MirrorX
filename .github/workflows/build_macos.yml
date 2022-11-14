@@ -5,8 +5,11 @@ on:
 
 jobs:
   
-  clone_x264:
+  clone-x264:
     runs-on: macos-latest
+    outputs:
+      cache-hit: ${{ steps.cache-libx264.outputs.cache-hit }}
+      hash-tag: ${{ steps.get-commit-hash.outputs.hash }}
     steps:
     - name: clone repository
       run: git clone https://github.com/mirror/x264.git -b stable --depth=1
@@ -23,17 +26,17 @@ jobs:
         path: ${{github.workspace}}/artifacts/x264
         key: ${{ runner.os }}-libx264-${{ steps.get-commit-hash.outputs.hash }}
     
-  build_x264:
-    if: jobs.clone_x264.steps.cache-libx264.outputs.cache-hit != 'true'
+  build-x264:
+    if: needs.clone-x264.outputs.cache-hit != 'true'
     runs-on: macos-latest
-    needs: [clone_x264]
+    needs: [clone-x264]
     steps:
     - name: cache libx264
       id: cache-libx264
       uses: actions/cache@v3
       with:
         path: ${{github.workspace}}/artifacts/x264
-        key: ${{ runner.os }}-libx264-${{ jobs.clone_x264.steps.get-commit-hash.outputs.hash }}
+        key: ${{ runner.os }}-libx264-${{ needs.clone-x264.outputs.hash-tag }}
     - name: set up nasm
       uses: ilammy/setup-nasm@v1.4.0
     - name: configure
@@ -125,7 +128,7 @@ jobs:
   
   build_ffmpeg:
     runs-on: macos-latest
-    needs: [build_x264, build_x265]
+    needs: [build-x264, build_x265]
     steps:
     - name: clone FFMPEG 5.1 release
       run: git clone https://github.com/FFmpeg/FFmpeg.git -b release/5.1 --depth=1
