@@ -4,13 +4,13 @@ on:
   workflow_dispatch:
 
 jobs:
-  build_x264:
+  
+  clone_x264:
     runs-on: macos-latest
     steps:
-
-    - name: clone libx264 latest release
+    - name: clone repository
       run: git clone https://github.com/mirror/x264.git -b stable --depth=1
-    - name: get repository commit hash
+    - name: get commit hash
       working-directory: ./x264
       id: get-commit-hash
       run: |
@@ -22,9 +22,18 @@ jobs:
       with:
         path: ${{github.workspace}}/artifacts/x264
         key: ${{ runner.os }}-libx264-${{ steps.get-commit-hash.outputs.hash }}
-    - name: check if need compile
-      if: steps.cache-libx264.outputs.cache-hit != 'true'
-      run: echo 'repository is newer, compile libx264'
+    
+  build_x264:
+    if: jobs.clone_x264.steps.cache-libx264.outputs.cache-hit != 'true'
+    runs-on: macos-latest
+    needs: [clone_x264]
+    steps:
+    - name: cache libx264
+      id: cache-libx264
+      uses: actions/cache@v3
+      with:
+        path: ${{github.workspace}}/artifacts/x264
+        key: ${{ runner.os }}-libx264-${{ jobs.clone_x264.steps.get-commit-hash.outputs.hash }}
     - name: set up nasm
       uses: ilammy/setup-nasm@v1.4.0
     - name: configure
