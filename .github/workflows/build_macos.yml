@@ -8,6 +8,14 @@ jobs:
     runs-on: macos-latest
     steps:
 
+    - name: clone libx264 latest release
+      run: git clone https://github.com/mirror/x264.git -b stable --depth=1
+    - name: get repository commit hash
+      working-directory: ./x264
+      id: get-commit-hash
+      run: |
+        echo "::set-output name=hash::$(git rev-parse --short HEAD)"
+      shell: bash
     - name: cache libx264
       id: cache-libx264
       uses: actions/cache@v3
@@ -17,10 +25,9 @@ jobs:
           /usr/local/include/x264_config.h
           /usr/local/lib/pkgconfig/x264.pc
           /usr/local/lib/libx264.a
-        key: ${{ runner.os }}-${{ hashFiles('/usr/local/lib/libx264.a') }}
-    - name: clone libx264 latest release
+        key: ${{ runner.os }}-libx264-${{ steps.get-commit-hash.outputs.hash }}
+    - name: check if need compile
       if: steps.cache-libx264.outputs.cache-hit != 'true'
-      run: git clone https://github.com/mirror/x264.git -b stable --depth=1
     - name: set up nasm
       uses: ilammy/setup-nasm@v1.4.0
     - name: configure
@@ -39,6 +46,14 @@ jobs:
   build_x265:
     runs-on: macos-latest
     steps:
+    - name: clone libx265 latest release
+      run: git clone https://bitbucket.org/multicoreware/x265_git.git -b stable --depth=1
+    - name: get repository commit hash
+      working-directory: ./x265_git
+      id: get-commit-hash
+      run: |
+        echo "::set-output name=hash::$(git rev-parse --short HEAD)"
+      shell: bash
     - name: cache libx265
       id: cache-libx265
       uses: actions/cache@v3
@@ -47,10 +62,9 @@ jobs:
           /usr/local/lib/libx265.a
           /usr/local/include/x265.h
           /usr/local/include/x265_config.h
-        key: ${{ runner.os }}-${{ hashFiles('/usr/local/lib/libx265.a') }}
-    - name: clone libx265 latest release
+        key: ${{ runner.os }}-libx265-${{ steps.get-commit-hash.outputs.hash }}
+    - name: check if need compile
       if: steps.cache-libx265.outputs.cache-hit != 'true'
-      run: git clone https://bitbucket.org/multicoreware/x265_git.git -b stable --depth=1
     - name: set up nasm
       uses: ilammy/setup-nasm@v1.4.0
     - name: cmake configure
@@ -66,6 +80,14 @@ jobs:
   build_opus:
     runs-on: macos-latest
     steps:
+    - name: clone libopus lates release
+      run: git clone https://github.com/xiph/opus.git -b 1.1.2 --depth=1
+    - name: get repository commit hash
+      working-directory: ./opus
+      id: get-commit-hash
+      run: |
+        echo "::set-output name=hash::$(git rev-parse --short HEAD)"
+      shell: bash
     - name: cache opus
       id: cache-opus
       uses: actions/cache@v3
@@ -74,10 +96,9 @@ jobs:
           /usr/local/lib/libopus.a
           /usr/local/lib/pkgconfig/opus.pc
           /usr/local/include/opus
-        key: ${{ runner.os }}-${{ hashFiles('/usr/local/lib/libopus.a') }}
-    - name: clone libopus lates release
-      if: steps.cache-opus.outputs.cache-hit != 'true'
-      run: git clone https://github.com/xiph/opus.git -b 1.1.2 --depth=1
+        key: ${{ runner.os }}-libopus-${{ steps.get-commit-hash.outputs.hash }}
+    - name: check if need compile
+      if: steps.cache-libx265.outputs.cache-hit != 'true'
     - name: setup autoconf
       run: brew install autoconf
     - name: setup automake
