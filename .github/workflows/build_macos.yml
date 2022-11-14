@@ -268,3 +268,47 @@ jobs:
       working-directory: ./FFmpeg
       run: make clean
 
+  build_mirrorx:
+    runs-on: macos-latest
+    needs: [build-FFmpeg]
+    steps:
+    - name: set up node.js
+      uses: actions/setup-node@v3.5.1
+    - name: set up yarn
+      uses: corepack enalbe && corepack prepare yarn@stable --activate
+    - name: download protoc
+      uses: dsaltares/fetch-gh-release-asset@master
+      with:
+        repo: 'protocolbuffers/protobuf'
+        version: 'tags/v21.9'
+        file: 'protoc-21.9-osx-x86_64.zip'
+        target: '${{github.workspace}}/artifacts/protoc/protoc-21.9-osx-x86_64.zip'
+    - name: unzip protoc
+      working-directory: ${{github.workspace}}/artifacts/protoc
+      run: 7zip x protoc-21.9-osx-x86_64.zip
+    - name: set up protoc
+      run: echo "PATH=$PATH:${{github.workspace}}/artifacts/protoc/bin" >> $GITHUB_ENV
+    - name: install tauri-cli
+      uses: baptiste0928/cargo-install@v1.3.0
+      with:
+        crate: tauri-cli
+    - name: checkout repository
+      run: actions/checkout@v2.5.0
+    - name: cache cargo build
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+    - name: build release
+      run: cargo tauri release
+      
+
+    
+      
+      
+  
