@@ -77,7 +77,8 @@ jobs:
       run: git clone https://github.com/FFmpeg/FFmpeg.git -b release/5.1 --depth=1
     - name: configure
       working-directory: ./FFmpeg
-      run: ./configure \
+      run: |
+        ./configure \
         --disable-all \
         --disable-autodetect \
         --arch=x86_64 \
