@@ -21,6 +21,7 @@ jobs:
         --disable-cli \
         --disable-opencl
     - name: make
+      working-directory: ./x264
       run: make && make install && make clean
       
   build_x265:
@@ -32,12 +33,12 @@ jobs:
       uses: ilammy/setup-nasm@v1.4.0
     - name: cmake configure
       working-directory: ./x265_git
-      run: cmake \
-        ./source \
+      run: cmake ./source \
         -DENABLE_SHARED=OFF \
         -DENABLE_CLI=OFF \
         -DENABLE_PIC=ON \
     - name: cmake
+      working-directory: ./x265_git
       run: cmake --build . --config Release && cmake --install .
   
   build_opus:
@@ -59,6 +60,7 @@ jobs:
         --disable-doc \
         --disable-extra-programs
     - name: make
+      working-directory: ./opus
       run: make && make install && make clean
   
   build_ffmpeg:
