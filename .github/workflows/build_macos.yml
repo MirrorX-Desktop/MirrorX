@@ -10,15 +10,17 @@ jobs:
 
     - name: clone libx264 latest release
       run: git clone https://github.com/mirror/x264.git -b stable --depth=1
+    - name: set up nasm
+      uses: ilammy/setup-nasm@v1.4.0
     - name: configure
-      run: cd x264 && ./configure --prefix=./artifacts \
+      working-directory: ./x264
+      run: ./configure \
+        --prefix=${{GITHUB_WORKSPACE}}/x264/artifacts \
         --enable-pic \
         --enable-static \
         --enable-strip \
         --disable-cli \
         --disable-opencl
-    - name: set up nasm
-      uses: ilammy/setup-nasm@v1.4.0
     - name: make
       run: make && make install && make clean
       
@@ -27,14 +29,16 @@ jobs:
     steps:
     - name: clone libx265 latest release
       run: git clone https://bitbucket.org/multicoreware/x265_git.git -b stable --depth=1
-    - name: cmake configure
-      run: cd x265_git && cmake ./source \
-        -DCMAKE_INSTALL_PREFIX=./artifacts \
-        -DENABLE_SHARED=OFF \
-        -DENABLE_CLI=OFF \
-        -DENABLE_PIC=ON
     - name: set up nasm
       uses: ilammy/setup-nasm@v1.4.0
+    - name: cmake configure
+      working-directory: ./x265_git
+      run: cmake \
+        ./source \
+        -DCMAKE_INSTALL_PREFIX=${{GITHUB_WORKSPACE}}/x265_git/artifacts \
+        -DENABLE_SHARED=OFF \
+        -DENABLE_CLI=OFF \
+        -DENABLE_PIC=ON \
     - name: cmake
       run: cmake --build . --config Release && cmake --install .
   
@@ -50,7 +54,9 @@ jobs:
     - name: setup libtool
       run: brew install libtool
     - name: configure
-      run: cd opus && ./autogen.sh && ./configure --prefix=./artifacts \
+      working-directory: ./opus
+      run: ./autogen.sh && ./configure \
+        --prefix=${{GITHUB_WORKSPACE}}/opus/artifacts \
         --enable-static \
         --disable-shared \
         --disable-doc \
@@ -65,7 +71,9 @@ jobs:
     - name: clone FFMPEG 5.1 release
       run: git clone https://github.com/FFmpeg/FFmpeg.git -b release/5.1 --depth=1
     - name: configure
-      run: cd FFmpeg && ./configure --prefix=./artifacts \
+      working-directory: ./FFmpeg
+      run: ./configure \
+        --prefix=${{GITHUB_WORKSPACE}}/FFmpeg/artifacts \
         --disable-all \
         --disable-autodetect \
         --arch=x86_64 \
