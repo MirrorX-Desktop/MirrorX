@@ -227,7 +227,6 @@ jobs:
         --disable-all \
         --disable-autodetect \
         --arch=x86_64 \
-        --pkg-config-flags=--static \
         --enable-stripping \
         --disable-debug \
         --enable-pic \
