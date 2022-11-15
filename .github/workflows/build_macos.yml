@@ -19,7 +19,8 @@ jobs:
     - name: set up node.js
       uses: actions/setup-node@v3.5.1
     - name: set up yarn
-      run: corepack enalbe
+      run: |
+        corepack enable && corepack prepare yarn@stable --activate
     - name: set up protobuf
       run: brew install protobuf
 #     - name: download protoc
