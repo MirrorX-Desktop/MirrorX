@@ -19,20 +19,21 @@ jobs:
     - name: set up node.js
       uses: actions/setup-node@v3.5.1
     - name: set up yarn
-      run: |
-        corepack enalbe && corepack prepare yarn@stable --activate
-    - name: download protoc
-      uses: dsaltares/fetch-gh-release-asset@master
-      with:
-        repo: 'protocolbuffers/protobuf'
-        version: 'tags/v21.9'
-        file: 'protoc-21.9-osx-x86_64.zip'
-        target: '${{github.workspace}}/artifacts/protoc/protoc-21.9-osx-x86_64.zip'
-    - name: unzip protoc
-      working-directory: ${{github.workspace}}/artifacts/protoc
-      run: 7zip x protoc-21.9-osx-x86_64.zip
-    - name: set up protoc
-      run: echo "PATH=$PATH:${{github.workspace}}/artifacts/protoc/bin" >> $GITHUB_ENV
+      run: corepack enalbe
+    - name: set up protobuf
+      run: brew install protobuf
+#     - name: download protoc
+#       uses: dsaltares/fetch-gh-release-asset@master
+#       with:
+#         repo: 'protocolbuffers/protobuf'
+#         version: 'tags/v21.9'
+#         file: 'protoc-21.9-osx-x86_64.zip'
+#         target: '${{github.workspace}}/artifacts/protoc/protoc-21.9-osx-x86_64.zip'
+#     - name: unzip protoc
+#       working-directory: ${{github.workspace}}/artifacts/protoc
+#       run: 7zip x protoc-21.9-osx-x86_64.zip
+#     - name: set up protoc
+#       run: echo "PATH=$PATH:${{github.workspace}}/artifacts/protoc/bin" >> $GITHUB_ENV
     - name: install tauri-cli
       uses: baptiste0928/cargo-install@v1.3.0
       with:
