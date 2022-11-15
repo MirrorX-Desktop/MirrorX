@@ -38,7 +38,7 @@ jobs:
       with:
         crate: tauri-cli
     - name: use cargo cache
-    - uses: actions/cache@v3
+      uses: actions/cache@v3
       with:
         path: |
           ~/.cargo/bin/
