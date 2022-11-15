@@ -5,283 +5,22 @@ on:
 
 jobs:
   
-  clone-x264:
+  build:
     runs-on: macos-latest
-    outputs:
-      cache-hit: ${{ steps.cache-libx264.outputs.cache-hit }}
-      hash-tag: ${{ steps.get-commit-hash.outputs.hash }}
     steps:
-    - name: clone repository
-      run: git clone https://github.com/mirror/x264.git -b stable --depth=1
-    - name: get commit hash
-      working-directory: ./x264
-      id: get-commit-hash
-      run: |
-        echo "::set-output name=hash::$(git rev-parse --short HEAD)"
-      shell: bash
-    - name: cache libx264
-      id: cache-libx264
-      uses: actions/cache@v3
-      with:
-        path: ${{github.workspace}}/artifacts/x264
-        key: ${{ runner.os }}-libx264-${{ steps.get-commit-hash.outputs.hash }}
-    
-  build-x264:
-    if: needs.clone-x264.outputs.cache-hit != 'true'
-    runs-on: macos-latest
-    needs: [clone-x264]
-    outputs:
-      update-build: ${{ needs.clone-x264.outputs.cache-hit != 'true' }}
-      hash-tag: ${{ needs.clone-x264.outputs.hash-tag }}
-    steps:
-    - name: cache libx264
-      id: cache-libx264
-      uses: actions/cache@v3
-      with:
-        path: ${{github.workspace}}/artifacts/x264
-        key: ${{ runner.os }}-libx264-${{ needs.clone-x264.outputs.hash-tag }}
-    - name: clone repository
-      run: git clone https://github.com/mirror/x264.git -b stable --depth=1
-    - name: set up nasm
+    - name: setup nasm
       uses: ilammy/setup-nasm@v1.4.0
-    - name: configure
-      working-directory: ./x264
-      run: ./configure --prefix=${{github.workspace}}/artifacts/x264 --enable-pic --enable-static --enable-strip --disable-cli --disable-opencl
-    - name: make
-      working-directory: ./x264
-      run: make
-    - name: make install
-      working-directory: ./x264
-      run: make install
-    - name: make clean
-      working-directory: ./x264
-      run: make clean
-  
-  clone-x265:
-    runs-on: macos-latest
-    outputs:
-      cache-hit: ${{ steps.cache-libx265.outputs.cache-hit }}
-      hash-tag: ${{ steps.get-commit-hash.outputs.hash }}
-    steps:
-    - name: clone repository
-      run: git clone https://bitbucket.org/multicoreware/x265_git.git -b stable --depth=1
-    - name: get commit hash
-      working-directory: ./x265_git
-      id: get-commit-hash
-      run: |
-        echo "::set-output name=hash::$(git rev-parse --short HEAD)"
-      shell: bash
-    - name: cache libx265
-      id: cache-libx265
-      uses: actions/cache@v3
-      with:
-        path: ${{github.workspace}}/artifacts/x265
-        key: ${{ runner.os }}-libx265-${{ steps.get-commit-hash.outputs.hash }}
-        
-  build-x265:
-    if: needs.clone-x265.outputs.cache-hit != 'true'
-    runs-on: macos-latest
-    needs: [clone-x265]
-    outputs:
-      update-build: ${{ needs.clone-x265.outputs.cache-hit != 'true' }}
-      hash-tag: ${{ needs.clone-x265.outputs.hash-tag }}
-    steps:
-    - name: cache libx265
-      id: cache-libx265
-      uses: actions/cache@v3
-      with:
-        path: ${{github.workspace}}/artifacts/x265
-        key: ${{ runner.os }}-libx265-${{ needs.clone-x265.outputs.hash-tag }}
-    - name: clone repository
-      run: git clone https://bitbucket.org/multicoreware/x265_git.git -b stable --depth=1
-    - name: set up nasm
-      uses: ilammy/setup-nasm@v1.4.0
-    - name: cmake configure
-      working-directory: ./x265_git
-      run: cmake ./source -DCMAKE_INSTALL_PREFIX=${{github.workspace}}/artifacts/x265 -DENABLE_SHARED=OFF -DENABLE_CLI=OFF -DENABLE_PIC=ON
-    - name: cmake
-      working-directory: ./x265_git
-      run: cmake --build . --config Release
-    - name: cmake install
-      working-directory: ./x265_git
-      run: cmake --install .
-      
-  clone-opus:
-    runs-on: macos-latest
-    outputs:
-      cache-hit: ${{ steps.cache-libopus.outputs.cache-hit }}
-      hash-tag: ${{ steps.get-commit-hash.outputs.hash }}
-    steps:
-    - name: clone repository
-      run: git clone https://github.com/xiph/opus.git -b 1.1.2 --depth=1
-    - name: get commit hash
-      working-directory: ./opus
-      id: get-commit-hash
-      run: |
-        echo "::set-output name=hash::$(git rev-parse --short HEAD)"
-      shell: bash
-    - name: cache libopus
-      id: cache-libopus
-      uses: actions/cache@v3
-      with:
-        path: ${{github.workspace}}/artifacts/opus
-        key: ${{ runner.os }}-libopus-${{ steps.get-commit-hash.outputs.hash }}
-        
-  build-opus:
-    if: needs.clone-opus.outputs.cache-hit != 'true'
-    runs-on: macos-latest
-    needs: [clone-opus]
-    steps:
-    - name: cache libopus
-      id: cache-libopus
-      uses: actions/cache@v3
-      with:
-        path: ${{github.workspace}}/artifacts/opus
-        key: ${{ runner.os }}-libx265-${{ needs.clone-opus.outputs.hash-tag }}
-    - name: clone repository
-      run: git clone https://github.com/xiph/opus.git -b 1.1.2 --depth=1
     - name: setup autoconf
       run: brew install autoconf
     - name: setup automake
       run: brew install automake
     - name: setup libtool
       run: brew install libtool
-    - name: autogen
-      working-directory: ./opus
-      run: ./autogen.sh
-    - name: configure
-      working-directory: ./opus
-      run: ./configure --host=x86_64 --prefix=${{github.workspace}}/artifacts/opus --enable-static --disable-shared --disable-doc --disable-extra-programs
-    - name: make
-      working-directory: ./opus
-      run: make
-    - name: make install
-      working-directory: ./opus
-      run: make install
-    - name: make clean
-      working-directory: ./opus
-      run: make clean
-  
-  clone-FFmpeg:
-    runs-on: macos-latest
-    needs: [clone-x264, clone-x265]
-    outputs:
-      cache-hit: ${{ steps.cache-FFmpeg.outputs.cache-hit }}
-      ffmpeg-hash-tag: ${{steps.get-commit-hash.outputs.hash}}
-      x264-hash-tag: ${{needs.clone-x264.outputs.hash-tag}}
-      x265-hash-tag: ${{needs.clone-x265.outputs.hash-tag}}
-    steps:
-    - name: clone repository
-      run: git clone https://github.com/FFmpeg/FFmpeg.git -b release/5.1 --depth=1
-    - name: ls
-      run: ls -la
-    - name: get commit hash
-      working-directory: ./FFmpeg
-      id: get-commit-hash
-      run: |
-        echo "::set-output name=hash::$(git rev-parse --short HEAD)"
-      shell: bash
-    - name: cache FFmpeg
-      id: cache-FFmpeg
-      uses: actions/cache@v3
-      with:
-        path: ${{github.workspace}}/artifacts/ffmpeg
-        key: ${{ runner.os }}-FFmpeg-${{steps.get-commit-hash.outputs.hash}}-${{needs.clone-x264.outputs.hash-tag}}-${{needs.clone-x265.outputs.hash-tag}}
-        
-  build-FFmpeg:
-    if: |
-      always() && needs.clone-FFmpeg.outputs.cache-hit != 'true'
-    runs-on: macos-latest
-    outputs:
-      fmpeg-hash-tag: ${{needs.clone-FFmpeg.outputs.ffmpeg-hash-tag}}-${{needs.clone-FFmpeg.outputs.x264-hash-tag}}-${{needs.clone-FFmpeg.outputs.x265-hash-tag}}
-      x264-hash-tag: ${{needs.clone-x264.outputs.x264-hash-tag}}
-      x265-hash-tag: ${{needs.clone-x265.outputs.x265-hash-tag}}
-    needs: [clone-FFmpeg, build-x264, build-x265]
-    steps:
-    - name: get cached libx264
-      uses: actions/cache@v3
-      with:
-        path: ${{github.workspace}}/artifacts/x264
-        key: ${{ runner.os }}-libx264-${{needs.clone-FFmpeg.outputs.x264-hash-tag}}
-    - name: get cached libx265
-      uses: actions/cache@v3
-      with:
-        path: ${{github.workspace}}/artifacts/x265
-        key: ${{ runner.os }}-libx265-${{needs.clone-FFmpeg.outputs.x265-hash-tag}}
-    - name: cache FFmpeg
-      uses: actions/cache@v3
-      with:
-        path: ${{github.workspace}}/artifacts/FFmpeg
-        key: ${{ runner.os }}-FFmpeg-${{needs.clone-FFmpeg.outputs.ffmpeg-hash-tag}}-${{needs.clone-FFmpeg.outputs.x264-hash-tag}}-${{needs.clone-FFmpeg.outputs.x265-hash-tag}}
-    - name: clone repository
-      run: git clone https://github.com/FFmpeg/FFmpeg.git -b release/5.1 --depth=1
-    - name: set up nasm
-      uses: ilammy/setup-nasm@v1.4.0
-    - name: set env
-      run: |
-        echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH:${{github.workspace}}/artifacts/x264/lib/pkgconfig:${{github.workspace}}/artifacts/x265/lib/pkgconfig" >> $GITHUB_ENV      
-    - name: list pkg-config
-      run: |
-        pkg-config --list-all
-    - name: configure
-      working-directory: ./FFmpeg
-      run: |
-        ./configure \
-        --prefix=${{github.workspace}}/artifacts/FFmpeg \
-        --disable-all \
-        --disable-autodetect \
-        --arch=x86_64 \
-        --pkg-config-flags=--static \
-        --enable-stripping \
-        --disable-debug \
-        --enable-pic \
-        --enable-hardcoded-tables \
-        --enable-gpl \
-        --enable-version3 \
-        --enable-avdevice \
-        --enable-avcodec \
-        --enable-avformat \
-        --disable-doc \
-        --disable-htmlpages \
-        --disable-manpages \
-        --disable-podpages \
-        --disable-txtpages \
-        --disable-network \
-        --enable-libx264 \
-        --enable-libx265 \
-        --enable-videotoolbox \
-        --enable-audiotoolbox \
-        --enable-encoder=libx264 \
-        --enable-encoder=libx265 \
-        --enable-decoder=h264 \
-        --enable-decoder=hevc \
-        --enable-encoder=h264_videotoolbox \
-        --enable-encoder=hevc_videotoolbox \
-        --enable-hwaccel=h264_videotoolbox \
-        --enable-hwaccel=hevc_videotoolbox \
-        --enable-hwaccel=vp9_videotoolbox \
-        --enable-parser=h264 \
-        --enable-parser=hevc
-    - name: make
-      working-directory: ./FFmpeg
-      run: make
-    - name: make install
-      working-directory: ./FFmpeg
-      run: make install
-    - name: make clean
-      working-directory: ./FFmpeg
-      run: make clean
-
-  build_mirrorx:
-    if: |
-      always()
-    runs-on: macos-latest
-    needs: [build-FFmpeg, build-opus]
-    steps:
     - name: set up node.js
       uses: actions/setup-node@v3.5.1
     - name: set up yarn
-      run: corepack enalbe && corepack prepare yarn@stable --activate
+      run: |
+        corepack enalbe && corepack prepare yarn@stable --activate
     - name: download protoc
       uses: dsaltares/fetch-gh-release-asset@master
       with:
@@ -298,10 +37,8 @@ jobs:
       uses: baptiste0928/cargo-install@v1.3.0
       with:
         crate: tauri-cli
-    - name: checkout repository
-      uses: actions/checkout@v2.5.0
-    - name: cache cargo build
-      uses: actions/cache@v3
+    - name: use cargo cache
+    - uses: actions/cache@v3
       with:
         path: |
           ~/.cargo/bin/
@@ -310,33 +47,17 @@ jobs:
           ~/.cargo/git/db/
           target/
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-    - name: get cache libx264
-      uses: actions/cache@v3
+    - name: Get yarn cache directory path
+      id: yarn-cache-dir-path
+      run: echo "::set-output name=dir::$(yarn config get cacheFolder)"
+    - uses: actions/cache@v3
+      id: yarn-cache # use this to check for `cache-hit` (`steps.yarn-cache.outputs.cache-hit != 'true'`)
       with:
-        path: ${{github.workspace}}/artifacts/x264
-        key: ${{ runner.os }}-libx264-${{ needs.build-FFmpeg.outputs.x264-hash-tag }}
-    - name: get cache libx265
-      uses: actions/cache@v3
-      with:
-        path: ${{github.workspace}}/artifacts/x265
-        key: ${{ runner.os }}-libx265-${{ needs.build-FFmpeg.outputs.x265-hash-tag }}
-    - name: get cache libopus
-      uses: actions/cache@v3
-      with:
-        path: ${{github.workspace}}/artifacts/opus
-        key: ${{ runner.os }}-libopus-${{ needs.build-opus.outputs.hash-tag }}
-    - name: get cache FFmpeg
-      uses: actions/cache@v3
-      with:
-        path: ${{github.workspace}}/artifacts/FFmpeg
-        key: ${{ runner.os }}-FFmpeg-${{ needs.build-FFmpeg.outputs.ffmpeg-hash-tag }}
-    - name: ls
-      run: ls -la
-    - name: build release
-      run: cargo tauri release
-      
-
-    
-      
-      
-  
+        path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
+        key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-yarn-
+    - name: checkout repository
+      uses: actions/checkout@v2.5.0
+    - name: build
+      run: cargo tauri build
