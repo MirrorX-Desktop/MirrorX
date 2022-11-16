@@ -35,8 +35,7 @@ jobs:
     - uses: actions-rs/install@v0.1
       with:
         crate: tauri-cli
-        version: latest
-        use-tool-cache: true
+        version: 1.2.0
     - name: use cargo cache
       uses: actions/cache@v3
       with:
