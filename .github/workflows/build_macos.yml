@@ -35,10 +35,11 @@ jobs:
 #       run: 7zip x protoc-21.9-osx-x86_64.zip
 #     - name: set up protoc
 #       run: echo "PATH=$PATH:${{github.workspace}}/artifacts/protoc/bin" >> $GITHUB_ENV
-    - name: install tauri-cli
-      uses: baptiste0928/cargo-install@v1.3.0
+    - uses: actions-rs/install@v0.1
       with:
         crate: tauri-cli
+        version: latest
+        use-tool-cache: true
     - name: use cargo cache
       uses: actions/cache@v3
       with:
