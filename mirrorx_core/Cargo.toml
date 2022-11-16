@@ -46,6 +46,10 @@ fxhash = "0.2.1"
 r2d2 = "0.8.10"
 r2d2_sqlite = "0.21.0"
 
+[target.'cfg(not(macos))'.build-dependencies]
+reqwest = { version = "0.11.12", features = ["blocking"] }
+sevenz-rust = "0.1.5"
+
 [target.x86_64-apple-darwin.dependencies]
 objc = { version = "0.2.7" }
 objc-encode = "1.1.0"

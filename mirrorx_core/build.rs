@@ -1,4 +1,4 @@
-use std::{ffi::OsStr, path::Path};
+use std::{ffi::OsStr, io, path::Path};
 
 fn main() {
     println!("cargo:rerun-if-changed=build.rs");
@@ -11,6 +11,11 @@ fn main() {
         macos_build_libopus();
         macos_build_libx265();
         macos_build_ffmpeg();
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        windows_build_ffmpeg();
     }
 }
 
@@ -336,6 +341,40 @@ fn macos_build_ffmpeg() {
         Some(&target_dir),
     );
     run_command("ffmpeg::make-clean", "make", ["clean"], Some(&target_dir));
+}
+
+#[cfg(target_os = "windows")]
+fn windows_build_ffmpeg() {
+    let output_dir = std::env::var_os("OUT_DIR").unwrap();
+    let download_file_path = Path::new(&output_dir).join("ffmpeg-release-full-shared.7z");
+    let artifacts_dir = Path::new(&output_dir).join("artifacts").join("ffmpeg");
+
+    println!(
+        "cargo:rustc-link-search={}",
+        artifacts_dir.join("lib").display()
+    );
+    println!("cargo:rustc-link-lib=libavcodec");
+    println!("cargo:rustc-link-lib=libavformat");
+    println!("cargo:rustc-link-lib=libavutil");
+    println!("cargo:rustc-link-lib=libavdevice");
+    println!("cargo:warning=build_ffmpeg_output_dir: {:?}", output_dir);
+
+    let mut resp =
+        reqwest::blocking::get("https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-full-shared.7z")
+            .unwrap_or_else(|err| panic!("request ffmpeg pre built binary failed: {:?}", err));
+
+    let mut download_file = std::fs::File::create(&download_file_path)
+        .unwrap_or_else(|err| panic!("create ffmpeg pre built binary file failed: {:?}", err));
+
+    io::copy(&mut resp, &mut download_file)
+        .unwrap_or_else(|err| panic!("write ffmpeg pre built binary file failed: {:?}", err));
+
+    download_file
+        .sync_all()
+        .unwrap_or_else(|err| panic!("sync all to ffmpeg pre built binary file failed: {:?}", err));
+
+    sevenz_rust::decompress_file(&download_file_path, artifacts_dir)
+        .unwrap_or_else(|err| panic!("decompress ffmpeg pre built binary file failed: {:?}", err));
 }
 
 fn run_command<P, I, S>(stage: &str, program: P, args: I, working_directory: Option<&Path>)
