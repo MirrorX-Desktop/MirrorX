@@ -1,0 +1,47 @@
+name: build_windows
+
+on:
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+    - name: set up protobuf
+      run: brew install protobuf
+    - name: set up rust toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+          toolchain: stable
+    - uses: actions-rs/install@v0.1
+      with:
+        crate: tauri-cli
+        version: 1.2.0
+        use-tool-cache: true
+    - name: use cargo cache
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+    - name: Get yarn cache directory path
+      id: yarn-cache-dir-path
+      run: echo "::set-output name=dir::$(yarn config get cacheFolder)"
+    - uses: actions/cache@v3
+      id: yarn-cache # use this to check for `cache-hit` (`steps.yarn-cache.outputs.cache-hit != 'true'`)
+      with:
+        path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
+        key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-yarn-
+    - name: checkout repository
+      uses: actions/checkout@v2.5.0
+    - name: build
+      run: cargo tauri build
