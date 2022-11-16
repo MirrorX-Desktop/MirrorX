@@ -36,6 +36,7 @@ jobs:
       with:
         crate: tauri-cli
         version: 1.2.0
+        use-tool-cache: false
     - name: use cargo cache
       uses: actions/cache@v3
       with:
