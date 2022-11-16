@@ -11,7 +11,7 @@ jobs:
     runs-on: windows-latest
     steps:
     - name: set up protobuf
-      run: brew install protobuf
+      run: choco install protoc
     - name: set up rust toolchain
       uses: actions-rs/toolchain@v1
       with:
