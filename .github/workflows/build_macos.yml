@@ -16,19 +16,19 @@ jobs:
       run: brew install automake
     - name: setup libtool
       run: brew install libtool
-    - name: set up node.js
+    - name: setup node.js
       uses: actions/setup-node@v3.5.1
-    - name: set up protobuf
+    - name: setup protobuf
       run: brew install protobuf
-    - name: set up rust toolchain
+    - name: setup rust toolchain
       uses: actions-rs/toolchain@v1
       with:
           toolchain: stable
-    - uses: actions-rs/install@v0.1
+    - name: setup tauri-cli
+      uses: baptiste0928/cargo-install@v1
       with:
         crate: tauri-cli
-        version: 1.2.0
-        use-tool-cache: false
+        version: "1.2.0" 
     - name: use cargo cache
       uses: actions/cache@v3
       with:
