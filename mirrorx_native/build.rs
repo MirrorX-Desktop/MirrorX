@@ -343,7 +343,7 @@ fn macos_build_ffmpeg() {
     run_command("ffmpeg::make-clean", "make", ["clean"], Some(&target_dir));
 }
 
-#[cfg(target_os = "windows")]
+// #[cfg(target_os = "windows")]
 fn windows_build_ffmpeg() {
     let output_dir = std::env::var_os("OUT_DIR").unwrap();
     let download_file_path = Path::new(&output_dir).join("ffmpeg-release-full-shared.7z");
@@ -372,6 +372,9 @@ fn windows_build_ffmpeg() {
     download_file
         .sync_all()
         .unwrap_or_else(|err| panic!("sync all to ffmpeg pre built binary file failed: {:?}", err));
+
+    // close the file
+    drop(download_file);
 
     sevenz_rust::decompress_file(&download_file_path, artifacts_dir)
         .unwrap_or_else(|err| panic!("decompress ffmpeg pre built binary file failed: {:?}", err));

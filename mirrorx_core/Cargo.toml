@@ -2,7 +2,6 @@
 name = "mirrorx_core"
 version = "0.1.0"
 edition = "2021"
-build = "build.rs"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [lib]
@@ -10,6 +9,7 @@ doctest = false
 crate-type = ["lib", "cdylib", "staticlib"]
 
 [dependencies]
+mirrorx_native = { path = "../mirrorx_native" }
 chrono = "0.4.22"
 rand = "0.8.5"
 serde = { version = "1.0.145", features = ["derive"] }
@@ -46,9 +46,6 @@ fxhash = "0.2.1"
 r2d2 = "0.8.10"
 r2d2_sqlite = "0.21.0"
 
-[target.'cfg(not(macos))'.build-dependencies]
-reqwest = { version = "0.11.12", features = ["blocking"] }
-sevenz-rust = "0.1.5"
 
 [target.x86_64-apple-darwin.dependencies]
 objc = { version = "0.2.7" }

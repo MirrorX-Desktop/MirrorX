@@ -1,8 +1,6 @@
 use super::{set_codec_ctx_option, EncoderConfig};
-use crate::{
-    error::CoreResult,
-    ffi::ffmpeg::avcodec::{AVCodecContext, AVCodecID, AV_CODEC_ID_H264},
-};
+use crate::error::CoreResult;
+use mirrorx_native::ffmpeg::avcodec::*;
 use std::ffi::CString;
 
 pub struct Libx264Config {

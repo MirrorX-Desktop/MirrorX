@@ -3,10 +3,11 @@ use crate::{
     component::frame::{DesktopDecodeFrame, DesktopDecodeFrameFormat},
     core_error,
     error::CoreResult,
-    ffi::ffmpeg::{avcodec::*, avutil::*},
 };
+use mirrorx_native::ffmpeg::{avcodec::*, avutil::*};
 use std::ffi::{CStr, CString};
 use tokio::sync::mpsc::Sender;
+
 pub struct VideoDecoder {
     decode_context: Option<DecodeContext>,
     render_frame_tx: Sender<DesktopDecodeFrame>,

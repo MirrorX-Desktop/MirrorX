@@ -1,4 +1,4 @@
-use crate::ffi::ffmpeg::avutil::rational::AVRational;
+use crate::ffmpeg::avutil::rational::AVRational;
 use std::os::raw::{c_char, c_void};
 
 pub type AVOptionType = u32;

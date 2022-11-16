@@ -1,11 +1,9 @@
 use super::config::{EncoderConfig, EncoderType};
 use crate::{
-    api::endpoint::EndPointClient,
-    component::frame::DesktopEncodeFrame,
-    core_error,
+    api::endpoint::EndPointClient, component::frame::DesktopEncodeFrame, core_error,
     error::CoreResult,
-    ffi::ffmpeg::{avcodec::*, avutil::*},
 };
+use mirrorx_native::ffmpeg::{avcodec::*, avutil::*};
 
 pub struct VideoEncoder {
     encode_config: Box<dyn EncoderConfig>,

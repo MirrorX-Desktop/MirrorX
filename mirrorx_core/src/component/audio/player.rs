@@ -1,15 +1,9 @@
-use crate::{
-    api::endpoint::message::EndPointAudioFrame,
-    core_error,
-    error::CoreResult,
-    ffi::opus::decoder::{
-        opus_decode_float, opus_decoder_create, opus_decoder_destroy, OpusDecoder,
-    },
-};
+use crate::{api::endpoint::message::EndPointAudioFrame, core_error, error::CoreResult};
 use cpal::{
     traits::{DeviceTrait, HostTrait, StreamTrait},
     BufferSize, OutputCallbackInfo, SampleRate,
 };
+use mirrorx_native::opus::decoder::*;
 use tokio::sync::mpsc::{error::TryRecvError, Receiver, Sender};
 
 #[derive(Default)]

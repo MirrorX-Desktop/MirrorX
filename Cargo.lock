@@ -2672,6 +2672,7 @@ dependencies = [
  "hmac",
  "image",
  "libc",
+ "mirrorx_native",
  "objc",
  "objc-encode",
  "objc-foundation",
@@ -2682,7 +2683,6 @@ dependencies = [
  "r2d2",
  "r2d2_sqlite",
  "rand 0.8.5",
- "reqwest",
  "ring",
  "rsa",
  "rtrb",
@@ -2691,7 +2691,6 @@ dependencies = [
  "serde",
  "serde_bytes",
  "serde_json",
- "sevenz-rust",
  "sha2 0.10.6",
  "signaling_proto",
  "thiserror",
@@ -2701,6 +2700,22 @@ dependencies = [
  "tracing",
  "uuid 1.2.1",
  "windows 0.42.0",
+]
+
+[[package]]
+name = "mirrorx_native"
+version = "0.1.0"
+dependencies = [
+ "block",
+ "core-foundation",
+ "core-graphics",
+ "dispatch",
+ "objc",
+ "objc-encode",
+ "objc-foundation",
+ "objc_id",
+ "reqwest",
+ "sevenz-rust",
 ]
 
 [[package]]

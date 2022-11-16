@@ -1,8 +1,5 @@
-use std::os::raw::c_char;
-
-use libc::c_void;
-
 use super::{buffer::AVBufferRef, frame::AVFrame};
+use std::{ffi::c_void, os::raw::c_char};
 
 pub type AVHWDeviceType = u32;
 pub const AV_HWDEVICE_TYPE_NONE: AVHWDeviceType = 0;

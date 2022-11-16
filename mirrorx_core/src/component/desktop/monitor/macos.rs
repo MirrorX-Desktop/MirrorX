@@ -1,6 +1,7 @@
 use super::Monitor;
-use crate::{core_error, error::CoreResult, ffi::os::macos::core_graphics::*};
+use crate::{core_error, error::CoreResult};
 use core_graphics::display::{CGDirectDisplayID, CGRect, *};
+use mirrorx_native::os::macos::core_graphics::*;
 use objc::{class, msg_send, runtime::Class, sel, sel_impl};
 use objc_foundation::{
     INSArray, INSData, INSObject, INSString, NSArray, NSDictionary, NSMutableData, NSObject,

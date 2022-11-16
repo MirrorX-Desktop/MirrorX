@@ -2,14 +2,8 @@ mod h264_videotoolbox;
 mod hevc_videotoolbox;
 mod libx264;
 
-use crate::{
-    core_error,
-    error::CoreResult,
-    ffi::ffmpeg::{
-        avcodec::{AVCodecContext, AVCodecID},
-        avutil::{av_opt_set, AVERROR, AVERROR_OPTION_NOT_FOUND},
-    },
-};
+use crate::{core_error, error::CoreResult};
+use mirrorx_native::ffmpeg::{avcodec::*, avutil::*};
 use std::ffi::CString;
 
 #[allow(unused)]

@@ -4,10 +4,10 @@ use crate::{
     },
     core_error,
     error::CoreResult,
-    ffi::os::macos::{core_graphics::*, core_video::*, io_surface::*},
 };
 use block::ConcreteBlock;
 use dispatch::ffi::{dispatch_queue_create, dispatch_release, DISPATCH_QUEUE_SERIAL};
+use mirrorx_native::os::macos::{core_graphics::*, core_video::*, io_surface::*};
 use once_cell::unsync::OnceCell;
 use scopeguard::defer;
 use std::{ffi::CString, ops::Deref, time::Duration};

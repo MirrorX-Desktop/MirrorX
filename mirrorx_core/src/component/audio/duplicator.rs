@@ -3,15 +3,12 @@ use crate::{
     component::frame::AudioEncodeFrame,
     core_error,
     error::CoreResult,
-    ffi::opus::encoder::{
-        opus_encode_float, opus_encoder_create, opus_encoder_destroy, OpusEncoder,
-        OPUS_APPLICATION_RESTRICTED_LOWDELAY,
-    },
 };
 use cpal::{
     traits::{DeviceTrait, HostTrait, StreamTrait},
     InputCallbackInfo,
 };
+use mirrorx_native::opus::encoder::*;
 use once_cell::sync::OnceCell;
 use tokio::sync::mpsc::Receiver;
 
