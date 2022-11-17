@@ -54,7 +54,7 @@ cargo install tauri-cli
 
 ### Steps
 
-1. Download pre built media libraries artifacts from [MirrorX/media_libraries_auto_build](https://github.com/MirrorX-Desktop/media_libraries_auto_build) Release.
+1. Download pre built media libraries artifacts from [MirrorX-Desktop/media_libraries_auto_build](https://github.com/MirrorX-Desktop/media_libraries_auto_build) Release.
 2. Unzip artifacts to anywhere you'd like to put in.
 3. **Add unzipped artifacts path to your Environment Variables**
 

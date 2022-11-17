@@ -54,7 +54,7 @@ cargo install tauri-cli
 
 ### 步骤
 
-1. 从 [MirrorX/media_libraries_auto_build](https://github.com/MirrorX-Desktop/media_libraries_auto_build) 下载预编译的多媒体库产物。
+1. 从 [MirrorX-Desktop/media_libraries_auto_build](https://github.com/MirrorX-Desktop/media_libraries_auto_build) 下载预编译的多媒体库产物。
 2. 解压多媒体库产物到任何你喜欢的路径。
 3. **将刚才解压的多媒体库产物路径添加到环境变量中**
 
