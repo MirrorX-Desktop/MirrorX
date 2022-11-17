@@ -16,7 +16,3 @@ objc-foundation = "0.1.1"
 objc_id = "0.1.1"
 core-foundation = "0.9.3"
 core-graphics = { version = "0.22.3", features = ["highsierra"] }
-
-[target.'cfg(not(macos))'.build-dependencies]
-reqwest = { version = "0.11.12", features = ["blocking"] }
-sevenz-rust = "0.1.5"
