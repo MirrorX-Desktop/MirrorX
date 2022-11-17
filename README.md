@@ -44,57 +44,42 @@ MirrorX is a remote desktop control tool powered by [Rust](https://github.com/ru
 
 ### Prerequisite
 
-1. Installed `nodejs && npm && yarn`
+1. Install `nodejs && npm && yarn`
 2. `ProtoBuf Compiler (protoc)` can be find at your PATH
-3. For Windows: Installed `Visual Studio 2019+ && Desktop Development with C++ workloads`
-
-### For Windows
-
-1. Make sure you have installed Visual Studio 2019+ and install Desktop Development with C++ workloads.
-2. Launch Developer PowerShell for VS with `Administorator priviliges`.
-3. Switch terminal location to `MirrorX\third` and run PowerShell script:
-
-```PowerShell
-PS > Set-Location MirrorX\third
-PS C:\MirrorX\third> .\build_dependencies.ps1
-```
-
-4. After script install and compile, install `tauri-cli`:
-
-```PowerShell
-PS > cargo install tauri-cli
-```
-
-5. Switch terminal location to MirrorX root dir and run:
-
-```PowerShell
-PS > cargo tauri dev
-```
-
-### For MacOS
-
-1. Switch terminal location to `MirrorX/third` and run shell script:
+3. Install `tauri-cli`
 
 ```console
-$ cd MirrorX/third
-$ ./build_dependencies.sh
+cargo install tauri-cli
 ```
 
-2. After script install and compile, install `tauri-cli`:
+### Steps
+
+1. Download pre built media libraries artifacts from [MirrorX/media_libraries_auto_build](https://github.com/MirrorX-Desktop/media_libraries_auto_build) Release.
+2. Unzip artifacts to anywhere you'd like to put in.
+3. **Add artifacts path to your Environment Variables**
+
+   - For MacOS
+
+     ```console
+     $ export MIRRORX_MEDIA_LIBS_PATH=[your artifacts unzip destination path]
+     ```
+
+   - For Windows **(run As Administrator)**
+     ```PowerShell
+     PS > [Environment]::SetEnvironmentVariable('MIRRORX_MEDIA_LIBS_PATH', '[your artifacts unzip destination path]' , 'User')
+     ```
+
+4. Run as Development Mode
 
 ```console
-$ cargo install tauri-cli
+cargo tauri dev
 ```
 
-3. Switch terminal location to MirrorX root dir and run:
+## About Pre Built Media Libraries
 
-```console
-$ cargo tauri dev
-```
+To speed up the build process, we made [MirrorX-Desktop/media_libraries_auto_build](https://github.com/MirrorX-Desktop/media_libraries_auto_build) to automatically and transparently build external libraries. Includes [FFmpeg](https://git.ffmpeg.org/ffmpeg.git), libx264([Windows](https://github.com/ShiftMediaProject/x264.git), [MacOS](https://code.videolan.org/videolan/x264.git)), libx265([Windows](https://github.com/ShiftMediaProject/x265.git), [MacOS](https://bitbucket.org/multicoreware/x265_git.git)), libopus([Windows](https://github.com/ShiftMediaProject/opus.git), [MacOS](https://github.com/xiph/opus.git)) and MFXDispatch([Windows](https://github.com/ShiftMediaProject/mfx_dispatch.git) only). For more details, you can look through [Workflows](https://github.com/MirrorX-Desktop/media_libraries_auto_build/tree/main/.github/workflows) on [MirrorX-Desktop/media_libraries_auto_build](https://github.com/MirrorX-Desktop/media_libraries_auto_build).
 
-### Other Platforms
-
-not support yet
+You can also built those libraries by yourself according to our [Workflows](https://github.com/MirrorX-Desktop/media_libraries_auto_build/tree/main/.github/workflows).
 
 ## Thanks
 
@@ -112,3 +97,4 @@ not support yet
 8. [sveltekit](https://github.com/sveltejs/kit)
 9. [daisyUI](https://github.com/saadeghi/daisyui)
 10. [tailwindcss](https://github.com/tailwindlabs/tailwindcss)
+11. [ShiftMediaProject](https://github.com/ShiftMediaProject)
