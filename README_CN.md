@@ -83,9 +83,9 @@ cargo tauri dev
 
 ## 感谢
 
-### 感谢那些令人惊叹的开源项目使得 MirrorX 得以成真.
+### 感谢那些令人惊叹的开源项目使得 MirrorX 得以成真。
 
-(排名不分先后，仅列出部分项目, 感谢所有在 Cargo.toml 和 package.json 中依赖的库的作者)
+（排名不分先后，仅列出部分项目，感谢所有在 Cargo.toml 和 package.json 中依赖的库的作者）
 
 1. [Rust](https://github.com/rust-lang/rust)
 2. [Tokio](https://github.com/tokio-rs/tokio)
