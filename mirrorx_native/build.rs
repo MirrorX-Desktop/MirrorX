@@ -26,7 +26,7 @@ fn link_sys() {
 fn link_media_libraries_artifacts() {
     let mirrorx_media_libraries_path = match std::env::var("MIRRORX_MEDIA_LIBS_PATH") {
         Ok(path) => PathBuf::from(path),
-        Err(_) => panic!("environment variable 'MIRRORX_MEDIA_LIB_PATH' not exists"),
+        Err(_) => panic!("environment variable 'MIRRORX_MEDIA_LIBS_PATH' not exists"),
     };
 
     println!(
@@ -73,7 +73,7 @@ fn link_media_libraries_artifacts() {
 fn link_media_libraries_artifacts() {
     let mirrorx_media_libraries_path = match std::env::var("MIRRORX_MEDIA_LIBS_PATH") {
         Ok(path) => PathBuf::from(path),
-        Err(_) => panic!("environment variable 'MIRRORX_MEDIA_LIB_PATH' not exists"),
+        Err(_) => panic!("environment variable 'MIRRORX_MEDIA_LIBS_PATH' not exists"),
     };
 
     println!(
@@ -85,7 +85,7 @@ fn link_media_libraries_artifacts() {
     );
     println!("cargo:rustc-link-lib=libx264");
     println!("cargo:rustc-link-lib=libx265");
-    println!("cargo:rustc-link-lib=libxopus");
+    println!("cargo:rustc-link-lib=libopus");
     println!("cargo:rustc-link-lib=libmfx");
     println!("cargo:rustc-link-lib=libavcodec");
     println!("cargo:rustc-link-lib=libavutil");
