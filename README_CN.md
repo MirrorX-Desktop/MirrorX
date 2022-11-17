@@ -44,57 +44,42 @@ MirrorX 是一个使用 [Rust](https://github.com/rust-lang/rust) 构建的远�
 
 ### 先决条件
 
-1. 已安装 `nodejs && npm && yarn`
-2. `ProtoBuf Compiler (protoc)` 可在环境变量中查找
-3. 对于 Windows：已安装 `Visual Studio 2019+ && C++桌面开发`
-
-### 对于 Windows
-
-1. 请确保你已提前安装 Visual Studio 2019+ 和 C++桌面开发工作负载。
-2. 以管理员身份运行 Developer PowerShell for VS。
-3. 切换目录到 `MirrorX\third` 并运行 PowerShell 脚本：
-
-```PowerShell
-PS > Set-Location MirrorX\third
-PS C:\MirrorX\third> .\build_dependencies.ps1
-```
-
-4. 在脚本安装与编译完成后，安装 `tauri-cli`:
-
-```PowerShell
-PS > cargo install tauri-cli
-```
-
-5. 切换目录到 MirrorX 的根目录并且运行：
-
-```PowerShell
-PS > cargo tauri dev
-```
-
-### 对于 MacOS
-
-1. 切换目录到 `MirrorX/third` 并运行 shell 脚本：
+1. 已安装 `nodejs && npm && yarn` 。
+2. 在环境变量中加入 `ProtoBuf Compiler (protoc)` 的路径。
+3. 安装 `tauri-cli` 。
 
 ```console
-$ cd MirrorX/third
-$ ./build_dependencies.sh
+cargo install tauri-cli
 ```
 
-2. 在脚本安装与编译完成后，安装 `tauri-cli`：
+### 步骤
+
+1. 从 [MirrorX/media_libraries_auto_build](https://github.com/MirrorX-Desktop/media_libraries_auto_build) 下载预编译的多媒体库产物。
+2. 解压多媒体库产物到任何你喜欢的路径。
+3. **将刚才解压的多媒体库产物路径添加到环境变量中**
+
+   - 对于 MacOS
+
+     ```console
+     $ export MIRRORX_MEDIA_LIBS_PATH=你的产物解压路径
+     ```
+
+   - 对于 Windows **(以管理员身份运行)**
+     ```PowerShell
+     PS > [Environment]::SetEnvironmentVariable('MIRRORX_MEDIA_LIBS_PATH', '你的产物解压路径' , 'User')
+     ```
+
+4. 以 Debug 模式运行
 
 ```console
-$ cargo install tauri-cli
+cargo tauri dev
 ```
 
-3. 切换到 MirrorX 根目录并运行：
+## 关于预编译的多媒体库
 
-```console
-$ cargo tauri dev
-```
+为了加速编译过程, 我们建立了 [MirrorX-Desktop/media_libraries_auto_build](https://github.com/MirrorX-Desktop/media_libraries_auto_build) 来自动化和透明化构建这些依赖库。包括 [FFmpeg](https://git.ffmpeg.org/ffmpeg.git) 、libx264（[Windows](https://github.com/ShiftMediaProject/x264.git), [MacOS](https://code.videolan.org/videolan/x264.git)）、libx265（[Windows](https://github.com/ShiftMediaProject/x265.git), [MacOS](https://bitbucket.org/multicoreware/x265_git.git)）、libopus（[Windows](https://github.com/ShiftMediaProject/opus.git), [MacOS](https://github.com/xiph/opus.git)） 和 MFXDispatch（只用于 [Windows](https://github.com/ShiftMediaProject/mfx_dispatch.git)）。你可以在 [MirrorX-Desktop/media_libraries_auto_build](https://github.com/MirrorX-Desktop/media_libraries_auto_build) 浏览工作流 [Workflows](https://github.com/MirrorX-Desktop/media_libraries_auto_build/tree/main/.github/workflows) 以获取更多细节。
 
-### 其它平台
-
-暂不支持
+当然，你也完全可以根据我们的 [Workflows](https://github.com/MirrorX-Desktop/media_libraries_auto_build/tree/main/.github/workflows) 来自行构建这些依赖库。
 
 ## 感谢
 
@@ -112,3 +97,4 @@ $ cargo tauri dev
 8. [sveltekit](https://github.com/sveltejs/kit)
 9. [daisyUI](https://github.com/saadeghi/daisyui)
 10. [tailwindcss](https://github.com/tailwindlabs/tailwindcss)
+11. [ShiftMediaProject](https://github.com/ShiftMediaProject)
