@@ -7,6 +7,7 @@ use super::{
         AVColorTransferCharacteristic, AVPixelFormat,
     },
     rational::AVRational,
+    AVChannelLayout,
 };
 use std::ffi::c_void;
 
@@ -94,11 +95,8 @@ pub struct AVFrame {
     pub pkt_size: i32,
     pub hw_frames_ctx: *mut AVBufferRef,
     pub opaque_ref: *mut AVBufferRef,
-    pub crop_top: usize,
-    pub crop_bottom: usize,
-    pub crop_left: usize,
-    pub crop_right: usize,
     pub private_ref: *mut AVBufferRef,
+    pub ch_layout: AVChannelLayout,
 }
 
 impl Drop for AVFrame {

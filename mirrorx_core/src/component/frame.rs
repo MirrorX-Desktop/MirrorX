@@ -1,5 +1,7 @@
 use std::time::Duration;
 
+use cpal::{SampleFormat, SampleRate};
+
 pub struct DesktopEncodeFrame {
     pub capture_time: Duration,
     pub width: i32,
@@ -29,8 +31,10 @@ pub struct DesktopDecodeFrame {
 }
 
 pub struct AudioEncodeFrame {
-    pub initial_encoder_params: Option<(u32, u8)>, // sample_rate, channels
-    pub buffer: Vec<f32>,
+    pub channels: u16,
+    pub sample_format: SampleFormat,
+    pub sample_rate: u32,
+    pub buffer: Vec<u8>,
 }
 
 unsafe impl Send for AudioEncodeFrame {}

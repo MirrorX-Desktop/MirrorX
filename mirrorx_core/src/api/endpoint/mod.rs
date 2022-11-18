@@ -196,11 +196,15 @@ impl EndPointClient {
 
     pub fn send_audio_frame(
         &self,
-        params: Option<(u32, AudioSampleFormat, u8, u16)>,
+        channels: u8,
+        sample_format: i32,
+        sample_rate: i32,
         buffer: &[u8],
     ) -> CoreResult<()> {
         let message = EndPointMessage::AudioFrame(EndPointAudioFrame {
-            params,
+            channels,
+            sample_format,
+            sample_rate,
             buffer: buffer.to_vec(),
         });
         self.send_message(message)

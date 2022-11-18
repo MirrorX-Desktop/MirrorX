@@ -1,6 +1,8 @@
 use crate::ffmpeg::avutil::rational::AVRational;
 use std::os::raw::{c_char, c_void};
 
+use super::{AVChannelLayout, AVSampleFormat};
+
 pub type AVOptionType = u32;
 pub const AV_OPT_TYPE_FLAGS: AVOptionType = 0;
 pub const AV_OPT_TYPE_INT: AVOptionType = 1;
@@ -65,6 +67,22 @@ extern "C" {
         obj: *mut c_void,
         name: *const c_char,
         val: *const c_char,
+        search_flags: i32,
+    ) -> i32;
+}
+
+extern "C" {
+    pub fn av_opt_set_chlayout(
+        obj: *mut c_void,
+        name: *const i8,
+        layout: *const AVChannelLayout,
+        search_flags: i32,
+    ) -> i32;
+    pub fn av_opt_set_int(obj: *mut c_void, name: *const i8, val: i64, search_flags: i32) -> i32;
+    pub fn av_opt_set_sample_fmt(
+        obj: *mut c_void,
+        name: *const i8,
+        fmt: AVSampleFormat,
         search_flags: i32,
     ) -> i32;
 }

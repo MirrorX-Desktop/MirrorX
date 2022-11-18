@@ -1,13 +1,15 @@
 use crate::api::endpoint::PASSIVE_ENDPOINTS_MONITORS;
+use crate::component::audio::duplicator::new_record_stream_and_rx;
+use crate::component::audio_encoder::audio_encoder::AudioEncoder;
 use crate::error::CoreError;
 use crate::{
     api::endpoint::EndPointClient,
     component::{
-        audio::duplicator::AudioDuplicator,
         desktop::{monitor::get_active_monitors, Duplicator},
         video_encoder::{config::EncoderType, video_encoder::VideoEncoder},
     },
 };
+use cpal::traits::StreamTrait;
 use scopeguard::defer;
 
 pub struct NegotiateFinishedRequest {
@@ -204,27 +206,64 @@ fn spawn_desktop_capture_and_encode_process(client: EndPointClient) {
 }
 
 fn spawn_audio_capture_and_encode_process(client: EndPointClient) {
+    let mut exit_rx = client.exit_tx.new_receiver();
+
     tokio::task::spawn_blocking(move || loop {
-        let mut audio_duplicator = match AudioDuplicator::new(client.clone()) {
-            Ok(duplicator) => duplicator,
+        match exit_rx.try_recv() {
+            Ok(_) => return,
+            Err(err) => match err {
+                async_broadcast::TryRecvError::Empty => {}
+                _ => return,
+            },
+        }
+
+        let (stream, mut rx) = match new_record_stream_and_rx() {
+            Ok((stream, rx)) => (stream, rx),
             Err(err) => {
-                tracing::error!(?err, "audio capture and encode process initialize failed");
-                client.close();
+                tracing::error!(?err, "initialize audio record stream failed");
+                continue;
+            }
+        };
+
+        if let Err(err) = stream.play() {
+            tracing::error!(?err, "play audio stream failed");
+            continue;
+        }
+
+        let mut audio_encoder = match AudioEncoder::new(client.clone()) {
+            Ok(encoder) => encoder,
+            Err(err) => {
+                tracing::error!(?err, "initialize audio encoder failed");
                 return;
             }
         };
 
         loop {
-            if let Err(err) = audio_duplicator.capture_samples() {
-                if let CoreError::OutgoingMessageChannelDisconnect = err {
-                    tracing::info!("audio capture and encode process exit");
-                    client.close();
-                    return;
-                } else {
-                    tracing::error!(
-                        ?err,
-                        "audio capture or encode process has an error occurred"
-                    );
+            match exit_rx.try_recv() {
+                Ok(_) => return,
+                Err(err) => match err {
+                    async_broadcast::TryRecvError::Empty => {}
+                    _ => return,
+                },
+            }
+
+            match rx.blocking_recv() {
+                Some(audio_frame) => {
+                    if let Err(err) = audio_encoder.encode(audio_frame) {
+                        match err {
+                            CoreError::OutgoingMessageChannelDisconnect => {
+                                tracing::info!("audio encode process exit");
+                                return;
+                            }
+                            _ => {
+                                tracing::error!(?err, "audio encode failed");
+                            }
+                        }
+                    }
+                }
+                None => {
+                    tracing::error!("audio duplicator tx closed");
+                    break;
                 }
             }
         }

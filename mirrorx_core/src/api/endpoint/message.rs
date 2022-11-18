@@ -92,7 +92,9 @@ pub struct EndPointVideoFrame {
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub struct EndPointAudioFrame {
-    pub params: Option<(u32, AudioSampleFormat, u8, u16)>, // sample_rate, sample_format, channels, frame_size
+    pub channels: u8,
+    pub sample_format: i32,
+    pub sample_rate: i32,
     #[serde(with = "serde_bytes")]
     pub buffer: Vec<u8>,
 }

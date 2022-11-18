@@ -67,6 +67,7 @@ fn link_media_libraries_artifacts() {
     println!("cargo:rustc-link-lib=avutil");
     println!("cargo:rustc-link-lib=avformat");
     println!("cargo:rustc-link-lib=avdevice");
+    println!("cargo:rustc-link-lib=swresample");
 }
 
 #[cfg(target_os = "windows")]
@@ -91,4 +92,5 @@ fn link_media_libraries_artifacts() {
     println!("cargo:rustc-link-lib=libavutil");
     println!("cargo:rustc-link-lib=libavformat");
     println!("cargo:rustc-link-lib=libavdevice");
+    println!("cargo:rustc-link-lib=libswresample");
 }
