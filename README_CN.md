@@ -66,7 +66,7 @@ cargo install tauri-cli
 
    - 对于 Windows **(以管理员身份运行)**
      ```PowerShell
-     PS > [Environment]::SetEnvironmentVariable('MIRRORX_MEDIA_LIBS_PATH', '你的产物解压路径' , 'User')
+     PS > [Environment]::SetEnvironmentVariable('MIRRORX_MEDIA_LIBS_PATH', '你的产物解压路径' , 'Machine')
      ```
 
 4. 以 Debug 模式运行

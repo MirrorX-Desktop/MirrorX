@@ -66,7 +66,7 @@ cargo install tauri-cli
 
    - For Windows **(run As Administrator)**
      ```PowerShell
-     PS > [Environment]::SetEnvironmentVariable('MIRRORX_MEDIA_LIBS_PATH', 'your artifacts unzip destination path' , 'User')
+     PS > [Environment]::SetEnvironmentVariable('MIRRORX_MEDIA_LIBS_PATH', 'your artifacts unzip destination path' , 'Machine')
      ```
 
 4. Run as Debug Mode
