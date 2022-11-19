@@ -206,28 +206,6 @@ impl EncodeContext {
                 opaque: std::ptr::null_mut(),
             };
 
-            tracing::info!("format: {}", (*encoder_context.frame).format);
-            tracing::info!("format: {}", (*encoder_context.frame).nb_samples);
-
-            // let mut linesize = 0;
-            // let ret = av_samples_get_buffer_size(
-            //     &mut linesize,
-            //     (*encoder_context.frame).ch_layout.nb_channels,
-            //     (*encoder_context.frame).nb_samples,
-            //     (*encoder_context.frame).format,
-            //     0,
-            // );
-
-            // if ret < 0 {
-            //     return Err(core_error!("av_samples_get_buffer_size check failed",));
-            // }
-
-            // tracing::info!(?linesize, "linesize");
-
-            // if av_channel_layout_check(&(*encoder_context.frame).ch_layout) == 0 {
-            //     return Err(core_error!("av_channel_layout_check check failed",));
-            // }
-
             let ret = av_frame_get_buffer(encoder_context.frame, 0);
             if ret < 0 {
                 return Err(core_error!(
