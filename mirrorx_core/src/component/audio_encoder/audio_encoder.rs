@@ -192,7 +192,6 @@ impl EncodeContext {
 
             (*encoder_context.frame).format = (*encoder_context.codec_ctx).sample_fmt;
             (*encoder_context.frame).nb_samples = nb_samples;
-            (*encoder_context.frame).channels = 2;
             (*encoder_context.frame).ch_layout = AVChannelLayout {
                 order: AV_CHANNEL_ORDER_NATIVE,
                 nb_channels: if channels >= 2 { 2 } else { 1 },
