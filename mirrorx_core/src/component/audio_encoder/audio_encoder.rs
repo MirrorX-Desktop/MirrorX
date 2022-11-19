@@ -106,7 +106,7 @@ impl AudioEncoder {
                 }
 
                 self.client.send_audio_frame(
-                    (*(*self.encode_context).codec_ctx).channels as u8,
+                    (*(*self.encode_context).codec_ctx).ch_layout.nb_channels as u8,
                     (*(*self.encode_context).codec_ctx).sample_fmt,
                     (*(*self.encode_context).codec_ctx).sample_rate,
                     std::slice::from_raw_parts(
@@ -228,15 +228,7 @@ impl EncodeContext {
             //     return Err(core_error!("av_channel_layout_check check failed",));
             // }
 
-            // let ret = av_frame_get_buffer(encoder_context.frame, 0);
-            // if ret < 0 {
-            //     return Err(core_error!(
-            //         "av_frame_get_buffer returns error code: {}",
-            //         ret
-            //     ));
-            // }
-
-            let ret = get_audio_buffer(encoder_context.frame, 0);
+            let ret = av_frame_get_buffer(encoder_context.frame, 0);
             if ret < 0 {
                 return Err(core_error!(
                     "av_frame_get_buffer returns error code: {}",
