@@ -193,6 +193,10 @@ impl EncodeContext {
                 opaque: std::ptr::null_mut(),
             };
 
+            if av_channel_layout_check(&(*encoder_context.frame).ch_layout) == 0 {
+                return Err(core_error!("av_channel_layout_check check failed",));
+            }
+
             let ret = av_frame_get_buffer(encoder_context.frame, 0);
             if ret < 0 {
                 return Err(core_error!(

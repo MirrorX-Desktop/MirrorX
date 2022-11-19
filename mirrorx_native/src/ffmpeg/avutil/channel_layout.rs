@@ -19,3 +19,7 @@ pub struct AVChannelLayout {
     pub u: AVChannelLayout_u,
     pub opaque: *mut c_void,
 }
+
+extern "C" {
+    pub fn av_channel_layout_check(channel_layout: *const AVChannelLayout) -> i32;
+}
