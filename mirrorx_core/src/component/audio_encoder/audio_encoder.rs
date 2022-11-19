@@ -42,7 +42,20 @@ impl AudioEncoder {
                     let _ = Box::from_raw(self.encode_context);
                 }
 
+                let buffer_size = match capture_frame.sample_format {
+                    SampleFormat::I16 => {
+                        capture_frame.buffer.len() / 2 / (capture_frame.channels as usize)
+                    }
+                    SampleFormat::U16 => {
+                        capture_frame.buffer.len() / 2 / (capture_frame.channels as usize)
+                    }
+                    SampleFormat::F32 => {
+                        capture_frame.buffer.len() / 4 / (capture_frame.channels as usize)
+                    }
+                };
+
                 self.encode_context = Box::into_raw(Box::new(EncodeContext::new(
+                    buffer_size as i32,
                     capture_frame.channels,
                     capture_frame.sample_format,
                     capture_frame.sample_rate,
@@ -129,6 +142,7 @@ struct EncodeContext {
 
 impl EncodeContext {
     pub fn new(
+        nb_samples: i32,
         channels: u16,
         sample_format: SampleFormat,
         sample_rate: u32,
@@ -162,6 +176,21 @@ impl EncodeContext {
                 SampleFormat::I16 => AV_SAMPLE_FMT_S16,
                 SampleFormat::U16 => AV_SAMPLE_FMT_S16,
                 SampleFormat::F32 => AV_SAMPLE_FMT_FLT,
+            };
+
+            (*encoder_context.frame).format = (*encoder_context.codec_ctx).sample_fmt;
+            (*encoder_context.frame).nb_samples = nb_samples;
+            (*encoder_context.frame).ch_layout = AVChannelLayout {
+                order: AV_CHANNEL_ORDER_NATIVE,
+                nb_channels: if channels >= 2 { 2 } else { 1 },
+                u: AVChannelLayout_u {
+                    mask: if channels >= 2 {
+                        (1 << 0) | (1 << 1)
+                    } else {
+                        1 << 2
+                    },
+                },
+                opaque: std::ptr::null_mut(),
             };
 
             let ret = av_frame_get_buffer(encoder_context.frame, 0);
