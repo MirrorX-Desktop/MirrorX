@@ -19,29 +19,29 @@ pub fn new_play_stream_and_tx() -> CoreResult<StreamAndTx> {
 
     tracing::info!(name = ?device.name(), "select audio output device");
 
-    let input_config = device.default_input_config()?;
-    let channels = input_config.channels();
-    let sample_format = input_config.sample_format();
-    let sample_rate = input_config.sample_rate();
+    let output_config = device.default_output_config()?;
+    let channels = output_config.channels();
+    let sample_format = output_config.sample_format();
+    let sample_rate = output_config.sample_rate();
 
-    tracing::info!(?input_config, "select audio stream config");
+    tracing::info!(?output_config, "select audio stream config");
 
     let (tx, mut rx) = tokio::sync::mpsc::channel::<Vec<u8>>(180);
     let err_fn = |err| tracing::error!(?err, "an error occurred when play audio sample");
 
-    let stream = match input_config.sample_format() {
+    let stream = match output_config.sample_format() {
         SampleFormat::I16 => device.build_output_stream(
-            &input_config.into(),
+            &output_config.into(),
             move |data, _| play_samples::<i16>(data, &mut rx),
             err_fn,
         ),
         SampleFormat::U16 => device.build_output_stream(
-            &input_config.into(),
+            &output_config.into(),
             move |data, _| play_samples::<u16>(data, &mut rx),
             err_fn,
         ),
         SampleFormat::F32 => device.build_output_stream(
-            &input_config.into(),
+            &output_config.into(),
             move |data, _| play_samples::<f32>(data, &mut rx),
             err_fn,
         ),

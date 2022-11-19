@@ -58,6 +58,7 @@ impl AudioEncoder {
             }
 
             (*(*self.encode_context).frame).data[0] = capture_frame.buffer.as_ptr() as *mut _;
+            (*(*self.encode_context).frame).linesize[0] = capture_frame.buffer.len() as i32;
 
             ret = avcodec_send_frame(
                 (*self.encode_context).codec_ctx,
