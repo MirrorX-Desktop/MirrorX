@@ -171,15 +171,28 @@ impl EncodeContext {
 
             (*encoder_context.codec_ctx).bit_rate = 64000;
             (*encoder_context.codec_ctx).sample_rate = sample_rate as i32;
-            (*encoder_context.codec_ctx).channels = channels as i32;
             (*encoder_context.codec_ctx).sample_fmt = match sample_format {
                 SampleFormat::I16 => AV_SAMPLE_FMT_S16,
                 SampleFormat::U16 => AV_SAMPLE_FMT_S16,
                 SampleFormat::F32 => AV_SAMPLE_FMT_FLT,
             };
+            (*encoder_context.codec_ctx).ch_layout = AVChannelLayout {
+                order: AV_CHANNEL_ORDER_NATIVE,
+                nb_channels: if channels >= 2 { 2 } else { 1 },
+                u: AVChannelLayout_u {
+                    mask: if channels >= 2 {
+                        (1 << 0) | (1 << 1)
+                    } else {
+                        1 << 2
+                    },
+                },
+                opaque: std::ptr::null_mut(),
+            };
+            (*encoder_context.codec_ctx).flags2 |= AV_CODEC_FLAG2_LOCAL_HEADER;
 
             (*encoder_context.frame).format = (*encoder_context.codec_ctx).sample_fmt;
             (*encoder_context.frame).nb_samples = nb_samples;
+            (*encoder_context.frame).channels = 2;
             (*encoder_context.frame).ch_layout = AVChannelLayout {
                 order: AV_CHANNEL_ORDER_NATIVE,
                 nb_channels: if channels >= 2 { 2 } else { 1 },
@@ -193,11 +206,37 @@ impl EncodeContext {
                 opaque: std::ptr::null_mut(),
             };
 
-            if av_channel_layout_check(&(*encoder_context.frame).ch_layout) == 0 {
-                return Err(core_error!("av_channel_layout_check check failed",));
-            }
+            tracing::info!("format: {}", (*encoder_context.frame).format);
+            tracing::info!("format: {}", (*encoder_context.frame).nb_samples);
 
-            let ret = av_frame_get_buffer(encoder_context.frame, 0);
+            // let mut linesize = 0;
+            // let ret = av_samples_get_buffer_size(
+            //     &mut linesize,
+            //     (*encoder_context.frame).ch_layout.nb_channels,
+            //     (*encoder_context.frame).nb_samples,
+            //     (*encoder_context.frame).format,
+            //     0,
+            // );
+
+            // if ret < 0 {
+            //     return Err(core_error!("av_samples_get_buffer_size check failed",));
+            // }
+
+            // tracing::info!(?linesize, "linesize");
+
+            // if av_channel_layout_check(&(*encoder_context.frame).ch_layout) == 0 {
+            //     return Err(core_error!("av_channel_layout_check check failed",));
+            // }
+
+            // let ret = av_frame_get_buffer(encoder_context.frame, 0);
+            // if ret < 0 {
+            //     return Err(core_error!(
+            //         "av_frame_get_buffer returns error code: {}",
+            //         ret
+            //     ));
+            // }
+
+            let ret = get_audio_buffer(encoder_context.frame, 0);
             if ret < 0 {
                 return Err(core_error!(
                     "av_frame_get_buffer returns error code: {}",

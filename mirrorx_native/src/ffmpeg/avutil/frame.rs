@@ -111,4 +111,5 @@ extern "C" {
     pub fn av_frame_get_buffer(frame: *mut AVFrame, align: i32) -> i32;
     pub fn av_frame_make_writable(frame: *mut AVFrame) -> i32;
     pub fn av_frame_unref(frame: *mut AVFrame) -> i32;
+    pub fn get_audio_buffer(frame: *mut AVFrame, align: i32) -> i32;
 }

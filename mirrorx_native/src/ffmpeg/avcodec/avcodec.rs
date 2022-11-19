@@ -296,6 +296,7 @@ pub struct AVCodecContext {
     pub export_side_data: i32,
     pub get_encode_buffer:
         extern "C" fn(s: *mut AVCodecContext, pkt: *mut AVPacket, flags: i32) -> i32,
+    pub ch_layout: AVChannelLayout,
 }
 
 impl Drop for AVCodecContext {
