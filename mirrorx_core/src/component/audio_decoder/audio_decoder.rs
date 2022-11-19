@@ -67,22 +67,24 @@ impl AudioDecoder {
                 };
 
                 // check if needs resample
-                self.resample_context = if (audio_frame.channels as u16) != self.output_channels
-                    || audio_frame.sample_format != output_sample_format
-                    || audio_frame.sample_rate != self.output_sample_rate.0 as i32
-                {
-                    Some(ResampleContext::new(
-                        (total_samples as i32) / (audio_frame.channels as i32),
-                        audio_frame.channels as u16,
-                        audio_frame.sample_rate,
-                        audio_frame.sample_format,
-                        self.output_channels,
-                        self.output_sample_rate.0 as i32,
-                        output_sample_format,
-                    )?)
-                } else {
-                    None
-                };
+                // self.resample_context = if (audio_frame.channels as u16) != self.output_channels
+                //     || audio_frame.sample_format != output_sample_format
+                //     || audio_frame.sample_rate != self.output_sample_rate.0 as i32
+                // {
+                //     Some(ResampleContext::new(
+                //         (total_samples as i32) / (audio_frame.channels as i32),
+                //         audio_frame.channels as u16,
+                //         audio_frame.sample_rate,
+                //         audio_frame.sample_format,
+                //         self.output_channels,
+                //         self.output_sample_rate.0 as i32,
+                //         output_sample_format,
+                //     )?)
+                // } else {
+                //     None
+                // };
+
+                // tracing::info!(?self.resample_context, "resample context");
             }
 
             let Some(decode_context)= self.decode_context.as_ref() else{
@@ -119,41 +121,19 @@ impl AudioDecoder {
                     ));
                 }
 
-                let data_size = av_get_bytes_per_sample((*decode_context.codec_ctx).sample_fmt);
-                let mut data = Vec::<u8>::with_capacity(
-                    (data_size
-                        * (*decode_context.frame).nb_samples
-                        * (*decode_context.frame).ch_layout.nb_channels)
-                        as usize,
-                );
+                let linesize = (*decode_context.frame).linesize[0];
 
-                for i in 0..(*decode_context.frame).nb_samples {
-                    for ch in 0..(*decode_context.frame).ch_layout.nb_channels {
-                        //     frame.data[n]
-                        //     |ch0|ch1|ch2|.....    copy to
-                        // sp1 |xxx|xxx|xxx|.....       ->       |ch0|ch1|ch2|ch0|ch1|ch2|....
-                        // sp2 |xxx|xxx|xxx|.....                |<-  sp1  ->|<-  sp2  ->|
+                let mut data = std::slice::from_raw_parts(
+                    (*decode_context.frame).data[0],
+                    (*decode_context.frame).linesize[0] as usize,
+                )
+                .to_vec();
 
-                        std::ptr::copy_nonoverlapping(
-                            (*decode_context.frame).data[ch as usize].add((i * data_size) as usize),
-                            data.as_mut_ptr().add(
-                                ((i * (*decode_context.frame).ch_layout.nb_channels * data_size)
-                                    + (ch * data_size)) as usize,
-                            ),
-                            data_size as usize,
-                        );
-                    }
-                }
-
-                data.set_len(
-                    (data_size
-                        * (*decode_context.frame).nb_samples
-                        * (*decode_context.frame).ch_layout.nb_channels)
-                        as usize,
-                );
+                tracing::info!(?linesize, "linesize");
 
                 if let Some(resample_context) = self.resample_context.as_mut() {
-                    data = resample_context.convert(&data)?;
+                    // data = resample_context.convert(&data)?;
+                    tracing::info!(?resample_context, "resample context");
                 }
 
                 if let Err(err) = self.output_tx.try_send(data) {
@@ -244,6 +224,7 @@ impl Drop for DecodeContext {
     }
 }
 
+#[derive(Debug)]
 struct ResampleContext {
     swr_context: *mut SwrContext,
 

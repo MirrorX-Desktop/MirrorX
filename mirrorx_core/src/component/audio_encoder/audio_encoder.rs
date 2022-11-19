@@ -42,7 +42,7 @@ impl AudioEncoder {
                     let _ = Box::from_raw(self.encode_context);
                 }
 
-                let buffer_size = match capture_frame.sample_format {
+                let nb_samples = match capture_frame.sample_format {
                     SampleFormat::I16 => {
                         capture_frame.buffer.len() / 2 / (capture_frame.channels as usize)
                     }
@@ -55,7 +55,7 @@ impl AudioEncoder {
                 };
 
                 self.encode_context = Box::into_raw(Box::new(EncodeContext::new(
-                    buffer_size as i32,
+                    nb_samples as i32,
                     capture_frame.channels,
                     capture_frame.sample_format,
                     capture_frame.sample_rate,

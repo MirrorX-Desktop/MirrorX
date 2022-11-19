@@ -1,7 +1,7 @@
 use crate::{core_error, error::CoreResult};
 use cpal::{
     traits::{DeviceTrait, HostTrait},
-    Sample, SampleFormat, SampleRate, Stream,
+    Sample, SampleFormat, SampleRate, Stream, StreamConfig,
 };
 use tokio::sync::mpsc::{error::TryRecvError, Receiver, Sender};
 
@@ -16,32 +16,36 @@ pub fn new_play_stream_and_tx() -> CoreResult<StreamAndTx> {
             return Err(core_error!("default audio output device not exist"));
         }
     };
-
     tracing::info!(name = ?device.name(), "select audio output device");
 
-    let output_config = device.default_output_config()?;
-    let channels = output_config.channels();
-    let sample_format = output_config.sample_format();
-    let sample_rate = output_config.sample_rate();
+    let supported_output_config = device.default_output_config()?;
+    let channels = supported_output_config.channels();
+    let sample_format = supported_output_config.sample_format();
+    let sample_rate = supported_output_config.sample_rate();
+    tracing::info!(?supported_output_config, "select audio stream config");
 
-    tracing::info!(?output_config, "select audio stream config");
+    let output_config = StreamConfig {
+        channels,
+        sample_rate,
+        buffer_size: cpal::BufferSize::Fixed(960),
+    };
 
     let (tx, mut rx) = tokio::sync::mpsc::channel::<Vec<u8>>(180);
     let err_fn = |err| tracing::error!(?err, "an error occurred when play audio sample");
 
-    let stream = match output_config.sample_format() {
+    let stream = match supported_output_config.sample_format() {
         SampleFormat::I16 => device.build_output_stream(
-            &output_config.into(),
+            &output_config,
             move |data, _| play_samples::<i16>(data, &mut rx),
             err_fn,
         ),
         SampleFormat::U16 => device.build_output_stream(
-            &output_config.into(),
+            &output_config,
             move |data, _| play_samples::<u16>(data, &mut rx),
             err_fn,
         ),
         SampleFormat::F32 => device.build_output_stream(
-            &output_config.into(),
+            &output_config,
             move |data, _| play_samples::<f32>(data, &mut rx),
             err_fn,
         ),
