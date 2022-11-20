@@ -60,14 +60,13 @@ where
 {
     match rx.try_recv() {
         Ok(samples) => unsafe {
-            let buffer = std::mem::transmute(samples.as_ptr());
-            let buffer_len = match T::FORMAT {
-                SampleFormat::I16 => samples.len() / 2,
-                SampleFormat::U16 => samples.len() / 2,
-                SampleFormat::F32 => samples.len() / 4,
-            };
+            let buffer: &[T] = std::mem::transmute(samples.as_slice());
 
-            std::ptr::copy_nonoverlapping(buffer, data.as_mut_ptr(), buffer_len.min(data.len()))
+            std::ptr::copy_nonoverlapping(
+                buffer.as_ptr(),
+                data.as_mut_ptr(),
+                buffer.len().min(data.len()),
+            )
         },
         Err(err) => {
             if err == TryRecvError::Disconnected {

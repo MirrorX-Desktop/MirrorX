@@ -6,7 +6,7 @@ use crate::{
     api::endpoint::EndPointClient,
     component::{
         desktop::{monitor::get_active_monitors, Duplicator},
-        video_encoder::{config::EncoderType, video_encoder::VideoEncoder},
+        video_encoder::video_encoder::VideoEncoder,
     },
 };
 use cpal::traits::StreamTrait;
@@ -26,6 +26,8 @@ pub fn handle_negotiate_finished_request(client: EndPointClient) {
 
 #[cfg(target_os = "macos")]
 fn spawn_desktop_capture_and_encode_process(client: EndPointClient) {
+    use crate::component::video_encoder::config::libx264::Libx264Config;
+
     let (capture_frame_tx, mut capture_frame_rx) = tokio::sync::mpsc::channel(180);
 
     tokio::task::spawn_blocking(move || {
@@ -43,7 +45,7 @@ fn spawn_desktop_capture_and_encode_process(client: EndPointClient) {
             }
         };
 
-        let mut encoder = match VideoEncoder::new(EncoderType::Libx264, client.clone()) {
+        let mut encoder = match VideoEncoder::new(Libx264Config::new(), client.clone()) {
             Ok(encoder) => encoder,
             Err(err) => {
                 tracing::error!(?err, "initialize encoder failed");
@@ -230,13 +232,7 @@ fn spawn_audio_capture_and_encode_process(client: EndPointClient) {
             continue;
         }
 
-        let mut audio_encoder = match AudioEncoder::new(client.clone()) {
-            Ok(encoder) => encoder,
-            Err(err) => {
-                tracing::error!(?err, "initialize audio encoder failed");
-                return;
-            }
-        };
+        let mut audio_encoder = AudioEncoder::default();
 
         loop {
             match exit_rx.try_recv() {
@@ -248,19 +244,25 @@ fn spawn_audio_capture_and_encode_process(client: EndPointClient) {
             }
 
             match rx.blocking_recv() {
-                Some(audio_frame) => {
-                    if let Err(err) = audio_encoder.encode(audio_frame) {
-                        match err {
-                            CoreError::OutgoingMessageChannelDisconnect => {
-                                tracing::info!("audio encode process exit");
-                                return;
-                            }
-                            _ => {
-                                tracing::error!(?err, "audio encode failed");
+                Some(audio_frame) => match audio_encoder.encode(audio_frame) {
+                    Ok(frame) => {
+                        if let Err(err) = client.send_audio_frame(frame) {
+                            match err {
+                                CoreError::OutgoingMessageChannelDisconnect => {
+                                    tracing::info!("audio encode process exit");
+                                    return;
+                                }
+                                _ => {
+                                    tracing::error!(?err, "audio encode failed");
+                                }
                             }
                         }
                     }
-                }
+                    Err(err) => {
+                        tracing::error!(?err, "audio encode failed");
+                        break;
+                    }
+                },
                 None => {
                     tracing::error!("audio duplicator tx closed");
                     break;

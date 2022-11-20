@@ -1,27 +1,32 @@
-use super::config::{EncoderConfig, EncoderType};
+use super::config::EncoderConfig;
 use crate::{
     api::endpoint::EndPointClient, component::frame::DesktopEncodeFrame, core_error,
     error::CoreResult,
 };
 use mirrorx_native::ffmpeg::{avcodec::*, avutil::*};
 
-pub struct VideoEncoder {
-    encode_config: Box<dyn EncoderConfig>,
-    encode_context: *mut EncodeContext,
+pub struct VideoEncoder<T>
+where
+    T: EncoderConfig,
+{
+    encoder_config: T,
+    encode_context: Option<EncodeContext>,
     client: EndPointClient,
 }
 
-impl VideoEncoder {
-    pub fn new(encoder_type: EncoderType, client: EndPointClient) -> CoreResult<VideoEncoder> {
-        let encode_config = encoder_type.create_config();
-
+impl<T> VideoEncoder<T>
+where
+    T: EncoderConfig,
+{
+    pub fn new(encoder_config: T, client: EndPointClient) -> CoreResult<VideoEncoder<T>> {
         unsafe {
             av_log_set_level(AV_LOG_INFO);
             av_log_set_flags(AV_LOG_SKIP_REPEATED);
         }
+
         Ok(VideoEncoder {
-            encode_config,
-            encode_context: std::ptr::null_mut(),
+            encoder_config,
+            encode_context: None,
             client,
         })
     }
@@ -30,22 +35,21 @@ impl VideoEncoder {
         unsafe {
             let mut ret: i32;
 
-            if self.encode_context.is_null()
-                || (*(*self.encode_context).codec_ctx).width != capture_frame.width
-                || (*(*self.encode_context).codec_ctx).height != capture_frame.height
-            {
-                if !self.encode_context.is_null() {
-                    let _ = Box::from_raw(self.encode_context);
+            if let Some(ref encode_context) = self.encode_context {
+                if (*encode_context.codec_ctx).width != capture_frame.width
+                    || (*encode_context.codec_ctx).height != capture_frame.height
+                {
+                    self.encode_context = None;
                 }
-
-                self.encode_context = Box::into_raw(Box::new(EncodeContext::new(
-                    capture_frame.width,
-                    capture_frame.height,
-                    self.encode_config.as_ref(),
-                )?));
             }
 
-            ret = av_frame_make_writable((*self.encode_context).frame);
+            let encode_context = self.encode_context.get_or_insert(EncodeContext::new(
+                capture_frame.width,
+                capture_frame.height,
+                &self.encoder_config,
+            )?);
+
+            ret = av_frame_make_writable(encode_context.frame);
             if ret < 0 {
                 return Err(core_error!(
                     "av_frame_make_writable returns error code: {}",
@@ -53,24 +57,15 @@ impl VideoEncoder {
                 ));
             }
 
-            (*(*self.encode_context).frame).data[0] =
-                capture_frame.luminance_bytes.as_ptr() as *mut _;
-
-            (*(*self.encode_context).frame).linesize[0] = capture_frame.luminance_stride;
-
-            (*(*self.encode_context).frame).data[1] =
-                capture_frame.chrominance_bytes.as_ptr() as *mut _;
-
-            (*(*self.encode_context).frame).linesize[1] = capture_frame.chrominance_stride;
-
-            (*(*self.encode_context).frame).pts = (capture_frame.capture_time.as_secs_f64()
-                * ((*(*self.encode_context).codec_ctx).time_base.den as f64))
+            (*(encode_context).frame).data[0] = capture_frame.luminance_bytes.as_ptr() as *mut _;
+            (*(encode_context).frame).linesize[0] = capture_frame.luminance_stride;
+            (*(encode_context).frame).data[1] = capture_frame.chrominance_bytes.as_ptr() as *mut _;
+            (*(encode_context).frame).linesize[1] = capture_frame.chrominance_stride;
+            (*(encode_context).frame).pts = (capture_frame.capture_time.as_secs_f64()
+                * ((*(encode_context).codec_ctx).time_base.den as f64))
                 as i64;
 
-            ret = avcodec_send_frame(
-                (*self.encode_context).codec_ctx,
-                (*self.encode_context).frame,
-            );
+            ret = avcodec_send_frame((encode_context).codec_ctx, (encode_context).frame);
 
             if ret != 0 {
                 if ret == AVERROR(libc::EAGAIN) {
@@ -85,10 +80,7 @@ impl VideoEncoder {
             }
 
             loop {
-                ret = avcodec_receive_packet(
-                    (*self.encode_context).codec_ctx,
-                    (*self.encode_context).packet,
-                );
+                ret = avcodec_receive_packet((encode_context).codec_ctx, (encode_context).packet);
 
                 if ret == AVERROR(libc::EAGAIN) || ret == AVERROR_EOF {
                     return Ok(());
@@ -100,26 +92,16 @@ impl VideoEncoder {
                 }
 
                 self.client.send_video_frame(
-                    (*(*self.encode_context).codec_ctx).width,
-                    (*(*self.encode_context).codec_ctx).height,
-                    (*(*self.encode_context).packet).pts,
+                    (*(encode_context).codec_ctx).width,
+                    (*(encode_context).codec_ctx).height,
+                    (*(encode_context).packet).pts,
                     std::slice::from_raw_parts(
-                        (*(*self.encode_context).packet).data,
-                        (*(*self.encode_context).packet).size as usize,
+                        (*(encode_context).packet).data,
+                        (*(encode_context).packet).size as usize,
                     ),
                 )?;
 
-                av_packet_unref((*self.encode_context).packet);
-            }
-        }
-    }
-}
-
-impl Drop for VideoEncoder {
-    fn drop(&mut self) {
-        if !self.encode_context.is_null() {
-            unsafe {
-                let _ = Box::from_raw(self.encode_context);
+                av_packet_unref((encode_context).packet);
             }
         }
     }

@@ -1,7 +1,7 @@
 use crate::{component::frame::AudioEncodeFrame, core_error, error::CoreResult};
 use cpal::{
     traits::{DeviceTrait, HostTrait},
-    Sample, SampleRate, Stream, StreamConfig,
+    Sample, Stream, StreamConfig,
 };
 use tokio::sync::mpsc::{Receiver, Sender};
 
@@ -62,18 +62,13 @@ fn send_audio_frame<T>(data: &[T], channels: u16, sample_rate: u32, tx: &Sender<
 where
     T: Sample,
 {
-    let buffer_length = match T::FORMAT {
-        cpal::SampleFormat::I16 => data.len() * 2,
-        cpal::SampleFormat::U16 => data.len() * 2,
-        cpal::SampleFormat::F32 => data.len() * 4,
-    };
-
     let audio_encode_frame = AudioEncodeFrame {
         channels,
         sample_format: T::FORMAT,
         sample_rate,
         buffer: unsafe {
-            std::slice::from_raw_parts(data.as_ptr() as *const u8, buffer_length).to_vec()
+            let v: &[u8] = std::mem::transmute(data);
+            v.to_vec()
         },
     };
 

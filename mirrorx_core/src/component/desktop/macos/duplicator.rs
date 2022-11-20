@@ -1,7 +1,5 @@
 use crate::{
-    component::{
-        desktop::monitor::NSScreen, frame::DesktopEncodeFrame, video_encoder::config::EncoderType,
-    },
+    component::{desktop::monitor::NSScreen, frame::DesktopEncodeFrame},
     core_error,
     error::CoreResult,
 };
@@ -194,7 +192,7 @@ unsafe fn frame_available_handler(
         chrominance_stride: chrominance_stride as i32,
     };
 
-    if let Err(err) = (*capture_frame_tx).try_send(capture_frame) {
+    if (*capture_frame_tx).try_send(capture_frame).is_err() {
         tracing::error!("desktop capture frame tx send failed");
     }
 

@@ -20,7 +20,7 @@ pub fn serve_audio_decode(id: EndPointID, mut decode_rx: Receiver<EndPointAudioF
                 }
             };
 
-        let mut audio_decoder = AudioDecoder::new(channels, sample_format, sample_rate, samples_tx);
+        let mut audio_decoder = AudioDecoder::default();
 
         if let Err(err) = stream.play() {
             tracing::error!(?err, "play audio stream failed");
@@ -30,9 +30,16 @@ pub fn serve_audio_decode(id: EndPointID, mut decode_rx: Receiver<EndPointAudioF
         loop {
             match decode_rx.blocking_recv() {
                 Some(audio_frame) => {
-                    if let Err(err) = audio_decoder.decode(audio_frame) {
-                        tracing::error!(?err, "decode audio frame failed");
-                        break;
+                    match audio_decoder.decode(audio_frame) {
+                        Ok(buffer) => {
+                            if let Err(err) = samples_tx.try_send(buffer) {
+                                tracing::error!("send audio play buffer failed");
+                            }
+                        }
+                        Err(err) => {
+                            tracing::error!(?err, "decode audio frame failed");
+                            break;
+                        }
                     };
                 }
                 None => {

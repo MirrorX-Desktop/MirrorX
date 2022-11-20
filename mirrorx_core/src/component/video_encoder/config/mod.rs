@@ -1,32 +1,10 @@
-mod h264_videotoolbox;
-mod hevc_videotoolbox;
-mod libx264;
+pub mod h264_videotoolbox;
+pub mod hevc_videotoolbox;
+pub mod libx264;
 
 use crate::{core_error, error::CoreResult};
 use mirrorx_native::ffmpeg::{avcodec::*, avutil::*};
 use std::ffi::CString;
-
-#[allow(unused)]
-#[derive(Clone)]
-pub enum EncoderType {
-    Libx264,
-    H264VideoToolbox,
-    HEVCVideoToolbox,
-}
-
-impl EncoderType {
-    pub fn create_config(self) -> Box<dyn EncoderConfig> {
-        match self {
-            EncoderType::Libx264 => Box::new(libx264::Libx264Config::new()),
-            EncoderType::H264VideoToolbox => {
-                Box::new(h264_videotoolbox::H264VideoToolboxConfig::new())
-            }
-            EncoderType::HEVCVideoToolbox => {
-                Box::new(hevc_videotoolbox::HEVCVideoToolboxConfig::new())
-            }
-        }
-    }
-}
 
 pub trait EncoderConfig {
     fn apply_option(&self, codec_ctx: *mut AVCodecContext) -> CoreResult<()>;

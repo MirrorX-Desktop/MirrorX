@@ -1,4 +1,5 @@
 use crate::component::input::key::{KeyboardKey, MouseKey};
+use cpal::SampleFormat;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
@@ -68,6 +69,26 @@ pub enum AudioSampleFormat {
     F32,
 }
 
+impl Into<SampleFormat> for AudioSampleFormat {
+    fn into(self) -> SampleFormat {
+        match self {
+            AudioSampleFormat::I16 => SampleFormat::I16,
+            AudioSampleFormat::U16 => SampleFormat::U16,
+            AudioSampleFormat::F32 => SampleFormat::F32,
+        }
+    }
+}
+
+impl From<SampleFormat> for AudioSampleFormat {
+    fn from(v: SampleFormat) -> Self {
+        match v {
+            SampleFormat::I16 => AudioSampleFormat::I16,
+            SampleFormat::U16 => AudioSampleFormat::U16,
+            SampleFormat::F32 => AudioSampleFormat::F32,
+        }
+    }
+}
+
 impl Default for AudioSampleFormat {
     fn default() -> Self {
         AudioSampleFormat::I16
@@ -93,8 +114,8 @@ pub struct EndPointVideoFrame {
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub struct EndPointAudioFrame {
     pub channels: u8,
-    pub sample_format: i32,
-    pub sample_rate: i32,
+    pub sample_format: AudioSampleFormat,
+    pub sample_rate: u32,
     #[serde(with = "serde_bytes")]
     pub buffer: Vec<u8>,
 }

@@ -22,6 +22,7 @@ use bincode::{
     DefaultOptions, Options,
 };
 use bytes::{Buf, Bytes, BytesMut};
+use cpal::SampleFormat;
 use dashmap::DashMap;
 use futures::{
     stream::{SplitSink, SplitStream},
@@ -194,20 +195,8 @@ impl EndPointClient {
         self.send_message(req)
     }
 
-    pub fn send_audio_frame(
-        &self,
-        channels: u8,
-        sample_format: i32,
-        sample_rate: i32,
-        buffer: &[u8],
-    ) -> CoreResult<()> {
-        let message = EndPointMessage::AudioFrame(EndPointAudioFrame {
-            channels,
-            sample_format,
-            sample_rate,
-            buffer: buffer.to_vec(),
-        });
-        self.send_message(message)
+    pub fn send_audio_frame(&self, frame: EndPointAudioFrame) -> CoreResult<()> {
+        self.send_message(EndPointMessage::AudioFrame(frame))
     }
 
     pub fn send_video_frame(
