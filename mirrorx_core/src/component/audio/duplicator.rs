@@ -67,8 +67,11 @@ where
         sample_format: T::FORMAT,
         sample_rate,
         buffer: unsafe {
-            let v: &[u8] = std::mem::transmute(data);
-            v.to_vec()
+            std::slice::from_raw_parts(
+                data.as_ptr() as *const u8,
+                data.len() * T::FORMAT.sample_size(),
+            )
+            .to_vec()
         },
     };
 

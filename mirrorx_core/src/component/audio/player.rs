@@ -60,12 +60,10 @@ where
 {
     match rx.try_recv() {
         Ok(samples) => unsafe {
-            let buffer: &[T] = std::mem::transmute(samples.as_slice());
-
             std::ptr::copy_nonoverlapping(
-                buffer.as_ptr(),
+                std::mem::transmute(samples.as_ptr()),
                 data.as_mut_ptr(),
-                buffer.len().min(data.len()),
+                (samples.len() / T::FORMAT.sample_size()).min(data.len()),
             )
         },
         Err(err) => {
