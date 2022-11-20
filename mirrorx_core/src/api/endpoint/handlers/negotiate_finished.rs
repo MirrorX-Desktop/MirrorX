@@ -1,6 +1,7 @@
 use crate::api::endpoint::PASSIVE_ENDPOINTS_MONITORS;
 use crate::component::audio::duplicator::new_record_stream_and_rx;
 use crate::component::audio_encoder::audio_encoder::AudioEncoder;
+use crate::component::video_encoder::config::*;
 use crate::error::CoreError;
 use crate::{
     api::endpoint::EndPointClient,
@@ -26,8 +27,6 @@ pub fn handle_negotiate_finished_request(client: EndPointClient) {
 
 #[cfg(target_os = "macos")]
 fn spawn_desktop_capture_and_encode_process(client: EndPointClient) {
-    use crate::component::video_encoder::config::libx264::Libx264Config;
-
     let (capture_frame_tx, mut capture_frame_rx) = tokio::sync::mpsc::channel(180);
 
     tokio::task::spawn_blocking(move || {
@@ -45,7 +44,7 @@ fn spawn_desktop_capture_and_encode_process(client: EndPointClient) {
             }
         };
 
-        let mut encoder = match VideoEncoder::new(Libx264Config::new(), client.clone()) {
+        let mut encoder = match VideoEncoder::new(libx264::Libx264Config::new(), client.clone()) {
             Ok(encoder) => encoder,
             Err(err) => {
                 tracing::error!(?err, "initialize encoder failed");
@@ -176,7 +175,8 @@ fn spawn_desktop_capture_and_encode_process(client: EndPointClient) {
             //     tracing::info!(?active_device_id, ?passive_device_id, "video encode process exit");
             // }
 
-            let mut encoder = match VideoEncoder::new(EncoderType::Libx264, client.clone()) {
+            let mut encoder = match VideoEncoder::new(libx264::Libx264Config::new(), client.clone())
+            {
                 Ok(encoder) => encoder,
                 Err(err) => {
                     tracing::error!(?err, "video encoder initialize failed");
