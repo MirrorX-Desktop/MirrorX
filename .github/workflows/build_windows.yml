@@ -10,6 +10,8 @@ jobs:
   build:
     runs-on: windows-latest
     steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2.5.0
     - name: Setup node.js
       uses: actions/setup-node@v3.5.1
     - name: Setup Protobuf
@@ -48,7 +50,5 @@ jobs:
         key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
         restore-keys: |
           ${{ runner.os }}-yarn-
-    - name: Checkout repository
-      uses: actions/checkout@v2.5.0
     - name: Build
       run: cargo tauri build
