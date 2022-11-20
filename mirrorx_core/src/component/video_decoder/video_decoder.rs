@@ -43,8 +43,8 @@ impl VideoDecoder {
                     Some(DecodeContext::new(video_frame.width, video_frame.height)?);
             }
 
-            let Some(decode_context)= self.decode_context.as_ref() else{
-                return Err(core_error!("decode context is null"));
+            let Some(ref decode_context)= self.decode_context else{
+                return Err(core_error!("decode context is empty"));
             };
 
             (*(decode_context).packet).data = video_frame.buffer.as_mut_ptr();

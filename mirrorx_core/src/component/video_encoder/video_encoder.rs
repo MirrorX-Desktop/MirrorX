@@ -43,11 +43,17 @@ where
                 }
             }
 
-            let encode_context = self.encode_context.get_or_insert(EncodeContext::new(
-                capture_frame.width,
-                capture_frame.height,
-                &self.encoder_config,
-            )?);
+            if self.encode_context.is_none() {
+                self.encode_context = Some(EncodeContext::new(
+                    capture_frame.width,
+                    capture_frame.height,
+                    &self.encoder_config,
+                )?);
+            }
+
+            let Some(ref encode_context)= self.encode_context else{
+                return Err(core_error!("encode context is empty"))
+            };
 
             ret = av_frame_make_writable(encode_context.frame);
             if ret < 0 {

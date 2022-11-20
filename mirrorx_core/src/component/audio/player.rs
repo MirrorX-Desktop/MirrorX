@@ -27,7 +27,7 @@ pub fn new_play_stream_and_tx() -> CoreResult<StreamAndTx> {
     let output_config = StreamConfig {
         channels,
         sample_rate,
-        buffer_size: cpal::BufferSize::Fixed(960),
+        buffer_size: cpal::BufferSize::Fixed(480),
     };
 
     let (tx, mut rx) = tokio::sync::mpsc::channel::<Vec<u8>>(180);
