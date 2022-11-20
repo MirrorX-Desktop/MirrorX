@@ -148,9 +148,11 @@ impl DesktopWindow {
 
                             let cb = tauri_egui::eframe::egui_glow::CallbackFn::new(
                                 move |_info, painter| {
-                                    if let Err(err) =
-                                        desktop_render.lock().paint(painter.gl(), frame.clone())
-                                    {
+                                    if let Err(err) = desktop_render.lock().paint(
+                                        painter.gl(),
+                                        frame.clone(),
+                                        painter.intermediate_fbo(),
+                                    ) {
                                         tracing::error!(?err, "desktop render failed");
                                     }
                                 },
@@ -190,7 +192,11 @@ impl DesktopWindow {
                 let desktop_render = self.desktop_render.clone();
 
                 let cb = tauri_egui::eframe::egui_glow::CallbackFn::new(move |_info, painter| {
-                    if let Err(err) = desktop_render.lock().paint(painter.gl(), frame.clone()) {
+                    if let Err(err) = desktop_render.lock().paint(
+                        painter.gl(),
+                        frame.clone(),
+                        painter.intermediate_fbo(),
+                    ) {
                         tracing::error!(?err, "desktop render failed");
                     }
                 });

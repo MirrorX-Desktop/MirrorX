@@ -4897,7 +4897,7 @@ dependencies = [
 [[package]]
 name = "tauri-egui"
 version = "0.1.0"
-source = "git+https://github.com/tauri-apps/tauri-egui.git#0b22da7280105fc4fdf3747f7a432065ab0124cf"
+source = "git+https://github.com/tauri-apps/tauri-egui.git#a0b26cf90999e6c9ce5a5195bda6b98d855766b6"
 dependencies = [
  "eframe_tao",
  "egui",

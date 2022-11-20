@@ -268,7 +268,12 @@ impl DesktopRender {
         }
     }
 
-    pub fn paint(&mut self, gl: &Context, frame: DesktopDecodeFrame) -> Result<(), String> {
+    pub fn paint(
+        &mut self,
+        gl: &Context,
+        frame: DesktopDecodeFrame,
+        fbo: Option<tauri_egui::eframe::glow::Framebuffer>,
+    ) -> Result<(), String> {
         if self.destroyed {
             return Err("desktop render has destroyed".into());
         }
@@ -277,29 +282,25 @@ impl DesktopRender {
             if self.textures.is_empty() {
                 match frame.format {
                     DesktopDecodeFrameFormat::NV12 => {
-                        self.textures.push(create_texture(
-                            gl,
-                            RED,
-                            frame.width,
-                            frame.height,
-                            frame.line_sizes[0],
-                        )?);
+                        self.textures
+                            .push(create_texture(gl, RED, frame.width, frame.height)?);
 
                         self.textures.push(create_texture(
                             gl,
                             RG,
                             frame.width / 2,
                             frame.height / 2,
-                            frame.line_sizes[1],
                         )?);
                     }
                     DesktopDecodeFrameFormat::YUV420P => {
+                        self.textures
+                            .push(create_texture(gl, RED, frame.width, frame.height)?);
+
                         self.textures.push(create_texture(
                             gl,
                             RED,
-                            frame.width,
-                            frame.height,
-                            frame.line_sizes[0],
+                            frame.width / 2,
+                            frame.height / 2,
                         )?);
 
                         self.textures.push(create_texture(
@@ -307,15 +308,6 @@ impl DesktopRender {
                             RED,
                             frame.width / 2,
                             frame.height / 2,
-                            frame.line_sizes[1],
-                        )?);
-
-                        self.textures.push(create_texture(
-                            gl,
-                            RED,
-                            frame.width / 2,
-                            frame.height / 2,
-                            frame.line_sizes[2],
                         )?);
                     }
                 }
@@ -353,8 +345,9 @@ impl DesktopRender {
             gl.bind_vertex_array(Some(self.vao));
             check_for_gl_error!(gl);
 
+            gl.bind_framebuffer(tauri_egui::eframe::glow::FRAMEBUFFER, fbo);
             gl.draw_elements(TRIANGLES, 6, UNSIGNED_INT, 0);
-            check_for_gl_error!(gl);
+            gl.bind_framebuffer(tauri_egui::eframe::glow::FRAMEBUFFER, None);
 
             if let Some(instant) = self.frame_count_instant {
                 if instant.elapsed().as_secs() >= 1 {
@@ -428,6 +421,9 @@ impl DesktopRender {
 
         gl.uniform_1_i32(uv_uniform_location.as_ref(), 1);
         check_for_gl_error!(gl);
+
+        // important: reset UNPACK_ROW_LENGTH to zero otherwise it will affect egui texture upload and cause unexpected behavior
+        gl.pixel_store_i32(UNPACK_ROW_LENGTH, 0);
     }
 
     unsafe fn upload_yuv420p(&mut self, gl: &Context, frame: &DesktopDecodeFrame) {
@@ -517,6 +513,9 @@ impl DesktopRender {
 
         gl.uniform_1_i32(v_uniform_location.as_ref(), 2);
         check_for_gl_error!(gl);
+
+        // important: reset UNPACK_ROW_LENGTH to zero otherwise it will affect egui texture upload and cause unexpected behavior
+        gl.pixel_store_i32(UNPACK_ROW_LENGTH, 0);
     }
 }
 
@@ -525,7 +524,6 @@ unsafe fn create_texture(
     texture_format: u32,
     width: i32,
     height: i32,
-    stride: i32,
 ) -> Result<NativeTexture, String> {
     let texture = gl
         .create_texture()
