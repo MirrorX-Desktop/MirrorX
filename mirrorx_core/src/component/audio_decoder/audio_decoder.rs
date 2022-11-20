@@ -67,7 +67,9 @@ impl AudioDecoder {
                 ),
             };
 
-            buffer.set_len((ret as usize) * self.sample_format.sample_size());
+            buffer.set_len(
+                (ret as usize) * self.sample_format.sample_size() * (self.channels as usize),
+            );
 
             Ok(buffer)
         }
