@@ -10,11 +10,11 @@ jobs:
   build:
     runs-on: windows-latest
     steps:
-    - name: setup node.js
+    - name: Setup node.js
       uses: actions/setup-node@v3.5.1
-    - name: setup protobuf
+    - name: Setup Protobuf
       run: choco install protoc
-    - name: setup rust toolchain
+    - name: Setup rust toolchain
       uses: actions-rs/toolchain@v1
       with:
           toolchain: stable
@@ -26,14 +26,14 @@ jobs:
         fileName: "artifacts_windows_x64.zip"
     - name: Unzip Pre Built Media Libraries
       run: |
-        7z x artifacts_windows_x64.zip -o.\\artifacts_windows_x64
+        7z x artifacts_windows_x64.zip -oartifacts_windows_x64
     - name: ls
       run: |
         Get-ChildItem
     - name: Set Pre Built Media Libraries Path
       run: |
         echo "MIRRORX_MEDIA_LIBS_PATH=${{github.workspace}}\\artifacts_windows_x64" >> $GITHUB_ENV
-    - name: setup tauri-cli
+    - name: Setup tauri-cli
       uses: baptiste0928/cargo-install@v1
       with:
         crate: tauri-cli
@@ -48,7 +48,7 @@ jobs:
         key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
         restore-keys: |
           ${{ runner.os }}-yarn-
-    - name: checkout repository
+    - name: Checkout repository
       uses: actions/checkout@v2.5.0
-    - name: build
+    - name: Build
       run: cargo tauri build
