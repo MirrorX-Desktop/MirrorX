@@ -3,6 +3,9 @@ name: build_macos
 on:
   workflow_dispatch:
 
+env:
+  CARGO_TERM_COLOR: always
+  
 jobs:
   
   build:
