@@ -27,7 +27,7 @@ jobs:
         7z x artifacts_macos_x64.zip
     - name: Set Pre Built Media Libraries Path
       run: |
-        echo "${{github.workspace}}/artifacts_macos_x64" >> $GITHUB_ENV
+        echo "MIRRORX_MEDIA_LIBS_PATH=${{github.workspace}}/artifacts_macos_x64" >> $GITHUB_ENV
     - name: setup tauri-cli
       uses: baptiste0928/cargo-install@v1
       with:
