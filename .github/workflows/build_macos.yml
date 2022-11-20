@@ -11,6 +11,8 @@ jobs:
   build:
     runs-on: macos-latest
     steps:
+    - name: checkout repository
+      uses: actions/checkout@v2.5.0
     - name: setup node.js
       uses: actions/setup-node@v3.5.1
     - name: setup protobuf
@@ -53,7 +55,5 @@ jobs:
         key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
         restore-keys: |
           ${{ runner.os }}-yarn-
-    - name: checkout repository
-      uses: actions/checkout@v2.5.0
     - name: build
       run: cargo tauri build
