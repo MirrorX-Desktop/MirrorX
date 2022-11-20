@@ -10,27 +10,31 @@ jobs:
   build:
     runs-on: windows-latest
     steps:
+    - name: setup node.js
+      uses: actions/setup-node@v3.5.1
     - name: setup protobuf
       run: choco install protoc
     - name: setup rust toolchain
       uses: actions-rs/toolchain@v1
       with:
           toolchain: stable
+    - name: Download Pre Built Media Libraries Zip
+      uses: robinraju/release-downloader@v1.6
+      with:
+        repository: "MirrorX-Desktop/media_libraries_auto_build"
+        tag: "latest"
+        fileName: "artifacts_windows_x64.zip"
+    - name: Unzip Pre Built Media Libraries
+      run: |
+        7z x artifacts_windows_x64.zip
+    - name: Set Pre Built Media Libraries Path
+      run: |
+        echo "MIRRORX_MEDIA_LIBS_PATH=${{github.workspace}}\\artifacts_windows_x64" >> $GITHUB_ENV
     - name: setup tauri-cli
       uses: baptiste0928/cargo-install@v1
       with:
         crate: tauri-cli
-        version: "1.2.0"
-    - name: use cargo cache
-      uses: actions/cache@v3
-      with:
-        path: |
-          ~/.cargo/bin/
-          ~/.cargo/registry/index/
-          ~/.cargo/registry/cache/
-          ~/.cargo/git/db/
-          target/
-        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        version: "1.2.0" 
     - name: Get yarn cache directory path
       id: yarn-cache-dir-path
       run: echo "::set-output name=dir::$(yarn config get cacheFolder)"
