@@ -32,7 +32,7 @@ jobs:
         Get-ChildItem
     - name: Set Pre Built Media Libraries Path
       run: |
-        echo "MIRRORX_MEDIA_LIBS_PATH=${{github.workspace}}\\artifacts_windows_x64" >> $GITHUB_ENV
+        Add-Content -Path $env:GITHUB_ENV -Value "MIRRORX_MEDIA_LIBS_PATH=${{github.workspace}}\\artifacts_windows_x64"
     - name: Setup tauri-cli
       uses: baptiste0928/cargo-install@v1
       with:
