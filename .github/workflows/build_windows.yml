@@ -26,7 +26,10 @@ jobs:
         fileName: "artifacts_windows_x64.zip"
     - name: Unzip Pre Built Media Libraries
       run: |
-        7z x artifacts_windows_x64.zip
+        7z x artifacts_windows_x64.zip -o.\\artifacts_windows_x64
+    - name: ls
+      run: |
+        Get-ChildItem
     - name: Set Pre Built Media Libraries Path
       run: |
         echo "MIRRORX_MEDIA_LIBS_PATH=${{github.workspace}}\\artifacts_windows_x64" >> $GITHUB_ENV
