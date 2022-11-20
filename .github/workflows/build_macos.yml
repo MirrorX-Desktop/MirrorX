@@ -8,14 +8,6 @@ jobs:
   build:
     runs-on: macos-latest
     steps:
-    - name: setup nasm
-      uses: ilammy/setup-nasm@v1.4.0
-    - name: setup autoconf
-      run: brew install autoconf
-    - name: setup automake
-      run: brew install automake
-    - name: setup libtool
-      run: brew install libtool
     - name: setup node.js
       uses: actions/setup-node@v3.5.1
     - name: setup protobuf
@@ -29,16 +21,6 @@ jobs:
       with:
         crate: tauri-cli
         version: "1.2.0" 
-    - name: use cargo cache
-      uses: actions/cache@v3
-      with:
-        path: |
-          ~/.cargo/bin/
-          ~/.cargo/registry/index/
-          ~/.cargo/registry/cache/
-          ~/.cargo/git/db/
-          target/
-        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
     - name: Get yarn cache directory path
       id: yarn-cache-dir-path
       run: echo "::set-output name=dir::$(yarn config get cacheFolder)"
