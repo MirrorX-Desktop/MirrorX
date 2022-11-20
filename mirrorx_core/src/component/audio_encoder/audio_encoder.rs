@@ -67,7 +67,7 @@ impl AudioEncoder {
                     self.encode_buffer.as_mut_ptr(),
                     self.encode_buffer.len() as _,
                 ),
-                SampleFormat::F32 => opus_encode(
+                SampleFormat::F32 => opus_encode_float(
                     self.opus_encoder,
                     std::mem::transmute(capture_frame.buffer.as_ptr()),
                     frame_size as _,
