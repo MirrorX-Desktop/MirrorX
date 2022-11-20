@@ -31,6 +31,10 @@ jobs:
     - name: ls
       run: |
         ls -la
+    - name: ls artifacts
+      working-directory: ./artifacts_macos_x64
+      run: |
+        ls -la
     - name: Set Pre Built Media Libraries Path
       run: |
         echo "MIRRORX_MEDIA_LIBS_PATH=${{github.workspace}}/artifacts_macos_x64" >> $GITHUB_ENV
