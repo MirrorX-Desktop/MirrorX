@@ -1,7 +1,11 @@
 name: build_windows
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+    - release
+    tags:
+    - "v*"
 
 env:
   CARGO_TERM_COLOR: always
@@ -50,5 +54,23 @@ jobs:
         key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
         restore-keys: |
           ${{ runner.os }}-yarn-
-    - name: Build
+    - uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+    - name: build
       run: cargo tauri build
+    - name: Zip
+      run: |
+        7z a MirrorX_x64.zip ${{github.workspace}}\\target\\release\\MirrorX.exe
+    - name: Release
+      uses: ncipollo/release-action@v1
+      with:
+        artifacts: "MirrorX_x64.zip"
+        tag: ${{github.ref_name}}
+        allowUpdates: true

@@ -4,7 +4,7 @@ mod subscribe;
 mod visit;
 mod visit_reply;
 
-use crate::{api::config::LocalStorage, core_error, error::CoreResult};
+use crate::{core_error, error::CoreResult};
 
 use signaling_proto::service::signaling_client::SignalingClient;
 use tokio::sync::mpsc::Sender;

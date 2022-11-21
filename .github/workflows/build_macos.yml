@@ -1,8 +1,12 @@
 name: build_macos
 
 on:
-  workflow_dispatch:
-
+  push:
+    branches:
+    - release
+    tags:
+    - "v*"
+    
 env:
   CARGO_TERM_COLOR: always
   
@@ -51,5 +55,20 @@ jobs:
         key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
         restore-keys: |
           ${{ runner.os }}-yarn-
+    - uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
     - name: build
       run: cargo tauri build
+    - name: Release
+      uses: ncipollo/release-action@v1
+      with:
+        artifacts: "./target/release/bundle/dmg/MirrorX_${{github.ref_name}}_x64.dmg"
+        tag: ${{github.ref_name}}
+        allowUpdates: true
