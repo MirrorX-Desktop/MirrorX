@@ -35,10 +35,10 @@ MirrorX is a remote desktop control tool powered by [Rust](https://github.com/ru
 
 - [x] macOS
 - [x] Windows
-- [ ] Linux
-- [ ] Android
-- [ ] iOS
-- [ ] Web
+- [ ] Linux (WIP)
+- [ ] Android (WIP)
+- [ ] iOS (WIP)
+- [ ] Web (WIP)
 
 ## How to build
 
