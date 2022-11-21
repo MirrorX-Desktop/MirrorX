@@ -1,6 +1,6 @@
 {
   "build": {
-    "beforeBuildCommand": "cd mirrorx_frontend && npx vite build",
+    "beforeBuildCommand": "cd mirrorx_frontend && yarn install && npx vite build",
     "beforeDevCommand": "cd mirrorx_frontend && npx vite dev",
     "devPath": "http://localhost:5173",
     "distDir": "../mirrorx_frontend/build"
