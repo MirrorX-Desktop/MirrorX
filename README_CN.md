@@ -35,10 +35,10 @@ MirrorX 是一个使用 [Rust](https://github.com/rust-lang/rust) 构建的远�
 
 - [x] macOS
 - [x] Windows
-- [ ] Linux
-- [ ] Android
-- [ ] iOS
-- [ ] Web
+- [ ] Linux (WIP)
+- [ ] Android (WIP)
+- [ ] iOS (WIP)
+- [ ] Web (WIP)
 
 ## 如何构建
 
