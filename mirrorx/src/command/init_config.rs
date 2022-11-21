@@ -13,7 +13,7 @@ pub async fn init_config(
 ) -> CoreResult<()> {
     let app_dir = app_handle
         .path_resolver()
-        .app_dir()
+        .app_config_dir()
         .ok_or(core_error!("read app dir from path resolver failed"))?;
 
     tracing::info!(?app_dir, "app dir");
@@ -28,7 +28,7 @@ pub async fn init_config(
         storage.domain().add_domain(Domain {
             id: 0,
             name: "MirrorX.cloud".into(),
-            addr: "tcp://192.168.0.101:28000".into(),
+            addr: "http://mirrorx.cloud:28000".into(),
             is_primary: true,
             device_id: 0,
             password: mirrorx_core::utility::rand::generate_random_password(),
