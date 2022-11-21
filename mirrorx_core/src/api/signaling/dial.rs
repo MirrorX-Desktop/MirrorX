@@ -22,7 +22,7 @@ where
         .keep_alive_while_idle(true)
         .initial_connection_window_size(256 * 1024 * 1024)
         .initial_stream_window_size(32 * 1024 * 1024)
-        .connect_timeout(Duration::from_secs(5));
+        .connect_timeout(Duration::from_secs(30));
 
     let client = SignalingClient::connect(channel).await?;
     let client = client
