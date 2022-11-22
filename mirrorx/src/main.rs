@@ -8,7 +8,7 @@ mod platform;
 mod utility;
 mod window;
 
-use tauri::{Manager, SystemTray, SystemTrayEvent};
+use tauri::{Manager, SystemTray, SystemTrayEvent, WindowEvent};
 
 #[tracing::instrument]
 #[tokio::main]
@@ -65,9 +65,19 @@ async fn main() {
         ])
         .build(tauri::generate_context!())
         .expect("error while running tauri application")
-        .run(|_app_handle, event| {
-            if let tauri::RunEvent::ExitRequested { api, .. } = event {
+        .run(|app_handle, event| match event {
+            tauri::RunEvent::WindowEvent { label, event, .. } => {
+                if let WindowEvent::CloseRequested { api, .. } = event {
+                    if label == "main" {
+                        if let Some(window) = app_handle.get_window(&label) {
+                            let _ = window.hide();
+                        }
+                    }
+                }
+            }
+            tauri::RunEvent::ExitRequested { api, .. } => {
                 api.prevent_exit();
             }
+            _ => {}
         });
 }
