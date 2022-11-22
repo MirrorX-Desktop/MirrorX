@@ -23,11 +23,9 @@
 	$: notifications_reverse = notifications.reverse().slice(0, 2);
 
 	onMount(async () => {
-		unlisten_fn = await listen<string>('settings_notification', (event) => {
-			let payload: SettingsNotificationEvent = JSON.parse(event.payload);
-
+		unlisten_fn = await listen<SettingsNotificationEvent>('settings_notification', (event) => {
 			let level_color: string = '';
-			switch (payload.level) {
+			switch (event.payload.level) {
 				case 'info':
 					level_color = 'alert-info';
 				case 'success':
@@ -40,7 +38,7 @@
 
 			notifications.push({
 				level_color: level_color,
-				message: payload.message,
+				message: event.payload.message,
 				id: uuidv4()
 			});
 

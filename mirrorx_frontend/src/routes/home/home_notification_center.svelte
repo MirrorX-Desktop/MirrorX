@@ -24,11 +24,11 @@
 	$: notifications_reverse = notifications.reverse().slice(0, 2);
 
 	onMount(async () => {
-		unlisten_fn = await listen<string>('home_notification', (event) => {
-			let payload: HomeNotificationEvent = JSON.parse(event.payload);
+		unlisten_fn = await listen<HomeNotificationEvent>('home_notification', (event) => {
+			console.log('home_notification_center: ' + event);
 
 			let level_color: string = '';
-			switch (payload.level) {
+			switch (event.payload.level) {
 				case 'info':
 					level_color = 'bg-info';
 				case 'success':
@@ -41,8 +41,8 @@
 
 			notifications.push({
 				level_color: level_color,
-				title: payload.title,
-				message: payload.message,
+				title: event.payload.title,
+				message: event.payload.message,
 				id: uuidv4()
 			});
 

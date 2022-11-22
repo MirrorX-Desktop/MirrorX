@@ -67,6 +67,7 @@
 			current_domain.set(await invoke_get_current_domain());
 			console.log('finish init current domain');
 		} catch (error: any) {
+			console.log(error);
 			await emitHomeNotification({ level: 'error', title: 'Error', message: error.toString() });
 		}
 	})();
