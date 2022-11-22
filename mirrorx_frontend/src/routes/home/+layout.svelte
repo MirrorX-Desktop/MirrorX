@@ -170,8 +170,12 @@
 			<hr />
 			<a
 				class="align-text-top text-xs text-blue-500 hover:text-blue-600"
-				href="https://github.com/MirrorX-Desktop/MirrorX">MirrorX</a
+				rel="noreferrer"
+				target="_blank"
+				href="https://github.com/MirrorX-Desktop/MirrorX"
 			>
+				MirrorX
+			</a>
 		</div>
 	</div>
 </div>
