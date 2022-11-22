@@ -8,7 +8,7 @@ mod platform;
 mod utility;
 mod window;
 
-use tauri::{CustomMenuItem, Manager, SystemTray, SystemTrayMenu, SystemTrayMenuItem};
+use tauri::{Manager, SystemTray, SystemTrayEvent};
 
 #[tracing::instrument]
 #[tokio::main]
@@ -16,18 +16,23 @@ async fn main() {
     tracing_subscriber::fmt::init();
     tauri::async_runtime::set(tokio::runtime::Handle::current());
 
-    let quit = CustomMenuItem::new("quit".to_string(), "Quit");
-    let hide = CustomMenuItem::new("hide".to_string(), "Hide");
-    let tray_menu = SystemTrayMenu::new()
-        .add_item(quit)
-        .add_native_item(SystemTrayMenuItem::Separator)
-        .add_item(hide);
-
-    let system_tray = SystemTray::new().with_menu(tray_menu);
-
     tauri::Builder::default()
         .manage(command::UIState::new())
-        .system_tray(system_tray)
+        .system_tray(SystemTray::new())
+        .on_system_tray_event(|app, event| {
+            if let SystemTrayEvent::MenuItemClick { id, .. } = event {
+                match id.as_str() {
+                    "quit" => std::process::exit(0),
+                    "show" => app.windows().values().for_each(|window| {
+                        let _ = window.show();
+                    }),
+                    "hide" => app.windows().values().for_each(|window| {
+                        let _ = window.hide();
+                    }),
+                    _ => {}
+                }
+            }
+        })
         .setup(|app| {
             app.wry_plugin(tauri_egui::EguiPluginBuilder::new(app.handle()));
 
