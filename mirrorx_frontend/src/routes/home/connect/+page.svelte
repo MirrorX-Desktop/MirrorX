@@ -21,6 +21,7 @@
 	import type { Unsubscriber } from 'svelte/store';
 	import LL from '../../../i18n/i18n-svelte';
 	import { emitHomeNotification } from '../home_notification_center.svelte';
+	import { writeText, readText } from '@tauri-apps/api/clipboard';
 
 	let domain: CurrentDomain | null = null;
 	let domain_unsubscribe: Unsubscriber | null = null;
@@ -62,7 +63,7 @@
 		}
 	});
 
-	const on_remote_device_id_input = (
+	const on_remote_device_id_input = async (
 		event: Event & {
 			currentTarget: EventTarget & HTMLInputElement;
 		}
@@ -73,14 +74,14 @@
 
 		if (input_event.inputType == 'insertFromPaste') {
 			// paste device_id from clipboard
-
-			let matched_ids = input_event.data?.match(/^\d{2}-\d{4}-\d{4}$/g);
-
-			if (matched_ids != null && matched_ids.length >= 1) {
-				input_remote_device_id = matched_ids[0];
-			} else {
-				input_event.currentTarget.value = '';
-			}
+			readText().then((v) => {
+				let matched_ids = v?.match(/^\d{2}-\d{4}-\d{4}$/g);
+				if (matched_ids != null && matched_ids.length > 0) {
+					input_remote_device_id = matched_ids[0];
+				} else {
+					input_event.currentTarget.value = '';
+				}
+			});
 		} else if (
 			(input_event.inputType == 'deleteContentBackward' || input_event.inputType == 'deleteContentForward') &&
 			input_remote_device_id_before.endsWith('-')
@@ -143,8 +144,9 @@
 	};
 
 	const copy_domain_id = () => {
-		if (domain && navigator.clipboard) {
-			navigator.clipboard.writeText(domain.device_id);
+		if (domain) {
+			writeText(domain.device_id);
+
 			domain_id_copied = true;
 		}
 	};
