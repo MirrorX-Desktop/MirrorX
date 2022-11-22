@@ -71,6 +71,7 @@ async fn main() {
                     if label == "main" {
                         if let Some(window) = app_handle.get_window(&label) {
                             let _ = window.hide();
+                            api.prevent_close();
                         }
                     }
                 }
