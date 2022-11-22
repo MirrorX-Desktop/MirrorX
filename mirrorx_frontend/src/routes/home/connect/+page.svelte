@@ -42,11 +42,10 @@
 			domain = value;
 		});
 
-		desktop_is_connecting_unlisten_fn = await listen<string>('desktop_is_connecting', (event) => {
-			let is_connecting: boolean = JSON.parse(event.payload);
-			desktop_is_connecting = is_connecting;
+		desktop_is_connecting_unlisten_fn = await listen<boolean>('desktop_is_connecting', (event) => {
+			desktop_is_connecting = event.payload;
 
-			if (!is_connecting) {
+			if (!event.payload) {
 				input_remote_device_id = '';
 				input_remote_device_id_before = '';
 			}

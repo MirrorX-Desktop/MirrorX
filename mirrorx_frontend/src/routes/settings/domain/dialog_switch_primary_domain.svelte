@@ -12,12 +12,14 @@
 	let domain_name: string = '';
 
 	onMount(async () => {
-		unlisten_fn = await listen<string>('settings:domain:show_switch_primary_domain_dialog', (event) => {
-			let ev: SwitchPrimaryDomainEvent = JSON.parse(event.payload);
-			domain_id = ev.domain_id;
-			domain_name = ev.domain_name;
-			show = true;
-		});
+		unlisten_fn = await listen<SwitchPrimaryDomainEvent>(
+			'settings:domain:show_switch_primary_domain_dialog',
+			(event) => {
+				domain_id = event.payload.domain_id;
+				domain_name = event.payload.domain_name;
+				show = true;
+			}
+		);
 	});
 
 	onDestroy(() => {

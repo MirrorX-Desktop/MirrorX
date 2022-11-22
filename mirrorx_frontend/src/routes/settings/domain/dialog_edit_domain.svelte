@@ -17,13 +17,12 @@
 	let unlisten_fn: UnlistenFn | null = null;
 
 	onMount(async () => {
-		unlisten_fn = await listen<string>('settings:domain:show_edit_domain_dialog', (event) => {
-			let ev: EditDomainEvent = JSON.parse(event.payload);
-			domain_id = ev.domain_id;
-			domain_name = ev.domain_name;
-			domain_device_id = ev.domain_device_id;
-			domain_finger_print = ev.domain_finger_print;
-			domain_remarks = ev.domain_remarks;
+		unlisten_fn = await listen<EditDomainEvent>('settings:domain:show_edit_domain_dialog', (event) => {
+			domain_id = event.payload.domain_id;
+			domain_name = event.payload.domain_name;
+			domain_device_id = event.payload.domain_device_id;
+			domain_finger_print = event.payload.domain_finger_print;
+			domain_remarks = event.payload.domain_remarks;
 			show = true;
 		});
 	});

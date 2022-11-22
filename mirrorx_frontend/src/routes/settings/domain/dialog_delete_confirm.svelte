@@ -13,10 +13,9 @@
 	let domain_name: string = '';
 
 	onMount(async () => {
-		unlisten_fn = await listen<string>('settings:domain:show_delete_confirm_dialog', (event) => {
-			let ev: DeleteConfirmEvent = JSON.parse(event.payload);
-			domain_id = ev.domain_id;
-			domain_name = ev.domain_name;
+		unlisten_fn = await listen<DeleteConfirmEvent>('settings:domain:show_delete_confirm_dialog', (event) => {
+			domain_id = event.payload.domain_id;
+			domain_name = event.payload.domain_name;
 			show = true;
 		});
 	});
