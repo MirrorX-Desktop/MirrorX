@@ -86,7 +86,9 @@
 							</tr>
 							<tr>
 								<th class="text-right" style="z-index:0!important">{$LL.Settings.Pages.Dialog.EditDomain.Remarks()}</th>
-								<td><input type="text" bind:value={domain_remarks} class="w-full rounded border p-2" /></td>
+								<td>
+									<input type="text" maxlength="15" bind:value={domain_remarks} class="w-full rounded border p-2" />
+								</td>
 							</tr>
 						</tbody>
 					</table>
