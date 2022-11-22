@@ -37,7 +37,9 @@ const zh_Hans: Translation = {
 					EditPassword: '修改密码',
 					PasswordVisible: '点击以显示密码',
 					PasswordInvisible: '移开鼠标隐藏密码',
-					EditPasswordCancel: '取消'
+					EditPasswordCancel: '取消',
+					ClickToCopyDeviceID: '点击以复制',
+					ClickToCopyDeviceIDCopied: '已复制'
 				},
 				Dialog: {
 					InputRemotePassword: {

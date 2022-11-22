@@ -31,6 +31,7 @@
 	let random_password_generating = false;
 	let desktop_is_connecting = false;
 	let desktop_is_connecting_unlisten_fn: UnlistenFn | null;
+	let domain_id_copied = false;
 
 	$: device_password_display = domain?.password ?? '';
 	$: remote_device_valid = input_remote_device_id.length == 0 || /^\d{2}-\d{4}-\d{4}$/.test(input_remote_device_id);
@@ -140,18 +141,35 @@
 			await emitHomeNotification({ level: 'error', title: 'Error', message: error.toString() });
 		}
 	};
+
+	const copy_domain_id = () => {
+		if (domain && navigator.clipboard) {
+			navigator.clipboard.writeText(domain.device_id);
+			domain_id_copied = true;
+		}
+	};
 </script>
 
 <slot>
 	{#if domain && domain.device_id && domain.name && domain.password}
 		<div class="mx-2 flex h-full flex-col">
 			<div class="my-3 text-center text-3xl">{$LL.Home.Pages.Connect.DeviceID()}</div>
-			<div class="my-3 text-center text-4xl">
-				{#if domain}
-					{domain.device_id}
-				{:else}
-					<Fa class="w-full text-center" icon={faSpinner} spin={true} size={'sm'} />
-				{/if}
+			<!-- svelte-ignore a11y-click-events-have-key-events -->
+			<div
+				class="tooltip tooltip-bottom hover:cursor-pointer"
+				data-tip={domain_id_copied
+					? $LL.Home.Pages.Connect.Tooltips.ClickToCopyDeviceIDCopied()
+					: $LL.Home.Pages.Connect.Tooltips.ClickToCopyDeviceID()}
+				on:click={copy_domain_id}
+				on:mouseleave={() => (domain_id_copied = false)}
+			>
+				<div class="py-3 text-center text-4xl">
+					{#if domain}
+						{domain.device_id}
+					{:else}
+						<Fa class="w-full text-center" icon={faSpinner} spin={true} size={'sm'} />
+					{/if}
+				</div>
 			</div>
 			<div class="my-3 text-center text-3xl">{$LL.Home.Pages.Connect.Password()}</div>
 			<div class="my-3 text-center">

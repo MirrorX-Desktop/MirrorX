@@ -37,7 +37,9 @@ const en: BaseTranslation = {
 					EditPassword: 'Edit Password',
 					PasswordVisible: 'Click to show plain password',
 					PasswordInvisible: 'Hide password when mouse leave',
-					EditPasswordCancel: 'Cancel'
+					EditPasswordCancel: 'Cancel',
+					ClickToCopyDeviceID: 'Click to Copy',
+					ClickToCopyDeviceIDCopied: 'Copied'
 				},
 				Dialog: {
 					InputRemotePassword: {

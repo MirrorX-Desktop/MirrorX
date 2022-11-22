@@ -20,6 +20,7 @@
 	import DialogSelectLanguage from './dialog_select_language.svelte';
 	import type { UpdateLanguageEvent } from '$lib/components/rust_event';
 	import type { Locales } from '$lib/i18n/i18n-types';
+	import { clipboard } from '@tauri-apps/api';
 
 	let domain: CurrentDomain | null = null;
 	let domain_unsubscribe: Unsubscriber | null = null;

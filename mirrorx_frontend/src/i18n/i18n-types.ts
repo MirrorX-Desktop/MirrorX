@@ -120,6 +120,14 @@ type RootTranslation = {
 					 * C​a​n​c​e​l
 					 */
 					EditPasswordCancel: string
+					/**
+					 * C​l​i​c​k​ ​t​o​ ​C​o​p​y
+					 */
+					ClickToCopyDeviceID: string
+					/**
+					 * C​o​p​i​e​d
+					 */
+					ClickToCopyDeviceIDCopied: string
 				}
 				Dialog: {
 					InputRemotePassword: {
@@ -387,6 +395,14 @@ export type TranslationFunctions = {
 					 * Cancel
 					 */
 					EditPasswordCancel: () => LocalizedString
+					/**
+					 * Click to Copy
+					 */
+					ClickToCopyDeviceID: () => LocalizedString
+					/**
+					 * Copied
+					 */
+					ClickToCopyDeviceIDCopied: () => LocalizedString
 				}
 				Dialog: {
 					InputRemotePassword: {
