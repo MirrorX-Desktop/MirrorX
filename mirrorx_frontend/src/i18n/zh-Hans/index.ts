@@ -76,6 +76,12 @@ const zh_Hans: Translation = {
 					Delete: '删除'
 				}
 			},
+			About: {
+				Version: '版本',
+				Official: '官方网站',
+				SourceRepository: '代码仓库',
+				SupportAndHelp: '帮助支持'
+			},
 			Dialog: {
 				EditDomain: {
 					Title: '修改域',

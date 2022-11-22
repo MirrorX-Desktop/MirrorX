@@ -76,6 +76,12 @@ const en: BaseTranslation = {
 					Delete: 'Delete'
 				}
 			},
+			About: {
+				Version: 'Version',
+				Official: 'Official',
+				SourceRepository: 'Source Repository',
+				SupportAndHelp: 'Support&Help'
+			},
 			Dialog: {
 				EditDomain: {
 					Title: 'Edit Domain',

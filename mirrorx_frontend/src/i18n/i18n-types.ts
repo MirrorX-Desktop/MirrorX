@@ -212,6 +212,24 @@ type RootTranslation = {
 					Delete: string
 				}
 			}
+			About: {
+				/**
+				 * V​e​r​s​i​o​n
+				 */
+				Version: string
+				/**
+				 * O​f​f​i​c​i​a​l
+				 */
+				Official: string
+				/**
+				 * S​o​u​r​c​e​ ​R​e​p​o​s​i​t​o​r​y
+				 */
+				SourceRepository: string
+				/**
+				 * S​u​p​p​o​r​t​&​H​e​l​p
+				 */
+				SupportAndHelp: string
+			}
 			Dialog: {
 				EditDomain: {
 					/**
@@ -486,6 +504,24 @@ export type TranslationFunctions = {
 					 */
 					Delete: () => LocalizedString
 				}
+			}
+			About: {
+				/**
+				 * Version
+				 */
+				Version: () => LocalizedString
+				/**
+				 * Official
+				 */
+				Official: () => LocalizedString
+				/**
+				 * Source Repository
+				 */
+				SourceRepository: () => LocalizedString
+				/**
+				 * Support&Help
+				 */
+				SupportAndHelp: () => LocalizedString
 			}
 			Dialog: {
 				EditDomain: {
