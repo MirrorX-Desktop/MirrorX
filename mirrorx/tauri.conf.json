@@ -52,6 +52,10 @@
     "updater": {
       "active": false
     },
+    "systemTray": {
+      "iconPath": "assets/icons/icon.png",
+      "iconAsTemplate": true
+    },
     "windows": [
       {
         "center": true,

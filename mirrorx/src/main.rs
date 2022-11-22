@@ -8,7 +8,7 @@ mod platform;
 mod utility;
 mod window;
 
-use tauri::Manager;
+use tauri::{CustomMenuItem, Manager, SystemTray, SystemTrayMenu, SystemTrayMenuItem};
 
 #[tracing::instrument]
 #[tokio::main]
@@ -16,8 +16,18 @@ async fn main() {
     tracing_subscriber::fmt::init();
     tauri::async_runtime::set(tokio::runtime::Handle::current());
 
+    let quit = CustomMenuItem::new("quit".to_string(), "Quit");
+    let hide = CustomMenuItem::new("hide".to_string(), "Hide");
+    let tray_menu = SystemTrayMenu::new()
+        .add_item(quit)
+        .add_native_item(SystemTrayMenuItem::Separator)
+        .add_item(hide);
+
+    let system_tray = SystemTray::new().with_menu(tray_menu);
+
     tauri::Builder::default()
         .manage(command::UIState::new())
+        .system_tray(system_tray)
         .setup(|app| {
             app.wry_plugin(tauri_egui::EguiPluginBuilder::new(app.handle()));
 
@@ -48,6 +58,11 @@ async fn main() {
             command::set_language,
             command::get_language,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while running tauri application")
+        .run(|_app_handle, event| {
+            if let tauri::RunEvent::ExitRequested { api, .. } = event {
+                api.prevent_exit();
+            }
+        });
 }

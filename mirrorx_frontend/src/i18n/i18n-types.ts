@@ -7,7 +7,7 @@ export type BaseLocale = 'en'
 
 export type Locales =
 	| 'en'
-	| 'zh-Hans'
+	| 'zh'
 
 export type Translation = RootTranslation
 

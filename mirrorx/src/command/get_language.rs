@@ -12,14 +12,7 @@ pub async fn get_language() -> CoreResult<String> {
     let language_tag = language_tags::LanguageTag::parse(&system_locale)
         .map_err(|err| core_error!("parse language tag failed ({})", err))?;
 
-    let mut language_code = language_tag.primary_language().to_string();
-
-    if language_code == "zh" {
-        if let Some(script) = language_tag.script() {
-            language_code.push('-');
-            language_code.push_str(script);
-        }
-    }
+    let language_code = language_tag.primary_language().to_string();
 
     storage.kv().set_language(&language_code)?;
 

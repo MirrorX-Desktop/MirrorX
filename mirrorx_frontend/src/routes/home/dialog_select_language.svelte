@@ -36,7 +36,7 @@
 
 	const localeAndDisplayNames: Array<{ code: string; name: string }> = [
 		{ code: 'en', name: 'English' },
-		{ code: 'zh-Hans', name: '简体中文' }
+		{ code: 'zh', name: '中文' }
 	];
 
 	onMount(async () => {
