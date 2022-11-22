@@ -34,7 +34,6 @@ async fn main() {
         .invoke_handler(tauri::generate_handler![
             command::init_config,
             command::init_signaling,
-            command::init_language,
             command::get_current_domain,
             command::generate_random_password,
             command::set_current_domain_device_password,

@@ -14,7 +14,6 @@
 		invoke_get_current_domain,
 		invoke_get_language,
 		invoke_init_config,
-		invoke_init_language,
 		invoke_init_signaling
 	} from '../../components/command';
 	import { emit, listen, type UnlistenFn } from '@tauri-apps/api/event';
@@ -60,9 +59,6 @@
 
 			await invoke_init_signaling({ force: false });
 			console.log('finish init signaling');
-
-			await invoke_init_language();
-			console.log('finish init language');
 
 			setLocale((await invoke_get_language()) as Locales);
 			console.log('finish set locale');

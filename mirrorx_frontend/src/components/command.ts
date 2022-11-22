@@ -8,10 +8,6 @@ export function invoke_init_signaling(args: { force: boolean }): Promise<void> {
 	return invoke('init_signaling', args);
 }
 
-export function invoke_init_language(): Promise<void> {
-	return invoke('init_language');
-}
-
 export function invoke_get_current_domain(): Promise<{ name: string; device_id: string; password: string }> {
 	return invoke('get_current_domain');
 }
