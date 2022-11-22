@@ -1,49 +1,42 @@
 <!DOCTYPE html>
 <html lang="%lang%" data-theme="light">
+	<head>
+		<meta charset="utf-8" />
+		<link rel="icon" href="%sveltekit.assets%/favicon.png" />
+		<meta name="viewport" content="width=device-width" />
+		<!-- <link rel="stylesheet" type="text/css" href="./app.css" /> -->
+		<style>
+			html,
+			body {
+				width: 100%;
+				height: 100%;
+				margin: 0;
+				user-select: none;
+				-webkit-user-select: none;
+				-moz-user-select: none;
+			}
 
-<head>
-	<meta charset="utf-8" />
-	<link rel="icon" href="%sveltekit.assets%/favicon.png" />
-	<meta name="viewport" content="width=device-width" />
-	<!-- <link rel="stylesheet" type="text/css" href="./app.css" /> -->
-	<style>
-		html,
-		body {
-			width: 100%;
-			height: 100%;
-			margin: 0;
-			user-select: none;
-			-webkit-user-select: none;
-			-moz-user-select: none;
-		}
+			.title_move_region {
+				position: absolute;
+				top: 0;
+				right: 0;
+				left: 0;
+				height: 30px;
+				z-index: 9999;
+			}
 
-		.title_move_region {
-			position: absolute;
-			top: 0;
-			right: 0;
-			left: 0;
-			height: 30px;
-			z-index: 9999;
-		}
+			.content {
+				position: absolute;
+				top: 0;
+				right: 0;
+				bottom: 0;
+				left: 0;
+			}
+		</style>
+		%sveltekit.head%
+	</head>
 
-		.content {
-			position: absolute;
-			top: 0;
-			right: 0;
-			bottom: 0;
-			left: 0;
-		}
-	</style>
-	<script>
-		// document.addEventListener('contextmenu', event => event.preventDefault());
-	</script>
-	%sveltekit.head%
-</head>
-
-<body>
-	
-	<div data-tauri-drag-region class="content">%sveltekit.body%</div>
-
-</body>
-
+	<body>
+		<div data-tauri-drag-region class="content">%sveltekit.body%</div>
+	</body>
 </html>
