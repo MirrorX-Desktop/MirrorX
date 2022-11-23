@@ -44,7 +44,7 @@ uuid = { version = "1.2.1", features = ["v4"] }
 fxhash = "0.2.1"
 r2d2 = "0.8.10"
 r2d2_sqlite = "0.21.0"
-
+tao = "0.15.6"
 
 [target.x86_64-apple-darwin.dependencies]
 objc = { version = "0.2.7" }

@@ -130,8 +130,8 @@ pub enum MouseEvent {
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub enum KeyboardEvent {
-    KeyUp(KeyboardKey),
-    KeyDown(KeyboardKey),
+    KeyUp(tao::keyboard::KeyCode),
+    KeyDown(tao::keyboard::KeyCode),
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]

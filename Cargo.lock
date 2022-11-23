@@ -1078,8 +1078,7 @@ checksum = "0bd4b30a6560bbd9b4620f4de34c3f14f60848e58a9b7216801afcb4c7b31c3c"
 [[package]]
 name = "eframe_tao"
 version = "0.20.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cd948e1f72cf8719d5a34f06a37be82f9e58d6acb8a0a4979dbcd0ebdd796a77"
+source = "git+https://github.com/MirrorX-Desktop/egui.git#b84c24f521c8a0723aed7d433f54012e5fe83718"
 dependencies = [
  "bytemuck",
  "egui",
@@ -1100,20 +1099,19 @@ dependencies = [
 [[package]]
 name = "egui"
 version = "0.19.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fc9fcd393c3daaaf5909008a1d948319d538b79c51871e4df0993260260a94e4"
+source = "git+https://github.com/MirrorX-Desktop/egui.git#b84c24f521c8a0723aed7d433f54012e5fe83718"
 dependencies = [
  "ahash 0.8.0",
  "epaint",
  "nohash-hasher",
+ "tao",
  "tracing",
 ]
 
 [[package]]
 name = "egui-tao"
 version = "0.20.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a1329cc121cab91a95a538ee48359a496344f37bc8f0bf7a7586c7e355027c24"
+source = "git+https://github.com/MirrorX-Desktop/egui.git#b84c24f521c8a0723aed7d433f54012e5fe83718"
 dependencies = [
  "arboard",
  "egui",
@@ -1127,8 +1125,7 @@ dependencies = [
 [[package]]
 name = "egui_extras"
 version = "0.19.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f698f685bb0ad39e87109e2f695ded0bccde77d5d40bbf7590cb5561c1e3039d"
+source = "git+https://github.com/MirrorX-Desktop/egui.git#b84c24f521c8a0723aed7d433f54012e5fe83718"
 dependencies = [
  "egui",
  "resvg",
@@ -1139,8 +1136,7 @@ dependencies = [
 [[package]]
 name = "egui_glow_tao"
 version = "0.20.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "14151e283229f6426a2052fdcb181e3c7d03bd24fa003f917b482a65dd6b59c4"
+source = "git+https://github.com/MirrorX-Desktop/egui.git#b84c24f521c8a0723aed7d433f54012e5fe83718"
 dependencies = [
  "bytemuck",
  "egui",
@@ -1160,8 +1156,7 @@ checksum = "90e5c1c8368803113bf0c9584fc495a58b86dc8a29edbf8fe877d21d9507e797"
 [[package]]
 name = "emath"
 version = "0.19.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9542a40106fdba943a055f418d1746a050e1a903a049b030c2b097d4686a33cf"
+source = "git+https://github.com/MirrorX-Desktop/egui.git#b84c24f521c8a0723aed7d433f54012e5fe83718"
 dependencies = [
  "bytemuck",
 ]
@@ -1184,8 +1179,7 @@ dependencies = [
 [[package]]
 name = "epaint"
 version = "0.19.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5ba04741be7f6602b1a1b28f1082cce45948a7032961c52814f8946b28493300"
+source = "git+https://github.com/MirrorX-Desktop/egui.git#b84c24f521c8a0723aed7d433f54012e5fe83718"
 dependencies = [
  "ab_glyph",
  "ahash 0.8.0",
@@ -2599,6 +2593,7 @@ dependencies = [
  "serde_json",
  "strum_macros 0.24.3",
  "sys-locale",
+ "tao",
  "tauri",
  "tauri-build",
  "tauri-egui",
@@ -2650,6 +2645,7 @@ dependencies = [
  "serde_json",
  "sha2",
  "signaling_proto",
+ "tao",
  "thiserror",
  "tokio",
  "tokio-util",
@@ -4768,9 +4764,9 @@ dependencies = [
 
 [[package]]
 name = "tao"
-version = "0.15.3"
+version = "0.15.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "42c460173627564bde252ca5ebf346ba5b37c5cee1a445782bacc8e9b8d38b5e"
+checksum = "8c8fab9f2ba9a6d7ad55b46f812984b6ab203d774c162163ac297edc9567404b"
 dependencies = [
  "bitflags",
  "cairo-rs",
@@ -4922,8 +4918,8 @@ dependencies = [
 
 [[package]]
 name = "tauri-egui"
-version = "0.1.0"
-source = "git+https://github.com/tauri-apps/tauri-egui.git#a0b26cf90999e6c9ce5a5195bda6b98d855766b6"
+version = "0.1.1"
+source = "git+https://github.com/MirrorX-Desktop/tauri-egui.git#6fb2b083e82c544413bdbf26af3a2a46c868c2da"
 dependencies = [
  "eframe_tao",
  "egui",

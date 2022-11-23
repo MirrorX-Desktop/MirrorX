@@ -354,67 +354,78 @@ impl DesktopWindow {
                         input_series
                             .push(InputEvent::Mouse(MouseEvent::ScrollWheel(scroll_vector.y)));
                     }
-                    tauri_egui::egui::Event::Key {
-                        key,
-                        pressed,
-                        modifiers,
-                    } => {
-                        tracing::info!(?key, ?pressed, ?modifiers, "modifiers");
+                    // tauri_egui::egui::Event::Key {
+                    //     key,
+                    //     pressed,
+                    //     modifiers,
+                    // } => {
+                    //     tracing::info!(?key, ?pressed, ?modifiers, "modifiers");
 
-                        // todo: mac command map
+                    //     // todo: mac command map
 
-                        if *pressed {
-                            if modifiers.alt {
-                                self.press_alt = true;
-                                input_series.push(InputEvent::Keyboard(KeyboardEvent::KeyDown(
-                                    KeyboardKey::LeftAlt,
-                                )))
-                            }
+                    //     if *pressed {
+                    //         if modifiers.alt {
+                    //             self.press_alt = true;
+                    //             input_series.push(InputEvent::Keyboard(KeyboardEvent::KeyDown(
+                    //                 KeyboardKey::LeftAlt,
+                    //             )))
+                    //         }
 
-                            if modifiers.ctrl {
-                                self.press_ctrl = true;
-                                input_series.push(InputEvent::Keyboard(KeyboardEvent::KeyDown(
-                                    KeyboardKey::LeftControl,
-                                )))
-                            }
+                    //         if modifiers.ctrl {
+                    //             self.press_ctrl = true;
+                    //             input_series.push(InputEvent::Keyboard(KeyboardEvent::KeyDown(
+                    //                 KeyboardKey::LeftControl,
+                    //             )))
+                    //         }
 
-                            if modifiers.shift {
-                                self.press_ctrl = true;
-                                input_series.push(InputEvent::Keyboard(KeyboardEvent::KeyDown(
-                                    KeyboardKey::LeftShift,
-                                )))
-                            }
+                    //         if modifiers.shift {
+                    //             self.press_ctrl = true;
+                    //             input_series.push(InputEvent::Keyboard(KeyboardEvent::KeyDown(
+                    //                 KeyboardKey::LeftShift,
+                    //             )))
+                    //         }
 
-                            input_series
-                                .push(InputEvent::Keyboard(KeyboardEvent::KeyDown(map_key(*key))));
+                    //         input_series
+                    //             .push(InputEvent::Keyboard(KeyboardEvent::KeyDown(map_key(*key))));
+                    //     } else {
+                    //         input_series
+                    //             .push(InputEvent::Keyboard(KeyboardEvent::KeyUp(map_key(*key))));
+
+                    //         if self.press_alt && !modifiers.alt {
+                    //             self.press_alt = false;
+                    //             input_series.push(InputEvent::Keyboard(KeyboardEvent::KeyUp(
+                    //                 KeyboardKey::LeftAlt,
+                    //             )))
+                    //         }
+
+                    //         if self.press_ctrl && !modifiers.ctrl {
+                    //             self.press_ctrl = false;
+                    //             input_series.push(InputEvent::Keyboard(KeyboardEvent::KeyUp(
+                    //                 KeyboardKey::LeftControl,
+                    //             )))
+                    //         }
+
+                    //         if self.press_shift && !modifiers.shift {
+                    //             self.press_shift = false;
+                    //             input_series.push(InputEvent::Keyboard(KeyboardEvent::KeyUp(
+                    //                 KeyboardKey::LeftShift,
+                    //             )))
+                    //         }
+                    //     }
+                    // }
+                    // tauri_egui::egui::Event::Text(text) => {
+                    //     tracing::info!(?text, "input text");
+                    // }
+                    tauri_egui::egui::Event::RawKeyInput { key, pressed } => {
+                        tracing::info!(?key, "raw key");
+
+                        let keyboard_event = if *pressed {
+                            KeyboardEvent::KeyDown(*key)
                         } else {
-                            input_series
-                                .push(InputEvent::Keyboard(KeyboardEvent::KeyUp(map_key(*key))));
+                            KeyboardEvent::KeyUp(*key)
+                        };
 
-                            if self.press_alt && !modifiers.alt {
-                                self.press_alt = false;
-                                input_series.push(InputEvent::Keyboard(KeyboardEvent::KeyUp(
-                                    KeyboardKey::LeftAlt,
-                                )))
-                            }
-
-                            if self.press_ctrl && !modifiers.ctrl {
-                                self.press_ctrl = false;
-                                input_series.push(InputEvent::Keyboard(KeyboardEvent::KeyUp(
-                                    KeyboardKey::LeftControl,
-                                )))
-                            }
-
-                            if self.press_shift && !modifiers.shift {
-                                self.press_shift = false;
-                                input_series.push(InputEvent::Keyboard(KeyboardEvent::KeyUp(
-                                    KeyboardKey::LeftShift,
-                                )))
-                            }
-                        }
-                    }
-                    tauri_egui::egui::Event::Text(text) => {
-                        tracing::info!(?text, "input text");
+                        input_series.push(InputEvent::Keyboard(keyboard_event))
                     }
                     _ => {}
                 }
@@ -456,81 +467,5 @@ impl tauri_egui::eframe::App for DesktopWindow {
         if let Some(gl) = gl {
             self.desktop_render.lock().destroy(gl);
         }
-    }
-}
-
-const fn map_key(key: tauri_egui::egui::Key) -> KeyboardKey {
-    match key {
-        tauri_egui::egui::Key::ArrowDown => KeyboardKey::ArrowDown,
-        tauri_egui::egui::Key::ArrowLeft => KeyboardKey::ArrowLeft,
-        tauri_egui::egui::Key::ArrowRight => KeyboardKey::ArrowRight,
-        tauri_egui::egui::Key::ArrowUp => KeyboardKey::ArrowUp,
-        tauri_egui::egui::Key::Escape => KeyboardKey::Escape,
-        tauri_egui::egui::Key::Tab => KeyboardKey::Tab,
-        tauri_egui::egui::Key::Backspace => KeyboardKey::Backspace,
-        tauri_egui::egui::Key::Enter => KeyboardKey::Enter,
-        tauri_egui::egui::Key::Space => KeyboardKey::Space,
-        tauri_egui::egui::Key::Insert => KeyboardKey::Insert,
-        tauri_egui::egui::Key::Delete => KeyboardKey::Delete,
-        tauri_egui::egui::Key::Home => KeyboardKey::Home,
-        tauri_egui::egui::Key::End => KeyboardKey::End,
-        tauri_egui::egui::Key::PageUp => KeyboardKey::PageUp,
-        tauri_egui::egui::Key::PageDown => KeyboardKey::PageDown,
-        tauri_egui::egui::Key::Num0 => KeyboardKey::Digit0,
-        tauri_egui::egui::Key::Num1 => KeyboardKey::Digit1,
-        tauri_egui::egui::Key::Num2 => KeyboardKey::Digit2,
-        tauri_egui::egui::Key::Num3 => KeyboardKey::Digit3,
-        tauri_egui::egui::Key::Num4 => KeyboardKey::Digit4,
-        tauri_egui::egui::Key::Num5 => KeyboardKey::Digit5,
-        tauri_egui::egui::Key::Num6 => KeyboardKey::Digit6,
-        tauri_egui::egui::Key::Num7 => KeyboardKey::Digit7,
-        tauri_egui::egui::Key::Num8 => KeyboardKey::Digit8,
-        tauri_egui::egui::Key::Num9 => KeyboardKey::Digit9,
-        tauri_egui::egui::Key::A => KeyboardKey::A,
-        tauri_egui::egui::Key::B => KeyboardKey::B,
-        tauri_egui::egui::Key::C => KeyboardKey::C,
-        tauri_egui::egui::Key::D => KeyboardKey::D,
-        tauri_egui::egui::Key::E => KeyboardKey::E,
-        tauri_egui::egui::Key::F => KeyboardKey::F,
-        tauri_egui::egui::Key::G => KeyboardKey::G,
-        tauri_egui::egui::Key::H => KeyboardKey::H,
-        tauri_egui::egui::Key::I => KeyboardKey::I,
-        tauri_egui::egui::Key::J => KeyboardKey::J,
-        tauri_egui::egui::Key::K => KeyboardKey::K,
-        tauri_egui::egui::Key::L => KeyboardKey::L,
-        tauri_egui::egui::Key::M => KeyboardKey::M,
-        tauri_egui::egui::Key::N => KeyboardKey::N,
-        tauri_egui::egui::Key::O => KeyboardKey::O,
-        tauri_egui::egui::Key::P => KeyboardKey::P,
-        tauri_egui::egui::Key::Q => KeyboardKey::Q,
-        tauri_egui::egui::Key::R => KeyboardKey::R,
-        tauri_egui::egui::Key::S => KeyboardKey::S,
-        tauri_egui::egui::Key::T => KeyboardKey::T,
-        tauri_egui::egui::Key::U => KeyboardKey::U,
-        tauri_egui::egui::Key::V => KeyboardKey::V,
-        tauri_egui::egui::Key::W => KeyboardKey::W,
-        tauri_egui::egui::Key::X => KeyboardKey::X,
-        tauri_egui::egui::Key::Y => KeyboardKey::Y,
-        tauri_egui::egui::Key::Z => KeyboardKey::Z,
-        tauri_egui::egui::Key::F1 => KeyboardKey::F1,
-        tauri_egui::egui::Key::F2 => KeyboardKey::F2,
-        tauri_egui::egui::Key::F3 => KeyboardKey::F3,
-        tauri_egui::egui::Key::F4 => KeyboardKey::F4,
-        tauri_egui::egui::Key::F5 => KeyboardKey::F5,
-        tauri_egui::egui::Key::F6 => KeyboardKey::F6,
-        tauri_egui::egui::Key::F7 => KeyboardKey::F7,
-        tauri_egui::egui::Key::F8 => KeyboardKey::F8,
-        tauri_egui::egui::Key::F9 => KeyboardKey::F9,
-        tauri_egui::egui::Key::F10 => KeyboardKey::F10,
-        tauri_egui::egui::Key::F11 => KeyboardKey::F11,
-        tauri_egui::egui::Key::F12 => KeyboardKey::F12,
-        tauri_egui::egui::Key::F13 => KeyboardKey::PrintScreen,
-        tauri_egui::egui::Key::F14 => KeyboardKey::ScrollLock,
-        tauri_egui::egui::Key::F15 => KeyboardKey::Pause,
-        tauri_egui::egui::Key::F16 => KeyboardKey::Fn, // todo: temp
-        tauri_egui::egui::Key::F17 => KeyboardKey::Fn, // todo: temp
-        tauri_egui::egui::Key::F18 => KeyboardKey::Fn, // todo: temp
-        tauri_egui::egui::Key::F19 => KeyboardKey::Fn, // todo: temp
-        tauri_egui::egui::Key::F20 => KeyboardKey::Fn, // todo: temp
     }
 }
