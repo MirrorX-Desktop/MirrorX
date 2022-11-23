@@ -1,6 +1,6 @@
 use crate::{
     api::endpoint::message::{KeyboardEvent, MouseEvent},
-    component::{self, desktop::monitor::Monitor},
+    component::{self, desktop::monitor::Monitor, input::key::MouseKey},
 };
 
 pub fn handle_mouse(event: MouseEvent, monitor: &Monitor) {
@@ -18,6 +18,10 @@ pub fn handle_mouse(event: MouseEvent, monitor: &Monitor) {
             let _ = component::input::mouse_scroll_wheel(monitor, delta);
         }
     }
+}
+
+pub fn handle_mouse_double_click(key: MouseKey, x: f32, y: f32, monitor: &Monitor) {
+    let _ = component::input::mouse_double_click(monitor, key, x, y);
 }
 
 pub fn handle_keyboard(event: KeyboardEvent) {

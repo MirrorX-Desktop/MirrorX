@@ -51,6 +51,57 @@ pub fn mouse_down(monitor: &Monitor, key: MouseKey, x: f32, y: f32) -> CoreResul
     unsafe { send_input(&[(mouse_data, dw_flags)], monitor.left, monitor.top, x, y) }
 }
 
+pub fn mouse_double_click(monitor: &Monitor, key: MouseKey, x: f32, y: f32) -> CoreResult<()> {
+    let mut args = Vec::new();
+
+    for _ in 0..2 {
+        let down_flags = match key {
+            MouseKey::None => return Err(core_error!("unsupport key")),
+            MouseKey::Left => MOUSEEVENTF_LEFTDOWN | MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_VIRTUALDESK,
+            MouseKey::Right => {
+                MOUSEEVENTF_RIGHTDOWN | MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_VIRTUALDESK
+            }
+            MouseKey::Wheel => {
+                MOUSEEVENTF_MIDDLEDOWN | MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_VIRTUALDESK
+            }
+            MouseKey::SideForward => {
+                MOUSEEVENTF_XUP | MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_VIRTUALDESK
+            }
+            MouseKey::SideBack => {
+                MOUSEEVENTF_XDOWN | MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_VIRTUALDESK
+            }
+        };
+
+        let up_flags = match key {
+            MouseKey::None => return Err(core_error!("unsupport key")),
+            MouseKey::Left => MOUSEEVENTF_LEFTUP | MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_VIRTUALDESK,
+            MouseKey::Right => MOUSEEVENTF_RIGHTUP | MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_VIRTUALDESK,
+            MouseKey::Wheel => {
+                MOUSEEVENTF_MIDDLEUP | MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_VIRTUALDESK
+            }
+            MouseKey::SideForward => {
+                MOUSEEVENTF_XUP | MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_VIRTUALDESK
+            }
+            MouseKey::SideBack => {
+                MOUSEEVENTF_XDOWN | MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_VIRTUALDESK
+            }
+        };
+
+        let mouse_data = if MouseKey::SideForward == key {
+            VK_XBUTTON1.0 as i32
+        } else if MouseKey::SideBack == key {
+            VK_XBUTTON2.0 as i32
+        } else {
+            0
+        };
+
+        args.push((mouse_data, down_flags));
+        args.push((mouse_data, up_flags));
+    }
+
+    unsafe { send_input(&args, monitor.left, monitor.top, x, y) }
+}
+
 pub fn mouse_move(monitor: &Monitor, key: MouseKey, x: f32, y: f32) -> CoreResult<()> {
     let dw_flags = match key {
         MouseKey::None => MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_VIRTUALDESK,
