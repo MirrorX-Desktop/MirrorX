@@ -31,6 +31,14 @@ MirrorX is a remote desktop control tool powered by [Rust](https://github.com/ru
 - [MirrorX Signaling Server](https://github.com/MirrorX-Desktop/signaling)
 - [MirrorX Endpoints Server](https://github.com/MirrorX-Desktop/endpoints)
 
+## Free Public Servers
+
+> This server is support at my own expense, so please do not abuse it.
+
+| Location | Specification  |
+| :------: | :------------: |
+|  Seoul   | 1vCPU & 1G RAM |
+
 ## Available Platform
 
 - [x] macOS

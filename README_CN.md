@@ -31,6 +31,14 @@ MirrorX 是一个使用 [Rust](https://github.com/rust-lang/rust) 构建的远�
 - [MirrorX Signaling Server](https://github.com/MirrorX-Desktop/signaling)
 - [MirrorX Endpoints Server](https://github.com/MirrorX-Desktop/endpoints)
 
+## 免费公共服务器
+
+> 这台服务器是我自费的，所以请不要滥用它。
+
+| 位置 |      配置      |
+| :--: | :------------: |
+| 首尔 | 1vCPU & 1G RAM |
+
 ## 可用平台
 
 - [x] macOS
