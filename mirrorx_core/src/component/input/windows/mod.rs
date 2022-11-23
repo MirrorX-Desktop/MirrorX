@@ -9,7 +9,7 @@ use windows::Win32::{
     UI::{Input::KeyboardAndMouse::*, WindowsAndMessaging::*},
 };
 
-pub fn mouse_up(monitor: &Monitor, key: MouseKey, x: f32, y: f32) -> CoreResult<()> {
+pub fn mouse_up(monitor: &Monitor, key: &MouseKey, x: f32, y: f32) -> CoreResult<()> {
     let dw_flags = match key {
         MouseKey::None => return Err(core_error!("unsupport key")),
         MouseKey::Left => MOUSEEVENTF_LEFTUP | MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_VIRTUALDESK,
@@ -19,9 +19,9 @@ pub fn mouse_up(monitor: &Monitor, key: MouseKey, x: f32, y: f32) -> CoreResult<
         MouseKey::SideBack => MOUSEEVENTF_XDOWN | MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_VIRTUALDESK,
     };
 
-    let mouse_data = if MouseKey::SideForward == key {
+    let mouse_data = if MouseKey::SideForward == *key {
         VK_XBUTTON1.0 as i32
-    } else if MouseKey::SideBack == key {
+    } else if MouseKey::SideBack == *key {
         VK_XBUTTON2.0 as i32
     } else {
         0
@@ -30,7 +30,7 @@ pub fn mouse_up(monitor: &Monitor, key: MouseKey, x: f32, y: f32) -> CoreResult<
     unsafe { send_input(&[(mouse_data, dw_flags)], monitor.left, monitor.top, x, y) }
 }
 
-pub fn mouse_down(monitor: &Monitor, key: MouseKey, x: f32, y: f32) -> CoreResult<()> {
+pub fn mouse_down(monitor: &Monitor, key: &MouseKey, x: f32, y: f32) -> CoreResult<()> {
     let dw_flags = match key {
         MouseKey::None => return Err(core_error!("unsupport key")),
         MouseKey::Left => MOUSEEVENTF_LEFTDOWN | MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_VIRTUALDESK,
@@ -40,9 +40,9 @@ pub fn mouse_down(monitor: &Monitor, key: MouseKey, x: f32, y: f32) -> CoreResul
         MouseKey::SideBack => MOUSEEVENTF_XDOWN | MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_VIRTUALDESK,
     };
 
-    let mouse_data = if MouseKey::SideForward == key {
+    let mouse_data = if MouseKey::SideForward == *key {
         VK_XBUTTON1.0 as i32
-    } else if MouseKey::SideBack == key {
+    } else if MouseKey::SideBack == *key {
         VK_XBUTTON2.0 as i32
     } else {
         0
@@ -51,7 +51,7 @@ pub fn mouse_down(monitor: &Monitor, key: MouseKey, x: f32, y: f32) -> CoreResul
     unsafe { send_input(&[(mouse_data, dw_flags)], monitor.left, monitor.top, x, y) }
 }
 
-pub fn mouse_double_click(monitor: &Monitor, key: MouseKey, x: f32, y: f32) -> CoreResult<()> {
+pub fn mouse_double_click(monitor: &Monitor, key: &MouseKey, x: f32, y: f32) -> CoreResult<()> {
     let mut args = Vec::new();
 
     for _ in 0..2 {
@@ -87,9 +87,9 @@ pub fn mouse_double_click(monitor: &Monitor, key: MouseKey, x: f32, y: f32) -> C
             }
         };
 
-        let mouse_data = if MouseKey::SideForward == key {
+        let mouse_data = if MouseKey::SideForward == *key {
             VK_XBUTTON1.0 as i32
-        } else if MouseKey::SideBack == key {
+        } else if MouseKey::SideBack == *key {
             VK_XBUTTON2.0 as i32
         } else {
             0
@@ -102,7 +102,7 @@ pub fn mouse_double_click(monitor: &Monitor, key: MouseKey, x: f32, y: f32) -> C
     unsafe { send_input(&args, monitor.left, monitor.top, x, y) }
 }
 
-pub fn mouse_move(monitor: &Monitor, key: MouseKey, x: f32, y: f32) -> CoreResult<()> {
+pub fn mouse_move(monitor: &Monitor, key: &MouseKey, x: f32, y: f32) -> CoreResult<()> {
     let dw_flags = match key {
         MouseKey::None => MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_VIRTUALDESK,
         MouseKey::Left => {
@@ -128,9 +128,9 @@ pub fn mouse_move(monitor: &Monitor, key: MouseKey, x: f32, y: f32) -> CoreResul
         }
     };
 
-    let mouse_data = if MouseKey::SideForward == key {
+    let mouse_data = if MouseKey::SideForward == *key {
         VK_XBUTTON1.0 as i32
-    } else if MouseKey::SideBack == key {
+    } else if MouseKey::SideBack == *key {
         VK_XBUTTON2.0 as i32
     } else {
         0
@@ -151,11 +151,11 @@ pub fn mouse_scroll_wheel(monitor: &Monitor, delta: f32) -> CoreResult<()> {
     }
 }
 
-pub fn keyboard_up(key: tao::keyboard::KeyCode) -> CoreResult<()> {
+pub fn keyboard_up(key: &tao::keyboard::KeyCode) -> CoreResult<()> {
     unsafe { post_keyboard_event(key, false) }
 }
 
-pub fn keyboard_down(key: tao::keyboard::KeyCode) -> CoreResult<()> {
+pub fn keyboard_down(key: &tao::keyboard::KeyCode) -> CoreResult<()> {
     unsafe { post_keyboard_event(key, true) }
 }
 
@@ -203,8 +203,8 @@ unsafe fn send_input(
     }
 }
 
-unsafe fn post_keyboard_event(key: tao::keyboard::KeyCode, press: bool) -> CoreResult<()> {
-    if let Some(vk_key) = map_key_code(key) {
+unsafe fn post_keyboard_event(key: &tao::keyboard::KeyCode, press: bool) -> CoreResult<()> {
+    if let Some(vk_key) = map_key_code(&key) {
         let mut flags: KEYBD_EVENT_FLAGS = KEYBD_EVENT_FLAGS(0);
         if is_extend_key(vk_key) {
             flags |= KEYEVENTF_EXTENDEDKEY;
@@ -265,7 +265,7 @@ const fn is_extend_key(key: VIRTUAL_KEY) -> bool {
     )
 }
 
-const fn map_key_code(key: tao::keyboard::KeyCode) -> Option<VIRTUAL_KEY> {
+const fn map_key_code(key: &tao::keyboard::KeyCode) -> Option<VIRTUAL_KEY> {
     match key {
         tao::keyboard::KeyCode::Unidentified(_) => None,
         tao::keyboard::KeyCode::Backquote => Some(VK_OEM_3),
