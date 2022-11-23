@@ -100,11 +100,11 @@ pub fn mouse_scroll_wheel(monitor: &Monitor, delta: f32) -> CoreResult<()> {
     }
 }
 
-pub fn keyboard_up(key: KeyboardKey) -> CoreResult<()> {
+pub fn keyboard_up(key: tao::keyboard::KeyCode) -> CoreResult<()> {
     unsafe { post_keyboard_event(key, false) }
 }
 
-pub fn keyboard_down(key: KeyboardKey) -> CoreResult<()> {
+pub fn keyboard_down(key: tao::keyboard::KeyCode) -> CoreResult<()> {
     unsafe { post_keyboard_event(key, true) }
 }
 
@@ -152,37 +152,39 @@ unsafe fn send_input(
     }
 }
 
-unsafe fn post_keyboard_event(key: KeyboardKey, press: bool) -> CoreResult<()> {
-    let vk_key = map_key_code(key);
+unsafe fn post_keyboard_event(key: tao::keyboard::KeyCode, press: bool) -> CoreResult<()> {
+    if let Some(vk_key) = map_key_code(key) {
+        let mut flags: KEYBD_EVENT_FLAGS = KEYBD_EVENT_FLAGS(0);
+        if is_extend_key(vk_key) {
+            flags |= KEYEVENTF_EXTENDEDKEY;
+        }
 
-    let mut flags: KEYBD_EVENT_FLAGS = KEYBD_EVENT_FLAGS(0);
-    if is_extend_key(vk_key) {
-        flags |= KEYEVENTF_EXTENDEDKEY;
-    }
+        if !press {
+            flags |= KEYEVENTF_KEYUP;
+        }
 
-    if !press {
-        flags |= KEYEVENTF_KEYUP;
-    }
-
-    let inputs = [INPUT {
-        r#type: INPUT_KEYBOARD,
-        Anonymous: INPUT_0 {
-            ki: KEYBDINPUT {
-                wVk: vk_key,
-                wScan: (MapVirtualKeyW(vk_key.0 as u32, MAPVK_VK_TO_VSC) & 0xFF) as u16,
-                dwFlags: flags,
-                ..Default::default()
+        let inputs = [INPUT {
+            r#type: INPUT_KEYBOARD,
+            Anonymous: INPUT_0 {
+                ki: KEYBDINPUT {
+                    wVk: vk_key,
+                    wScan: (MapVirtualKeyW(vk_key.0 as u32, MAPVK_VK_TO_VSC) & 0xFF) as u16,
+                    dwFlags: flags,
+                    ..Default::default()
+                },
             },
-        },
-    }];
+        }];
 
-    if SendInput(&inputs, std::mem::size_of::<INPUT>() as i32) as usize == inputs.len() {
-        Ok(())
+        if SendInput(&inputs, std::mem::size_of::<INPUT>() as i32) as usize == inputs.len() {
+            Ok(())
+        } else {
+            Err(core_error!(
+                "SendInput failed ({:?})",
+                GetLastError().to_hresult()
+            ))
+        }
     } else {
-        Err(core_error!(
-            "SendInput failed ({:?})",
-            GetLastError().to_hresult()
-        ))
+        Ok(())
     }
 }
 
@@ -212,112 +214,203 @@ const fn is_extend_key(key: VIRTUAL_KEY) -> bool {
     )
 }
 
-const fn map_key_code(key: KeyboardKey) -> VIRTUAL_KEY {
+const fn map_key_code(key: tao::keyboard::KeyCode) -> Option<VIRTUAL_KEY> {
     match key {
-        KeyboardKey::A => VK_A,
-        KeyboardKey::B => VK_B,
-        KeyboardKey::C => VK_C,
-        KeyboardKey::D => VK_D,
-        KeyboardKey::E => VK_E,
-        KeyboardKey::F => VK_F,
-        KeyboardKey::G => VK_G,
-        KeyboardKey::H => VK_H,
-        KeyboardKey::I => VK_I,
-        KeyboardKey::J => VK_J,
-        KeyboardKey::K => VK_K,
-        KeyboardKey::L => VK_L,
-        KeyboardKey::M => VK_M,
-        KeyboardKey::N => VK_N,
-        KeyboardKey::O => VK_O,
-        KeyboardKey::P => VK_P,
-        KeyboardKey::Q => VK_Q,
-        KeyboardKey::R => VK_R,
-        KeyboardKey::S => VK_S,
-        KeyboardKey::T => VK_T,
-        KeyboardKey::U => VK_U,
-        KeyboardKey::V => VK_V,
-        KeyboardKey::W => VK_W,
-        KeyboardKey::X => VK_X,
-        KeyboardKey::Y => VK_Y,
-        KeyboardKey::Z => VK_Z,
-        KeyboardKey::BackQuote => VK_OEM_3,
-        KeyboardKey::Digit0 => VK_0,
-        KeyboardKey::Digit1 => VK_1,
-        KeyboardKey::Digit2 => VK_2,
-        KeyboardKey::Digit3 => VK_3,
-        KeyboardKey::Digit4 => VK_4,
-        KeyboardKey::Digit5 => VK_5,
-        KeyboardKey::Digit6 => VK_6,
-        KeyboardKey::Digit7 => VK_7,
-        KeyboardKey::Digit8 => VK_8,
-        KeyboardKey::Digit9 => VK_9,
-        KeyboardKey::Minus => VK_OEM_MINUS,
-        KeyboardKey::Equal => VK_OEM_PLUS,
-        KeyboardKey::Tab => VK_TAB,
-        KeyboardKey::CapsLock => VK_CAPITAL,
-        KeyboardKey::LeftShift => VK_LSHIFT,
-        KeyboardKey::LeftControl => VK_LCONTROL,
-        KeyboardKey::LeftAlt => VK_LMENU,
-        KeyboardKey::LeftMeta => VK_LWIN,
-        KeyboardKey::Space => VK_SPACE,
-        KeyboardKey::RightMeta => VK_RWIN,
-        KeyboardKey::RightControl => VK_RCONTROL,
-        KeyboardKey::RightAlt => VK_RMENU,
-        KeyboardKey::RightShift => VK_RSHIFT,
-        KeyboardKey::Comma => VK_OEM_COMMA,
-        KeyboardKey::Period => VK_OEM_PERIOD,
-        KeyboardKey::Slash => VK_OEM_2,
-        KeyboardKey::Semicolon => VK_OEM_1,
-        KeyboardKey::QuoteSingle => VK_OEM_7,
-        KeyboardKey::Enter => VK_RETURN,
-        KeyboardKey::BracketLeft => VK_OEM_4,
-        KeyboardKey::BracketRight => VK_OEM_6,
-        KeyboardKey::BackSlash => VK_OEM_5,
-        KeyboardKey::Backspace => VK_BACK,
-        KeyboardKey::NumLock => VK_NUMLOCK,
-        KeyboardKey::NumpadEquals => VK_OEM_NEC_EQUAL, // todo: check it
-        KeyboardKey::NumpadDivide => VK_DIVIDE,
-        KeyboardKey::NumpadMultiply => VK_MULTIPLY,
-        KeyboardKey::NumpadSubtract => VK_SUBTRACT,
-        KeyboardKey::NumpadAdd => VK_ADD,
-        KeyboardKey::NumpadEnter => VK_RETURN, // Windows doesn't have NumPad Enter
-        KeyboardKey::Numpad0 => VK_NUMPAD0,
-        KeyboardKey::Numpad1 => VK_NUMPAD1,
-        KeyboardKey::Numpad2 => VK_NUMPAD2,
-        KeyboardKey::Numpad3 => VK_NUMPAD3,
-        KeyboardKey::Numpad4 => VK_NUMPAD4,
-        KeyboardKey::Numpad5 => VK_NUMPAD5,
-        KeyboardKey::Numpad6 => VK_NUMPAD6,
-        KeyboardKey::Numpad7 => VK_NUMPAD7,
-        KeyboardKey::Numpad8 => VK_NUMPAD8,
-        KeyboardKey::Numpad9 => VK_NUMPAD9,
-        KeyboardKey::NumpadDecimal => VK_DECIMAL,
-        KeyboardKey::ArrowLeft => VK_LEFT,
-        KeyboardKey::ArrowUp => VK_UP,
-        KeyboardKey::ArrowRight => VK_RIGHT,
-        KeyboardKey::ArrowDown => VK_DOWN,
-        KeyboardKey::Escape => VK_ESCAPE,
-        KeyboardKey::PrintScreen => VK_SNAPSHOT,
-        KeyboardKey::ScrollLock => VK_SCROLL,
-        KeyboardKey::Pause => VK_PAUSE,
-        KeyboardKey::Insert => VK_INSERT,
-        KeyboardKey::Delete => VK_DELETE,
-        KeyboardKey::Home => VK_HOME,
-        KeyboardKey::End => VK_END,
-        KeyboardKey::PageUp => VK_PRIOR,
-        KeyboardKey::PageDown => VK_NEXT,
-        KeyboardKey::F1 => VK_F1,
-        KeyboardKey::F2 => VK_F2,
-        KeyboardKey::F3 => VK_F3,
-        KeyboardKey::F4 => VK_F4,
-        KeyboardKey::F5 => VK_F5,
-        KeyboardKey::F6 => VK_F6,
-        KeyboardKey::F7 => VK_F7,
-        KeyboardKey::F8 => VK_F8,
-        KeyboardKey::F9 => VK_F9,
-        KeyboardKey::F10 => VK_F10,
-        KeyboardKey::F11 => VK_F11,
-        KeyboardKey::F12 => VK_F12,
-        KeyboardKey::Fn => todo!(),
+        tao::keyboard::KeyCode::Unidentified(_) => None,
+        tao::keyboard::KeyCode::Backquote => Some(VK_OEM_3),
+        tao::keyboard::KeyCode::Backslash => Some(VK_OEM_5),
+        tao::keyboard::KeyCode::BracketLeft => Some(VK_OEM_4),
+        tao::keyboard::KeyCode::BracketRight => Some(VK_OEM_6),
+        tao::keyboard::KeyCode::Comma => Some(VK_OEM_COMMA),
+        tao::keyboard::KeyCode::Digit0 => Some(VK_0),
+        tao::keyboard::KeyCode::Digit1 => Some(VK_1),
+        tao::keyboard::KeyCode::Digit2 => Some(VK_2),
+        tao::keyboard::KeyCode::Digit3 => Some(VK_3),
+        tao::keyboard::KeyCode::Digit4 => Some(VK_4),
+        tao::keyboard::KeyCode::Digit5 => Some(VK_5),
+        tao::keyboard::KeyCode::Digit6 => Some(VK_6),
+        tao::keyboard::KeyCode::Digit7 => Some(VK_7),
+        tao::keyboard::KeyCode::Digit8 => Some(VK_8),
+        tao::keyboard::KeyCode::Digit9 => Some(VK_9),
+        tao::keyboard::KeyCode::Equal => Some(VK_OEM_PLUS),
+        tao::keyboard::KeyCode::IntlBackslash => Some(VK_OEM_5),
+        tao::keyboard::KeyCode::IntlRo => None,
+        tao::keyboard::KeyCode::IntlYen => None,
+        tao::keyboard::KeyCode::KeyA => Some(VK_A),
+        tao::keyboard::KeyCode::KeyB => Some(VK_B),
+        tao::keyboard::KeyCode::KeyC => Some(VK_C),
+        tao::keyboard::KeyCode::KeyD => Some(VK_D),
+        tao::keyboard::KeyCode::KeyE => Some(VK_E),
+        tao::keyboard::KeyCode::KeyF => Some(VK_F),
+        tao::keyboard::KeyCode::KeyG => Some(VK_G),
+        tao::keyboard::KeyCode::KeyH => Some(VK_H),
+        tao::keyboard::KeyCode::KeyI => Some(VK_I),
+        tao::keyboard::KeyCode::KeyJ => Some(VK_J),
+        tao::keyboard::KeyCode::KeyK => Some(VK_K),
+        tao::keyboard::KeyCode::KeyL => Some(VK_L),
+        tao::keyboard::KeyCode::KeyM => Some(VK_M),
+        tao::keyboard::KeyCode::KeyN => Some(VK_N),
+        tao::keyboard::KeyCode::KeyO => Some(VK_O),
+        tao::keyboard::KeyCode::KeyP => Some(VK_P),
+        tao::keyboard::KeyCode::KeyQ => Some(VK_Q),
+        tao::keyboard::KeyCode::KeyR => Some(VK_R),
+        tao::keyboard::KeyCode::KeyS => Some(VK_S),
+        tao::keyboard::KeyCode::KeyT => Some(VK_T),
+        tao::keyboard::KeyCode::KeyU => Some(VK_U),
+        tao::keyboard::KeyCode::KeyV => Some(VK_V),
+        tao::keyboard::KeyCode::KeyW => Some(VK_W),
+        tao::keyboard::KeyCode::KeyX => Some(VK_X),
+        tao::keyboard::KeyCode::KeyY => Some(VK_Y),
+        tao::keyboard::KeyCode::KeyZ => Some(VK_Z),
+        tao::keyboard::KeyCode::Minus => Some(VK_OEM_MINUS),
+        tao::keyboard::KeyCode::Plus => Some(VK_OEM_PLUS),
+        tao::keyboard::KeyCode::Period => Some(VK_OEM_PERIOD),
+        tao::keyboard::KeyCode::Quote => Some(VK_OEM_7),
+        tao::keyboard::KeyCode::Semicolon => Some(VK_OEM_1),
+        tao::keyboard::KeyCode::Slash => Some(VK_OEM_2),
+        tao::keyboard::KeyCode::AltLeft => Some(VK_LMENU),
+        tao::keyboard::KeyCode::AltRight => Some(VK_RMENU),
+        tao::keyboard::KeyCode::Backspace => Some(VK_BACK),
+        tao::keyboard::KeyCode::CapsLock => Some(VK_CAPITAL),
+        tao::keyboard::KeyCode::ContextMenu => Some(VK_MENU),
+        tao::keyboard::KeyCode::ControlLeft => Some(VK_LCONTROL),
+        tao::keyboard::KeyCode::ControlRight => Some(VK_RCONTROL),
+        tao::keyboard::KeyCode::Enter => Some(VK_RETURN),
+        tao::keyboard::KeyCode::SuperLeft => Some(VK_LWIN),
+        tao::keyboard::KeyCode::SuperRight => Some(VK_RWIN),
+        tao::keyboard::KeyCode::ShiftLeft => Some(VK_LSHIFT),
+        tao::keyboard::KeyCode::ShiftRight => Some(VK_RSHIFT),
+        tao::keyboard::KeyCode::Space => Some(VK_SPACE),
+        tao::keyboard::KeyCode::Tab => Some(VK_TAB),
+        tao::keyboard::KeyCode::Convert => Some(VK_CONVERT),
+        tao::keyboard::KeyCode::KanaMode => Some(VK_KANA),
+        tao::keyboard::KeyCode::Lang1 => Some(VK_HANGUL),
+        tao::keyboard::KeyCode::Lang2 => Some(VK_HANJA),
+        tao::keyboard::KeyCode::Lang3 => None, // todo: https://bsakatu.net/doc/virtual-key-of-windows/
+        tao::keyboard::KeyCode::Lang4 => None, // todo: https://bsakatu.net/doc/virtual-key-of-windows/
+        tao::keyboard::KeyCode::Lang5 => None, // todo: https://bsakatu.net/doc/virtual-key-of-windows/
+        tao::keyboard::KeyCode::NonConvert => Some(VK_NONCONVERT),
+        tao::keyboard::KeyCode::Delete => Some(VK_DELETE),
+        tao::keyboard::KeyCode::End => Some(VK_END),
+        tao::keyboard::KeyCode::Help => Some(VK_HELP),
+        tao::keyboard::KeyCode::Home => Some(VK_HOME),
+        tao::keyboard::KeyCode::Insert => Some(VK_INSERT),
+        tao::keyboard::KeyCode::PageDown => Some(VK_NEXT),
+        tao::keyboard::KeyCode::PageUp => Some(VK_PRIOR),
+        tao::keyboard::KeyCode::ArrowDown => Some(VK_DOWN),
+        tao::keyboard::KeyCode::ArrowLeft => Some(VK_LEFT),
+        tao::keyboard::KeyCode::ArrowRight => Some(VK_RIGHT),
+        tao::keyboard::KeyCode::ArrowUp => Some(VK_UP),
+        tao::keyboard::KeyCode::NumLock => Some(VK_NUMLOCK),
+        tao::keyboard::KeyCode::Numpad0 => Some(VK_NUMPAD0),
+        tao::keyboard::KeyCode::Numpad1 => Some(VK_NUMPAD1),
+        tao::keyboard::KeyCode::Numpad2 => Some(VK_NUMPAD2),
+        tao::keyboard::KeyCode::Numpad3 => Some(VK_NUMPAD3),
+        tao::keyboard::KeyCode::Numpad4 => Some(VK_NUMPAD4),
+        tao::keyboard::KeyCode::Numpad5 => Some(VK_NUMPAD5),
+        tao::keyboard::KeyCode::Numpad6 => Some(VK_NUMPAD6),
+        tao::keyboard::KeyCode::Numpad7 => Some(VK_NUMPAD7),
+        tao::keyboard::KeyCode::Numpad8 => Some(VK_NUMPAD8),
+        tao::keyboard::KeyCode::Numpad9 => Some(VK_NUMPAD9),
+        tao::keyboard::KeyCode::NumpadAdd => Some(VK_ADD),
+        tao::keyboard::KeyCode::NumpadBackspace => Some(VK_BACK),
+        tao::keyboard::KeyCode::NumpadClear => Some(VK_CLEAR),
+        tao::keyboard::KeyCode::NumpadClearEntry => None,
+        tao::keyboard::KeyCode::NumpadComma => Some(VK_SEPARATOR),
+        tao::keyboard::KeyCode::NumpadDecimal => Some(VK_DECIMAL),
+        tao::keyboard::KeyCode::NumpadDivide => Some(VK_DIVIDE),
+        tao::keyboard::KeyCode::NumpadEnter => Some(VK_RETURN),
+        tao::keyboard::KeyCode::NumpadEqual => Some(VK_OEM_NEC_EQUAL),
+        tao::keyboard::KeyCode::NumpadHash => None,
+        tao::keyboard::KeyCode::NumpadMemoryAdd => None,
+        tao::keyboard::KeyCode::NumpadMemoryClear => None,
+        tao::keyboard::KeyCode::NumpadMemoryRecall => None,
+        tao::keyboard::KeyCode::NumpadMemoryStore => None,
+        tao::keyboard::KeyCode::NumpadMemorySubtract => None,
+        tao::keyboard::KeyCode::NumpadMultiply => Some(VK_MULTIPLY),
+        tao::keyboard::KeyCode::NumpadParenLeft => None,
+        tao::keyboard::KeyCode::NumpadParenRight => None,
+        tao::keyboard::KeyCode::NumpadStar => Some(VK_MULTIPLY),
+        tao::keyboard::KeyCode::NumpadSubtract => Some(VK_SUBTRACT),
+        tao::keyboard::KeyCode::Escape => Some(VK_ESCAPE),
+        tao::keyboard::KeyCode::Fn => None,
+        tao::keyboard::KeyCode::FnLock => None,
+        tao::keyboard::KeyCode::PrintScreen => Some(VK_PRINT),
+        tao::keyboard::KeyCode::ScrollLock => Some(VK_SCROLL),
+        tao::keyboard::KeyCode::Pause => Some(VK_PAUSE),
+        tao::keyboard::KeyCode::BrowserBack => Some(VK_BROWSER_BACK),
+        tao::keyboard::KeyCode::BrowserFavorites => Some(VK_BROWSER_FAVORITES),
+        tao::keyboard::KeyCode::BrowserForward => Some(VK_BROWSER_FORWARD),
+        tao::keyboard::KeyCode::BrowserHome => Some(VK_BROWSER_HOME),
+        tao::keyboard::KeyCode::BrowserRefresh => Some(VK_BROWSER_REFRESH),
+        tao::keyboard::KeyCode::BrowserSearch => Some(VK_BROWSER_SEARCH),
+        tao::keyboard::KeyCode::BrowserStop => Some(VK_BROWSER_STOP),
+        tao::keyboard::KeyCode::Eject => None,
+        tao::keyboard::KeyCode::LaunchApp1 => Some(VK_LAUNCH_APP1),
+        tao::keyboard::KeyCode::LaunchApp2 => Some(VK_LAUNCH_APP2),
+        tao::keyboard::KeyCode::LaunchMail => Some(VK_LAUNCH_MAIL),
+        tao::keyboard::KeyCode::MediaPlayPause => Some(VK_MEDIA_PLAY_PAUSE),
+        tao::keyboard::KeyCode::MediaSelect => Some(VK_LAUNCH_MEDIA_SELECT),
+        tao::keyboard::KeyCode::MediaStop => Some(VK_MEDIA_STOP),
+        tao::keyboard::KeyCode::MediaTrackNext => Some(VK_MEDIA_NEXT_TRACK),
+        tao::keyboard::KeyCode::MediaTrackPrevious => Some(VK_MEDIA_PREV_TRACK),
+        tao::keyboard::KeyCode::Power => None,
+        tao::keyboard::KeyCode::Sleep => Some(VK_SLEEP),
+        tao::keyboard::KeyCode::AudioVolumeDown => Some(VK_VOLUME_DOWN),
+        tao::keyboard::KeyCode::AudioVolumeMute => Some(VK_VOLUME_MUTE),
+        tao::keyboard::KeyCode::AudioVolumeUp => Some(VK_VOLUME_UP),
+        tao::keyboard::KeyCode::WakeUp => None,
+        tao::keyboard::KeyCode::Hyper => None,
+        tao::keyboard::KeyCode::Turbo => None,
+        tao::keyboard::KeyCode::Abort => None,
+        tao::keyboard::KeyCode::Resume => None,
+        tao::keyboard::KeyCode::Suspend => None,
+        tao::keyboard::KeyCode::Again => None,
+        tao::keyboard::KeyCode::Copy => None,
+        tao::keyboard::KeyCode::Cut => None,
+        tao::keyboard::KeyCode::Find => None,
+        tao::keyboard::KeyCode::Open => None,
+        tao::keyboard::KeyCode::Paste => None,
+        tao::keyboard::KeyCode::Props => None,
+        tao::keyboard::KeyCode::Select => None,
+        tao::keyboard::KeyCode::Undo => None,
+        tao::keyboard::KeyCode::Hiragana => None,
+        tao::keyboard::KeyCode::Katakana => None,
+        tao::keyboard::KeyCode::F1 => Some(VK_F1),
+        tao::keyboard::KeyCode::F2 => Some(VK_F2),
+        tao::keyboard::KeyCode::F3 => Some(VK_F3),
+        tao::keyboard::KeyCode::F4 => Some(VK_F4),
+        tao::keyboard::KeyCode::F5 => Some(VK_F5),
+        tao::keyboard::KeyCode::F6 => Some(VK_F6),
+        tao::keyboard::KeyCode::F7 => Some(VK_F7),
+        tao::keyboard::KeyCode::F8 => Some(VK_F8),
+        tao::keyboard::KeyCode::F9 => Some(VK_F9),
+        tao::keyboard::KeyCode::F10 => Some(VK_F10),
+        tao::keyboard::KeyCode::F11 => Some(VK_F11),
+        tao::keyboard::KeyCode::F12 => Some(VK_F12),
+        tao::keyboard::KeyCode::F13 => Some(VK_F13),
+        tao::keyboard::KeyCode::F14 => Some(VK_F14),
+        tao::keyboard::KeyCode::F15 => Some(VK_F15),
+        tao::keyboard::KeyCode::F16 => Some(VK_F16),
+        tao::keyboard::KeyCode::F17 => Some(VK_F17),
+        tao::keyboard::KeyCode::F18 => Some(VK_F18),
+        tao::keyboard::KeyCode::F19 => Some(VK_F19),
+        tao::keyboard::KeyCode::F20 => Some(VK_F20),
+        tao::keyboard::KeyCode::F21 => Some(VK_F21),
+        tao::keyboard::KeyCode::F22 => Some(VK_F22),
+        tao::keyboard::KeyCode::F23 => Some(VK_F23),
+        tao::keyboard::KeyCode::F24 => Some(VK_F24),
+        tao::keyboard::KeyCode::F25 => None,
+        tao::keyboard::KeyCode::F26 => None,
+        tao::keyboard::KeyCode::F27 => None,
+        tao::keyboard::KeyCode::F28 => None,
+        tao::keyboard::KeyCode::F29 => None,
+        tao::keyboard::KeyCode::F30 => None,
+        tao::keyboard::KeyCode::F31 => None,
+        tao::keyboard::KeyCode::F32 => None,
+        tao::keyboard::KeyCode::F33 => None,
+        tao::keyboard::KeyCode::F34 => None,
+        tao::keyboard::KeyCode::F35 => None,
+        _ => None,
     }
 }
