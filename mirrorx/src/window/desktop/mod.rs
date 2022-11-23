@@ -9,7 +9,10 @@ use mirrorx_core::{
 };
 use once_cell::sync::Lazy;
 use state::State;
-use std::{sync::Arc, time::Duration};
+use std::{
+    sync::Arc,
+    time::{Duration, Instant},
+};
 use tauri_egui::{
     eframe::glow::{self, Context},
     egui::{
@@ -29,9 +32,9 @@ static ICON_ARROWS_LEFT_RIGHT_TO_LINE: Lazy<RetainedImage> = Lazy::new(|| {
 pub struct DesktopWindow {
     state: State,
     desktop_render: Arc<Mutex<DesktopRender>>,
-    press_alt: bool,
-    press_ctrl: bool,
-    press_shift: bool,
+    input_commands: Vec<InputEvent>,
+    last_mouse_pos: Pos2,
+    last_send_input_commands: Instant,
 }
 
 impl DesktopWindow {
@@ -64,9 +67,9 @@ impl DesktopWindow {
         Self {
             state,
             desktop_render: Arc::new(Mutex::new(desktop_render)),
-            press_alt: false,
-            press_ctrl: false,
-            press_shift: false,
+            input_commands: Vec::new(),
+            last_mouse_pos: Pos2::ZERO,
+            last_send_input_commands: Instant::now(),
         }
     }
 
@@ -311,131 +314,64 @@ impl DesktopWindow {
         events: &[tauri_egui::egui::Event],
         pos_calc_fn: impl Fn(Pos2) -> Option<Pos2>,
     ) {
-        if let Some(client) = self.state.endpoint_client() {
-            let mut input_series = Vec::new();
-            for event in events.iter() {
-                match event {
-                    tauri_egui::egui::Event::PointerMoved(pos) => {
-                        if let Some(mouse_pos) = pos_calc_fn(*pos) {
-                            input_series.push(InputEvent::Mouse(MouseEvent::Move(
+        for event in events.iter() {
+            match event {
+                tauri_egui::egui::Event::PointerMoved(pos) => {
+                    if let Some(mouse_pos) = pos_calc_fn(*pos) {
+                        if mouse_pos != self.last_mouse_pos {
+                            self.input_commands.push(InputEvent::Mouse(MouseEvent::Move(
                                 MouseKey::None,
                                 mouse_pos.x,
                                 mouse_pos.y,
                             )));
+
+                            self.last_mouse_pos = mouse_pos;
                         }
                     }
-                    tauri_egui::egui::Event::PointerButton {
-                        pos,
-                        button,
-                        pressed,
-                        modifiers,
-                    } => {
-                        let Some(mouse_pos) = pos_calc_fn(*pos)else{
+                }
+                tauri_egui::egui::Event::PointerButton {
+                    pos,
+                    button,
+                    pressed,
+                    modifiers,
+                } => {
+                    let Some(mouse_pos) = pos_calc_fn(*pos)else{
                             continue;
                         };
 
-                        let mouse_key = match button {
-                            tauri_egui::egui::PointerButton::Primary => MouseKey::Left,
-                            tauri_egui::egui::PointerButton::Secondary => MouseKey::Right,
-                            tauri_egui::egui::PointerButton::Middle => MouseKey::Wheel,
-                            tauri_egui::egui::PointerButton::Extra1 => MouseKey::SideBack,
-                            tauri_egui::egui::PointerButton::Extra2 => MouseKey::SideForward,
-                        };
+                    let mouse_key = match button {
+                        tauri_egui::egui::PointerButton::Primary => MouseKey::Left,
+                        tauri_egui::egui::PointerButton::Secondary => MouseKey::Right,
+                        tauri_egui::egui::PointerButton::Middle => MouseKey::Wheel,
+                        tauri_egui::egui::PointerButton::Extra1 => MouseKey::SideBack,
+                        tauri_egui::egui::PointerButton::Extra2 => MouseKey::SideForward,
+                    };
 
-                        let mouse_event = if *pressed {
-                            MouseEvent::Down(mouse_key, mouse_pos.x, mouse_pos.y)
-                        } else {
-                            MouseEvent::Up(mouse_key, mouse_pos.x, mouse_pos.y)
-                        };
+                    let mouse_event = if *pressed {
+                        MouseEvent::Down(mouse_key, mouse_pos.x, mouse_pos.y)
+                    } else {
+                        MouseEvent::Up(mouse_key, mouse_pos.x, mouse_pos.y)
+                    };
 
-                        input_series.push(InputEvent::Mouse(mouse_event));
-                    }
-                    tauri_egui::egui::Event::Scroll(scroll_vector) => {
-                        input_series
-                            .push(InputEvent::Mouse(MouseEvent::ScrollWheel(scroll_vector.y)));
-                    }
-                    // tauri_egui::egui::Event::Key {
-                    //     key,
-                    //     pressed,
-                    //     modifiers,
-                    // } => {
-                    //     tracing::info!(?key, ?pressed, ?modifiers, "modifiers");
-
-                    //     // todo: mac command map
-
-                    //     if *pressed {
-                    //         if modifiers.alt {
-                    //             self.press_alt = true;
-                    //             input_series.push(InputEvent::Keyboard(KeyboardEvent::KeyDown(
-                    //                 KeyboardKey::LeftAlt,
-                    //             )))
-                    //         }
-
-                    //         if modifiers.ctrl {
-                    //             self.press_ctrl = true;
-                    //             input_series.push(InputEvent::Keyboard(KeyboardEvent::KeyDown(
-                    //                 KeyboardKey::LeftControl,
-                    //             )))
-                    //         }
-
-                    //         if modifiers.shift {
-                    //             self.press_ctrl = true;
-                    //             input_series.push(InputEvent::Keyboard(KeyboardEvent::KeyDown(
-                    //                 KeyboardKey::LeftShift,
-                    //             )))
-                    //         }
-
-                    //         input_series
-                    //             .push(InputEvent::Keyboard(KeyboardEvent::KeyDown(map_key(*key))));
-                    //     } else {
-                    //         input_series
-                    //             .push(InputEvent::Keyboard(KeyboardEvent::KeyUp(map_key(*key))));
-
-                    //         if self.press_alt && !modifiers.alt {
-                    //             self.press_alt = false;
-                    //             input_series.push(InputEvent::Keyboard(KeyboardEvent::KeyUp(
-                    //                 KeyboardKey::LeftAlt,
-                    //             )))
-                    //         }
-
-                    //         if self.press_ctrl && !modifiers.ctrl {
-                    //             self.press_ctrl = false;
-                    //             input_series.push(InputEvent::Keyboard(KeyboardEvent::KeyUp(
-                    //                 KeyboardKey::LeftControl,
-                    //             )))
-                    //         }
-
-                    //         if self.press_shift && !modifiers.shift {
-                    //             self.press_shift = false;
-                    //             input_series.push(InputEvent::Keyboard(KeyboardEvent::KeyUp(
-                    //                 KeyboardKey::LeftShift,
-                    //             )))
-                    //         }
-                    //     }
-                    // }
-                    // tauri_egui::egui::Event::Text(text) => {
-                    //     tracing::info!(?text, "input text");
-                    // }
-                    tauri_egui::egui::Event::RawKeyInput { key, pressed } => {
-                        tracing::info!(?key, "raw key");
-
-                        let keyboard_event = if *pressed {
-                            KeyboardEvent::KeyDown(*key)
-                        } else {
-                            KeyboardEvent::KeyUp(*key)
-                        };
-
-                        input_series.push(InputEvent::Keyboard(keyboard_event))
-                    }
-                    _ => {}
+                    self.input_commands.push(InputEvent::Mouse(mouse_event));
                 }
-            }
-
-            if !input_series.is_empty() {
-                tracing::info!(?input_series, "input series");
-                if let Err(err) = client.send_input_command(input_series) {
-                    tracing::error!(?err, "endpoint input failed");
+                tauri_egui::egui::Event::Scroll(scroll_vector) => {
+                    self.input_commands
+                        .push(InputEvent::Mouse(MouseEvent::ScrollWheel(scroll_vector.y)));
                 }
+                tauri_egui::egui::Event::RawKeyInput { key, pressed } => {
+                    tracing::info!(?key, "raw key");
+
+                    let keyboard_event = if *pressed {
+                        KeyboardEvent::KeyDown(*key)
+                    } else {
+                        KeyboardEvent::KeyUp(*key)
+                    };
+
+                    self.input_commands
+                        .push(InputEvent::Keyboard(keyboard_event))
+                }
+                _ => {}
             }
         }
     }
@@ -452,6 +388,21 @@ impl tauri_egui::eframe::App for DesktopWindow {
             .show(ctx, |ui| {
                 self.build_panel(ui);
             });
+
+        if !self.input_commands.is_empty()
+            && self.last_send_input_commands.elapsed().as_millis() >= 60
+        {
+            tracing::info!(?self.input_commands, "input series");
+
+            if let Some(client) = self.state.endpoint_client() {
+                if let Err(err) = client.send_input_command(&self.input_commands) {
+                    tracing::error!(?err, "endpoint input failed");
+                }
+            }
+
+            self.input_commands.clear();
+            self.last_send_input_commands = Instant::now();
+        }
 
         // ctx.request_repaint();
         let cost = update_instant.elapsed();

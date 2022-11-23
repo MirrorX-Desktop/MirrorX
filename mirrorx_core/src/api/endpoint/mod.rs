@@ -190,8 +190,10 @@ impl EndPointClient {
         Ok(video_render_rx)
     }
 
-    pub fn send_input_command(&self, events: Vec<InputEvent>) -> CoreResult<()> {
-        let req = EndPointMessage::InputCommand(EndPointInput { events });
+    pub fn send_input_command(&self, events: &[InputEvent]) -> CoreResult<()> {
+        let req = EndPointMessage::InputCommand(EndPointInput {
+            events: events.to_vec(),
+        });
         self.send_message(req)
     }
 

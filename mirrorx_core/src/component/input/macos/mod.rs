@@ -14,7 +14,7 @@ use core_graphics::{
 
 // https://developer.mozilla.org/en-US/docs/Web/API/UI_Events/Keyboard_event_code_values
 
-pub fn mouse_up(monitor: &Monitor, key: MouseKey, x: f32, y: f32) -> CoreResult<()> {
+pub fn mouse_up(monitor: &Monitor, key: &MouseKey, x: f32, y: f32) -> CoreResult<()> {
     let display_id = monitor.id.parse::<u32>()?;
 
     let (event_type, mouse_button) = match key {
@@ -26,25 +26,33 @@ pub fn mouse_up(monitor: &Monitor, key: MouseKey, x: f32, y: f32) -> CoreResult<
         MouseKey::SideBack => (CGEventType::OtherMouseUp, CGMouseButton::Center),
     };
 
+    let extra_value = if let CGEventType::OtherMouseDown = event_type {
+        if *key == MouseKey::SideForward {
+            Some((EventField::MOUSE_EVENT_BUTTON_NUMBER, 0x08))
+        } else if *key == MouseKey::SideBack {
+            Some((EventField::MOUSE_EVENT_BUTTON_NUMBER, 0x16))
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+
     unsafe {
         post_mouse_event(display_id, x, y, move |event_source, point| {
             let event = CGEvent::new_mouse_event(event_source, event_type, point, mouse_button)
                 .map_err(|_| core_error!("create mouse CGEvent failed"))?;
 
-            if let CGEventType::OtherMouseUp = event_type {
-                if key == MouseKey::SideForward {
-                    event.set_integer_value_field(EventField::MOUSE_EVENT_BUTTON_NUMBER, 0x08);
-                } else if key == MouseKey::SideBack {
-                    event.set_integer_value_field(EventField::MOUSE_EVENT_BUTTON_NUMBER, 0x16);
-                }
+            if let Some((field, value)) = extra_value {
+                event.set_integer_value_field(field, value);
             }
 
-            Ok(event)
+            Ok(vec![event])
         })
     }
 }
 
-pub fn mouse_down(monitor: &Monitor, key: MouseKey, x: f32, y: f32) -> CoreResult<()> {
+pub fn mouse_down(monitor: &Monitor, key: &MouseKey, x: f32, y: f32) -> CoreResult<()> {
     let display_id = monitor.id.parse::<u32>()?;
 
     let (event_type, mouse_button) = match key {
@@ -56,25 +64,33 @@ pub fn mouse_down(monitor: &Monitor, key: MouseKey, x: f32, y: f32) -> CoreResul
         MouseKey::SideBack => (CGEventType::OtherMouseDown, CGMouseButton::Center),
     };
 
+    let extra_value = if let CGEventType::OtherMouseDown = event_type {
+        if *key == MouseKey::SideForward {
+            Some((EventField::MOUSE_EVENT_BUTTON_NUMBER, 0x08))
+        } else if *key == MouseKey::SideBack {
+            Some((EventField::MOUSE_EVENT_BUTTON_NUMBER, 0x16))
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+
     unsafe {
         post_mouse_event(display_id, x, y, move |event_source, point| {
             let event = CGEvent::new_mouse_event(event_source, event_type, point, mouse_button)
                 .map_err(|_| core_error!("create mouse CGEvent failed"))?;
 
-            if let CGEventType::OtherMouseDown = event_type {
-                if key == MouseKey::SideForward {
-                    event.set_integer_value_field(EventField::MOUSE_EVENT_BUTTON_NUMBER, 0x08);
-                } else if key == MouseKey::SideBack {
-                    event.set_integer_value_field(EventField::MOUSE_EVENT_BUTTON_NUMBER, 0x16);
-                }
+            if let Some((field, value)) = extra_value {
+                event.set_integer_value_field(field, value);
             }
 
-            Ok(event)
+            Ok(vec![event])
         })
     }
 }
 
-pub fn mouse_move(monitor: &Monitor, key: MouseKey, x: f32, y: f32) -> CoreResult<()> {
+pub fn mouse_move(monitor: &Monitor, key: &MouseKey, x: f32, y: f32) -> CoreResult<()> {
     let display_id = monitor.id.parse::<u32>()?;
 
     let (event_type, mouse_button) = match key {
@@ -86,20 +102,28 @@ pub fn mouse_move(monitor: &Monitor, key: MouseKey, x: f32, y: f32) -> CoreResul
         MouseKey::SideBack => (CGEventType::OtherMouseDragged, CGMouseButton::Center),
     };
 
+    let extra_value = if let CGEventType::OtherMouseDown = event_type {
+        if *key == MouseKey::SideForward {
+            Some((EventField::MOUSE_EVENT_BUTTON_NUMBER, 0x08))
+        } else if *key == MouseKey::SideBack {
+            Some((EventField::MOUSE_EVENT_BUTTON_NUMBER, 0x16))
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+
     unsafe {
         post_mouse_event(display_id, x, y, move |event_source, point| {
             let event = CGEvent::new_mouse_event(event_source, event_type, point, mouse_button)
                 .map_err(|_| core_error!("create mouse CGEvent failed"))?;
 
-            if let CGEventType::OtherMouseDragged = event_type {
-                if key == MouseKey::SideForward {
-                    event.set_integer_value_field(EventField::MOUSE_EVENT_BUTTON_NUMBER, 0x08);
-                } else if key == MouseKey::SideBack {
-                    event.set_integer_value_field(EventField::MOUSE_EVENT_BUTTON_NUMBER, 0x16);
-                }
+            if let Some((field, value)) = extra_value {
+                event.set_integer_value_field(field, value);
             }
 
-            Ok(event)
+            Ok(vec![event])
         })
     }
 }
@@ -109,24 +133,67 @@ pub fn mouse_scroll_wheel(monitor: &Monitor, delta: f32) -> CoreResult<()> {
 
     unsafe {
         post_mouse_event(display_id, 0f32, 0f32, move |event_source, _| {
-            CGEvent::new_scroll_event(
+            if let Ok(event) = CGEvent::new_scroll_event(
                 event_source,
                 ScrollEventUnit::PIXEL,
                 1,
                 delta.round() as i32,
                 0,
                 0,
-            )
-            .map_err(|_| core_error!("create scroll CGEvent failed"))
+            ) {
+                Ok(vec![event])
+            } else {
+                Err(core_error!("create scroll CGEvent failed"))
+            }
         })
     }
 }
 
-pub fn keyboard_up(key: tao::keyboard::KeyCode) -> CoreResult<()> {
+pub fn mouse_double_click(monitor: &Monitor, key: &MouseKey, x: f32, y: f32) -> CoreResult<()> {
+    let display_id = monitor.id.parse::<u32>()?;
+
+    let (event_type, mouse_button) = match key {
+        MouseKey::None => return Err(core_error!("unsupport key")),
+        MouseKey::Left => (CGEventType::LeftMouseDown, CGMouseButton::Left),
+        MouseKey::Right => (CGEventType::RightMouseDown, CGMouseButton::Right),
+        MouseKey::Wheel => (CGEventType::ScrollWheel, CGMouseButton::Center),
+        MouseKey::SideForward => (CGEventType::OtherMouseDown, CGMouseButton::Center),
+        MouseKey::SideBack => (CGEventType::OtherMouseDown, CGMouseButton::Center),
+    };
+
+    let extra_value = if let CGEventType::OtherMouseDown = event_type {
+        if *key == MouseKey::SideForward {
+            Some((EventField::MOUSE_EVENT_BUTTON_NUMBER, 0x08))
+        } else if *key == MouseKey::SideBack {
+            Some((EventField::MOUSE_EVENT_BUTTON_NUMBER, 0x16))
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+
+    unsafe {
+        post_mouse_event(display_id, x, y, move |event_source, point| {
+            let event = CGEvent::new_mouse_event(event_source, event_type, point, mouse_button)
+                .map_err(|_| core_error!("create mouse CGEvent failed"))?;
+
+            event.set_integer_value_field(EventField::MOUSE_EVENT_CLICK_STATE, 2);
+
+            if let Some((field, value)) = extra_value {
+                event.set_integer_value_field(field, value);
+            }
+
+            Ok(vec![event])
+        })
+    }
+}
+
+pub fn keyboard_up(key: &tao::keyboard::KeyCode) -> CoreResult<()> {
     post_keyboard_event(key, false)
 }
 
-pub fn keyboard_down(key: tao::keyboard::KeyCode) -> CoreResult<()> {
+pub fn keyboard_down(key: &tao::keyboard::KeyCode) -> CoreResult<()> {
     post_keyboard_event(key, true)
 }
 
@@ -134,15 +201,18 @@ unsafe fn post_mouse_event(
     display_id: CGDirectDisplayID,
     x: f32,
     y: f32,
-    event_create_fn: impl Fn(CGEventSource, CGPoint) -> CoreResult<CGEvent> + 'static + Send,
+    event_create_fn: impl Fn(CGEventSource, CGPoint) -> CoreResult<Vec<CGEvent>> + 'static + Send,
 ) -> CoreResult<()> {
     // todo: use self created serial queue
     dispatch::Queue::global(dispatch::QueuePriority::High).barrier_async(move || {
         if let Ok(event_source) = CGEventSource::new(CGEventSourceStateID::HIDSystemState) {
             let point = CGPoint::new(x as f64, y as f64);
 
-            if let Ok(event) = event_create_fn(event_source, point) {
-                event.post(CGEventTapLocation::HID);
+            if let Ok(events) = event_create_fn(event_source, point) {
+                for event in events.iter() {
+                    event.post(CGEventTapLocation::HID);
+                }
+
                 let _ = CGDisplayMoveCursorToPoint(display_id, point);
             }
         }
@@ -151,7 +221,7 @@ unsafe fn post_mouse_event(
     Ok(())
 }
 
-fn post_keyboard_event(key: tao::keyboard::KeyCode, press: bool) -> CoreResult<()> {
+fn post_keyboard_event(key: &tao::keyboard::KeyCode, press: bool) -> CoreResult<()> {
     if let Some(vk_key) = map_key_code(key) {
         if let Ok(source) = CGEventSource::new(CGEventSourceStateID::HIDSystemState) {
             if let Ok(event) = CGEvent::new_keyboard_event(source, vk_key, press) {
@@ -168,7 +238,7 @@ fn post_keyboard_event(key: tao::keyboard::KeyCode, press: bool) -> CoreResult<(
     }
 }
 
-const fn map_key_code(key: tao::keyboard::KeyCode) -> Option<CGKeyCode> {
+const fn map_key_code(key: &tao::keyboard::KeyCode) -> Option<CGKeyCode> {
     match key {
         tao::keyboard::KeyCode::Unidentified(_) => None,
         tao::keyboard::KeyCode::Backquote => Some(kVK_ANSI_Grave),
