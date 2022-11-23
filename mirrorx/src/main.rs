@@ -67,8 +67,8 @@ async fn main() {
         .expect("error while running tauri application")
         .run(|app_handle, event| match event {
             tauri::RunEvent::WindowEvent { label, event, .. } => {
-                if let WindowEvent::CloseRequested { api, .. } = event {
-                    if label == "main" {
+                if label == "main" {
+                    if let WindowEvent::CloseRequested { api, .. } = event {
                         if let Some(window) = app_handle.get_window(&label) {
                             let _ = window.hide();
                             api.prevent_close();
