@@ -20,6 +20,11 @@ async fn main() {
         .manage(command::UIState::new())
         .system_tray(SystemTray::new())
         .on_system_tray_event(|app, event| {
+           if let SystemTrayEvent::DoubleClick { position: _, size: _, ..} = event {
+                app.windows().values().for_each(|window| {
+                    let _ = window.show();
+                })
+            }
             if let SystemTrayEvent::MenuItemClick { id, .. } = event {
                 match id.as_str() {
                     "quit" => std::process::exit(0),
