@@ -1,6 +1,7 @@
 use crate::error::CoreResult;
 use futures::{pin_mut, StreamExt};
 use mdns::RecordKind;
+use serde::Serialize;
 use std::{
     net::IpAddr,
     sync::{atomic::Ordering, Arc},
@@ -8,7 +9,7 @@ use std::{
 };
 use tokio::sync::Mutex;
 
-#[derive(Clone)]
+#[derive(Clone, Serialize)]
 pub struct Node {
     pub host_name: String,
     pub addr: IpAddr,
