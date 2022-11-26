@@ -85,6 +85,10 @@ pub enum CoreError {
 
     #[error("audio device get default config failed ({0:?})")]
     AudioDeviceDefaultConfigError(#[from] cpal::DefaultStreamConfigError),
+
+    #[error("mdns error ({0:?})")]
+    #[allow(non_camel_case_types)]
+    mDNSError(#[from] mdns::Error),
 }
 
 impl serde::Serialize for CoreError {
