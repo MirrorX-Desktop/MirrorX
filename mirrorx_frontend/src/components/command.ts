@@ -79,3 +79,20 @@ export function invoke_set_language(args: { language: string }): Promise<void> {
 export function invoke_get_language(): Promise<string> {
 	return invoke('get_language');
 }
+
+export function invoke_init_lan_discover(): Promise<void> {
+	return invoke('init_lan_discover');
+}
+
+export function invoke_get_lan_discover_nodes(): Promise<
+	Array<{
+		host_name: string;
+		addr: string;
+		os: string;
+		os_version: string;
+		tcp_port: number;
+		udp_port: number;
+	}>
+> {
+	return invoke('get_lan_discover_nodes');
+}
