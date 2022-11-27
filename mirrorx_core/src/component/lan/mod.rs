@@ -6,9 +6,9 @@ use serde::Serialize;
 use std::{collections::HashMap, ffi::OsStr, net::Ipv4Addr, sync::Arc};
 use tokio::sync::Mutex;
 
-const LOCAL_DOMAIN: &str = "_mirrorx._udp._tcp.local.";
+const LOCAL_DOMAIN: &str = "_mirrorx._udp.local.";
 
-#[derive(Clone, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct Node {
     pub host_name: String,
     pub addr: Ipv4Addr,
@@ -32,9 +32,50 @@ impl LanDiscover {
         let service_daemon = ServiceDaemon::new()?;
         let name: String = Alphanumeric.sample_string(&mut rand::thread_rng(), 32);
 
+        let os_info = os_info::get();
+        let os = match os_info.os_type() {
+            os_info::Type::Linux
+            | os_info::Type::Alpine
+            | os_info::Type::Amazon
+            | os_info::Type::Arch
+            | os_info::Type::Debian
+            | os_info::Type::EndeavourOS
+            | os_info::Type::Garuda
+            | os_info::Type::Gentoo
+            | os_info::Type::Manjaro
+            | os_info::Type::Mariner
+            | os_info::Type::Mint
+            | os_info::Type::NixOS
+            | os_info::Type::OracleLinux
+            | os_info::Type::Pop
+            | os_info::Type::Raspbian
+            | os_info::Type::Solus => "Linux",
+
+            os_info::Type::FreeBSD
+            | os_info::Type::HardenedBSD
+            | os_info::Type::MidnightBSD
+            | os_info::Type::NetBSD
+            | os_info::Type::OpenBSD
+            | os_info::Type::DragonFly => "BSD",
+
+            os_info::Type::Android => "Android",
+            os_info::Type::CentOS => "CentOS",
+            os_info::Type::Fedora => "Fedora",
+            os_info::Type::Illumos => "Unix",
+            os_info::Type::Macos => "macOS",
+            os_info::Type::openSUSE => "openSUSE",
+            os_info::Type::Redhat => "Redhat",
+            os_info::Type::RedHatEnterprise => "Redhat Enterprise",
+            os_info::Type::SUSE => "SUSE",
+            os_info::Type::Ubuntu => "Ubuntu",
+            os_info::Type::Windows => "Windows",
+            os_info::Type::Unknown | os_info::Type::Emscripten | os_info::Type::Redox => "Unknown",
+            _ => "Unknown",
+        };
+
         let mut properties = HashMap::new();
-        properties.insert("os".to_string(), "test".to_string());
-        properties.insert("os_version".to_string(), "1234".to_string());
+        properties.insert("os".to_string(), os.to_string());
+        properties.insert("os_version".to_string(), os_info.version().to_string());
         properties.insert("tcp_port".to_string(), local_tcp_port.to_string());
         properties.insert("udp_port".to_string(), local_udp_port.to_string());
 
@@ -43,7 +84,7 @@ impl LanDiscover {
             &name,
             &host_name,
             local_ip.to_string().as_str(),
-            0,
+            u16::MAX,
             Some(properties),
         )?;
 

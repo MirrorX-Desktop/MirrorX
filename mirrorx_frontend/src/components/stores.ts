@@ -7,3 +7,14 @@ export interface CurrentDomain {
 }
 
 export const current_domain = writable<CurrentDomain | null>(null);
+
+export interface LanDiscoverNode {
+	host_name: string;
+	addr: string;
+	os: string;
+	os_version: string;
+	tcp_port: number;
+	udp_port: number;
+}
+
+export const current_lan_discover_nodes = writable<Array<LanDiscoverNode>>([]);

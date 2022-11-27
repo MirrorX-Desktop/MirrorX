@@ -2685,6 +2685,7 @@ dependencies = [
  "objc-foundation",
  "objc_id",
  "once_cell",
+ "os_info",
  "pbkdf2",
  "prost",
  "r2d2",
