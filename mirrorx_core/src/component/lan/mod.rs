@@ -36,7 +36,6 @@ impl LanDiscover {
         let os = match os_info.os_type() {
             os_info::Type::Linux
             | os_info::Type::Alpine
-            | os_info::Type::Amazon
             | os_info::Type::Arch
             | os_info::Type::Debian
             | os_info::Type::EndeavourOS
@@ -51,17 +50,22 @@ impl LanDiscover {
             | os_info::Type::Raspbian
             | os_info::Type::Solus => "Linux",
 
-            os_info::Type::FreeBSD
-            | os_info::Type::HardenedBSD
+            os_info::Type::HardenedBSD
             | os_info::Type::MidnightBSD
             | os_info::Type::NetBSD
             | os_info::Type::OpenBSD
             | os_info::Type::DragonFly => "BSD",
 
+            os_info::Type::Unknown
+            | os_info::Type::Emscripten
+            | os_info::Type::Redox
+            | os_info::Type::Illumos => "Unknown",
+
+            os_info::Type::Amazon => "Amazon",
+            os_info::Type::FreeBSD => "FreeBSD",
             os_info::Type::Android => "Android",
             os_info::Type::CentOS => "CentOS",
             os_info::Type::Fedora => "Fedora",
-            os_info::Type::Illumos => "Unix",
             os_info::Type::Macos => "macOS",
             os_info::Type::openSUSE => "openSUSE",
             os_info::Type::Redhat => "Redhat",
@@ -69,7 +73,7 @@ impl LanDiscover {
             os_info::Type::SUSE => "SUSE",
             os_info::Type::Ubuntu => "Ubuntu",
             os_info::Type::Windows => "Windows",
-            os_info::Type::Unknown | os_info::Type::Emscripten | os_info::Type::Redox => "Unknown",
+
             _ => "Unknown",
         };
 

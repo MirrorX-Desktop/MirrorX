@@ -1,6 +1,18 @@
 <script lang="ts">
 	import Fa from 'svelte-fa';
-	import { faApple, faWindows, faLinux } from '@fortawesome/free-brands-svg-icons';
+	import {
+		faApple,
+		faWindows,
+		faLinux,
+		faUbuntu,
+		faFedora,
+		faCentos,
+		faAndroid,
+		faRedhat,
+		faSuse,
+		faFreebsd,
+		faAmazon
+	} from '@fortawesome/free-brands-svg-icons';
 
 	export let host_name: string;
 	export let addr: string;
@@ -20,6 +32,22 @@
 					<Fa icon={faWindows} />
 				{:else if os == 'Linux'}
 					<Fa icon={faLinux} />
+				{:else if os == 'Ubuntu'}
+					<Fa icon={faUbuntu} />
+				{:else if os == 'Fedora'}
+					<Fa icon={faFedora} />
+				{:else if os == 'CentOS'}
+					<Fa icon={faCentos} />
+				{:else if os == 'Android'}
+					<Fa icon={faAndroid} />
+				{:else if os == 'Redhat' || os == 'Redhat Enterprise'}
+					<Fa icon={faRedhat} />
+				{:else if os == 'SUSE' || os == 'openSUSE'}
+					<Fa icon={faSuse} />
+				{:else if os == 'FreeBSD'}
+					<Fa icon={faFreebsd} />
+				{:else if os == 'Amazon'}
+					<Fa icon={faAmazon} />
 				{/if}
 			</div>
 		</div>
