@@ -164,8 +164,9 @@ fn convert_host_name_to_string(v: &OsStr) -> CoreResult<String> {
     {
         use crate::core_error;
         use std::os::windows::ffi::OsStrExt;
+
         let result: Vec<u16> = v.encode_wide().collect();
-        String::from_utf16(result)
+        String::from_utf16(&result)
             .map_err(|err| core_error!("convert host name to string failed ({:?})", err))
     }
 
