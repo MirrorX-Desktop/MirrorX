@@ -6,7 +6,7 @@ use serde::Serialize;
 use std::{collections::HashMap, ffi::OsStr, net::Ipv4Addr, sync::Arc};
 use tokio::sync::Mutex;
 
-const LOCAL_DOMAIN: &str = "_mirrorx.udp.tcp.local.";
+const LOCAL_DOMAIN: &str = "_mirrorx._udp._tcp.local.";
 
 #[derive(Clone, Serialize)]
 pub struct Node {
