@@ -146,10 +146,15 @@ impl LanDiscover {
                                 };
 
                             if let Some(addr) = service.get_addresses().iter().next() {
+                                let mut host_name = service.get_hostname();
+                                if let Some(host_name_stripped) = host_name.strip_suffix(".") {
+                                    host_name = host_name_stripped;
+                                }
+
                                 nodes.insert(
                                     service.get_fullname().to_string(),
                                     Node {
-                                        host_name: service.get_hostname().to_string(),
+                                        host_name: host_name.to_string(),
                                         addr: *addr,
                                         os,
                                         os_version,
