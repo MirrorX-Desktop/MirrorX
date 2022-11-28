@@ -47,10 +47,10 @@ impl LanDiscover {
 
         tracing::info!("udp lan discover listen on {}", stream.local_addr()?);
 
+        let live_packet = gen_target_live_packet(tcp_port, udp_port)?;
+        let local_host_name = live_packet.host_name.clone();
         let dead_packet = bincode::serialize(&BroadcastPacket::TargetDead)?;
-        let live_packet = bincode::serialize(&BroadcastPacket::TargetLive(
-            gen_target_live_packet(tcp_port, udp_port)?,
-        ))?;
+        let live_packet = bincode::serialize(&BroadcastPacket::TargetLive(live_packet))?;
 
         let cache = Cache::builder()
             .time_to_live(Duration::from_secs(29))
@@ -98,6 +98,10 @@ impl LanDiscover {
 
                 match packet {
                     BroadcastPacket::TargetLive(live_packet) => {
+                        if local_host_name == live_packet.host_name {
+                            continue;
+                        }
+
                         cache_copy
                             .insert(
                                 target_addr,
