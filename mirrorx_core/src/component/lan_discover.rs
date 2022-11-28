@@ -42,8 +42,10 @@ pub struct LanDiscover {
 
 impl LanDiscover {
     pub async fn new(tcp_port: u16, udp_port: u16) -> CoreResult<Self> {
-        let stream = tokio::net::UdpSocket::bind((Ipv4Addr::UNSPECIFIED, 0)).await?;
+        let stream = tokio::net::UdpSocket::bind((Ipv4Addr::UNSPECIFIED, 55000)).await?;
         stream.set_broadcast(true)?;
+
+        tracing::info!("udp lan discover listen on {}", stream.local_addr()?);
 
         let dead_packet = bincode::serialize(&BroadcastPacket::TargetDead)?;
         let live_packet = bincode::serialize(&BroadcastPacket::TargetLive(
@@ -128,7 +130,10 @@ impl LanDiscover {
                     }
                 };
 
-                if let Err(err) = writer.send(&live_packet).await {
+                if let Err(err) = writer
+                    .send_to(&live_packet, (Ipv4Addr::BROADCAST, 55000))
+                    .await
+                {
                     tracing::warn!(?err, "udp broadcast send failed");
                 }
             }
