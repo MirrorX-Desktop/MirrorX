@@ -20,7 +20,7 @@ async fn main() {
         .manage(command::UIState::new())
         .system_tray(SystemTray::new())
         .on_system_tray_event(|app, event| {
-           if let SystemTrayEvent::DoubleClick { position: _, size: _, ..} = event {
+            if let SystemTrayEvent::DoubleClick { .. } = event {
                 app.windows().values().for_each(|window| {
                     let _ = window.show();
                 })
