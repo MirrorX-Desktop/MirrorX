@@ -18,7 +18,7 @@ mod switch_primary_domain;
 
 use mirrorx_core::{
     api::{config::entity::domain::Domain, signaling::SignalingProvider},
-    component::lan::LanDiscover,
+    component::lan_discover::LanDiscover,
 };
 use tauri::async_runtime::Mutex;
 
