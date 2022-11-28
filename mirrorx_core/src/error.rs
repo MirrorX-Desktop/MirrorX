@@ -85,13 +85,6 @@ pub enum CoreError {
 
     #[error("audio device get default config failed ({0:?})")]
     AudioDeviceDefaultConfigError(#[from] cpal::DefaultStreamConfigError),
-
-    #[error("mDNS error ({0:?})")]
-    #[allow(non_camel_case_types)]
-    mDNS(#[from] mdns_sd::Error),
-
-    #[error("local ip resolve failed ({0:?})")]
-    LocalIPResolve(#[from] local_ip_address::Error),
 }
 
 impl serde::Serialize for CoreError {
