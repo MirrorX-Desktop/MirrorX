@@ -45,7 +45,7 @@ impl LanDiscover {
         let stream = tokio::net::UdpSocket::bind((Ipv4Addr::UNSPECIFIED, 55000)).await?;
         stream.set_broadcast(true)?;
 
-        tracing::info!("udp lan discover listen on {}", stream.local_addr()?);
+        tracing::info!("lan discover listen on {}", stream.local_addr()?);
 
         let live_packet = gen_target_live_packet(tcp_port, udp_port)?;
         let local_host_name = live_packet.host_name.clone();
@@ -53,7 +53,7 @@ impl LanDiscover {
         let live_packet = bincode::serialize(&BroadcastPacket::TargetLive(live_packet))?;
 
         let cache = Cache::builder()
-            .time_to_live(Duration::from_secs(29))
+            .time_to_live(Duration::from_secs(17))
             .build();
 
         let writer = Arc::new(stream);
@@ -68,14 +68,14 @@ impl LanDiscover {
 
             loop {
                 let Err(tokio::sync::oneshot::error::TryRecvError::Empty) = read_exit_rx.try_recv() else {
-                    tracing::info!("udp broadcast read loop exit");
+                    tracing::info!("lan discover broadcast recv loop exit");
                     return;
                 };
 
                 let (buffer_len, from_addr) = match reader.recv_from(&mut buffer).await {
                     Ok(v) => v,
                     Err(err) => {
-                        tracing::error!(?err, "udp broadcast recv failed");
+                        tracing::error!(?err, "lan discover broadcast packet recv failed");
                         continue;
                     }
                 };
@@ -90,7 +90,7 @@ impl LanDiscover {
                         tracing::error!(
                             ?err,
                             ?from_addr,
-                            "deserialize udp broadcast packet failed"
+                            "deserialize lan discover broadcast packet failed"
                         );
                         continue;
                     }
@@ -102,6 +102,7 @@ impl LanDiscover {
                             continue;
                         }
 
+                        tracing::info!(?target_addr, "lan discover target live");
                         cache_copy
                             .insert(
                                 target_addr,
@@ -116,7 +117,10 @@ impl LanDiscover {
                             )
                             .await;
                     }
-                    BroadcastPacket::TargetDead => cache_copy.invalidate(&target_addr).await,
+                    BroadcastPacket::TargetDead => {
+                        tracing::info!(?target_addr, "lan discover target dead");
+                        cache_copy.invalidate(&target_addr).await
+                    }
                 }
             }
         });
@@ -129,7 +133,7 @@ impl LanDiscover {
                     _ = ticker.tick() => (),
                     _ = &mut write_exit_rx => {
                         let _ = writer.send(&dead_packet).await;
-                        tracing::info!("udp broadcast write loop exit");
+                        tracing::info!("lan discover broadcast loop exit");
                         return;
                     }
                 };
@@ -138,7 +142,7 @@ impl LanDiscover {
                     .send_to(&live_packet, (Ipv4Addr::BROADCAST, 55000))
                     .await
                 {
-                    tracing::warn!(?err, "udp broadcast send failed");
+                    tracing::warn!(?err, "lan discover broadcast failed");
                 }
             }
         });
