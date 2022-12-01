@@ -1,3 +1,5 @@
+use std::net::SocketAddr;
+
 use super::UIState;
 use crate::window::create_desktop_window;
 use mirrorx_core::{core_error, error::CoreResult};
@@ -13,6 +15,9 @@ pub async fn signaling_key_exchange(
     state: tauri::State<'_, UIState>,
     egui_plugin: tauri::State<'_, EguiPluginHandle>,
 ) -> CoreResult<()> {
+    let addr: SocketAddr = addr
+        .parse()
+        .map_err(|err| core_error!("parse SocketAddr from str failed ({})", err))?;
     let local_device_id = local_device_id.replace('-', "").parse()?;
     let remote_device_id: i64 = remote_device_id.replace('-', "").parse()?;
     let window_label = format!("MirrorX {}", remote_device_id);

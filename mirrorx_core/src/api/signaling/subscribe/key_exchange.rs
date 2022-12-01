@@ -1,5 +1,8 @@
 use crate::{
-    api::config::{entity::domain::Domain, LocalStorage},
+    api::{
+        config::{entity::domain::Domain, LocalStorage},
+        endpoint::{create_passive_endpoint_client, id::EndPointID},
+    },
     utility::nonce_value::NonceValue,
 };
 use hmac::Hmac;
@@ -13,6 +16,7 @@ use signaling_proto::message::{
     KeyExchangePassiveDeviceSecret, KeyExchangeReplyError, KeyExchangeReplyRequest,
     KeyExchangeRequest, KeyExchangeResult,
 };
+use std::net::SocketAddr;
 use tonic::transport::{Channel, Uri};
 
 pub async fn handle(
@@ -20,25 +24,33 @@ pub async fn handle(
     domain_id: i64,
     req: &KeyExchangeRequest,
 ) {
-    let Ok(storage)= LocalStorage::current()else{
-                send_key_exchange_reply(client, req.active_device_id, req.passive_device_id, Err(KeyExchangeReplyError::Internal)).await;
-                return;
+    let Ok(storage)= LocalStorage::current() else {
+        send_key_exchange_reply(client, req.active_device_id, req.passive_device_id, Err(KeyExchangeReplyError::Internal)).await;
+        return;
     };
 
-    let Ok(domain) = storage.domain().get_domain_by_id(domain_id)else{
-       send_key_exchange_reply(client, req.active_device_id, req.passive_device_id, Err(KeyExchangeReplyError::Internal)).await;
-                return;
+    let Ok(domain) = storage.domain().get_domain_by_id(domain_id) else {
+        send_key_exchange_reply(client, req.active_device_id, req.passive_device_id, Err(KeyExchangeReplyError::Internal)).await;
+        return;
     };
 
-    let Ok(uri) = Uri::try_from(&domain.addr)else{
-send_key_exchange_reply(client, req.active_device_id, req.passive_device_id, Err(KeyExchangeReplyError::Internal)).await;
-                return;
+    let Ok(uri) = Uri::try_from(&domain.addr) else {
+        send_key_exchange_reply(client, req.active_device_id, req.passive_device_id, Err(KeyExchangeReplyError::Internal)).await;
+        return;
     };
 
-    let Some(host) = uri.host() else{
-   send_key_exchange_reply(client, req.active_device_id, req.passive_device_id, Err(KeyExchangeReplyError::Internal)).await;
-                return;
+    let Some(host) = uri.host() else {
+        send_key_exchange_reply(client, req.active_device_id, req.passive_device_id, Err(KeyExchangeReplyError::Internal)).await;
+        return;
     };
+
+    let Ok(mut addr) = host.parse::<SocketAddr>() else {
+         send_key_exchange_reply(client, req.active_device_id, req.passive_device_id, Err(KeyExchangeReplyError::Internal)).await;
+        tracing::error!("convert uri host to socket addr failed");
+        return;
+    };
+
+    addr.set_port(29000);
 
     let (active_device_id, passive_device_id, _, visit_credentials, sealing_key, opening_key) =
         match key_agreement(&domain, req).await {
@@ -82,22 +94,17 @@ send_key_exchange_reply(client, req.active_device_id, req.passive_device_id, Err
             }
         };
 
-    match crate::api::endpoint::EndPointClient::new(
-        passive_device_id,
-        active_device_id,
-        opening_key,
-        sealing_key,
-        visit_credentials,
-        host,
+    if let Err(err) = create_passive_endpoint_client(
+        EndPointID::DeviceID {
+            local: passive_device_id,
+            remote: active_device_id,
+        },
+        Some((opening_key, sealing_key)),
+        crate::api::endpoint::EndPointStream::PublicTCP(addr),
     )
     .await
     {
-        Ok(endpoint_client) => {
-            // todo: if there has same active device endpoint, how to deal it ?
-            let _ = crate::api::endpoint::PASSIVE_ENDPOINT_CLIENTS
-                .insert(endpoint_client.id(), endpoint_client);
-        }
-        Err(err) => tracing::error!(?err, "endpoint client initialize failed"),
+        tracing::error!(?err, "create passive endpoint client failed");
     }
 }
 

@@ -9,10 +9,8 @@ pub struct H264VideoToolboxConfig {
 
 impl H264VideoToolboxConfig {
     pub fn new() -> Self {
-        let ffmpeg_encoder_name = CString::new("h264_videotoolbox").unwrap();
-
         H264VideoToolboxConfig {
-            ffmpeg_encoder_name,
+            ffmpeg_encoder_name: CString::new("h264_videotoolbox").unwrap(),
         }
     }
 }

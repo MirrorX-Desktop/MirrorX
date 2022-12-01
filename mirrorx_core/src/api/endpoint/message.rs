@@ -1,4 +1,4 @@
-use crate::component::input::key::{KeyboardKey, MouseKey};
+use crate::component::{desktop::monitor::Monitor, input::key::MouseKey};
 use cpal::SampleFormat;
 use serde::{Deserialize, Serialize};
 
@@ -29,22 +29,18 @@ pub struct EndPointNegotiateDesktopParamsRequest {
     pub video_codecs: Vec<VideoCodec>,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Default)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub struct EndPointNegotiateVisitDesktopParams {
     pub video_codec: VideoCodec,
-    pub audio_sample_rate: u32,
-    pub audio_sample_format: AudioSampleFormat,
-    pub audio_channels: u8,
     pub os_type: String,
     pub os_version: String,
-    pub monitor_id: String,
-    pub monitor_width: u16,
-    pub monitor_height: u16,
+    pub primary_monitor: Monitor,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub enum EndPointNegotiateDesktopParamsResponse {
-    Error,
+    VideoError(String),
+    MonitorError(String),
     Params(EndPointNegotiateVisitDesktopParams),
 }
 
@@ -69,6 +65,7 @@ pub enum AudioSampleFormat {
     F32,
 }
 
+#[allow(clippy::from_over_into)]
 impl Into<SampleFormat> for AudioSampleFormat {
     fn into(self) -> SampleFormat {
         match self {

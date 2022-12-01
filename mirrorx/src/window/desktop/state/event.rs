@@ -1,9 +1,10 @@
 use super::VisitState;
 use mirrorx_core::{
-    api::endpoint::{message::InputEvent, EndPointClient},
+    api::endpoint::{client::EndPointClient, message::InputEvent},
     error::CoreError,
     DesktopDecodeFrame,
 };
+use std::{net::SocketAddr, sync::Arc};
 use strum_macros::AsRefStr;
 use tokio::sync::mpsc::Receiver;
 
@@ -17,11 +18,11 @@ pub enum Event {
         sealing_key: Vec<u8>,
         sealing_nonce: Vec<u8>,
         visit_credentials: String,
-        addr: String,
+        addr: SocketAddr,
     },
 
     UpdateEndPointClient {
-        client: EndPointClient,
+        client: Arc<EndPointClient>,
     },
 
     UpdateVisitState {

@@ -12,11 +12,9 @@ use std::{
 #[derive(Debug, Clone, Serialize)]
 pub struct Node {
     pub host_name: String,
-    pub addr: Ipv4Addr,
+    pub addr: IpAddr,
     pub os: String,
     pub os_version: String,
-    pub tcp_port: u16,
-    pub udp_port: u16,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -30,24 +28,22 @@ pub struct TargetLivePacket {
     host_name: String,
     os: String,
     os_version: String,
-    tcp_port: u16,
-    udp_port: u16,
 }
 
-pub struct LanDiscover {
-    cache: Cache<Ipv4Addr, Node>,
+pub struct Discover {
+    cache: Cache<IpAddr, Node>,
     write_exit_tx: Option<tokio::sync::oneshot::Sender<()>>,
     read_exit_tx: Option<tokio::sync::oneshot::Sender<()>>,
 }
 
-impl LanDiscover {
-    pub async fn new(tcp_port: u16, udp_port: u16) -> CoreResult<Self> {
-        let stream = tokio::net::UdpSocket::bind((Ipv4Addr::UNSPECIFIED, 55000)).await?;
+impl Discover {
+    pub async fn new(local_lan_ip: IpAddr) -> CoreResult<Self> {
+        let stream = tokio::net::UdpSocket::bind((local_lan_ip, 55000)).await?;
         stream.set_broadcast(true)?;
 
         tracing::info!("lan discover listen on {}", stream.local_addr()?);
 
-        let live_packet = gen_target_live_packet(tcp_port, udp_port)?;
+        let live_packet = gen_target_live_packet()?;
         let local_host_name = live_packet.host_name.clone();
         let dead_packet = bincode::serialize(&BroadcastPacket::TargetDead)?;
         let live_packet = bincode::serialize(&BroadcastPacket::TargetLive(live_packet))?;
@@ -72,7 +68,7 @@ impl LanDiscover {
                     return;
                 };
 
-                let (buffer_len, from_addr) = match reader.recv_from(&mut buffer).await {
+                let (buffer_len, target_addr) = match reader.recv_from(&mut buffer).await {
                     Ok(v) => v,
                     Err(err) => {
                         tracing::error!(?err, "lan discover broadcast packet recv failed");
@@ -80,16 +76,12 @@ impl LanDiscover {
                     }
                 };
 
-                let IpAddr::V4(target_addr) = from_addr.ip() else {
-                    continue;
-                };
-
                 let packet = match bincode::deserialize::<BroadcastPacket>(&buffer[..buffer_len]) {
                     Ok(v) => v,
                     Err(err) => {
                         tracing::error!(
                             ?err,
-                            ?from_addr,
+                            ?target_addr,
                             "deserialize lan discover broadcast packet failed"
                         );
                         continue;
@@ -105,21 +97,19 @@ impl LanDiscover {
                         tracing::info!(?target_addr, "lan discover target live");
                         cache_copy
                             .insert(
-                                target_addr,
+                                target_addr.ip(),
                                 Node {
                                     host_name: live_packet.host_name.to_string(),
-                                    addr: target_addr,
+                                    addr: target_addr.ip(),
                                     os: live_packet.os.to_string(),
                                     os_version: live_packet.os_version.to_string(),
-                                    tcp_port: live_packet.tcp_port,
-                                    udp_port: live_packet.udp_port,
                                 },
                             )
                             .await;
                     }
                     BroadcastPacket::TargetDead => {
                         tracing::info!(?target_addr, "lan discover target dead");
-                        cache_copy.invalidate(&target_addr).await
+                        cache_copy.invalidate(&target_addr.ip()).await
                     }
                 }
             }
@@ -159,7 +149,7 @@ impl LanDiscover {
     }
 }
 
-impl Drop for LanDiscover {
+impl Drop for Discover {
     fn drop(&mut self) {
         if let Some(tx) = self.write_exit_tx.take() {
             let _ = tx.send(());
@@ -171,7 +161,7 @@ impl Drop for LanDiscover {
     }
 }
 
-fn gen_target_live_packet(tcp_port: u16, udp_port: u16) -> CoreResult<TargetLivePacket> {
+fn gen_target_live_packet() -> CoreResult<TargetLivePacket> {
     let host_name = convert_host_name_to_string(&hostname::get()?)?;
     let os_info = os_info::get();
     let os_version = os_info.version().to_string();
@@ -224,8 +214,6 @@ fn gen_target_live_packet(tcp_port: u16, udp_port: u16) -> CoreResult<TargetLive
         host_name,
         os,
         os_version,
-        tcp_port,
-        udp_port,
     })
 }
 

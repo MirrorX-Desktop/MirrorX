@@ -1,4 +1,4 @@
-use std::{io, string::FromUtf16Error};
+use std::{io, str::FromStr, string::FromUtf16Error};
 use thiserror::Error;
 
 pub type CoreResult<T> = Result<T, CoreError>;

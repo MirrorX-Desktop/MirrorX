@@ -3,14 +3,17 @@ mod event;
 use crate::{send_event, utility::format_device_id};
 use event::Event;
 use mirrorx_core::{
-    api::endpoint::{message::EndPointNegotiateDesktopParamsResponse, EndPointClient},
+    api::endpoint::{
+        client::EndPointClient, create_active_endpoint_client, id::EndPointID,
+        message::EndPointNegotiateDesktopParamsResponse, EndPointStream,
+    },
     core_error,
     error::{CoreError, CoreResult},
     utility::nonce_value::NonceValue,
     DesktopDecodeFrame,
 };
 use ring::aead::{BoundKey, OpeningKey, SealingKey};
-use std::time::Duration;
+use std::{net::SocketAddr, sync::Arc, time::Duration};
 use tokio::sync::mpsc::{Receiver, Sender};
 
 #[macro_export]
@@ -36,7 +39,7 @@ pub struct State {
 
     format_remote_device_id: String,
     visit_state: VisitState,
-    endpoint_client: Option<EndPointClient>,
+    endpoint_client: Option<Arc<EndPointClient>>,
     desktop_frame_scaled: bool,
     desktop_frame_scalable: bool,
     last_error: Option<CoreError>,
@@ -53,7 +56,7 @@ impl State {
         sealing_key: Vec<u8>,
         sealing_nonce: Vec<u8>,
         visit_credentials: String,
-        addr: String,
+        addr: SocketAddr,
     ) -> Self {
         let (tx, rx) = tokio::sync::mpsc::channel(360);
 
@@ -91,8 +94,8 @@ impl State {
         self.format_remote_device_id.as_ref()
     }
 
-    pub fn endpoint_client(&self) -> Option<&EndPointClient> {
-        self.endpoint_client.as_ref()
+    pub fn endpoint_client(&self) -> Option<Arc<EndPointClient>> {
+        self.endpoint_client.clone()
     }
 
     pub fn visit_state(&self) -> &VisitState {
@@ -186,7 +189,7 @@ impl State {
         opening_key: Vec<u8>,
         opening_nonce: Vec<u8>,
         visit_credentials: String,
-        addr: String,
+        addr: SocketAddr,
     ) {
         let res = || -> CoreResult<(SealingKey<NonceValue>, OpeningKey<NonceValue>)> {
             let unbound_sealing_key =
@@ -212,17 +215,17 @@ impl State {
             Ok((sealing_key, opening_key)) => {
                 let tx = self.tx.clone();
                 tokio::spawn(async move {
-                    match mirrorx_core::api::endpoint::EndPointClient::new(
-                        local_device_id,
-                        remote_device_id,
-                        opening_key,
-                        sealing_key,
-                        visit_credentials,
-                        &addr,
+                    match create_active_endpoint_client(
+                        EndPointID::DeviceID {
+                            local: local_device_id,
+                            remote: remote_device_id,
+                        },
+                        Some((opening_key, sealing_key)),
+                        EndPointStream::PublicTCP(addr),
                     )
                     .await
                     {
-                        Ok(client) => {
+                        Ok((client, render_frame_rx)) => {
                             send_event!(
                                 tx,
                                 Event::UpdateVisitState {
@@ -230,6 +233,12 @@ impl State {
                                 }
                             );
                             send_event!(tx, Event::UpdateEndPointClient { client });
+                            send_event!(
+                                tx,
+                                Event::SetRenderFrameReceiver {
+                                    render_rx: render_frame_rx
+                                }
+                            );
                             send_event!(tx, Event::EmitNegotiateDesktopParams);
                         }
                         Err(err) => {
@@ -261,68 +270,68 @@ impl State {
             let tx = self.tx.clone();
             let client = client.clone();
             tokio::spawn(async move {
-                let resp_rx = match client.negotiate_desktop_params() {
-                    Ok(resp_rx) => resp_rx,
-                    Err(err) => {
-                        send_event!(
-                            tx,
-                            Event::UpdateVisitState {
-                                new_state: VisitState::ErrorOccurred
-                            }
-                        );
-                        send_event!(tx, Event::UpdateError { err });
-                        return;
-                    }
-                };
+                // let resp_rx = match client.negotiate_desktop_params() {
+                //     Ok(resp_rx) => resp_rx,
+                //     Err(err) => {
+                //         send_event!(
+                //             tx,
+                //             Event::UpdateVisitState {
+                //                 new_state: VisitState::ErrorOccurred
+                //             }
+                //         );
+                //         send_event!(tx, Event::UpdateError { err });
+                //         return;
+                //     }
+                // };
 
-                let resp = async {
-                    tokio::time::timeout(Duration::from_secs(30), resp_rx)
-                        .await
-                        .map_err(CoreError::Timeout)?
-                        .map_err(|err| {
-                            core_error!(
-                                "negotiate desktop params response receive failed ({})",
-                                err
-                            )
-                        })
-                }
-                .await;
+                // let resp = async {
+                //     tokio::time::timeout(Duration::from_secs(30), resp_rx)
+                //         .await
+                //         .map_err(CoreError::Timeout)?
+                //         .map_err(|err| {
+                //             core_error!(
+                //                 "negotiate desktop params response receive failed ({})",
+                //                 err
+                //             )
+                //         })
+                // }
+                // .await;
 
-                match resp {
-                    Ok(resp) => match resp {
-                        EndPointNegotiateDesktopParamsResponse::Error => {
-                            send_event!(
-                                tx,
-                                Event::UpdateVisitState {
-                                    new_state: VisitState::ErrorOccurred
-                                }
-                            );
-                            send_event!(
-                                tx,
-                                Event::UpdateError {
-                                    err: core_error!("negotiate desktop params failed",)
-                                }
-                            );
-                        }
-                        EndPointNegotiateDesktopParamsResponse::Params(params) => {
-                            send_event!(
-                                tx,
-                                Event::EmitNegotiateFinish {
-                                    expected_frame_rate: 60
-                                }
-                            );
-                        }
-                    },
-                    Err(err) => {
-                        send_event!(
-                            tx,
-                            Event::UpdateVisitState {
-                                new_state: VisitState::ErrorOccurred
-                            }
-                        );
-                        send_event!(tx, Event::UpdateError { err })
-                    }
-                }
+                // match resp {
+                //     Ok(resp) => match resp {
+                //         EndPointNegotiateDesktopParamsResponse::Error => {
+                //             send_event!(
+                //                 tx,
+                //                 Event::UpdateVisitState {
+                //                     new_state: VisitState::ErrorOccurred
+                //                 }
+                //             );
+                //             send_event!(
+                //                 tx,
+                //                 Event::UpdateError {
+                //                     err: core_error!("negotiate desktop params failed",)
+                //                 }
+                //             );
+                //         }
+                //         EndPointNegotiateDesktopParamsResponse::Params(params) => {
+                //             send_event!(
+                //                 tx,
+                //                 Event::EmitNegotiateFinish {
+                //                     expected_frame_rate: 60
+                //                 }
+                //             );
+                //         }
+                //     },
+                //     Err(err) => {
+                //         send_event!(
+                //             tx,
+                //             Event::UpdateVisitState {
+                //                 new_state: VisitState::ErrorOccurred
+                //             }
+                //         );
+                //         send_event!(tx, Event::UpdateError { err })
+                //     }
+                // }
             });
         }
     }
@@ -333,21 +342,21 @@ impl State {
             let tx = self.tx.clone();
 
             tokio::spawn(async move {
-                match client.negotiate_finish(expected_frame_rate).await {
-                    Ok(render_rx) => {
-                        send_event!(tx, Event::SetRenderFrameReceiver { render_rx });
+                // match client.negotiate_finish(expected_frame_rate).await {
+                //     Ok(render_rx) => {
+                //         send_event!(tx, Event::SetRenderFrameReceiver { render_rx });
 
-                        send_event!(
-                            tx,
-                            Event::UpdateVisitState {
-                                new_state: VisitState::Serving
-                            }
-                        );
-                    }
-                    Err(err) => {
-                        send_event!(tx, Event::UpdateError { err });
-                    }
-                }
+                //         send_event!(
+                //             tx,
+                //             Event::UpdateVisitState {
+                //                 new_state: VisitState::Serving
+                //             }
+                //         );
+                //     }
+                //     Err(err) => {
+                //         send_event!(tx, Event::UpdateError { err });
+                //     }
+                // }
             });
         }
     }

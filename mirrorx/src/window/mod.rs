@@ -2,7 +2,7 @@ mod desktop;
 
 use self::desktop::DesktopWindow;
 use once_cell::sync::Lazy;
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, net::SocketAddr, sync::Arc};
 use tauri_egui::{
     eframe::CreationContext,
     egui::{FontData, FontDefinitions, FontFamily},
@@ -55,7 +55,7 @@ pub fn create_desktop_window(
     sealing_key: Vec<u8>,
     sealing_nonce: Vec<u8>,
     visit_credentials: String,
-    addr: String,
+    addr: SocketAddr,
 ) -> DesktopWindow {
     set_fonts(&cc.egui_ctx);
 

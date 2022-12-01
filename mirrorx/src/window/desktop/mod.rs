@@ -4,12 +4,15 @@ mod state;
 use self::desktop_render::DesktopRender;
 use egui_extras::RetainedImage;
 use mirrorx_core::{
-    api::endpoint::message::{InputEvent, KeyboardEvent, MouseEvent},
+    api::endpoint::message::{
+        EndPointInput, EndPointMessage, InputEvent, KeyboardEvent, MouseEvent,
+    },
     component::input::key::{KeyboardKey, MouseKey},
 };
 use once_cell::sync::Lazy;
 use state::State;
 use std::{
+    net::SocketAddr,
     sync::Arc,
     time::{Duration, Instant},
 };
@@ -47,7 +50,7 @@ impl DesktopWindow {
         sealing_key: Vec<u8>,
         sealing_nonce: Vec<u8>,
         visit_credentials: String,
-        addr: String,
+        addr: SocketAddr,
         gl_context: Arc<Context>,
     ) -> Self {
         let state = State::new(
@@ -395,7 +398,9 @@ impl tauri_egui::eframe::App for DesktopWindow {
             tracing::info!(?self.input_commands, "input series");
 
             if let Some(client) = self.state.endpoint_client() {
-                if let Err(err) = client.send_input_command(&self.input_commands) {
+                if let Err(err) = client.send(&EndPointMessage::InputCommand(EndPointInput {
+                    events: self.input_commands.clone(),
+                })) {
                     tracing::error!(?err, "endpoint input failed");
                 }
             }

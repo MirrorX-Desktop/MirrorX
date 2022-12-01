@@ -14,25 +14,15 @@ use std::{
     os::raw::c_void,
 };
 
-pub fn get_primary_monitor_params() -> CoreResult<(String, u16, u16)> {
-    unsafe {
-        let main_display_id = CGMainDisplayID();
-        let ns_screens = NSScreen::screens()?;
-        for screen in ns_screens {
-            if screen.screenNumber() == main_display_id {
-                let monitor_width = CGDisplayPixelsWide(main_display_id);
-                let monitor_height = CGDisplayPixelsHigh(main_display_id);
-
-                return Ok((
-                    main_display_id.to_string(),
-                    monitor_width as u16,
-                    monitor_height as u16,
-                ));
-            }
+pub fn get_primary_monitor_params() -> CoreResult<Monitor> {
+    let monitors = get_active_monitors(false)?;
+    for monitor in monitors.into_iter() {
+        if monitor.is_primary {
+            return Ok(monitor);
         }
-
-        Err(core_error!("no primary display"))
     }
+
+    Err(core_error!("no primary display"))
 }
 
 pub fn get_active_monitors(take_screen_shot: bool) -> CoreResult<Vec<Monitor>> {

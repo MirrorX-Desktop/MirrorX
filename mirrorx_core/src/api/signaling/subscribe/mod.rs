@@ -4,14 +4,12 @@ use scopeguard::defer;
 use serde::Serialize;
 use signaling_proto::message::{publish_message::InnerPublishMessage, ResourceType};
 use signaling_proto::service::signaling_client::SignalingClient;
-use std::{path::PathBuf, time::Duration};
+use std::time::Duration;
 use tokio::{
     select,
     sync::mpsc::{error::TryRecvError, Receiver, Sender},
 };
 use tonic::transport::Channel;
-
-use crate::api::config::entity::domain::Domain;
 
 #[derive(Debug, Clone, Serialize)]
 pub enum PublishMessage {

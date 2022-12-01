@@ -9,10 +9,8 @@ pub struct HEVCVideoToolboxConfig {
 
 impl HEVCVideoToolboxConfig {
     pub fn new() -> Self {
-        let ffmpeg_encoder_name = CString::new("hevc_videotoolbox").unwrap();
-
         HEVCVideoToolboxConfig {
-            ffmpeg_encoder_name,
+            ffmpeg_encoder_name: CString::new("hevc_videotoolbox").unwrap(),
         }
     }
 }

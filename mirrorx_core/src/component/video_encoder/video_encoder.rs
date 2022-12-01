@@ -1,9 +1,15 @@
 use super::config::EncoderConfig;
 use crate::{
-    api::endpoint::EndPointClient, component::frame::DesktopEncodeFrame, core_error,
+    api::endpoint::{
+        client::EndPointClient,
+        message::{EndPointMessage, EndPointVideoFrame},
+    },
+    component::frame::DesktopEncodeFrame,
+    core_error,
     error::CoreResult,
 };
 use mirrorx_native::ffmpeg::{avcodec::*, avutil::*};
+use std::sync::Arc;
 
 pub struct VideoEncoder<T>
 where
@@ -11,14 +17,14 @@ where
 {
     encoder_config: T,
     encode_context: Option<EncodeContext>,
-    client: EndPointClient,
+    client: Arc<EndPointClient>,
 }
 
 impl<T> VideoEncoder<T>
 where
     T: EncoderConfig,
 {
-    pub fn new(encoder_config: T, client: EndPointClient) -> CoreResult<VideoEncoder<T>> {
+    pub fn new(encoder_config: T, client: Arc<EndPointClient>) -> CoreResult<VideoEncoder<T>> {
         unsafe {
             av_log_set_level(AV_LOG_INFO);
             av_log_set_flags(AV_LOG_SKIP_REPEATED);
@@ -97,15 +103,18 @@ where
                     ));
                 }
 
-                self.client.send_video_frame(
-                    (*(encode_context).codec_ctx).width,
-                    (*(encode_context).codec_ctx).height,
-                    (*(encode_context).packet).pts,
-                    std::slice::from_raw_parts(
+                let frame = EndPointVideoFrame {
+                    width: (*(encode_context).codec_ctx).width,
+                    height: (*(encode_context).codec_ctx).height,
+                    pts: (*(encode_context).packet).pts,
+                    buffer: std::slice::from_raw_parts(
                         (*(encode_context).packet).data,
                         (*(encode_context).packet).size as usize,
-                    ),
-                )?;
+                    )
+                    .to_vec(),
+                };
+
+                self.client.send(&EndPointMessage::VideoFrame(frame))?;
 
                 av_packet_unref((encode_context).packet);
             }

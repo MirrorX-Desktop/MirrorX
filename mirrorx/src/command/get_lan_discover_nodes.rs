@@ -1,5 +1,5 @@
 use super::UIState;
-use mirrorx_core::{component::lan_discover::Node, core_error, error::CoreResult};
+use mirrorx_core::{component::lan::discover::Node, core_error, error::CoreResult};
 
 #[tauri::command]
 #[tracing::instrument(skip(state))]

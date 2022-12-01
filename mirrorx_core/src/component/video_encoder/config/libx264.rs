@@ -9,10 +9,8 @@ pub struct Libx264Config {
 
 impl Libx264Config {
     pub fn new() -> Self {
-        let ffmpeg_encoder_name = CString::new("libx264").unwrap();
-
         Libx264Config {
-            ffmpeg_encoder_name,
+            ffmpeg_encoder_name: CString::new("libx264").unwrap(),
         }
     }
 }

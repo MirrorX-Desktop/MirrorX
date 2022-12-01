@@ -1,17 +1,17 @@
-use crate::api::endpoint::PASSIVE_ENDPOINTS_MONITORS;
-use crate::component::audio::duplicator::new_record_stream_and_rx;
-use crate::component::audio_encoder::audio_encoder::AudioEncoder;
-use crate::component::video_encoder::config::*;
+use crate::api::endpoint::message::EndPointMessage;
 use crate::error::CoreError;
 use crate::{
-    api::endpoint::EndPointClient,
+    api::endpoint::client::EndPointClient,
     component::{
+        audio::duplicator::new_record_stream_and_rx,
+        audio_encoder::audio_encoder::AudioEncoder,
         desktop::{monitor::get_active_monitors, Duplicator},
-        video_encoder::video_encoder::VideoEncoder,
+        video_encoder::{config::*, video_encoder::VideoEncoder},
     },
 };
 use cpal::traits::StreamTrait;
 use scopeguard::defer;
+use std::sync::Arc;
 
 pub struct NegotiateFinishedRequest {
     pub active_device_id: i64,
@@ -20,17 +20,17 @@ pub struct NegotiateFinishedRequest {
     pub texture_id: i64,
 }
 
-pub fn handle_negotiate_finished_request(client: EndPointClient) {
+pub fn handle_negotiate_finished_request(client: Arc<EndPointClient>) {
     spawn_desktop_capture_and_encode_process(client.clone());
     spawn_audio_capture_and_encode_process(client);
 }
 
 #[cfg(target_os = "macos")]
-fn spawn_desktop_capture_and_encode_process(client: EndPointClient) {
+fn spawn_desktop_capture_and_encode_process(client: Arc<EndPointClient>) {
     let (capture_frame_tx, mut capture_frame_rx) = tokio::sync::mpsc::channel(180);
 
     tokio::task::spawn_blocking(move || {
-        tracing::info_span!("desktop_capture_and_encode_process", id = ?client.id());
+        tracing::info_span!("desktop_capture_and_encode_process", client = ?client);
 
         defer! {
             tracing::info!("desktop capture process exit");
@@ -78,7 +78,7 @@ fn spawn_desktop_capture_and_encode_process(client: EndPointClient) {
 
         tracing::info!(?select_monitor.width,?select_monitor.height,"select monitor");
 
-        PASSIVE_ENDPOINTS_MONITORS.insert(client.id, select_monitor);
+        // PASSIVE_ENDPOINTS_MONITORS.insert(client.id, select_monitor);
 
         if let Err(err) = duplicator.start() {
             tracing::error!(?err, "desktop capture process start failed");
@@ -113,7 +113,7 @@ fn spawn_desktop_capture_and_encode_process(client: EndPointClient) {
 }
 
 #[cfg(target_os = "windows")]
-fn spawn_desktop_capture_and_encode_process(client: EndPointClient) {
+fn spawn_desktop_capture_and_encode_process(client: Arc<EndPointClient>) {
     let monitors = match get_active_monitors(false) {
         Ok(params) => params,
         Err(err) => {
@@ -151,7 +151,7 @@ fn spawn_desktop_capture_and_encode_process(client: EndPointClient) {
             }
         };
 
-        PASSIVE_ENDPOINTS_MONITORS.insert(client.id, select_monitor);
+        // PASSIVE_ENDPOINTS_MONITORS.insert(client.id, select_monitor);
 
         loop {
             match duplicator.capture() {
@@ -207,17 +207,14 @@ fn spawn_desktop_capture_and_encode_process(client: EndPointClient) {
     });
 }
 
-fn spawn_audio_capture_and_encode_process(client: EndPointClient) {
-    let mut exit_rx = client.exit_tx.new_receiver();
+fn spawn_audio_capture_and_encode_process(client: Arc<EndPointClient>) {
+    let mut exit_rx = client.close_receiver();
 
     tokio::task::spawn_blocking(move || loop {
-        match exit_rx.try_recv() {
-            Ok(_) => return,
-            Err(err) => match err {
-                async_broadcast::TryRecvError::Empty => {}
-                _ => return,
-            },
-        }
+        let Err(async_broadcast::TryRecvError::Empty) = exit_rx.try_recv() else {
+            tracing::info!("receive exit signal, exit");
+            return;
+        };
 
         let (stream, mut rx) = match new_record_stream_and_rx() {
             Ok((stream, rx)) => (stream, rx),
@@ -235,18 +232,15 @@ fn spawn_audio_capture_and_encode_process(client: EndPointClient) {
         let mut audio_encoder = AudioEncoder::default();
 
         loop {
-            match exit_rx.try_recv() {
-                Ok(_) => return,
-                Err(err) => match err {
-                    async_broadcast::TryRecvError::Empty => {}
-                    _ => return,
-                },
-            }
+            let Err(async_broadcast::TryRecvError::Empty) = exit_rx.try_recv() else {
+                tracing::info!("receive exit signal, exit");
+                return;
+            };
 
             match rx.blocking_recv() {
                 Some(audio_frame) => match audio_encoder.encode(audio_frame) {
                     Ok(frame) => {
-                        if let Err(err) = client.send_audio_frame(frame) {
+                        if let Err(err) = client.send(&EndPointMessage::AudioFrame(frame)) {
                             match err {
                                 CoreError::OutgoingMessageChannelDisconnect => {
                                     tracing::info!("audio encode process exit");
