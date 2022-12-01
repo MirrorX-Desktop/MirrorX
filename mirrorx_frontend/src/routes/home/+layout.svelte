@@ -14,7 +14,7 @@
 		invoke_get_current_domain,
 		invoke_get_language,
 		invoke_init_config,
-		invoke_init_lan_discover,
+		invoke_init_lan,
 		invoke_init_signaling
 	} from '../../components/command';
 	import { emit, listen, type UnlistenFn } from '@tauri-apps/api/event';
@@ -59,7 +59,7 @@
 			await invoke_init_config();
 			console.log('finish init config');
 
-			await invoke_init_lan_discover();
+			await invoke_init_lan();
 			console.log('finish init lan discover');
 
 			await invoke_init_signaling({ force: false });
