@@ -240,7 +240,8 @@ fn spawn_audio_capture_and_encode_process(client: Arc<EndPointClient>) {
             match rx.blocking_recv() {
                 Some(audio_frame) => match audio_encoder.encode(audio_frame) {
                     Ok(frame) => {
-                        if let Err(err) = client.send(&EndPointMessage::AudioFrame(frame)) {
+                        if let Err(err) = client.blocking_send(&EndPointMessage::AudioFrame(frame))
+                        {
                             match err {
                                 CoreError::OutgoingMessageChannelDisconnect => {
                                     tracing::info!("audio encode process exit");

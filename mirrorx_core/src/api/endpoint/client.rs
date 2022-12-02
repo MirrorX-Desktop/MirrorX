@@ -7,6 +7,7 @@ use crate::{
         input::handle_input, negotiate_finished::handle_negotiate_finished_request,
     },
     component::desktop::monitor::Monitor,
+    core_error,
     error::{CoreError, CoreResult},
     utility::nonce_value::NonceValue,
 };
@@ -21,7 +22,7 @@ use futures::{
 };
 use once_cell::sync::Lazy;
 use ring::aead::{OpeningKey, SealingKey};
-use std::{fmt::Display, net::SocketAddr, sync::Arc, time::Duration};
+use std::{fmt::Display, net::SocketAddr, ops::Deref, sync::Arc, time::Duration};
 use tokio::{
     net::TcpStream,
     sync::{mpsc::Sender, RwLock},
@@ -58,6 +59,7 @@ impl EndPointClient {
         audio_frame_tx: tokio::sync::mpsc::Sender<EndPointAudioFrame>,
     ) -> CoreResult<Arc<EndPointClient>> {
         EndPointClient::create(
+            true,
             endpoint_id,
             stream_key,
             stream,
@@ -72,11 +74,12 @@ impl EndPointClient {
         stream_key: Option<(OpeningKey<NonceValue>, SealingKey<NonceValue>)>,
         stream: EndPointStream,
     ) -> CoreResult<()> {
-        let _ = EndPointClient::create(endpoint_id, stream_key, stream, None, None).await?;
+        let _ = EndPointClient::create(false, endpoint_id, stream_key, stream, None, None).await?;
         Ok(())
     }
 
     async fn create(
+        active: bool,
         endpoint_id: EndPointID,
         stream_key: Option<(OpeningKey<NonceValue>, SealingKey<NonceValue>)>,
         stream: EndPointStream,
@@ -89,7 +92,7 @@ impl EndPointClient {
             None => (None, None),
         };
 
-        let (tx, rx) = match stream {
+        let (tx, mut rx) = match stream {
             EndPointStream::PublicTCP(addr) => {
                 let stream = tokio::time::timeout(
                     Duration::from_secs(10),
@@ -121,16 +124,112 @@ impl EndPointClient {
             }
         };
 
+        // active endpoint should start negotiate with passive endpoint
+        let primary_monitor = if active {
+            let params = serve_active_negotiate(&tx, &mut rx).await?;
+            Some(Arc::new(params.primary_monitor))
+        } else {
+            None
+        };
+
         let client = Arc::new(EndPointClient {
             endpoint_id,
-            monitor: Arc::new(RwLock::new(None)),
+            monitor: Arc::new(RwLock::new(primary_monitor)),
             exit_tx,
             tx,
         });
 
+        client
+            .send(&EndPointMessage::NegotiateFinishedRequest(
+                EndPointNegotiateFinishedRequest {
+                    expected_frame_rate: 60,
+                },
+            ))
+            .await?;
+
         handle_message(client.clone(), rx, video_frame_tx, audio_frame_tx);
 
         Ok(client)
+    }
+}
+
+impl EndPointClient {
+    pub async fn monitor(&self) -> Option<Arc<Monitor>> {
+        (*self.monitor.read().await).clone()
+    }
+
+    pub async fn set_monitor(&self, monitor: Monitor) {
+        (*self.monitor.write().await) = Some(Arc::new(monitor))
+    }
+}
+
+impl EndPointClient {
+    pub fn blocking_send(&self, message: &EndPointMessage) -> CoreResult<()> {
+        let buffer = BINARY_SERIALIZER.serialize(message)?;
+        self.tx
+            .blocking_send(buffer)
+            .map_err(|_| CoreError::OutgoingMessageChannelDisconnect)
+    }
+
+    pub async fn send(&self, message: &EndPointMessage) -> CoreResult<()> {
+        let buffer = BINARY_SERIALIZER.serialize(message)?;
+        self.tx
+            .send(buffer)
+            .await
+            .map_err(|_| CoreError::OutgoingMessageChannelDisconnect)
+    }
+
+    pub fn close(&self) {
+        let _ = self.exit_tx.try_broadcast(());
+    }
+
+    pub fn close_receiver(&self) -> async_broadcast::Receiver<()> {
+        self.exit_tx.new_receiver()
+    }
+}
+
+impl Display for EndPointClient {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "EndPointClient({})", self.endpoint_id)
+    }
+}
+
+async fn serve_active_negotiate(
+    tx: &Sender<Vec<u8>>,
+    rx: &mut tokio::sync::mpsc::Receiver<Bytes>,
+) -> CoreResult<EndPointNegotiateVisitDesktopParams> {
+    let negotiate_request_buffer = BINARY_SERIALIZER.serialize(
+        &EndPointMessage::NegotiateDesktopParamsRequest(EndPointNegotiateDesktopParamsRequest {
+            video_codecs: vec![VideoCodec::H264],
+        }),
+    )?;
+
+    tx.send(negotiate_request_buffer)
+        .await
+        .map_err(|_| CoreError::OutgoingMessageChannelDisconnect)?;
+
+    let negotiate_response_buffer = tokio::time::timeout(RECV_MESSAGE_TIMEOUT, rx.recv())
+        .await?
+        .ok_or(CoreError::OutgoingMessageChannelDisconnect)?;
+
+    let EndPointMessage::NegotiateDesktopParamsResponse(negotiate_response) =
+        BINARY_SERIALIZER.deserialize(negotiate_response_buffer.deref())? else {
+            return Err(core_error!("unexpected negotiate reply"));
+        };
+
+    match negotiate_response {
+        EndPointNegotiateDesktopParamsResponse::VideoError(err) => {
+            tracing::error!(?err, "negotiate failed with video error");
+            Err(core_error!("negotiate failed ({})", err))
+        }
+        EndPointNegotiateDesktopParamsResponse::MonitorError(err) => {
+            tracing::error!(?err, "negotiate failed with display error");
+            Err(core_error!("negotiate failed ({})", err))
+        }
+        EndPointNegotiateDesktopParamsResponse::Params(params) => {
+            tracing::info!(?params, "negotiate success");
+            Ok(params)
+        }
     }
 }
 
@@ -152,39 +251,6 @@ fn serve_tcp(
     serve_tcp_write(endpoint_id, rx, sealing_key, sink);
     let rx = serve_tcp_read(endpoint_id, opening_key, stream)?;
     Ok((tx, rx))
-}
-
-impl EndPointClient {
-    pub async fn monitor(&self) -> Option<Arc<Monitor>> {
-        (*self.monitor.read().await).clone()
-    }
-
-    pub async fn set_monitor(&self, monitor: Monitor) {
-        (*self.monitor.write().await) = Some(Arc::new(monitor))
-    }
-}
-
-impl EndPointClient {
-    pub fn send(&self, message: &EndPointMessage) -> CoreResult<()> {
-        let buffer = BINARY_SERIALIZER.serialize(message)?;
-        self.tx
-            .blocking_send(buffer)
-            .map_err(|_| CoreError::OutgoingMessageChannelDisconnect)
-    }
-
-    pub fn close(&self) {
-        let _ = self.exit_tx.try_broadcast(());
-    }
-
-    pub fn close_receiver(&self) -> async_broadcast::Receiver<()> {
-        self.exit_tx.new_receiver()
-    }
-}
-
-impl Display for EndPointClient {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "EndPointClient({})", self.endpoint_id)
-    }
 }
 
 fn serve_tcp_read(
@@ -351,51 +417,6 @@ fn serve_udp_write(
     });
 }
 
-// async fn connect(addr: &str) -> CoreResult<Framed<TcpStream, LengthDelimitedCodec>> {
-//     let stream = tokio::time::timeout(Duration::from_secs(10), TcpStream::connect(addr)).await??;
-
-//     stream.set_nodelay(true)?;
-
-//     let stream = LengthDelimitedCodec::builder()
-//         .little_endian()
-//         .max_frame_length(32 * 1024 * 1024)
-//         .new_framed(stream);
-
-//     Ok(stream)
-// }
-
-// async fn handshake(
-//     stream: &mut Framed<TcpStream, LengthDelimitedCodec>,
-//     local_device_id: i64,
-//     remote_device_id: i64,
-//     visit_credentials: String,
-// ) -> CoreResult<()> {
-//     let req = EndPointHandshakeRequest {
-//         device_id: local_device_id,
-//         visit_credentials,
-//     };
-
-//     let req_buffer = Bytes::from(BINARY_SERIALIZER.serialize(&req)?);
-
-//     stream.send(req_buffer).await?;
-
-//     let resp_buffer = tokio::time::timeout(RECV_MESSAGE_TIMEOUT, stream.next())
-//         .await?
-//         .ok_or(core_error!("stream was closed"))?
-//         .map_err(|err| core_error!("stream read failed ({})", err))?;
-
-//     let handshake_resp: EndPointHandshakeResponse =
-//         BINARY_SERIALIZER.deserialize_from(resp_buffer.reader())?;
-
-//     if handshake_resp.remote_device_id != remote_device_id {
-//         return Err(core_error!(
-//             "signaling server matched incorrect stream pair"
-//         ));
-//     }
-
-//     Ok(())
-// }
-
 fn handle_message(
     client: Arc<EndPointClient>,
     mut rx: tokio::sync::mpsc::Receiver<Bytes>,
@@ -425,31 +446,11 @@ fn handle_message(
                     // handle_error(active_device_id, passive_device_id);
                 }
                 EndPointMessage::NegotiateDesktopParamsRequest(req) => {
-                    handle_negotiate_desktop_params_request(client.clone(), req)
+                    handle_negotiate_desktop_params_request(client.clone(), req).await
                 }
-                EndPointMessage::NegotiateDesktopParamsResponse(resp) => {
-                    // todo: set video props
-                    match resp {
-                        EndPointNegotiateDesktopParamsResponse::VideoError(_) => {
-                            // todo: notify negotiate video props error
-                        }
-                        EndPointNegotiateDesktopParamsResponse::MonitorError(_) => {
-                            // todo: notify negotiate monitor props error
-                        }
-                        EndPointNegotiateDesktopParamsResponse::Params(params) => {
-                            let expected_frame_rate = params.primary_monitor.refresh_rate;
-                            client.set_monitor(params.primary_monitor).await;
-                            if let Err(err) =
-                                client.send(&EndPointMessage::NegotiateFinishedRequest(
-                                    EndPointNegotiateFinishedRequest {
-                                        expected_frame_rate,
-                                    },
-                                ))
-                            {
-                                // todo: handle error
-                            }
-                        }
-                    }
+                EndPointMessage::NegotiateDesktopParamsResponse(_) => {
+                    // this message should not received at handle_message loop because it already handled
+                    // at negotiate stage from active endpoint
                 }
                 EndPointMessage::NegotiateFinishedRequest(_) => {
                     handle_negotiate_finished_request(client.clone());

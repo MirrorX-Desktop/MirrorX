@@ -114,7 +114,8 @@ where
                     .to_vec(),
                 };
 
-                self.client.send(&EndPointMessage::VideoFrame(frame))?;
+                self.client
+                    .blocking_send(&EndPointMessage::VideoFrame(frame))?;
 
                 av_packet_unref((encode_context).packet);
             }
