@@ -13,8 +13,6 @@ export interface LanDiscoverNode {
 	addr: string;
 	os: string;
 	os_version: string;
-	tcp_port: number;
-	udp_port: number;
 }
 
 export const current_lan_discover_nodes = writable<Array<LanDiscoverNode>>([]);

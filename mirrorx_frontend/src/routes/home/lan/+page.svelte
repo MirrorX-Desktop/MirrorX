@@ -40,20 +40,15 @@
 </script>
 
 <slot>
-	<div class="h-full">
-		<div class="flex-none">
-			<table class="w-full">
-				{#each nodes as node}
-					<Panel
-						host_name={node.host_name}
-						addr={node.addr}
-						os={node.os}
-						os_version={node.os_version}
-						tcp_port={node.tcp_port}
-						udp_port={node.udp_port}
-					/>
-				{/each}
-			</table>
-		</div>
-	</div>
+	<table class="w-full">
+		{#each nodes as node}
+			<Panel
+				host_name={node.host_name}
+				addr={node.addr}
+				os={node.os}
+				os_version={node.os_version}
+				is_orphan={nodes.length == 1}
+			/>
+		{/each}
+	</table>
 </slot>

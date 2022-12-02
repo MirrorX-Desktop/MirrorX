@@ -112,7 +112,7 @@
 </script>
 
 <div data-tauri-drag-region class="flex h-full flex-col">
-	<div data-tauri-drag-region class="mx-2 flex flex-col">
+	<div data-tauri-drag-region class="mx-2 flex flex-none flex-col">
 		<div data-tauri-drag-region class=" z-10 mt-2 mb-2 flex flex-row items-center justify-between">
 			<button class="btn btn-xs invisible"><Fa icon={faSliders} /></button>
 			<div class="text-2xl">{$LL.Home.Layout.Domain()}</div>
@@ -142,7 +142,7 @@
 		</div>
 	</div>
 
-	<div class="mx-2 flex flex-1 flex-col">
+	<div class="mx-2 flex flex-1 flex-col overflow-hidden">
 		<div class="flex-none">
 			<div class="my-2 text-center text-4xl">
 				{#if domain}
@@ -164,7 +164,7 @@
 			</div>
 		</div>
 
-		<div class="flex-1">
+		<div class="custom-scroll flex-1 overflow-y-auto">
 			<slot />
 		</div>
 
@@ -186,3 +186,20 @@
 <DialogInputRemotePassword />
 <DialogSelectLanguage />
 <HomeNotificationCenter />
+
+<style>
+	.custom-scroll::-webkit-scrollbar {
+		width: 14px;
+	}
+
+	.custom-scroll::-webkit-scrollbar-thumb {
+		border: 4px solid rgba(0, 0, 0, 0);
+		background-clip: padding-box;
+		border-radius: 9999px;
+		background-color: #aaaaaa;
+	}
+
+	.custom-scroll::-webkit-scrollbar-track {
+		@apply my-4;
+	}
+</style>

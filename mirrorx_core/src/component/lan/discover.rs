@@ -83,8 +83,6 @@ impl Discover {
                     }
                 };
 
-                tracing::info!(?buffer_len, "udp read");
-
                 let packet = match bincode::deserialize::<BroadcastPacket>(&buffer[..buffer_len]) {
                     Ok(v) => v,
                     Err(err) => {
@@ -99,7 +97,6 @@ impl Discover {
 
                 match packet {
                     BroadcastPacket::TargetLive(live_packet) => {
-                        tracing::info!(?live_packet, "lan discover");
                         if local_host_name == live_packet.host_name {
                             continue;
                         }
