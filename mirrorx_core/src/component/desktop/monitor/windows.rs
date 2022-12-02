@@ -17,11 +17,11 @@ use windows::{
     },
 };
 
-pub fn get_primary_monitor_params() -> CoreResult<(String, u16, u16)> {
+pub fn get_primary_monitor_params() -> CoreResult<Monitor> {
     let monitors = get_active_monitors(false)?;
-    for monitor in monitors {
+    for monitor in monitors.into_iter() {
         if monitor.is_primary {
-            return Ok((monitor.id, monitor.width, monitor.height));
+            return Ok(monitor);
         }
     }
 
