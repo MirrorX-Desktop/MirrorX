@@ -38,7 +38,14 @@ pub struct Discover {
 
 impl Discover {
     pub async fn new(local_lan_ip: IpAddr) -> CoreResult<Self> {
-        let stream = tokio::net::UdpSocket::bind((local_lan_ip, 55000)).await?;
+        // why udp not polled when udp listen on specified ip on macOS?
+        let listen_ip = if cfg!(target_os = "macos") {
+            IpAddr::V4(Ipv4Addr::UNSPECIFIED)
+        } else {
+            local_lan_ip
+        };
+
+        let stream = tokio::net::UdpSocket::bind((listen_ip, 55000)).await?;
         stream.set_broadcast(true)?;
 
         tracing::info!("lan discover listen on {}", stream.local_addr()?);
@@ -76,6 +83,8 @@ impl Discover {
                     }
                 };
 
+                tracing::info!(?buffer_len, "udp read");
+
                 let packet = match bincode::deserialize::<BroadcastPacket>(&buffer[..buffer_len]) {
                     Ok(v) => v,
                     Err(err) => {
@@ -90,6 +99,7 @@ impl Discover {
 
                 match packet {
                     BroadcastPacket::TargetLive(live_packet) => {
+                        tracing::info!(?live_packet, "lan discover");
                         if local_host_name == live_packet.host_name {
                             continue;
                         }
