@@ -139,14 +139,6 @@ impl EndPointClient {
             tx,
         });
 
-        client
-            .send(&EndPointMessage::NegotiateFinishedRequest(
-                EndPointNegotiateFinishedRequest {
-                    expected_frame_rate: 60,
-                },
-            ))
-            .await?;
-
         handle_message(client.clone(), rx, video_frame_tx, audio_frame_tx);
 
         Ok(client)
@@ -217,20 +209,32 @@ async fn serve_active_negotiate(
             return Err(core_error!("unexpected negotiate reply"));
         };
 
-    match negotiate_response {
+    let params = match negotiate_response {
         EndPointNegotiateDesktopParamsResponse::VideoError(err) => {
             tracing::error!(?err, "negotiate failed with video error");
-            Err(core_error!("negotiate failed ({})", err))
+            return Err(core_error!("negotiate failed ({})", err));
         }
         EndPointNegotiateDesktopParamsResponse::MonitorError(err) => {
             tracing::error!(?err, "negotiate failed with display error");
-            Err(core_error!("negotiate failed ({})", err))
+            return Err(core_error!("negotiate failed ({})", err));
         }
         EndPointNegotiateDesktopParamsResponse::Params(params) => {
             tracing::info!(?params, "negotiate success");
-            Ok(params)
+            params
         }
-    }
+    };
+
+    let negotiate_request_buffer = BINARY_SERIALIZER.serialize(
+        &EndPointMessage::NegotiateFinishedRequest(EndPointNegotiateFinishedRequest {
+            expected_frame_rate: 60,
+        }),
+    )?;
+
+    tx.send(negotiate_request_buffer)
+        .await
+        .map_err(|_| CoreError::OutgoingMessageChannelDisconnect)?;
+
+    Ok(params)
 }
 
 fn serve_tcp(
@@ -285,7 +289,7 @@ fn serve_tcp_read(
                 }
             }
 
-            if tx.send(Bytes::from(buffer)).await.is_err() {
+            if tx.send(buffer.freeze()).await.is_err() {
                 tracing::error!(?endpoint_id, "output channel closed");
                 break;
             }

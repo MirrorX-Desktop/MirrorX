@@ -17,7 +17,10 @@ pub async fn handle_negotiate_desktop_params_request(
 ) {
     let resp = negotiate_media_params(&client, req).await;
 
-    if let Err(err) = client.blocking_send(&EndPointMessage::NegotiateDesktopParamsResponse(resp)) {
+    if let Err(err) = client
+        .send(&EndPointMessage::NegotiateDesktopParamsResponse(resp))
+        .await
+    {
         tracing::error!(
             ?err,
             "handle_negotiate_desktop_params_request: reply failed"
