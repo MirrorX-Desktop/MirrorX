@@ -463,6 +463,7 @@ fn handle_message(
                     if let Some(ref tx) = video_frame_tx {
                         if let Err(err) = tx.send(video_frame).await {
                             tracing::error!(%err, "endpoint video frame message channel send failed");
+                            return;
                         }
                     } else {
                         tracing::error!("as passive endpoint, shouldn't receive video frame");
@@ -472,6 +473,7 @@ fn handle_message(
                     if let Some(ref tx) = audio_frame_tx {
                         if let Err(err) = tx.send(audio_frame).await {
                             tracing::error!(%err, "endpoint audio frame message channel send failed");
+                            return;
                         }
                     } else {
                         tracing::error!("as passive endpoint, shouldn't receive audio frame");

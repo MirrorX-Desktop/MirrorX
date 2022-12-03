@@ -1,5 +1,6 @@
 pub mod duplicator;
 pub mod player;
+pub mod resampler;
 
 use crate::error::CoreResult;
 use cpal::traits::{DeviceTrait, HostTrait};

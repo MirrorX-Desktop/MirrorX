@@ -1,18 +1,43 @@
-use crate::{api::endpoint::message::EndPointAudioFrame, core_error, error::CoreResult};
-use cpal::SampleFormat;
-use mirrorx_native::opus::decoder::{
-    opus_decode, opus_decode_float, opus_decoder_create, opus_decoder_destroy, OpusDecoder,
+use crate::{
+    api::endpoint::message::EndPointAudioFrame, component::audio::resampler::Resampler, core_error,
+    error::CoreResult,
+};
+use cpal::{SampleFormat, SampleRate};
+use mirrorx_native::{
+    ffmpeg::avutil::{AVSampleFormat, AV_SAMPLE_FMT_FLT, AV_SAMPLE_FMT_S16},
+    opus::decoder::{
+        opus_decode, opus_decode_float, opus_decoder_create, opus_decoder_destroy, OpusDecoder,
+    },
 };
 
-#[derive(Debug)]
 pub struct AudioDecoder {
     opus_decoder: *mut OpusDecoder,
+    resampler: Option<Resampler>,
     channels: u8,
     sample_rate: u32,
     sample_format: SampleFormat,
+    out_channels: u8,
+    out_sample_format: SampleFormat,
+    out_sample_rate: SampleRate,
 }
 
 impl AudioDecoder {
+    pub fn new(
+        out_channels: u8,
+        out_sample_format: SampleFormat,
+        out_sample_rate: SampleRate,
+    ) -> AudioDecoder {
+        Self {
+            opus_decoder: std::ptr::null_mut(),
+            resampler: None,
+            channels: 0,
+            sample_rate: 0,
+            sample_format: SampleFormat::F32,
+            out_channels,
+            out_sample_format,
+            out_sample_rate,
+        }
+    }
     pub fn decode(&mut self, audio_frame: EndPointAudioFrame) -> CoreResult<Vec<u8>> {
         unsafe {
             let audio_frame_sample_format = audio_frame.sample_format.into();
@@ -41,6 +66,42 @@ impl AudioDecoder {
                 self.channels = audio_frame.channels;
                 self.sample_format = audio_frame_sample_format;
                 self.sample_rate = audio_frame.sample_rate;
+
+                if self.channels != self.out_channels
+                    || self.sample_rate != self.out_sample_rate.0
+                    || self.sample_format != self.out_sample_format
+                {
+                    let input_av_sample_format =
+                        cpal_sample_format_to_av_sample_format(self.sample_format);
+                    let output_av_sample_format =
+                        cpal_sample_format_to_av_sample_format(self.out_sample_format);
+
+                    self.resampler = Some(Resampler::new(
+                        480,
+                        self.channels as _,
+                        self.sample_rate as _,
+                        input_av_sample_format as _,
+                        self.out_channels as _,
+                        self.out_sample_rate.0 as _,
+                        output_av_sample_format as _,
+                    )?);
+
+                    tracing::info!(
+                        "use audio resampler with 
+                    input_channels:{}, 
+                    input_sample_rate:{}, 
+                    input_sample_format:{:?}, 
+                    output_channels:{}, 
+                    output_sample_rate:{}, 
+                    output_sample_format:{:?}",
+                        self.channels,
+                        self.sample_rate,
+                        self.sample_format,
+                        self.out_channels,
+                        self.out_sample_rate.0,
+                        self.out_sample_format
+                    );
+                }
             }
 
             let mut buffer = Vec::<u8>::with_capacity(960 * self.sample_format.sample_size());
@@ -71,18 +132,11 @@ impl AudioDecoder {
                 (ret as usize) * self.sample_format.sample_size() * (self.channels as usize),
             );
 
-            Ok(buffer)
-        }
-    }
-}
+            if let Some(ref mut resampler) = self.resampler {
+                buffer = resampler.convert(buffer.as_slice())?;
+            }
 
-impl Default for AudioDecoder {
-    fn default() -> Self {
-        Self {
-            opus_decoder: std::ptr::null_mut(),
-            channels: 0,
-            sample_format: SampleFormat::I16,
-            sample_rate: 0,
+            Ok(buffer)
         }
     }
 }
@@ -92,5 +146,13 @@ impl Drop for AudioDecoder {
         if !self.opus_decoder.is_null() {
             unsafe { opus_decoder_destroy(self.opus_decoder) }
         }
+    }
+}
+
+const fn cpal_sample_format_to_av_sample_format(sample_format: SampleFormat) -> AVSampleFormat {
+    match sample_format {
+        SampleFormat::I16 => AV_SAMPLE_FMT_S16,
+        SampleFormat::U16 => AV_SAMPLE_FMT_S16,
+        SampleFormat::F32 => AV_SAMPLE_FMT_FLT,
     }
 }

@@ -31,8 +31,8 @@ pub async fn create_active_endpoint_client(
     Arc<EndPointClient>,
     tokio::sync::mpsc::Receiver<DesktopDecodeFrame>,
 )> {
-    let (render_frame_tx, render_frame_rx) = tokio::sync::mpsc::channel(1);
-    let (audio_frame_tx, audio_frame_rx) = tokio::sync::mpsc::channel(1);
+    let (render_frame_tx, render_frame_rx) = tokio::sync::mpsc::channel(180);
+    let (audio_frame_tx, audio_frame_rx) = tokio::sync::mpsc::channel(180);
 
     let video_frame_tx = serve_video_decode(endpoint_id, render_frame_tx);
     serve_audio_decode(endpoint_id, audio_frame_rx);

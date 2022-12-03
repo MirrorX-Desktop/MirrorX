@@ -1,3 +1,7 @@
+use crate::{core_error, error::CoreResult};
+use mirrorx_native::ffmpeg::{avutil::*, swresample::*};
+use std::os::raw::c_void;
+
 const OPT_IN_CHANNEL_LAYOUT: &[u8] = b"in_chlayout\0";
 const OPT_IN_SAMPLE_RATE: &[u8] = b"in_sample_rate\0";
 const OPT_IN_SAMPLE_FORMAT: &[u8] = b"in_sample_fmt\0";
@@ -6,7 +10,7 @@ const OPT_OUT_SAMPLE_RATE: &[u8] = b"out_sample_rate\0";
 const OPT_OUT_SAMPLE_FORMAT: &[u8] = b"out_sample_fmt\0";
 
 #[derive(Debug)]
-struct ResampleContext {
+pub struct Resampler {
     swr_context: *mut SwrContext,
 
     // src_data: *mut *mut u8,
@@ -25,8 +29,8 @@ struct ResampleContext {
     max_dst_nb_samples: i32,
 }
 
-impl ResampleContext {
-    fn new(
+impl Resampler {
+    pub fn new(
         nb_samples: i32,
         input_channels: u16,
         input_sample_rate: i32,
@@ -142,26 +146,6 @@ impl ResampleContext {
                 return Err(core_error!("init swr context failed ({})", ret));
             }
 
-            // let src_nb_samples = nb_samples;
-            // let src_nb_channels = src_channel_layout.nb_channels;
-            // let mut src_data = std::ptr::null_mut();
-            // let mut src_linesize = 0;
-            // let ret = av_samples_alloc_array_and_samples(
-            //     &mut src_data,
-            //     &mut src_linesize,
-            //     src_nb_channels,
-            //     src_nb_samples,
-            //     input_sample_format,
-            //     0,
-            // );
-
-            // if ret < 0 {
-            //     return Err(core_error!(
-            //         "av_samples_alloc_array_and_samples failed ({})",
-            //         ret
-            //     ));
-            // }
-
             let dst_nb_samples = av_rescale_rnd(
                 nb_samples.into(),
                 output_sample_rate.into(),
@@ -208,68 +192,73 @@ impl ResampleContext {
         }
     }
 
-    unsafe fn convert(&mut self, input_data: &[u8]) -> CoreResult<Vec<u8>> {
-        self.dst_nb_samples = av_rescale_rnd(
-            swr_get_delay(self.swr_context, self.src_rate as _) + (self.src_nb_samples as i64),
-            self.dst_rate.into(),
-            self.src_rate.into(),
-            AV_ROUND_UP,
-        ) as i32;
+    pub fn convert(&mut self, input_data: &[u8]) -> CoreResult<Vec<u8>> {
+        unsafe {
+            self.dst_nb_samples = av_rescale_rnd(
+                swr_get_delay(self.swr_context, self.src_rate as _) + (self.src_nb_samples as i64),
+                self.dst_rate.into(),
+                self.src_rate.into(),
+                AV_ROUND_UP,
+            ) as i32;
 
-        if self.dst_nb_samples > self.max_dst_nb_samples {
-            av_freep(self.dst_data as *mut c_void);
+            if self.dst_nb_samples > self.max_dst_nb_samples {
+                av_freep(self.dst_data as *mut c_void);
 
-            let ret = av_samples_alloc(
+                let ret = av_samples_alloc(
+                    self.dst_data,
+                    &mut self.dst_linesize,
+                    self.dst_nb_channels,
+                    self.dst_nb_samples,
+                    self.dst_sample_fmt,
+                    1,
+                );
+
+                if ret < 0 {
+                    return Err(core_error!("av_samples_alloc failed ({})", ret));
+                }
+
+                self.max_dst_nb_samples = self.dst_nb_samples;
+            }
+
+            let ret = swr_convert(
+                self.swr_context,
                 self.dst_data,
+                self.dst_nb_samples,
+                &input_data.as_ptr(),
+                self.src_nb_samples,
+            );
+
+            if ret < 0 {
+                return Err(core_error!("swr_convert failed ({})", ret));
+            }
+
+            let dst_buffer_size = av_samples_get_buffer_size(
                 &mut self.dst_linesize,
                 self.dst_nb_channels,
-                self.dst_nb_samples,
+                ret,
                 self.dst_sample_fmt,
                 1,
             );
 
-            if ret != 0 {
-                return Err(core_error!("av_samples_alloc failed ({})", ret));
+            if dst_buffer_size < 0 {
+                return Err(core_error!(
+                    "av_samples_get_buffer_size failed ({})",
+                    dst_buffer_size
+                ));
             }
 
-            self.max_dst_nb_samples = self.dst_nb_samples;
+            Ok(std::slice::from_raw_parts(*self.dst_data, dst_buffer_size as usize).to_vec())
         }
-
-        let ret = swr_convert(
-            self.swr_context,
-            self.dst_data,
-            self.dst_nb_samples,
-            &input_data.as_ptr(),
-            self.src_nb_samples,
-        );
-
-        if ret < 0 {
-            return Err(core_error!("swr_convert failed ({})", ret));
-        }
-
-        let dst_buffer_size = av_samples_get_buffer_size(
-            &mut self.dst_linesize,
-            self.dst_nb_channels,
-            ret,
-            self.dst_sample_fmt,
-            1,
-        );
-
-        if dst_buffer_size < 0 {
-            return Err(core_error!(
-                "av_samples_get_buffer_size failed ({})",
-                dst_buffer_size
-            ));
-        }
-
-        Ok(std::slice::from_raw_parts(*self.dst_data, dst_buffer_size as usize).to_vec())
     }
 }
 
-impl Drop for ResampleContext {
+impl Drop for Resampler {
     fn drop(&mut self) {
         if !self.swr_context.is_null() {
-            unsafe { swr_free(&mut self.swr_context) }
+            unsafe {
+                av_freep(self.dst_data as *mut c_void);
+                swr_free(&mut self.swr_context);
+            }
         }
     }
 }
