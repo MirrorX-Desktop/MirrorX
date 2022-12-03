@@ -1,8 +1,10 @@
 <script lang="ts">
 	import { invoke_get_lan_discover_nodes } from '$lib/components/command';
 	import { current_lan_discover_nodes, type LanDiscoverNode } from '$lib/components/stores';
+	import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 	import { onDestroy, onMount } from 'svelte';
 	import type { Unsubscriber } from 'svelte/store';
+	import { get } from 'svelte/store';
 	import { emitHomeNotification } from '../home_notification_center.svelte';
 	import Panel from './panel.svelte';
 
@@ -12,6 +14,8 @@
 	let lan_discover_nodes_unsubscriber: Unsubscriber | null = null;
 
 	onMount(async () => {
+		nodes = get(current_lan_discover_nodes);
+
 		lan_discover_nodes_unsubscriber = current_lan_discover_nodes.subscribe((v) => {
 			nodes = v;
 		});

@@ -9,10 +9,11 @@
 	import HomeNotificationCenter, { emitHomeNotification } from './home_notification_center.svelte';
 	import type { Unsubscriber } from 'svelte/store';
 	import { page } from '$app/stores';
-	import { current_domain, type CurrentDomain } from '../../components/stores';
+	import { current_domain, current_lan_discover_nodes, type CurrentDomain } from '../../components/stores';
 	import {
 		invoke_get_current_domain,
 		invoke_get_language,
+		invoke_get_lan_discover_nodes,
 		invoke_init_config,
 		invoke_init_lan,
 		invoke_init_signaling
@@ -21,12 +22,12 @@
 	import DialogSelectLanguage from './dialog_select_language.svelte';
 	import type { UpdateLanguageEvent } from '$lib/components/rust_event';
 	import type { Locales } from '$lib/i18n/i18n-types';
-	import { clipboard } from '@tauri-apps/api';
 
 	let domain: CurrentDomain | null = null;
 	let domain_unsubscribe: Unsubscriber | null = null;
 	let switch_primary_unlisten_fn: UnlistenFn | null = null;
 	let update_language_unlisten_fn: UnlistenFn | null = null;
+	let update_lan_discover_nodes_unlisten_fn: UnlistenFn | null = null;
 
 	onMount(async () => {
 		domain_unsubscribe = current_domain.subscribe((value) => {
@@ -35,9 +36,19 @@
 		});
 
 		switch_primary_unlisten_fn = await listen('home:switch_primary_domain', switch_primary_domain);
+
 		update_language_unlisten_fn = await listen<UpdateLanguageEvent>('update_language', (event) =>
 			setLocale(event.payload.language as Locales)
 		);
+
+		update_lan_discover_nodes_unlisten_fn = await listen<void>('update_lan_discover_nodes', async (_) => {
+			try {
+				let nodes = await invoke_get_lan_discover_nodes();
+				current_lan_discover_nodes.set(nodes);
+			} catch (error: any) {
+				await emitHomeNotification({ level: 'error', title: 'Error', message: error.toString() });
+			}
+		});
 	});
 
 	onDestroy(() => {
@@ -52,6 +63,10 @@
 		if (update_language_unlisten_fn) {
 			update_language_unlisten_fn();
 		}
+
+		if (update_lan_discover_nodes_unlisten_fn != null) {
+			update_lan_discover_nodes_unlisten_fn();
+		}
 	});
 
 	(async function () {
@@ -59,7 +74,7 @@
 			await invoke_init_config();
 			console.log('finish init config');
 
-			await invoke_init_lan();
+			await invoke_init_lan({ force: false });
 			console.log('finish init lan discover');
 
 			await invoke_init_signaling({ force: false });

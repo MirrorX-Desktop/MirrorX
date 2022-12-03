@@ -80,8 +80,8 @@ export function invoke_get_language(): Promise<string> {
 	return invoke('get_language');
 }
 
-export function invoke_init_lan(): Promise<void> {
-	return invoke('init_lan');
+export function invoke_init_lan(args: { force: boolean }): Promise<void> {
+	return invoke('init_lan', args);
 }
 
 export function invoke_get_lan_discover_nodes(): Promise<

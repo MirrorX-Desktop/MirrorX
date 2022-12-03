@@ -70,10 +70,11 @@
 		let input_event = event as InputEvent & {
 			currentTarget: EventTarget & HTMLInputElement;
 		};
-
+		console.log(input_event);
 		if (input_event.inputType == 'insertFromPaste') {
 			// paste device_id from clipboard
 			readText().then((v) => {
+				console.log('read clip text');
 				let matched_ids = v?.match(/^\d{2}-\d{4}-\d{4}$/g);
 				if (matched_ids != null && matched_ids.length > 0) {
 					input_remote_device_id = matched_ids[0];
