@@ -58,18 +58,18 @@ fn play_samples<T>(data: &mut [T], rx: &mut Receiver<Vec<u8>>)
 where
     T: Sample,
 {
-    match rx.try_recv() {
-        Ok(samples) => unsafe {
+    match rx.blocking_recv() {
+        Some(samples) => unsafe {
             std::ptr::copy_nonoverlapping(
                 std::mem::transmute(samples.as_ptr()),
                 data.as_mut_ptr(),
                 (samples.len() / T::FORMAT.sample_size()).min(data.len()),
             )
         },
-        Err(err) => {
-            if err == TryRecvError::Disconnected {
-                // let _ = callback_exit_tx.try_send(());
-            }
+        None => {
+            // if err == TryRecvError::Disconnected {
+            //     // let _ = callback_exit_tx.try_send(());
+            // }
         }
     };
 }

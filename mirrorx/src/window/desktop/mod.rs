@@ -388,13 +388,15 @@ impl tauri_egui::eframe::App for DesktopWindow {
             tracing::info!(?self.input_commands, "input series");
 
             if let Some(client) = self.state.endpoint_client() {
-                if let Err(err) =
-                    client.blocking_send(&EndPointMessage::InputCommand(EndPointInput {
-                        events: self.input_commands.clone(),
-                    }))
-                {
-                    tracing::error!(?err, "endpoint input failed");
-                }
+                let events = self.input_commands.clone();
+                tokio::spawn(async move {
+                    if let Err(err) = client
+                        .send(&EndPointMessage::InputCommand(EndPointInput { events }))
+                        .await
+                    {
+                        tracing::error!(?err, "endpoint input failed");
+                    }
+                });
             }
 
             self.input_commands.clear();

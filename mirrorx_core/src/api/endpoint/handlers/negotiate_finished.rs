@@ -157,7 +157,6 @@ fn spawn_desktop_capture_and_encode_process(client: Arc<EndPointClient>) {
             match duplicator.capture() {
                 Ok(capture_frame) => {
                     if let Err(_) = capture_frame_tx.blocking_send(capture_frame) {
-                        tracing::error!("capture frame tx closed");
                         return;
                     }
                 }
@@ -208,13 +207,13 @@ fn spawn_desktop_capture_and_encode_process(client: Arc<EndPointClient>) {
 }
 
 fn spawn_audio_capture_and_encode_process(client: Arc<EndPointClient>) {
-    let mut exit_rx = client.close_receiver();
+    // let mut exit_rx = client.close_receiver();
 
     tokio::task::spawn_blocking(move || loop {
-        let Err(async_broadcast::TryRecvError::Empty) = exit_rx.try_recv() else {
-            tracing::info!("receive exit signal, exit");
-            return;
-        };
+        // let Err(async_broadcast::TryRecvError::Empty) = exit_rx.try_recv() else {
+        //     tracing::info!("receive exit signal, exit");
+        //     return;
+        // };
 
         let (stream, mut rx) = match new_record_stream_and_rx() {
             Ok((stream, rx)) => (stream, rx),
@@ -232,10 +231,10 @@ fn spawn_audio_capture_and_encode_process(client: Arc<EndPointClient>) {
         let mut audio_encoder = AudioEncoder::default();
 
         loop {
-            let Err(async_broadcast::TryRecvError::Empty) = exit_rx.try_recv() else {
-                tracing::info!("receive exit signal, exit");
-                return;
-            };
+            // let Err(async_broadcast::TryRecvError::Empty) = exit_rx.try_recv() else {
+            //     tracing::info!("receive exit signal, exit");
+            //     return;
+            // };
 
             match rx.blocking_recv() {
                 Some(audio_frame) => match audio_encoder.encode(audio_frame) {

@@ -160,15 +160,12 @@ impl VideoDecoder {
                     format,
                 };
 
-                if let Err(err) = self.render_frame_tx.try_send(desktop_decode_frame) {
-                    match err {
-                        tokio::sync::mpsc::error::TrySendError::Full(_) => {
-                            tracing::warn!("video render tx is full!")
-                        }
-                        tokio::sync::mpsc::error::TrySendError::Closed(_) => {
-                            return Err(core_error!("video render tx has closed"))
-                        }
-                    }
+                if self
+                    .render_frame_tx
+                    .blocking_send(desktop_decode_frame)
+                    .is_err()
+                {
+                    return Err(core_error!("video render tx has closed"));
                 }
 
                 av_frame_unref(tmp_frame);

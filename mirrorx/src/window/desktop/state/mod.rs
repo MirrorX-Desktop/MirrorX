@@ -171,6 +171,13 @@ impl State {
     ) {
         let tx = self.tx.clone();
         tokio::spawn(async move {
+            send_event!(
+                tx,
+                Event::UpdateVisitState {
+                    new_state: VisitState::Negotiating
+                }
+            );
+
             match create_active_endpoint_client(
                 endpoint_id,
                 key_pair,
@@ -182,7 +189,7 @@ impl State {
                     send_event!(
                         tx,
                         Event::UpdateVisitState {
-                            new_state: VisitState::Negotiating
+                            new_state: VisitState::Serving
                         }
                     );
                     send_event!(tx, Event::UpdateEndPointClient { client });
@@ -192,7 +199,6 @@ impl State {
                             render_rx: render_frame_rx
                         }
                     );
-                    send_event!(tx, Event::EmitNegotiateDesktopParams);
                 }
                 Err(err) => {
                     send_event!(

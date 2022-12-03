@@ -32,7 +32,7 @@ pub fn serve_audio_decode(id: EndPointID, mut decode_rx: Receiver<EndPointAudioF
                 Some(audio_frame) => {
                     match audio_decoder.decode(audio_frame) {
                         Ok(buffer) => {
-                            if let Err(err) = samples_tx.try_send(buffer) {
+                            if let Err(err) = samples_tx.blocking_send(buffer) {
                                 tracing::error!("send audio play buffer failed");
                             }
                         }

@@ -75,7 +75,7 @@ where
         },
     };
 
-    if tx.try_send(audio_encode_frame).is_err() {
+    if tx.blocking_send(audio_encode_frame).is_err() {
         tracing::warn!("audio encode frame tx try send failed!");
     }
 }
