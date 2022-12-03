@@ -1,7 +1,9 @@
 mod desktop;
 
 use self::desktop::DesktopWindow;
+use mirrorx_core::{api::endpoint::id::EndPointID, utility::nonce_value::NonceValue};
 use once_cell::sync::Lazy;
+use ring::aead::{OpeningKey, SealingKey};
 use std::{collections::HashMap, net::SocketAddr, sync::Arc};
 use tauri_egui::{
     eframe::CreationContext,
@@ -48,12 +50,8 @@ static MONOSPACE_FONTS: Lazy<HashMap<&str, &[u8]>> = Lazy::new(|| {
 pub fn create_desktop_window(
     cc: &CreationContext,
     gl_context: Arc<tauri_egui::eframe::glow::Context>,
-    local_device_id: i64,
-    remote_device_id: i64,
-    opening_key: Vec<u8>,
-    opening_nonce: Vec<u8>,
-    sealing_key: Vec<u8>,
-    sealing_nonce: Vec<u8>,
+    endpoint_id: EndPointID,
+    key_pair: Option<(OpeningKey<NonceValue>, SealingKey<NonceValue>)>,
     visit_credentials: String,
     addr: SocketAddr,
 ) -> DesktopWindow {
@@ -62,12 +60,8 @@ pub fn create_desktop_window(
     // cc.egui_ctx.set_debug_on_hover(true);
 
     crate::window::desktop::DesktopWindow::new(
-        local_device_id,
-        remote_device_id,
-        opening_key,
-        opening_nonce,
-        sealing_key,
-        sealing_nonce,
+        endpoint_id,
+        key_pair,
         visit_credentials,
         addr,
         gl_context,

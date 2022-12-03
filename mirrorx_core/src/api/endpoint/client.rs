@@ -71,23 +71,23 @@ impl EndPointClient {
 
     pub async fn new_passive(
         endpoint_id: EndPointID,
-        stream_key: Option<(OpeningKey<NonceValue>, SealingKey<NonceValue>)>,
+        key_pair: Option<(OpeningKey<NonceValue>, SealingKey<NonceValue>)>,
         stream: EndPointStream,
     ) -> CoreResult<()> {
-        let _ = EndPointClient::create(false, endpoint_id, stream_key, stream, None, None).await?;
+        let _ = EndPointClient::create(false, endpoint_id, key_pair, stream, None, None).await?;
         Ok(())
     }
 
     async fn create(
         active: bool,
         endpoint_id: EndPointID,
-        stream_key: Option<(OpeningKey<NonceValue>, SealingKey<NonceValue>)>,
+        key_pair: Option<(OpeningKey<NonceValue>, SealingKey<NonceValue>)>,
         stream: EndPointStream,
         video_frame_tx: Option<tokio::sync::mpsc::Sender<EndPointVideoFrame>>,
         audio_frame_tx: Option<tokio::sync::mpsc::Sender<EndPointAudioFrame>>,
     ) -> CoreResult<Arc<EndPointClient>> {
         let (exit_tx, exit_rx) = async_broadcast::broadcast(16);
-        let (opening_key, sealing_key) = match stream_key {
+        let (opening_key, sealing_key) = match key_pair {
             Some((opening_key, sealing_key)) => (Some(opening_key), Some(sealing_key)),
             None => (None, None),
         };

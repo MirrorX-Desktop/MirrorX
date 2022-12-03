@@ -2,7 +2,10 @@ use std::net::SocketAddr;
 
 use super::UIState;
 use crate::window::create_desktop_window;
-use mirrorx_core::{core_error, error::CoreResult};
+use mirrorx_core::{
+    api::endpoint::id::EndPointID, core_error, error::CoreResult, utility::nonce_value::NonceValue,
+};
+use ring::aead::BoundKey;
 use tauri_egui::EguiPluginHandle;
 
 #[tauri::command]
@@ -35,6 +38,20 @@ pub async fn signaling_key_exchange(
         })
         .await?;
 
+    let unbound_sealing_key =
+        ring::aead::UnboundKey::new(&ring::aead::AES_256_GCM, &resp.sealing_key_bytes)?;
+
+    let mut nonce = [0u8; 12];
+    nonce.copy_from_slice(&resp.sealing_nonce_bytes);
+    let sealing_key = ring::aead::SealingKey::new(unbound_sealing_key, NonceValue::new(nonce));
+
+    let unbound_opening_key =
+        ring::aead::UnboundKey::new(&ring::aead::AES_256_GCM, &resp.opening_key_bytes)?;
+
+    let mut nonce = [0u8; 12];
+    nonce.copy_from_slice(&resp.opening_nonce_bytes);
+    let opening_key = ring::aead::OpeningKey::new(unbound_opening_key, NonceValue::new(nonce));
+
     tracing::info!(?local_device_id, ?remote_device_id, "key exchange success");
 
     if let Err(err) = egui_plugin.create_window(
@@ -44,12 +61,11 @@ pub async fn signaling_key_exchange(
                 Box::new(create_desktop_window(
                     cc,
                     gl_context.clone(),
-                    local_device_id,
-                    remote_device_id,
-                    resp.opening_key_bytes,
-                    resp.opening_nonce_bytes,
-                    resp.sealing_key_bytes,
-                    resp.sealing_nonce_bytes,
+                    EndPointID::DeviceID {
+                        local: local_device_id,
+                        remote: remote_device_id,
+                    },
+                    Some((opening_key, sealing_key)),
                     resp.visit_credentials,
                     addr,
                 ))

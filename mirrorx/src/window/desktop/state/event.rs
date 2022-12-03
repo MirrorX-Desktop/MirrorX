@@ -1,9 +1,11 @@
 use super::VisitState;
 use mirrorx_core::{
-    api::endpoint::{client::EndPointClient, message::InputEvent},
+    api::endpoint::{client::EndPointClient, id::EndPointID},
     error::CoreError,
+    utility::nonce_value::NonceValue,
     DesktopDecodeFrame,
 };
+use ring::aead::{OpeningKey, SealingKey};
 use std::{net::SocketAddr, sync::Arc};
 use strum_macros::AsRefStr;
 use tokio::sync::mpsc::Receiver;
@@ -11,12 +13,8 @@ use tokio::sync::mpsc::Receiver;
 #[derive(AsRefStr)]
 pub enum Event {
     ConnectEndPoint {
-        local_device_id: i64,
-        remote_device_id: i64,
-        opening_key: Vec<u8>,
-        opening_nonce: Vec<u8>,
-        sealing_key: Vec<u8>,
-        sealing_nonce: Vec<u8>,
+        endpoint_id: EndPointID,
+        key_pair: Option<(OpeningKey<NonceValue>, SealingKey<NonceValue>)>,
         visit_credentials: String,
         addr: SocketAddr,
     },

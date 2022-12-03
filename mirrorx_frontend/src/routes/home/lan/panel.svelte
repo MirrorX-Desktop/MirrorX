@@ -20,6 +20,8 @@
 		faNetworkWired,
 		faDiagramProject
 	} from '@fortawesome/free-solid-svg-icons';
+	import { emitHomeNotification } from '../home_notification_center.svelte';
+	import { invoke_lan_connect } from '$lib/components/command';
 
 	export let is_orphan: boolean;
 	export let host_name: string;
@@ -28,6 +30,14 @@
 	export let os_version: string;
 
 	let show_connect_button: boolean = false;
+
+	const connect_lan = async () => {
+		try {
+			await invoke_lan_connect({ addr });
+		} catch (error: any) {
+			await emitHomeNotification({ level: 'error', title: 'Error', message: error.toString() });
+		}
+	};
 </script>
 
 <slot>
@@ -69,7 +79,7 @@
 					<Fa icon={faSpinner} spin />
 				</button> -->
 						<!-- {:else} -->
-						<button class="btn btn-xs btn-active inline-flex">
+						<button class="btn btn-xs btn-active inline-flex" on:click={connect_lan}>
 							<Fa icon={faDisplay} />
 							<!-- {$LL.Home.Pages.Connect.Desktop()} -->
 						</button>

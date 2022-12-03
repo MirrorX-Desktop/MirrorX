@@ -96,3 +96,7 @@ export function invoke_get_lan_discover_nodes(): Promise<
 > {
 	return invoke('get_lan_discover_nodes');
 }
+
+export function invoke_lan_connect(args: { addr: string }): Promise<void> {
+	return invoke('lan_connect', args);
+}

@@ -49,12 +49,8 @@ pub struct State {
 
 impl State {
     pub fn new(
-        local_device_id: i64,
-        remote_device_id: i64,
-        opening_key: Vec<u8>,
-        opening_nonce: Vec<u8>,
-        sealing_key: Vec<u8>,
-        sealing_nonce: Vec<u8>,
+        endpoint_id: EndPointID,
+        key_pair: Option<(OpeningKey<NonceValue>, SealingKey<NonceValue>)>,
         visit_credentials: String,
         addr: SocketAddr,
     ) -> Self {
@@ -63,18 +59,17 @@ impl State {
         send_event!(
             tx,
             Event::ConnectEndPoint {
-                local_device_id,
-                remote_device_id,
-                opening_key,
-                opening_nonce,
-                sealing_key,
-                sealing_nonce,
+                endpoint_id,
+                key_pair,
                 visit_credentials,
                 addr,
             }
         );
 
-        let mut format_remote_device_id = format_device_id(remote_device_id);
+        let mut format_remote_device_id = match endpoint_id {
+            EndPointID::DeviceID { local, remote } => format_device_id(remote),
+            EndPointID::LANID { local, remote } => remote.to_string(),
+        };
 
         Self {
             tx,
@@ -140,25 +135,12 @@ impl State {
         while let Ok(event) = self.rx.try_recv() {
             match event {
                 Event::ConnectEndPoint {
-                    local_device_id,
-                    remote_device_id,
-                    opening_key,
-                    opening_nonce,
-                    sealing_key,
-                    sealing_nonce,
+                    endpoint_id,
+                    key_pair,
                     visit_credentials,
                     addr,
                 } => {
-                    self.connect_endpoint(
-                        local_device_id,
-                        remote_device_id,
-                        sealing_key,
-                        sealing_nonce,
-                        opening_key,
-                        opening_nonce,
-                        visit_credentials,
-                        addr,
-                    );
+                    self.connect_endpoint(endpoint_id, key_pair, visit_credentials, addr);
                 }
                 Event::UpdateEndPointClient { client } => self.endpoint_client = Some(client),
                 Event::UpdateVisitState { new_state } => self.visit_state = new_state,
@@ -182,87 +164,47 @@ impl State {
     #[allow(clippy::too_many_arguments)]
     fn connect_endpoint(
         &mut self,
-        local_device_id: i64,
-        remote_device_id: i64,
-        sealing_key: Vec<u8>,
-        sealing_nonce: Vec<u8>,
-        opening_key: Vec<u8>,
-        opening_nonce: Vec<u8>,
+        endpoint_id: EndPointID,
+        key_pair: Option<(OpeningKey<NonceValue>, SealingKey<NonceValue>)>,
         visit_credentials: String,
         addr: SocketAddr,
     ) {
-        let res = || -> CoreResult<(SealingKey<NonceValue>, OpeningKey<NonceValue>)> {
-            let unbound_sealing_key =
-                ring::aead::UnboundKey::new(&ring::aead::AES_256_GCM, &sealing_key)?;
-
-            let mut nonce = [0u8; 12];
-            nonce.copy_from_slice(&sealing_nonce);
-            let sealing_key =
-                ring::aead::SealingKey::new(unbound_sealing_key, NonceValue::new(nonce));
-
-            let unbound_opening_key =
-                ring::aead::UnboundKey::new(&ring::aead::AES_256_GCM, &opening_key)?;
-
-            let mut nonce = [0u8; 12];
-            nonce.copy_from_slice(&opening_nonce);
-            let opening_key =
-                ring::aead::OpeningKey::new(unbound_opening_key, NonceValue::new(nonce));
-
-            Ok((sealing_key, opening_key))
-        }();
-
-        match res {
-            Ok((sealing_key, opening_key)) => {
-                let tx = self.tx.clone();
-                tokio::spawn(async move {
-                    match create_active_endpoint_client(
-                        EndPointID::DeviceID {
-                            local: local_device_id,
-                            remote: remote_device_id,
-                        },
-                        Some((opening_key, sealing_key)),
-                        EndPointStream::PublicTCP(addr),
-                    )
-                    .await
-                    {
-                        Ok((client, render_frame_rx)) => {
-                            send_event!(
-                                tx,
-                                Event::UpdateVisitState {
-                                    new_state: VisitState::Negotiating
-                                }
-                            );
-                            send_event!(tx, Event::UpdateEndPointClient { client });
-                            send_event!(
-                                tx,
-                                Event::SetRenderFrameReceiver {
-                                    render_rx: render_frame_rx
-                                }
-                            );
-                            send_event!(tx, Event::EmitNegotiateDesktopParams);
+        let tx = self.tx.clone();
+        tokio::spawn(async move {
+            match create_active_endpoint_client(
+                endpoint_id,
+                key_pair,
+                EndPointStream::PublicTCP(addr),
+            )
+            .await
+            {
+                Ok((client, render_frame_rx)) => {
+                    send_event!(
+                        tx,
+                        Event::UpdateVisitState {
+                            new_state: VisitState::Negotiating
                         }
-                        Err(err) => {
-                            send_event!(
-                                tx,
-                                Event::UpdateVisitState {
-                                    new_state: VisitState::ErrorOccurred
-                                }
-                            );
-                            send_event!(tx, Event::UpdateError { err });
+                    );
+                    send_event!(tx, Event::UpdateEndPointClient { client });
+                    send_event!(
+                        tx,
+                        Event::SetRenderFrameReceiver {
+                            render_rx: render_frame_rx
                         }
-                    }
-                });
+                    );
+                    send_event!(tx, Event::EmitNegotiateDesktopParams);
+                }
+                Err(err) => {
+                    send_event!(
+                        tx,
+                        Event::UpdateVisitState {
+                            new_state: VisitState::ErrorOccurred
+                        }
+                    );
+                    send_event!(tx, Event::UpdateError { err });
+                }
             }
-            Err(err) => {
-                send_event!(
-                    self.tx,
-                    Event::UpdateVisitState {
-                        new_state: VisitState::ErrorOccurred
-                    }
-                );
-                send_event!(self.tx, Event::UpdateError { err });
-            }
-        }
+        });
     }
 
     fn emit_negotiate_desktop_params(&mut self) {

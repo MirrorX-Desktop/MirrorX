@@ -25,7 +25,7 @@ pub enum EndPointStream {
 
 pub async fn create_active_endpoint_client(
     endpoint_id: EndPointID,
-    stream_key: Option<(OpeningKey<NonceValue>, SealingKey<NonceValue>)>,
+    key_pair: Option<(OpeningKey<NonceValue>, SealingKey<NonceValue>)>,
     stream: EndPointStream,
 ) -> CoreResult<(
     Arc<EndPointClient>,
@@ -39,7 +39,7 @@ pub async fn create_active_endpoint_client(
 
     let client = EndPointClient::new_active(
         endpoint_id,
-        stream_key,
+        key_pair,
         stream,
         video_frame_tx,
         audio_frame_tx,
@@ -51,9 +51,9 @@ pub async fn create_active_endpoint_client(
 
 pub async fn create_passive_endpoint_client(
     endpoint_id: EndPointID,
-    stream_key: Option<(OpeningKey<NonceValue>, SealingKey<NonceValue>)>,
+    key_pair: Option<(OpeningKey<NonceValue>, SealingKey<NonceValue>)>,
     stream: EndPointStream,
 ) -> CoreResult<()> {
-    EndPointClient::new_passive(endpoint_id, stream_key, stream).await?;
+    EndPointClient::new_passive(endpoint_id, key_pair, stream).await?;
     Ok(())
 }

@@ -69,6 +69,7 @@ async fn main() {
             command::set_language,
             command::get_language,
             command::get_lan_discover_nodes,
+            command::lan_connect,
         ])
         .build(tauri::generate_context!())
         .expect("error while running tauri application")

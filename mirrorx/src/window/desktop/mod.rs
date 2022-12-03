@@ -4,12 +4,15 @@ mod state;
 use self::desktop_render::DesktopRender;
 use egui_extras::RetainedImage;
 use mirrorx_core::{
-    api::endpoint::message::{
-        EndPointInput, EndPointMessage, InputEvent, KeyboardEvent, MouseEvent,
+    api::endpoint::{
+        id::EndPointID,
+        message::{EndPointInput, EndPointMessage, InputEvent, KeyboardEvent, MouseEvent},
     },
-    component::input::key::{KeyboardKey, MouseKey},
+    component::input::key::MouseKey,
+    utility::nonce_value::NonceValue,
 };
 use once_cell::sync::Lazy;
+use ring::aead::{OpeningKey, SealingKey};
 use state::State;
 use std::{
     net::SocketAddr,
@@ -43,26 +46,13 @@ pub struct DesktopWindow {
 impl DesktopWindow {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
-        local_device_id: i64,
-        remote_device_id: i64,
-        opening_key: Vec<u8>,
-        opening_nonce: Vec<u8>,
-        sealing_key: Vec<u8>,
-        sealing_nonce: Vec<u8>,
+        endpoint_id: EndPointID,
+        key_pair: Option<(OpeningKey<NonceValue>, SealingKey<NonceValue>)>,
         visit_credentials: String,
         addr: SocketAddr,
         gl_context: Arc<Context>,
     ) -> Self {
-        let state = State::new(
-            local_device_id,
-            remote_device_id,
-            opening_key,
-            opening_nonce,
-            sealing_key,
-            sealing_nonce,
-            visit_credentials,
-            addr,
-        );
+        let state = State::new(endpoint_id, key_pair, visit_credentials, addr);
 
         let desktop_render =
             DesktopRender::new(gl_context.as_ref()).expect("create desktop render failed");
