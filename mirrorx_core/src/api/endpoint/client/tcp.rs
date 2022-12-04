@@ -104,14 +104,19 @@ fn serve_tcp_read(
                 }
             };
 
-            if let Some(ref mut opening_key) = opening_key {
-                if let Err(err) =
-                    opening_key.open_in_place(ring::aead::Aad::empty(), buffer.as_mut())
-                {
-                    tracing::error!(?err, "open endpoint message packet failed");
-                    break;
+            let buffer_len = if let Some(ref mut opening_key) = opening_key {
+                match opening_key.open_in_place(ring::aead::Aad::empty(), buffer.as_mut()) {
+                    Ok(output) => output.len(),
+                    Err(err) => {
+                        tracing::error!(?err, "open endpoint message packet failed");
+                        break;
+                    }
                 }
-            }
+            } else {
+                buffer.len()
+            };
+
+            buffer.truncate(buffer_len);
 
             if tx.send(buffer.freeze()).await.is_err() {
                 tracing::error!(?endpoint_id, "output channel closed");
