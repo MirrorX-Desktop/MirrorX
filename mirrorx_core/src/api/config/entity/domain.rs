@@ -5,7 +5,6 @@ use crate::{
 use r2d2::{Pool, PooledConnection};
 use r2d2_sqlite::SqliteConnectionManager;
 use rusqlite::{params, OptionalExtension, Row};
-use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct Domain {

@@ -95,7 +95,6 @@ fn spawn_desktop_capture_and_encode_process(client: Arc<EndPointClient>) {
                     if let Err(err) = encoder.encode(capture_frame) {
                         if let CoreError::OutgoingMessageChannelDisconnect = err {
                             tracing::info!("desktop capture and encode process exit");
-                            client.close();
                             return;
                         } else {
                             tracing::error!("video encode failed");

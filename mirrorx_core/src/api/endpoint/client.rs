@@ -46,7 +46,6 @@ static BINARY_SERIALIZER: Lazy<
 pub struct EndPointClient {
     endpoint_id: EndPointID,
     monitor: Arc<RwLock<Option<Arc<Monitor>>>>,
-    exit_tx: async_broadcast::Sender<()>,
     tx: tokio::sync::mpsc::Sender<Vec<u8>>,
 }
 
@@ -86,7 +85,6 @@ impl EndPointClient {
         video_frame_tx: Option<tokio::sync::mpsc::Sender<EndPointVideoFrame>>,
         audio_frame_tx: Option<tokio::sync::mpsc::Sender<EndPointAudioFrame>>,
     ) -> CoreResult<Arc<EndPointClient>> {
-        let (exit_tx, exit_rx) = async_broadcast::broadcast(16);
         let (opening_key, sealing_key) = match key_pair {
             Some((opening_key, sealing_key)) => (Some(opening_key), Some(sealing_key)),
             None => (None, None),
@@ -135,7 +133,6 @@ impl EndPointClient {
         let client = Arc::new(EndPointClient {
             endpoint_id,
             monitor: Arc::new(RwLock::new(primary_monitor)),
-            exit_tx,
             tx,
         });
 
@@ -169,14 +166,6 @@ impl EndPointClient {
             .send(buffer)
             .await
             .map_err(|_| CoreError::OutgoingMessageChannelDisconnect)
-    }
-
-    pub fn close(&self) {
-        let _ = self.exit_tx.try_broadcast(());
-    }
-
-    pub fn close_receiver(&self) -> async_broadcast::Receiver<()> {
-        self.exit_tx.new_receiver()
     }
 }
 

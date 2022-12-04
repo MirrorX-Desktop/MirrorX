@@ -2,7 +2,6 @@ use crate::{core_error, error::CoreResult};
 use r2d2::{Pool, PooledConnection};
 use r2d2_sqlite::SqliteConnectionManager;
 use rusqlite::OptionalExtension;
-use std::sync::Arc;
 
 pub struct KVRepository {
     pool: Pool<SqliteConnectionManager>,
