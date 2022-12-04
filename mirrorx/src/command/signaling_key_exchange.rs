@@ -1,11 +1,14 @@
-use std::net::SocketAddr;
-
 use super::UIState;
 use crate::window::create_desktop_window;
 use mirrorx_core::{
     api::endpoint::id::EndPointID, core_error, error::CoreResult, utility::nonce_value::NonceValue,
 };
 use ring::aead::BoundKey;
+use std::{
+    net::{IpAddr, SocketAddr, ToSocketAddrs},
+    time::Duration,
+};
+use tauri::http::Uri;
 use tauri_egui::EguiPluginHandle;
 
 #[tauri::command]
@@ -18,9 +21,32 @@ pub async fn signaling_key_exchange(
     state: tauri::State<'_, UIState>,
     egui_plugin: tauri::State<'_, EguiPluginHandle>,
 ) -> CoreResult<()> {
-    let addr: SocketAddr = addr
-        .parse()
-        .map_err(|err| core_error!("parse SocketAddr from str failed ({})", err))?;
+    let Ok(uri) = Uri::try_from(&addr) else {
+        tracing::info!(?addr,"connect uri");
+        return Err(core_error!("parse addr to Uri failed"));
+    };
+
+    let Some(host) = uri.host().map(|host| host.to_string()) else {
+        tracing::info!(?uri,"get uri host");
+        return Err(core_error!("get Uri host failed"));
+    };
+
+    let (resolve_tx, resolve_rx) = tokio::sync::oneshot::channel();
+    tokio::task::spawn_blocking(move || {
+        if let Ok(resolved_addrs) = format!("{}:{}", host, 29000)
+            .to_socket_addrs()
+            .map(|addrs| addrs.collect::<Vec<SocketAddr>>())
+        {
+            let _ = resolve_tx.send(resolved_addrs);
+        }
+    });
+
+    let resolved_addrs = tokio::time::timeout(Duration::from_secs(10), resolve_rx).await??;
+
+    if resolved_addrs.is_empty() {
+        return Err(core_error!("can't resolve remote addr"));
+    }
+
     let local_device_id = local_device_id.replace('-', "").parse()?;
     let remote_device_id: i64 = remote_device_id.replace('-', "").parse()?;
     let window_label = format!("MirrorX {}", remote_device_id);
@@ -62,12 +88,12 @@ pub async fn signaling_key_exchange(
                     cc,
                     gl_context.clone(),
                     EndPointID::DeviceID {
-                        local_device_id: local_device_id,
-                        remote_device_id: remote_device_id,
+                        local_device_id,
+                        remote_device_id,
                     },
                     Some((opening_key, sealing_key)),
                     Some(resp.visit_credentials),
-                    addr,
+                    resolved_addrs[0],
                 ))
             } else {
                 panic!("get gl context failed");

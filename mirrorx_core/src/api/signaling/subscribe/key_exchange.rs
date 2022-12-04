@@ -16,7 +16,10 @@ use signaling_proto::message::{
     KeyExchangePassiveDeviceSecret, KeyExchangeReplyError, KeyExchangeReplyRequest,
     KeyExchangeRequest, KeyExchangeResult,
 };
-use std::net::SocketAddr;
+use std::{
+    net::{SocketAddr, ToSocketAddrs},
+    time::Duration,
+};
 use tonic::transport::{Channel, Uri};
 
 pub async fn handle(
@@ -39,18 +42,36 @@ pub async fn handle(
         return;
     };
 
-    let Some(host) = uri.host() else {
+    let Some(host) = uri.host().map(|host| host.to_string()) else {
         send_key_exchange_reply(client, req.active_device_id, req.passive_device_id, Err(KeyExchangeReplyError::Internal)).await;
         return;
     };
 
-    let Ok(mut addr) = host.parse::<SocketAddr>() else {
-         send_key_exchange_reply(client, req.active_device_id, req.passive_device_id, Err(KeyExchangeReplyError::Internal)).await;
-        tracing::error!("convert uri host to socket addr failed");
+    let (resolve_tx, resolve_rx) = tokio::sync::oneshot::channel();
+    tokio::task::spawn_blocking(move || {
+        if let Ok(resolved_addrs) = format!("{}:{}", host, 29000)
+            .to_socket_addrs()
+            .map(|addrs| addrs.collect::<Vec<SocketAddr>>())
+        {
+            let _ = resolve_tx.send(resolved_addrs);
+        }
+    });
+
+    let Ok(Ok(resolved_addrs)) = tokio::time::timeout(Duration::from_secs(10), resolve_rx).await else {
+        send_key_exchange_reply(client, req.active_device_id, req.passive_device_id, Err(KeyExchangeReplyError::Internal)).await;
         return;
     };
 
-    addr.set_port(29000);
+    if resolved_addrs.is_empty() {
+        send_key_exchange_reply(
+            client,
+            req.active_device_id,
+            req.passive_device_id,
+            Err(KeyExchangeReplyError::Internal),
+        )
+        .await;
+        return;
+    }
 
     let (active_device_id, passive_device_id, _, visit_credentials, sealing_key, opening_key) =
         match key_agreement(&domain, req).await {
@@ -100,7 +121,7 @@ pub async fn handle(
             remote_device_id: active_device_id,
         },
         Some((opening_key, sealing_key)),
-        crate::api::endpoint::EndPointStream::ActiveTCP(addr),
+        crate::api::endpoint::EndPointStream::ActiveTCP(resolved_addrs[0]),
         Some(visit_credentials),
     )
     .await
