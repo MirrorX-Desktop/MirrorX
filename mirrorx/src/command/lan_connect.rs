@@ -1,9 +1,8 @@
-use std::net::{IpAddr, SocketAddr};
-
 use crate::window::create_desktop_window;
 use mirrorx_core::{
     api::endpoint::id::EndPointID, core_error, error::CoreResult, utility::lan_ip::get_lan_ip,
 };
+use std::net::{IpAddr, SocketAddr};
 use tauri_egui::EguiPluginHandle;
 
 #[tauri::command]
@@ -26,11 +25,11 @@ pub async fn lan_connect(
                     cc,
                     gl_context.clone(),
                     EndPointID::LANID {
-                        local: local_ip,
-                        remote: remote_ip,
+                        local_ip: local_ip,
+                        remote_ip: remote_ip,
                     },
                     None,
-                    String::default(),
+                    None,
                     remote_addr,
                 ))
             } else {

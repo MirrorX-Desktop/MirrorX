@@ -56,6 +56,7 @@ impl EndPointClient {
         stream: EndPointStream,
         video_frame_tx: tokio::sync::mpsc::Sender<EndPointVideoFrame>,
         audio_frame_tx: tokio::sync::mpsc::Sender<EndPointAudioFrame>,
+        visit_credentials: Option<String>,
     ) -> CoreResult<Arc<EndPointClient>> {
         EndPointClient::create(
             true,
@@ -64,6 +65,7 @@ impl EndPointClient {
             stream,
             Some(video_frame_tx),
             Some(audio_frame_tx),
+            visit_credentials,
         )
         .await
     }
@@ -72,8 +74,18 @@ impl EndPointClient {
         endpoint_id: EndPointID,
         key_pair: Option<(OpeningKey<NonceValue>, SealingKey<NonceValue>)>,
         stream: EndPointStream,
+        visit_credentials: Option<String>,
     ) -> CoreResult<()> {
-        let _ = EndPointClient::create(false, endpoint_id, key_pair, stream, None, None).await?;
+        let _ = EndPointClient::create(
+            false,
+            endpoint_id,
+            key_pair,
+            stream,
+            None,
+            None,
+            visit_credentials,
+        )
+        .await?;
         Ok(())
     }
 
@@ -84,6 +96,7 @@ impl EndPointClient {
         stream: EndPointStream,
         video_frame_tx: Option<tokio::sync::mpsc::Sender<EndPointVideoFrame>>,
         audio_frame_tx: Option<tokio::sync::mpsc::Sender<EndPointAudioFrame>>,
+        mut visit_credentials: Option<String>,
     ) -> CoreResult<Arc<EndPointClient>> {
         let (opening_key, sealing_key) = match key_pair {
             Some((opening_key, sealing_key)) => (Some(opening_key), Some(sealing_key)),
@@ -91,7 +104,7 @@ impl EndPointClient {
         };
 
         let (tx, mut rx) = match stream {
-            EndPointStream::PublicTCP(addr) => {
+            EndPointStream::ActiveTCP(addr) => {
                 let stream = tokio::time::timeout(
                     Duration::from_secs(10),
                     tokio::net::TcpStream::connect(addr),
@@ -99,11 +112,11 @@ impl EndPointClient {
                 .await??;
                 serve_tcp(stream, endpoint_id, sealing_key, opening_key)?
             }
-            EndPointStream::PublicUDP(_) => panic!("not support yet"),
-            EndPointStream::PrivateTCP(stream) => {
+            EndPointStream::ActiveUDP(_) => panic!("not support yet"),
+            EndPointStream::PassiveTCP(stream) => {
                 serve_tcp(stream, endpoint_id, sealing_key, opening_key)?
             }
-            EndPointStream::PrivateUDP {
+            EndPointStream::PassiveUDP {
                 remote_addr,
                 socket,
             } => {
@@ -121,6 +134,12 @@ impl EndPointClient {
                 (tx, rx)
             }
         };
+
+        // public endpoints server need a visit_credentials to build tunnel so
+        // if it's not None, we should send the credentials to server first.
+        if let Some(visit_credentials) = visit_credentials.take() {
+            serve_handshake(&tx, &mut rx, visit_credentials, endpoint_id).await?;
+        }
 
         // active endpoint should start negotiate with passive endpoint
         let primary_monitor = if active {
@@ -173,6 +192,39 @@ impl Display for EndPointClient {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "EndPointClient({})", self.endpoint_id)
     }
+}
+
+async fn serve_handshake(
+    tx: &Sender<Vec<u8>>,
+    rx: &mut tokio::sync::mpsc::Receiver<Bytes>,
+    visit_credentials: String,
+    endpoint_id: EndPointID,
+) -> CoreResult<()> {
+    let EndPointID::DeviceID { local_device_id: local, remote_device_id: remote } = endpoint_id else {
+        return Err(core_error!("lan connection needn't device id"));
+    };
+
+    let handshake_request_buffer = BINARY_SERIALIZER.serialize(&EndPointHandshakeRequest {
+        visit_credentials,
+        device_id: local,
+    })?;
+
+    tx.send(handshake_request_buffer)
+        .await
+        .map_err(|_| CoreError::OutgoingMessageChannelDisconnect)?;
+
+    let handshake_response_buffer = tokio::time::timeout(RECV_MESSAGE_TIMEOUT, rx.recv())
+        .await?
+        .ok_or(CoreError::OutgoingMessageChannelDisconnect)?;
+
+    let resp: EndPointHandshakeResponse =
+        BINARY_SERIALIZER.deserialize(handshake_response_buffer.deref())?;
+
+    if resp.remote_device_id != remote {
+        return Err(core_error!("endpoints server build mismatch tunnel"));
+    }
+
+    Ok(())
 }
 
 async fn serve_active_negotiate(
@@ -236,8 +288,8 @@ fn serve_tcp(
     let framed = Framed::new(
         stream,
         LengthDelimitedCodec::builder()
-            .big_endian()
-            .length_field_length(4)
+            .little_endian()
+            .max_frame_length(32 * 1024 * 1024)
             .new_codec(),
     );
     let (sink, stream) = framed.split();
@@ -363,7 +415,7 @@ fn serve_udp_read(
                 }
             }
 
-            if tx.send(Bytes::from(buffer)).await.is_err() {
+            if tx.send(buffer.freeze()).await.is_err() {
                 tracing::error!(?remote_addr, "output channel closed");
                 break;
             }

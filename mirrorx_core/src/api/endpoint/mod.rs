@@ -14,10 +14,10 @@ use std::{net::SocketAddr, sync::Arc};
 use tokio::net::{TcpStream, UdpSocket};
 
 pub enum EndPointStream {
-    PublicTCP(SocketAddr),
-    PublicUDP(SocketAddr),
-    PrivateTCP(TcpStream),
-    PrivateUDP {
+    ActiveTCP(SocketAddr),
+    ActiveUDP(SocketAddr),
+    PassiveTCP(TcpStream),
+    PassiveUDP {
         remote_addr: SocketAddr,
         socket: UdpSocket,
     },
@@ -27,6 +27,7 @@ pub async fn create_active_endpoint_client(
     endpoint_id: EndPointID,
     key_pair: Option<(OpeningKey<NonceValue>, SealingKey<NonceValue>)>,
     stream: EndPointStream,
+    visit_credentials: Option<String>,
 ) -> CoreResult<(
     Arc<EndPointClient>,
     tokio::sync::mpsc::Receiver<DesktopDecodeFrame>,
@@ -43,6 +44,7 @@ pub async fn create_active_endpoint_client(
         stream,
         video_frame_tx,
         audio_frame_tx,
+        visit_credentials,
     )
     .await?;
 
@@ -53,7 +55,8 @@ pub async fn create_passive_endpoint_client(
     endpoint_id: EndPointID,
     key_pair: Option<(OpeningKey<NonceValue>, SealingKey<NonceValue>)>,
     stream: EndPointStream,
+    visit_credentials: Option<String>,
 ) -> CoreResult<()> {
-    EndPointClient::new_passive(endpoint_id, key_pair, stream).await?;
+    EndPointClient::new_passive(endpoint_id, key_pair, stream, visit_credentials).await?;
     Ok(())
 }

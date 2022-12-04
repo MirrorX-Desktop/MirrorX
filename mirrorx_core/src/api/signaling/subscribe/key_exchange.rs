@@ -96,11 +96,12 @@ pub async fn handle(
 
     if let Err(err) = create_passive_endpoint_client(
         EndPointID::DeviceID {
-            local: passive_device_id,
-            remote: active_device_id,
+            local_device_id: passive_device_id,
+            remote_device_id: active_device_id,
         },
         Some((opening_key, sealing_key)),
-        crate::api::endpoint::EndPointStream::PublicTCP(addr),
+        crate::api::endpoint::EndPointStream::ActiveTCP(addr),
+        Some(visit_credentials),
     )
     .await
     {

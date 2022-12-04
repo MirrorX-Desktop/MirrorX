@@ -62,11 +62,11 @@ pub async fn signaling_key_exchange(
                     cc,
                     gl_context.clone(),
                     EndPointID::DeviceID {
-                        local: local_device_id,
-                        remote: remote_device_id,
+                        local_device_id: local_device_id,
+                        remote_device_id: remote_device_id,
                     },
                     Some((opening_key, sealing_key)),
-                    resp.visit_credentials,
+                    Some(resp.visit_credentials),
                     addr,
                 ))
             } else {

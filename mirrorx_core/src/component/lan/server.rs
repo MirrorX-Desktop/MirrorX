@@ -33,11 +33,12 @@ impl Server {
 
                 if let Err(err) = create_passive_endpoint_client(
                     crate::api::endpoint::id::EndPointID::LANID {
-                        local: local_lan_ip,
-                        remote: addr.ip(),
+                        local_ip: local_lan_ip,
+                        remote_ip: addr.ip(),
                     },
                     None,
-                    EndPointStream::PrivateTCP(stream),
+                    EndPointStream::PassiveTCP(stream),
+                    None,
                 )
                 .await
                 {

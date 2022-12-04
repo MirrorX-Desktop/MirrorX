@@ -15,7 +15,7 @@ pub enum Event {
     ConnectEndPoint {
         endpoint_id: EndPointID,
         key_pair: Option<(OpeningKey<NonceValue>, SealingKey<NonceValue>)>,
-        visit_credentials: String,
+        visit_credentials: Option<String>,
         addr: SocketAddr,
     },
 
@@ -37,10 +37,5 @@ pub enum Event {
 
     SetRenderFrameReceiver {
         render_rx: Receiver<DesktopDecodeFrame>,
-    },
-
-    EmitNegotiateDesktopParams,
-    EmitNegotiateFinish {
-        expected_frame_rate: u8,
     },
 }
