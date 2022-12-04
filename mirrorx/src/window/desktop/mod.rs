@@ -326,11 +326,11 @@ impl DesktopWindow {
                     pos,
                     button,
                     pressed,
-                    modifiers,
+                    ..
                 } => {
-                    let Some(mouse_pos) = pos_calc_fn(*pos)else{
-                            continue;
-                        };
+                    let Some(mouse_pos) = pos_calc_fn(*pos) else {
+                        continue;
+                    };
 
                     let mouse_key = match button {
                         tauri_egui::egui::PointerButton::Primary => MouseKey::Left,
