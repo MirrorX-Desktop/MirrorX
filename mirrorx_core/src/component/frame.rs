@@ -1,6 +1,5 @@
+use cpal::SampleFormat;
 use std::time::Duration;
-
-use cpal::{SampleFormat, SampleRate};
 
 pub struct DesktopEncodeFrame {
     pub capture_time: Duration,

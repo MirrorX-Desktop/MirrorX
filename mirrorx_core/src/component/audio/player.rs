@@ -3,7 +3,7 @@ use cpal::{
     traits::{DeviceTrait, HostTrait},
     Sample, SampleFormat, SampleRate, Stream, StreamConfig, SupportedStreamConfig,
 };
-use tokio::sync::mpsc::{error::TryRecvError, Receiver, Sender};
+use tokio::sync::mpsc::{Receiver, Sender};
 
 pub fn default_output_config() -> CoreResult<SupportedStreamConfig> {
     let host = cpal::default_host();

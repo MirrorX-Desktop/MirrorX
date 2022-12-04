@@ -1,3 +1,7 @@
+mod tcp;
+mod udp;
+
+use self::{tcp::serve_tcp, udp::serve_udp};
 use super::{
     handlers::negotiate_desktop_params::handle_negotiate_desktop_params_request, id::EndPointID,
     message::*, EndPointStream,
@@ -16,21 +20,10 @@ use bincode::{
     DefaultOptions, Options,
 };
 use bytes::Bytes;
-use futures::{
-    stream::{SplitSink, SplitStream},
-    SinkExt, StreamExt,
-};
 use once_cell::sync::Lazy;
 use ring::aead::{OpeningKey, SealingKey};
-use std::{fmt::Display, net::SocketAddr, ops::Deref, sync::Arc, time::Duration};
-use tokio::{
-    net::TcpStream,
-    sync::{mpsc::Sender, RwLock},
-};
-use tokio_util::{
-    codec::{Framed, LengthDelimitedCodec},
-    udp::UdpFramed,
-};
+use std::{fmt::Display, ops::Deref, sync::Arc, time::Duration};
+use tokio::sync::{mpsc::Sender, RwLock};
 
 const RECV_MESSAGE_TIMEOUT: Duration = Duration::from_secs(30);
 
@@ -96,7 +89,7 @@ impl EndPointClient {
         stream: EndPointStream,
         video_frame_tx: Option<tokio::sync::mpsc::Sender<EndPointVideoFrame>>,
         audio_frame_tx: Option<tokio::sync::mpsc::Sender<EndPointAudioFrame>>,
-        mut visit_credentials: Option<String>,
+        visit_credentials: Option<String>,
     ) -> CoreResult<Arc<EndPointClient>> {
         let (opening_key, sealing_key) = match key_pair {
             Some((opening_key, sealing_key)) => (Some(opening_key), Some(sealing_key)),
@@ -110,36 +103,37 @@ impl EndPointClient {
                     tokio::net::TcpStream::connect(addr),
                 )
                 .await??;
-                serve_tcp(stream, endpoint_id, sealing_key, opening_key)?
+                serve_tcp(
+                    stream,
+                    endpoint_id,
+                    sealing_key,
+                    opening_key,
+                    visit_credentials,
+                )
+                .await?
             }
             EndPointStream::ActiveUDP(_) => panic!("not support yet"),
             EndPointStream::PassiveTCP(stream) => {
-                serve_tcp(stream, endpoint_id, sealing_key, opening_key)?
+                serve_tcp(
+                    stream,
+                    endpoint_id,
+                    sealing_key,
+                    opening_key,
+                    visit_credentials,
+                )
+                .await?
             }
-            EndPointStream::PassiveUDP {
-                remote_addr,
-                socket,
-            } => {
-                let (tx, rx) = tokio::sync::mpsc::channel(1);
-                let framed = UdpFramed::new(
+            EndPointStream::PassiveUDP { socket, .. } => {
+                serve_udp(
                     socket,
-                    LengthDelimitedCodec::builder()
-                        .big_endian()
-                        .length_field_length(4)
-                        .new_codec(),
-                );
-                let (sink, stream) = framed.split();
-                serve_udp_write(remote_addr, rx, sealing_key, sink);
-                let rx = serve_udp_read(remote_addr, opening_key, stream)?;
-                (tx, rx)
+                    endpoint_id,
+                    sealing_key,
+                    opening_key,
+                    visit_credentials,
+                )
+                .await?
             }
         };
-
-        // public endpoints server need a visit_credentials to build tunnel so
-        // if it's not None, we should send the credentials to server first.
-        if let Some(visit_credentials) = visit_credentials.take() {
-            serve_handshake(&tx, &mut rx, visit_credentials, endpoint_id).await?;
-        }
 
         // active endpoint should start negotiate with passive endpoint
         let primary_monitor = if active {
@@ -194,39 +188,6 @@ impl Display for EndPointClient {
     }
 }
 
-async fn serve_handshake(
-    tx: &Sender<Vec<u8>>,
-    rx: &mut tokio::sync::mpsc::Receiver<Bytes>,
-    visit_credentials: String,
-    endpoint_id: EndPointID,
-) -> CoreResult<()> {
-    let EndPointID::DeviceID { local_device_id: local, remote_device_id: remote } = endpoint_id else {
-        return Err(core_error!("lan connection needn't device id"));
-    };
-
-    let handshake_request_buffer = BINARY_SERIALIZER.serialize(&EndPointHandshakeRequest {
-        visit_credentials,
-        device_id: local,
-    })?;
-
-    tx.send(handshake_request_buffer)
-        .await
-        .map_err(|_| CoreError::OutgoingMessageChannelDisconnect)?;
-
-    let handshake_response_buffer = tokio::time::timeout(RECV_MESSAGE_TIMEOUT, rx.recv())
-        .await?
-        .ok_or(CoreError::OutgoingMessageChannelDisconnect)?;
-
-    let resp: EndPointHandshakeResponse =
-        BINARY_SERIALIZER.deserialize(handshake_response_buffer.deref())?;
-
-    if resp.remote_device_id != remote {
-        return Err(core_error!("endpoints server build mismatch tunnel"));
-    }
-
-    Ok(())
-}
-
 async fn serve_active_negotiate(
     tx: &Sender<Vec<u8>>,
     rx: &mut tokio::sync::mpsc::Receiver<Bytes>,
@@ -276,190 +237,6 @@ async fn serve_active_negotiate(
         .map_err(|_| CoreError::OutgoingMessageChannelDisconnect)?;
 
     Ok(params)
-}
-
-fn serve_tcp(
-    stream: TcpStream,
-    endpoint_id: EndPointID,
-    sealing_key: Option<SealingKey<NonceValue>>,
-    opening_key: Option<OpeningKey<NonceValue>>,
-) -> Result<(Sender<Vec<u8>>, tokio::sync::mpsc::Receiver<Bytes>), CoreError> {
-    let (tx, rx) = tokio::sync::mpsc::channel(1);
-    let framed = Framed::new(
-        stream,
-        LengthDelimitedCodec::builder()
-            .little_endian()
-            .max_frame_length(32 * 1024 * 1024)
-            .new_codec(),
-    );
-    let (sink, stream) = framed.split();
-    serve_tcp_write(endpoint_id, rx, sealing_key, sink);
-    let rx = serve_tcp_read(endpoint_id, opening_key, stream)?;
-    Ok((tx, rx))
-}
-
-fn serve_tcp_read(
-    endpoint_id: EndPointID,
-    mut opening_key: Option<OpeningKey<NonceValue>>,
-    mut stream: SplitStream<Framed<TcpStream, LengthDelimitedCodec>>,
-) -> CoreResult<tokio::sync::mpsc::Receiver<Bytes>> {
-    let (tx, rx) = tokio::sync::mpsc::channel(1);
-
-    tokio::spawn(async move {
-        loop {
-            let mut buffer = match stream.next().await {
-                Some(packet) => match packet {
-                    Ok(v) => v,
-                    Err(err) => {
-                        tracing::error!(?endpoint_id, ?err, "read stream failed");
-                        break;
-                    }
-                },
-                None => {
-                    tracing::error!(?endpoint_id, "read stream is closed");
-                    break;
-                }
-            };
-
-            if let Some(ref mut opening_key) = opening_key {
-                if let Err(err) =
-                    opening_key.open_in_place(ring::aead::Aad::empty(), buffer.as_mut())
-                {
-                    tracing::error!(?err, "open endpoint message packet failed");
-                    break;
-                }
-            }
-
-            if tx.send(buffer.freeze()).await.is_err() {
-                tracing::error!(?endpoint_id, "output channel closed");
-                break;
-            }
-        }
-
-        tracing::info!(?endpoint_id, "tcp read loop exit");
-    });
-
-    Ok(rx)
-}
-
-fn serve_tcp_write(
-    endpoint_id: EndPointID,
-    mut rx: tokio::sync::mpsc::Receiver<Vec<u8>>,
-    mut sealing_key: Option<SealingKey<NonceValue>>,
-    mut sink: SplitSink<Framed<TcpStream, LengthDelimitedCodec>, Bytes>,
-) {
-    tokio::spawn(async move {
-        loop {
-            match rx.recv().await {
-                Some(mut buffer) => {
-                    if let Some(ref mut sealing_key) = sealing_key {
-                        if let Err(err) = sealing_key
-                            .seal_in_place_append_tag(ring::aead::Aad::empty(), &mut buffer)
-                        {
-                            tracing::error!(?err, "seal endpoint message packet failed");
-                            break;
-                        }
-                    }
-
-                    if sink.send(Bytes::from(buffer)).await.is_err() {
-                        tracing::error!(?endpoint_id, "tcp write failed");
-                        break;
-                    }
-                }
-                None => {
-                    tracing::error!(?endpoint_id, "input channel closed");
-                    break;
-                }
-            }
-        }
-
-        tracing::info!(?endpoint_id, "tcp write loop exit");
-    });
-}
-
-fn serve_udp_read(
-    remote_addr: SocketAddr,
-    mut opening_key: Option<OpeningKey<NonceValue>>,
-    mut stream: SplitStream<UdpFramed<LengthDelimitedCodec>>,
-) -> CoreResult<tokio::sync::mpsc::Receiver<Bytes>> {
-    let (tx, rx) = tokio::sync::mpsc::channel(1);
-
-    tokio::spawn(async move {
-        loop {
-            let mut buffer = match stream.next().await {
-                Some(packet) => match packet {
-                    Ok((buffer, addr)) => {
-                        if addr != remote_addr {
-                            continue;
-                        }
-
-                        buffer
-                    }
-                    Err(err) => {
-                        tracing::error!(?remote_addr, ?err, "read stream failed");
-                        break;
-                    }
-                },
-                None => {
-                    tracing::error!(?remote_addr, "read stream is closed");
-                    break;
-                }
-            };
-
-            if let Some(ref mut opening_key) = opening_key {
-                if let Err(err) =
-                    opening_key.open_in_place(ring::aead::Aad::empty(), buffer.as_mut())
-                {
-                    tracing::error!(?err, "open endpoint message packet failed");
-                    break;
-                }
-            }
-
-            if tx.send(buffer.freeze()).await.is_err() {
-                tracing::error!(?remote_addr, "output channel closed");
-                break;
-            }
-        }
-
-        tracing::info!(?remote_addr, "tcp read loop exit");
-    });
-
-    Ok(rx)
-}
-
-fn serve_udp_write(
-    remote_addr: SocketAddr,
-    mut rx: tokio::sync::mpsc::Receiver<Vec<u8>>,
-    mut sealing_key: Option<SealingKey<NonceValue>>,
-    mut sink: SplitSink<UdpFramed<LengthDelimitedCodec>, (Bytes, SocketAddr)>,
-) {
-    tokio::spawn(async move {
-        loop {
-            match rx.recv().await {
-                Some(mut buffer) => {
-                    if let Some(ref mut sealing_key) = sealing_key {
-                        if let Err(err) = sealing_key
-                            .seal_in_place_append_tag(ring::aead::Aad::empty(), &mut buffer)
-                        {
-                            tracing::error!(?err, "seal endpoint message packet failed");
-                            break;
-                        }
-                    }
-
-                    if sink.send((Bytes::from(buffer), remote_addr)).await.is_err() {
-                        tracing::error!(?remote_addr, "tcp write failed");
-                        break;
-                    }
-                }
-                None => {
-                    tracing::error!(?remote_addr, "input channel closed");
-                    break;
-                }
-            }
-        }
-
-        tracing::info!(?remote_addr, "tcp write loop exit");
-    });
 }
 
 fn handle_message(

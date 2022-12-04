@@ -1,10 +1,7 @@
-use mirrorx_core::api::config::LocalStorage;
-use mirrorx_core::error::CoreResult;
-use serde::Serialize;
-
-use crate::utility::format_device_id;
-
 use super::UIState;
+use crate::utility::format_device_id;
+use mirrorx_core::{api::config::LocalStorage, error::CoreResult};
+use serde::Serialize;
 
 #[derive(Serialize)]
 pub struct Response {

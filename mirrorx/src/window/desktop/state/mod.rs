@@ -58,7 +58,7 @@ impl State {
             tx,
             Event::ConnectEndPoint {
                 endpoint_id,
-                key_pair,
+                key_pair: Box::new(key_pair),
                 visit_credentials,
                 addr,
             }
@@ -143,13 +143,10 @@ impl State {
                     visit_credentials,
                     addr,
                 } => {
-                    self.connect_endpoint(endpoint_id, key_pair, visit_credentials, addr);
+                    self.connect_endpoint(endpoint_id, *key_pair, visit_credentials, addr);
                 }
                 Event::UpdateEndPointClient { client } => self.endpoint_client = Some(client),
                 Event::UpdateVisitState { new_state } => self.visit_state = new_state,
-                Event::UpdateUseOriginalResolution {
-                    use_original_resolution,
-                } => self.desktop_frame_scaled = use_original_resolution,
                 Event::UpdateError { err } => {
                     tracing::error!(?err, "update error event");
                     self.last_error = Some(err);

@@ -4,7 +4,7 @@ use self::entity::{domain::DomainRepository, kv::KVRepository};
 use crate::{core_error, error::CoreResult};
 use once_cell::sync::{Lazy, OnceCell};
 use r2d2_sqlite::SqliteConnectionManager;
-use std::{path::Path, sync::Arc};
+use std::path::Path;
 
 static mut REPOSITORY_CELL: Lazy<OnceCell<LocalStorage>> = Lazy::new(OnceCell::new);
 

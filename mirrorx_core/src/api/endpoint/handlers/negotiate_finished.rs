@@ -1,13 +1,11 @@
-use crate::api::endpoint::message::EndPointMessage;
-use crate::error::CoreError;
 use crate::{
-    api::endpoint::client::EndPointClient,
+    api::endpoint::{client::EndPointClient, message::EndPointMessage},
     component::{
-        audio::duplicator::new_record_stream_and_rx,
-        audio_encoder::audio_encoder::AudioEncoder,
+        audio::{duplicator::new_record_stream_and_rx, encoder::AudioEncoder},
         desktop::{monitor::get_active_monitors, Duplicator},
         video_encoder::{config::*, video_encoder::VideoEncoder},
     },
+    error::CoreError,
 };
 use cpal::traits::StreamTrait;
 use scopeguard::defer;

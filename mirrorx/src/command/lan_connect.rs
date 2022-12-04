@@ -25,8 +25,8 @@ pub async fn lan_connect(
                     cc,
                     gl_context.clone(),
                     EndPointID::LANID {
-                        local_ip: local_ip,
-                        remote_ip: remote_ip,
+                        local_ip,
+                        remote_ip,
                     },
                     None,
                     None,

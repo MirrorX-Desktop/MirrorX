@@ -5,7 +5,7 @@ use mirrorx_core::{
 };
 use ring::aead::BoundKey;
 use std::{
-    net::{IpAddr, SocketAddr, ToSocketAddrs},
+    net::{SocketAddr, ToSocketAddrs},
     time::Duration,
 };
 use tauri::http::Uri;
