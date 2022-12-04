@@ -9,38 +9,38 @@ doctest = false
 
 [dependencies]
 mirrorx_native = { path = "../mirrorx_native" }
-chrono = "0.4.22"
+chrono = "0.4.23"
 rand = "0.8.5"
-serde = { version = "1.0.145", features = ["derive"] }
+serde = { version = "1.0.148", features = ["derive"] }
 serde_bytes = "0.11.7"
-anyhow = "1.0.65"
+anyhow = "1.0.66"
 rusqlite = { version = "0.28.0", features = ["bundled"] }
-bytes = "1.2.1"
-futures = "0.3.24"
-tokio = { version = "1.21.1", features = ["full"] }
+bytes = "1.3.0"
+futures = "0.3.25"
+tokio = { version = "1.22.0", features = ["full"] }
 tokio-util = { version = "0.7.4", features = ["full"] }
 bincode = "1.3.3"
-once_cell = "1.15.0"
+once_cell = "1.16.0"
 dashmap = "5.4.0"
-libc = "0.2.133"
-tracing = "0.1.36"
+libc = "0.2.138"
+tracing = "0.1.37"
 scopeguard = "1.1.0"
 hmac = "0.12.1"
 sha2 = "0.10.6"
-rsa = "0.7.0"
+rsa = "0.7.2"
 ring = { version = "0.16.20", features = ["std"] }
 pbkdf2 = "0.11"
-thiserror = "1.0.35"
+thiserror = "1.0.37"
 hex = "0.4.3"
-cpal = "0.14.1"
+cpal = "0.14.2"
 rtrb = "0.2.2"
 async-broadcast = "0.4.1"
-tonic = { version = "0.8.1", features = ["gzip"] }
-prost = "0.11.0"
-serde_json = "1.0.85"
+tonic = { version = "0.8.3", features = ["gzip"] }
+prost = "0.11.3"
+serde_json = "1.0.89"
 either = "1.8.0"
 signaling_proto = { git = "https://github.com/MirrorX-Desktop/signaling.git" }
-uuid = { version = "1.2.1", features = ["v4"] }
+uuid = { version = "1.2.2", features = ["v4"] }
 fxhash = "0.2.1"
 r2d2 = "0.8.10"
 r2d2_sqlite = "0.21.0"
@@ -61,8 +61,8 @@ core-foundation = "0.9.3"
 core-graphics = { version = "0.22.3", features = ["highsierra"] }
 
 [target.x86_64-pc-windows-msvc.dependencies]
-image = "0.24.2"
-windows = { version = "0.42.0", features = [
+image = "0.24.5"
+windows = { version = "0.43.0", features = [
   "Win32_Foundation",
   "Win32_System_Threading",
   "Win32_Graphics_Dxgi",

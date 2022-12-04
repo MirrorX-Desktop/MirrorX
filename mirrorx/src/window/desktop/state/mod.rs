@@ -309,11 +309,3 @@ impl State {
         }
     }
 }
-
-impl Drop for State {
-    fn drop(&mut self) {
-        if let Some(endpoint_client) = &self.endpoint_client {
-            endpoint_client.close();
-        }
-    }
-}
