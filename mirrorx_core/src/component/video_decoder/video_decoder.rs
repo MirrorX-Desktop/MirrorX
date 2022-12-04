@@ -5,13 +5,12 @@ use crate::{
     error::CoreResult,
 };
 use mirrorx_native::ffmpeg::{avcodec::*, avutil::*};
-use std::ffi::{CStr, CString};
 use tokio::sync::mpsc::Sender;
 
 pub struct VideoDecoder {
     decode_context: Option<DecodeContext>,
     render_frame_tx: Sender<DesktopDecodeFrame>,
-    last_pts: i64,
+    _last_pts: i64,
 }
 
 impl VideoDecoder {
@@ -24,7 +23,7 @@ impl VideoDecoder {
         VideoDecoder {
             decode_context: None,
             render_frame_tx,
-            last_pts: 0,
+            _last_pts: 0,
         }
     }
 

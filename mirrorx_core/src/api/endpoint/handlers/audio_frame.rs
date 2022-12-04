@@ -1,8 +1,8 @@
 use crate::{
     api::endpoint::{message::EndPointAudioFrame, EndPointID},
-    component::{
-        audio::player::{default_output_config, new_play_stream_and_tx},
-        audio_decoder::audio_decoder::AudioDecoder,
+    component::audio::{
+        decoder::AudioDecoder,
+        player::{default_output_config, new_play_stream_and_tx},
     },
 };
 use cpal::traits::StreamTrait;

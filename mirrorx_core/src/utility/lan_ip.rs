@@ -1,5 +1,5 @@
 use crate::error::CoreResult;
-use std::net::{IpAddr, Ipv4Addr};
+use std::net::IpAddr;
 
 pub async fn get_lan_ip() -> CoreResult<IpAddr> {
     let socket = tokio::net::UdpSocket::bind("0.0.0.0:0").await?;

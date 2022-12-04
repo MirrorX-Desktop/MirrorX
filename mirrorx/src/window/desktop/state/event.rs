@@ -14,7 +14,7 @@ use tokio::sync::mpsc::Receiver;
 pub enum Event {
     ConnectEndPoint {
         endpoint_id: EndPointID,
-        key_pair: Option<(OpeningKey<NonceValue>, SealingKey<NonceValue>)>,
+        key_pair: Box<Option<(OpeningKey<NonceValue>, SealingKey<NonceValue>)>>,
         visit_credentials: Option<String>,
         addr: SocketAddr,
     },
@@ -25,10 +25,6 @@ pub enum Event {
 
     UpdateVisitState {
         new_state: VisitState,
-    },
-
-    UpdateUseOriginalResolution {
-        use_original_resolution: bool,
     },
 
     UpdateError {
