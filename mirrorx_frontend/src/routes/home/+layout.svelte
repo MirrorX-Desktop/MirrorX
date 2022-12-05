@@ -138,7 +138,7 @@
 				<label tabindex="0" class="btn btn-xs"><Fa icon={faSliders} /></label>
 
 				<!-- svelte-ignore a11y-no-noninteractive-tabindex -->
-				<ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-box w-52 p-2 shadow">
+				<ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-box w-52 p-2 ring-1 ring-gray-300">
 					<li>
 						<button on:mouseup={open_settings_window}>
 							<Fa class="h-5 w-5" icon={faGear} />
