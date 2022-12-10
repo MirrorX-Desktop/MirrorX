@@ -13,3 +13,8 @@ pub fn generate_random_password() -> String {
         .map(char::from)
         .collect()
 }
+
+#[inline]
+pub fn generate_random_ping_value() -> i32 {
+    rand::thread_rng().gen()
+}

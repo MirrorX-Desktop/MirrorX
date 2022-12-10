@@ -15,7 +15,7 @@ pub enum Event {
     ConnectEndPoint {
         endpoint_id: EndPointID,
         key_pair: Box<Option<(OpeningKey<NonceValue>, SealingKey<NonceValue>)>>,
-        visit_credentials: Option<String>,
+        visit_credentials: Option<Vec<u8>>,
         addr: SocketAddr,
     },
 

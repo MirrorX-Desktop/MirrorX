@@ -1,5 +1,4 @@
 use super::super::avutil::*;
-use super::*;
 use std::ffi::c_void;
 
 pub type AVPacketSideDataType = u32;

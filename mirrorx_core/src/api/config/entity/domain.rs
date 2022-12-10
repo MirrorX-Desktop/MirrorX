@@ -5,12 +5,15 @@ use crate::{
 use r2d2::{Pool, PooledConnection};
 use r2d2_sqlite::SqliteConnectionManager;
 use rusqlite::{params, OptionalExtension, Row};
+use serde::Serialize;
 
-#[derive(Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct Domain {
     pub id: i64,
     pub name: String,
     pub addr: String,
+    pub signaling_port: u16,
+    pub subscribe_port: u16,
     pub is_primary: bool,
     pub device_id: i64,
     pub password: String,
@@ -35,6 +38,8 @@ impl DomainRepository {
             id INTEGER PRIMARY KEY,
             name TEXT NOT NULL UNIQUE,
             addr TEXT NOT NULL,
+            signaling_port INTEGER NOT NULL,
+            subscribe_port INTEGER NOT NULL,
             is_primary BOOLEAN NOT NULL,
             device_id INTEGER NOT NULL,
             password TEXT NOT NULL,
@@ -52,13 +57,15 @@ impl DomainRepository {
         INSERT INTO domains(
             name,
             addr,
+            signaling_port,
+            subscribe_port,
             is_primary,
             device_id,
             password,
             finger_print,
             remarks
         )
-        VALUES(?, ?, ?, ?, ?, ?, ?)"#;
+        VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)"#;
 
         let conn = self.get_connection()?;
         conn.execute(
@@ -66,6 +73,8 @@ impl DomainRepository {
             params![
                 domain.name,
                 domain.addr,
+                domain.signaling_port,
+                domain.subscribe_port,
                 domain.is_primary,
                 domain.device_id,
                 domain.password,
@@ -160,7 +169,8 @@ impl DomainRepository {
     }
 
     pub fn set_domain_is_primary(&self, domain_id: i64) -> CoreResult<()> {
-        const UNSET_PRIMARY_COMMAND: &str = r"UPDATE domains SET is_primary = 0";
+        const UNSET_PRIMARY_COMMAND: &str =
+            r"UPDATE domains SET is_primary = 0 WHERE is_primary = 1";
         const SET_PRIMARY_COMMAND: &str = r"UPDATE domains SET is_primary = 1 WHERE id = ?";
 
         let mut conn = self.get_connection()?;
@@ -230,10 +240,12 @@ fn parse_domain(row: &Row) -> CoreResult<Domain> {
         id: row.get(0)?,
         name: row.get(1)?,
         addr: row.get(2)?,
-        is_primary: row.get(3)?,
-        device_id: row.get(4)?,
-        password: row.get(5)?,
-        finger_print: row.get(6)?,
-        remarks: row.get(7)?,
+        signaling_port: row.get(3)?,
+        subscribe_port: row.get(4)?,
+        is_primary: row.get(5)?,
+        device_id: row.get(6)?,
+        password: row.get(7)?,
+        finger_print: row.get(8)?,
+        remarks: row.get(9)?,
     })
 }

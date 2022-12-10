@@ -10,8 +10,8 @@ mod window;
 
 use tauri::{Manager, SystemTray, SystemTrayEvent, WindowEvent};
 
-#[tracing::instrument]
 #[tokio::main]
+#[tracing::instrument]
 async fn main() {
     tracing_subscriber::fmt::init();
     tauri::async_runtime::set(tokio::runtime::Handle::current());
@@ -52,24 +52,19 @@ async fn main() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
-            command::init,
-            command::init_signaling,
-            command::init_lan,
-            command::get_current_domain,
-            command::generate_random_password,
-            command::set_current_domain_device_password,
-            command::signaling_visit_request,
-            command::signaling_reply_visit_request,
-            command::signaling_key_exchange,
-            command::get_domains,
-            command::add_domain,
-            command::delete_domain,
-            command::switch_primary_domain,
-            command::set_domain_remarks,
-            command::set_language,
-            command::get_language,
-            command::get_lan_discover_nodes,
-            command::lan_connect,
+            command::config::config_init,
+            command::config::config_domain_create,
+            command::config::config_domain_delete,
+            command::config::config_domain_list,
+            command::config::config_domain_update,
+            command::config::config_language_get,
+            command::config::config_language_update,
+            command::lan::lan_init,
+            command::lan::lan_connect,
+            command::lan::lan_nodes_list,
+            command::signaling::signaling_connect,
+            command::signaling::signaling_visit,
+            command::utility::utility_generate_random_password,
         ])
         .build(tauri::generate_context!())
         .expect("error while running tauri application")

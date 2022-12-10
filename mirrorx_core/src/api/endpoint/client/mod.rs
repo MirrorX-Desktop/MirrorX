@@ -13,27 +13,17 @@ use crate::{
     component::desktop::monitor::Monitor,
     core_error,
     error::{CoreError, CoreResult},
-    utility::nonce_value::NonceValue,
-};
-use bincode::{
-    config::{LittleEndian, VarintEncoding, WithOtherEndian, WithOtherIntEncoding},
-    DefaultOptions, Options,
+    utility::{
+        bincode::{bincode_deserialize, bincode_serialize},
+        nonce_value::NonceValue,
+    },
 };
 use bytes::Bytes;
-use once_cell::sync::Lazy;
 use ring::aead::{OpeningKey, SealingKey};
 use std::{fmt::Display, ops::Deref, sync::Arc, time::Duration};
 use tokio::sync::{mpsc::Sender, RwLock};
 
 const RECV_MESSAGE_TIMEOUT: Duration = Duration::from_secs(30);
-
-static BINARY_SERIALIZER: Lazy<
-    WithOtherIntEncoding<WithOtherEndian<DefaultOptions, LittleEndian>, VarintEncoding>,
-> = Lazy::new(|| {
-    bincode::DefaultOptions::new()
-        .with_little_endian()
-        .with_varint_encoding()
-});
 
 #[derive(Debug, Clone)]
 pub struct EndPointClient {
@@ -49,7 +39,7 @@ impl EndPointClient {
         stream: EndPointStream,
         video_frame_tx: tokio::sync::mpsc::Sender<EndPointVideoFrame>,
         audio_frame_tx: tokio::sync::mpsc::Sender<EndPointAudioFrame>,
-        visit_credentials: Option<String>,
+        visit_credentials: Option<Vec<u8>>,
     ) -> CoreResult<Arc<EndPointClient>> {
         EndPointClient::create(
             true,
@@ -67,7 +57,7 @@ impl EndPointClient {
         endpoint_id: EndPointID,
         key_pair: Option<(OpeningKey<NonceValue>, SealingKey<NonceValue>)>,
         stream: EndPointStream,
-        visit_credentials: Option<String>,
+        visit_credentials: Option<Vec<u8>>,
     ) -> CoreResult<()> {
         let _ = EndPointClient::create(
             false,
@@ -89,7 +79,7 @@ impl EndPointClient {
         stream: EndPointStream,
         video_frame_tx: Option<tokio::sync::mpsc::Sender<EndPointVideoFrame>>,
         audio_frame_tx: Option<tokio::sync::mpsc::Sender<EndPointAudioFrame>>,
-        visit_credentials: Option<String>,
+        visit_credentials: Option<Vec<u8>>,
     ) -> CoreResult<Arc<EndPointClient>> {
         let (opening_key, sealing_key) = match key_pair {
             Some((opening_key, sealing_key)) => (Some(opening_key), Some(sealing_key)),
@@ -167,14 +157,14 @@ impl EndPointClient {
 
 impl EndPointClient {
     pub fn blocking_send(&self, message: &EndPointMessage) -> CoreResult<()> {
-        let buffer = BINARY_SERIALIZER.serialize(message)?;
+        let buffer = bincode_serialize(message)?;
         self.tx
             .blocking_send(buffer)
             .map_err(|_| CoreError::OutgoingMessageChannelDisconnect)
     }
 
     pub async fn send(&self, message: &EndPointMessage) -> CoreResult<()> {
-        let buffer = BINARY_SERIALIZER.serialize(message)?;
+        let buffer = bincode_serialize(message)?;
         self.tx
             .send(buffer)
             .await
@@ -192,7 +182,7 @@ async fn serve_active_negotiate(
     tx: &Sender<Vec<u8>>,
     rx: &mut tokio::sync::mpsc::Receiver<Bytes>,
 ) -> CoreResult<EndPointNegotiateVisitDesktopParams> {
-    let negotiate_request_buffer = BINARY_SERIALIZER.serialize(
+    let negotiate_request_buffer = bincode_serialize(
         &EndPointMessage::NegotiateDesktopParamsRequest(EndPointNegotiateDesktopParamsRequest {
             video_codecs: vec![VideoCodec::H264],
         }),
@@ -207,7 +197,7 @@ async fn serve_active_negotiate(
         .ok_or(CoreError::OutgoingMessageChannelDisconnect)?;
 
     let EndPointMessage::NegotiateDesktopParamsResponse(negotiate_response) =
-        BINARY_SERIALIZER.deserialize(negotiate_response_buffer.deref())? else {
+        bincode_deserialize(negotiate_response_buffer.deref())? else {
             return Err(core_error!("unexpected negotiate reply"));
         };
 
@@ -226,11 +216,11 @@ async fn serve_active_negotiate(
         }
     };
 
-    let negotiate_request_buffer = BINARY_SERIALIZER.serialize(
-        &EndPointMessage::NegotiateFinishedRequest(EndPointNegotiateFinishedRequest {
+    let negotiate_request_buffer = bincode_serialize(&EndPointMessage::NegotiateFinishedRequest(
+        EndPointNegotiateFinishedRequest {
             expected_frame_rate: 60,
-        }),
-    )?;
+        },
+    ))?;
 
     tx.send(negotiate_request_buffer)
         .await
@@ -255,7 +245,7 @@ fn handle_message(
                 }
             };
 
-            let message = match BINARY_SERIALIZER.deserialize(&buffer) {
+            let message = match bincode_deserialize(&buffer) {
                 Ok(message) => message,
                 Err(err) => {
                     tracing::error!(?err, "deserialize endpoint message failed");

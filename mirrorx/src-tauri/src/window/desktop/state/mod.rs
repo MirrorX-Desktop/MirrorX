@@ -49,7 +49,7 @@ impl State {
     pub fn new(
         endpoint_id: EndPointID,
         key_pair: Option<(OpeningKey<NonceValue>, SealingKey<NonceValue>)>,
-        visit_credentials: Option<String>,
+        visit_credentials: Option<Vec<u8>>,
         addr: SocketAddr,
     ) -> Self {
         let (tx, rx) = tokio::sync::mpsc::channel(360);
@@ -161,7 +161,7 @@ impl State {
         &mut self,
         endpoint_id: EndPointID,
         key_pair: Option<(OpeningKey<NonceValue>, SealingKey<NonceValue>)>,
-        visit_credentials: Option<String>,
+        visit_credentials: Option<Vec<u8>>,
         addr: SocketAddr,
     ) {
         let tx = self.tx.clone();

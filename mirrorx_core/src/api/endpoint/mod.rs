@@ -27,7 +27,7 @@ pub async fn create_active_endpoint_client(
     endpoint_id: EndPointID,
     key_pair: Option<(OpeningKey<NonceValue>, SealingKey<NonceValue>)>,
     stream: EndPointStream,
-    visit_credentials: Option<String>,
+    visit_credentials: Option<Vec<u8>>,
 ) -> CoreResult<(
     Arc<EndPointClient>,
     tokio::sync::mpsc::Receiver<DesktopDecodeFrame>,
@@ -55,7 +55,7 @@ pub async fn create_passive_endpoint_client(
     endpoint_id: EndPointID,
     key_pair: Option<(OpeningKey<NonceValue>, SealingKey<NonceValue>)>,
     stream: EndPointStream,
-    visit_credentials: Option<String>,
+    visit_credentials: Option<Vec<u8>>,
 ) -> CoreResult<()> {
     EndPointClient::new_passive(endpoint_id, key_pair, stream, visit_credentials).await?;
     Ok(())

@@ -1,4 +1,4 @@
-use super::{BINARY_SERIALIZER, RECV_MESSAGE_TIMEOUT};
+use super::RECV_MESSAGE_TIMEOUT;
 use crate::{
     api::endpoint::{
         id::EndPointID,
@@ -6,9 +6,11 @@ use crate::{
     },
     core_error,
     error::{CoreError, CoreResult},
-    utility::nonce_value::NonceValue,
+    utility::{
+        bincode::{bincode_deserialize, bincode_serialize},
+        nonce_value::NonceValue,
+    },
 };
-use bincode::Options;
 use bytes::Bytes;
 use futures::{
     stream::{SplitSink, SplitStream},
@@ -27,7 +29,7 @@ pub async fn serve_tcp(
     endpoint_id: EndPointID,
     sealing_key: Option<SealingKey<NonceValue>>,
     opening_key: Option<OpeningKey<NonceValue>>,
-    mut visit_credentials: Option<String>,
+    mut visit_credentials: Option<Vec<u8>>,
 ) -> CoreResult<(Sender<Vec<u8>>, Receiver<Bytes>)> {
     let mut framed = Framed::new(
         stream,
@@ -50,14 +52,14 @@ pub async fn serve_tcp(
 
 async fn serve_handshake(
     stream: &mut Framed<TcpStream, LengthDelimitedCodec>,
-    visit_credentials: String,
+    visit_credentials: Vec<u8>,
     endpoint_id: EndPointID,
 ) -> CoreResult<()> {
     let EndPointID::DeviceID { local_device_id, remote_device_id } = endpoint_id else {
         return Err(core_error!("lan connection needn't device id"));
     };
 
-    let handshake_request_buffer = BINARY_SERIALIZER.serialize(&EndPointHandshakeRequest {
+    let handshake_request_buffer = bincode_serialize(&EndPointHandshakeRequest {
         visit_credentials,
         device_id: local_device_id,
     })?;
@@ -71,8 +73,7 @@ async fn serve_handshake(
         .await?
         .ok_or(CoreError::OutgoingMessageChannelDisconnect)??;
 
-    let resp: EndPointHandshakeResponse =
-        BINARY_SERIALIZER.deserialize(handshake_response_buffer.deref())?;
+    let resp: EndPointHandshakeResponse = bincode_deserialize(handshake_response_buffer.deref())?;
 
     if resp.remote_device_id != remote_device_id {
         return Err(core_error!("endpoints server build mismatch tunnel"));

@@ -52,7 +52,7 @@ pub fn create_desktop_window(
     gl_context: Arc<tauri_egui::eframe::glow::Context>,
     endpoint_id: EndPointID,
     key_pair: Option<(OpeningKey<NonceValue>, SealingKey<NonceValue>)>,
-    visit_credentials: Option<String>,
+    visit_credentials: Option<Vec<u8>>,
     addr: SocketAddr,
 ) -> DesktopWindow {
     set_fonts(&cc.egui_ctx);

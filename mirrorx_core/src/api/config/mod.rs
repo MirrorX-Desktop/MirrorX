@@ -2,27 +2,17 @@ pub mod entity;
 
 use self::entity::{domain::DomainRepository, kv::KVRepository};
 use crate::{core_error, error::CoreResult};
-use once_cell::sync::{Lazy, OnceCell};
 use r2d2_sqlite::SqliteConnectionManager;
-use std::path::Path;
+use std::{path::Path, sync::Arc};
 
-static mut REPOSITORY_CELL: Lazy<OnceCell<LocalStorage>> = Lazy::new(OnceCell::new);
-
+#[derive(Clone)]
 pub struct LocalStorage {
-    domain: DomainRepository,
-    kv: KVRepository,
+    domain: Arc<DomainRepository>,
+    kv: Arc<KVRepository>,
 }
 
 impl LocalStorage {
-    pub fn current() -> CoreResult<&'static LocalStorage> {
-        unsafe {
-            REPOSITORY_CELL
-                .get()
-                .ok_or_else(|| core_error!("current LocalStorage is empty"))
-        }
-    }
-
-    pub fn make_current<P>(db_path: P) -> CoreResult<&'static LocalStorage>
+    pub fn new<P>(db_path: P) -> CoreResult<LocalStorage>
     where
         P: AsRef<Path>,
     {
@@ -36,19 +26,10 @@ impl LocalStorage {
         let kv_repository = KVRepository::new(pool);
         kv_repository.ensure_table()?;
 
-        let repository = Self {
-            domain: domain_repository,
-            kv: kv_repository,
-        };
-
-        unsafe {
-            REPOSITORY_CELL.take();
-            let _ = REPOSITORY_CELL
-                .set(repository)
-                .map_err(|_| core_error!("set repository cell failed"));
-        }
-
-        Ok(unsafe { REPOSITORY_CELL.get().unwrap() })
+        Ok(Self {
+            domain: Arc::new(domain_repository),
+            kv: Arc::new(kv_repository),
+        })
     }
 
     pub fn domain(&self) -> &DomainRepository {

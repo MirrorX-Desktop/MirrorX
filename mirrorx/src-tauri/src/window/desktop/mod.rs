@@ -48,7 +48,7 @@ impl DesktopWindow {
     pub fn new(
         endpoint_id: EndPointID,
         key_pair: Option<(OpeningKey<NonceValue>, SealingKey<NonceValue>)>,
-        visit_credentials: Option<String>,
+        visit_credentials: Option<Vec<u8>>,
         addr: SocketAddr,
         gl_context: Arc<Context>,
     ) -> Self {

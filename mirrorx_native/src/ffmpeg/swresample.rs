@@ -1,5 +1,3 @@
-use std::ffi::c_void;
-
 pub enum SwrContext {}
 
 extern "C" {

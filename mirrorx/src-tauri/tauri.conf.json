@@ -1,0 +1,72 @@
+{
+  "build": {
+    "beforeBuildCommand": "yarn run build",
+    "beforeDevCommand": "yarn run dev",
+    "devPath": "http://localhost:5173",
+    "distDir": "../build"
+  },
+  "package": {
+    "productName": "MirrorX",
+    "version": "0.1.0"
+  },
+  "tauri": {
+    "allowlist": {
+      "all": true
+    },
+    "bundle": {
+      "active": true,
+      "category": "DeveloperTool",
+      "copyright": "",
+      "deb": {
+        "depends": []
+      },
+      "externalBin": [],
+      "icon": [
+        "assets/icons/32x32.png",
+        "assets/icons/128x128.png",
+        "assets/icons/128x128@2x.png",
+        "assets/icons/icon.icns",
+        "assets/icons/icon.ico"
+      ],
+      "identifier": "cloud.mirrorx",
+      "longDescription": "",
+      "macOS": {
+        "entitlements": null,
+        "exceptionDomain": "",
+        "frameworks": [],
+        "providerShortName": null,
+        "signingIdentity": null
+      },
+      "resources": [],
+      "shortDescription": "",
+      "targets": "all",
+      "windows": {
+        "certificateThumbprint": null,
+        "digestAlgorithm": "sha256",
+        "timestampUrl": ""
+      }
+    },
+    "security": {
+      "csp": null
+    },
+    "updater": {
+      "active": false
+    },
+    "systemTray": {
+      "iconPath": "assets/icons/icon.png",
+      "iconAsTemplate": true
+    },
+    "windows": [
+      {
+        "center": true,
+        "fullscreen": false,
+        "height": 640,
+        "resizable": false,
+        "title": "MirrorX",
+        "width": 360,
+        "maximized": false,
+        "url": "/home/connect"
+      }
+    ]
+  }
+}

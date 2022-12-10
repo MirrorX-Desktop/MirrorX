@@ -39,29 +39,23 @@ pub enum CoreError {
     #[error("bincode serialization or deserialization failed ({0:?})")]
     BincodeError(#[from] bincode::Error),
 
-    #[error("tonic transport error ({0:?})")]
-    TonicTransportError(#[from] tonic::transport::Error),
-
-    #[error("tonic rpc error ({0:?})")]
-    TonicRPCError(#[from] tonic::Status),
-
     #[error("rsa error ({0:?})")]
     RSAError(#[from] rsa::errors::Error),
 
     #[error("ring unspecified error")]
     RingUnspecifiedError(#[from] ring::error::Unspecified),
 
-    #[error("prost encode error")]
-    ProstEncodeError(#[from] prost::EncodeError),
+    #[error("reqwest error ({0:?})")]
+    ReqwestError(#[from] reqwest::Error),
 
-    #[error("prost decode error")]
-    ProstDecodeError(#[from] prost::DecodeError),
+    #[error("url parse error ({0:?})")]
+    UrlError(#[from] url::ParseError),
 
     #[error("serde json serialize/deserialize error ({0:?})")]
     SerdeJsonError(#[from] serde_json::Error),
 
-    #[error("key exchange reply error ({0:?})")]
-    KeyExchangeReplyError(signaling_proto::message::KeyExchangeReplyError),
+    #[error("base64 error ({0:?})")]
+    Base64Error(#[from] base64::DecodeError),
 
     #[cfg(target_os = "windows")]
     #[error("windows api hresult error ({error:?}, file = \"{file}\", line = {line})")]

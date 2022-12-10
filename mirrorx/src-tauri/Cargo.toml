@@ -15,7 +15,7 @@ edition = "2021"
 tauri-build = { version = "1.2.0", features = [] }
 
 [dependencies]
-mirrorx_core = { path = "../mirrorx_core" }
+mirrorx_core = { path = "../../mirrorx_core" }
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 tauri = { version = "1.2.1", features = ["api-all", "system-tray"] }
@@ -31,7 +31,7 @@ once_cell = "1.16.0"
 ring = { version = "0.16.20", features = ["std"] }
 strum_macros = "0.24.3"
 tao = "0.15.6"
-reqwest = "0.11.13"
+http = "0.2.8"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 cocoa = "0.24.1"

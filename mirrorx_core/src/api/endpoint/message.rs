@@ -4,7 +4,8 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub struct EndPointHandshakeRequest {
-    pub visit_credentials: String,
+    #[serde(with = "serde_bytes")]
+    pub visit_credentials: Vec<u8>,
     pub device_id: i64,
 }
 

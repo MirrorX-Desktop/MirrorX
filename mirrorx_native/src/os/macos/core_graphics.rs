@@ -29,6 +29,7 @@ extern "C" {
 }
 
 extern "C" {
+    #[allow(improper_ctypes)]
     pub fn CGDisplayStreamCreateWithDispatchQueue(
         display: core_graphics::display::CGDirectDisplayID,
         output_width: usize,

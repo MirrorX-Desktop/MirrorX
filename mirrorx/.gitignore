@@ -8,3 +8,4 @@ node_modules
 !.env.example
 .yarnrc.yml
 .yarn
+yarn-error.log

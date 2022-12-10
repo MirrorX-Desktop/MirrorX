@@ -7,4 +7,3 @@ pub mod error;
 pub mod utility;
 
 pub use component::frame::DesktopDecodeFrame;
-pub use signaling_proto;

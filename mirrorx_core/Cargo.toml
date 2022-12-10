@@ -13,6 +13,8 @@ chrono = "0.4.23"
 rand = "0.8.5"
 serde = { version = "1.0.148", features = ["derive"] }
 serde_bytes = "0.11.7"
+serde_json = "1.0.89"
+serde_with = "2.1.0"
 anyhow = "1.0.66"
 rusqlite = { version = "0.28.0", features = ["bundled"] }
 bytes = "1.3.0"
@@ -35,11 +37,7 @@ hex = "0.4.3"
 cpal = "0.14.2"
 rtrb = "0.2.2"
 async-broadcast = "0.4.1"
-tonic = { version = "0.8.3", features = ["gzip"] }
-prost = "0.11.3"
-serde_json = "1.0.89"
 either = "1.8.0"
-signaling_proto = { git = "https://github.com/MirrorX-Desktop/signaling.git" }
 uuid = { version = "1.2.2", features = ["v4"] }
 fxhash = "0.2.1"
 r2d2 = "0.8.10"
@@ -49,6 +47,9 @@ hostname = "0.3.1"
 os_info = "3.5.1"
 moka = { version = "0.9.6", features = ["future"] }
 async-trait = "0.1.59"
+reqwest = { version = "0.11.13", features = ["json"] }
+url = "2.3.1"
+base64 = "0.13.1"
 
 [target.x86_64-apple-darwin.dependencies]
 objc = { version = "0.2.7" }
