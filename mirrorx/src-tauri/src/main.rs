@@ -17,7 +17,7 @@ async fn main() {
     tauri::async_runtime::set(tokio::runtime::Handle::current());
 
     tauri::Builder::default()
-        .manage(command::UIState::new())
+        .manage(command::AppState::new())
         .system_tray(SystemTray::new())
         .on_system_tray_event(|app, event| {
             if let SystemTrayEvent::DoubleClick { .. } = event {
@@ -52,7 +52,7 @@ async fn main() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
-            command::init_config,
+            command::init,
             command::init_signaling,
             command::init_lan,
             command::get_current_domain,

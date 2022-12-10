@@ -1,4 +1,4 @@
-use super::UIState;
+use super::AppState;
 use mirrorx_core::{core_error, error::CoreResult};
 
 #[tauri::command]
@@ -7,7 +7,7 @@ pub async fn signaling_reply_visit_request(
     allow: bool,
     active_device_id: String,
     passive_device_id: String,
-    state: tauri::State<'_, UIState>,
+    state: tauri::State<'_, AppState>,
 ) -> CoreResult<()> {
     let active_device_id: i64 = active_device_id.replace('-', "").parse()?;
     let passive_device_id: i64 = passive_device_id.replace('-', "").parse()?;

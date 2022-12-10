@@ -1,6 +1,6 @@
 use crate::utility::format_device_id;
 
-use super::UIState;
+use super::AppState;
 use mirrorx_core::{api::signaling::ResourceType, core_error, error::CoreResult};
 use serde::Serialize;
 use tauri::http::Uri;
@@ -16,7 +16,7 @@ pub struct PopupDialogInputRemotePasswordEvent {
 #[tracing::instrument(skip(state, window))]
 pub async fn signaling_visit_request(
     remote_device_id: String,
-    state: tauri::State<'_, UIState>,
+    state: tauri::State<'_, AppState>,
     window: tauri::Window,
 ) -> CoreResult<()> {
     let remote_device_id: i64 = remote_device_id.replace('-', "").parse()?;

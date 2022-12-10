@@ -1,4 +1,4 @@
-use super::UIState;
+use super::AppState;
 use crate::utility::format_device_id;
 use mirrorx_core::{
     api::{
@@ -22,7 +22,7 @@ pub struct PopupDialogVisitRequestEvent {
 #[tracing::instrument(skip(state, window))]
 pub async fn init_signaling(
     force: bool,
-    state: tauri::State<'_, UIState>,
+    state: tauri::State<'_, AppState>,
     window: tauri::Window,
 ) -> CoreResult<()> {
     if state.signaling_client.lock().await.is_some() && !force {

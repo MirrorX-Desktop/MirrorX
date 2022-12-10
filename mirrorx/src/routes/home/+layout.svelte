@@ -14,7 +14,7 @@
 		invoke_get_current_domain,
 		invoke_get_language,
 		invoke_get_lan_discover_nodes,
-		invoke_init_config,
+		invoke_init,
 		invoke_init_lan,
 		invoke_init_signaling
 	} from '../../components/command';
@@ -71,7 +71,7 @@
 
 	(async function () {
 		try {
-			await invoke_init_config();
+			await invoke_init();
 			console.log('finish init config');
 
 			await invoke_init_lan({ force: false });

@@ -1,7 +1,7 @@
 import { invoke } from '@tauri-apps/api';
 
-export function invoke_init_config(): Promise<void> {
-	return invoke('init_config');
+export function invoke_init(): Promise<void> {
+	return invoke('init');
 }
 
 export function invoke_init_signaling(args: { force: boolean }): Promise<void> {

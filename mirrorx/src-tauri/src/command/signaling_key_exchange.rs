@@ -1,4 +1,4 @@
-use super::UIState;
+use super::AppState;
 use crate::window::create_desktop_window;
 use mirrorx_core::{
     api::endpoint::id::EndPointID, core_error, error::CoreResult, utility::nonce_value::NonceValue,
@@ -18,7 +18,7 @@ pub async fn signaling_key_exchange(
     local_device_id: String,
     remote_device_id: String,
     password: String,
-    state: tauri::State<'_, UIState>,
+    state: tauri::State<'_, AppState>,
     egui_plugin: tauri::State<'_, EguiPluginHandle>,
 ) -> CoreResult<()> {
     let Ok(uri) = Uri::try_from(&addr) else {
