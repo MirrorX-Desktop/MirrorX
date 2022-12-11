@@ -45,7 +45,7 @@ impl Discover {
             local_lan_ip
         };
 
-        let stream = tokio::net::UdpSocket::bind((listen_ip, 55000)).await?;
+        let stream = tokio::net::UdpSocket::bind((listen_ip, 48000)).await?;
         stream.set_broadcast(true)?;
 
         tracing::info!("lan discover listen on {}", stream.local_addr()?);
@@ -146,7 +146,7 @@ impl Discover {
                 };
 
                 if let Err(err) = writer
-                    .send_to(&live_packet, (Ipv4Addr::BROADCAST, 55000))
+                    .send_to(&live_packet, (Ipv4Addr::BROADCAST, 48000))
                     .await
                 {
                     tracing::warn!(?err, "lan discover broadcast failed");

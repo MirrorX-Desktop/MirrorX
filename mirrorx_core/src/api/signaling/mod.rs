@@ -463,7 +463,7 @@ async fn serve_visit_request(
         return Err(VisitFailureReason::InternalError);
     };
 
-    let secret = match key_agreement(
+    let (secret, sealing_key, opening_key) = match key_agreement(
         &domain.password,
         active_device_id,
         password_salt,
@@ -472,28 +472,27 @@ async fn serve_visit_request(
     )
     .await
     {
-        Ok((secret, sealing_key, opening_key)) => {
-            if let Err(err) = create_passive_endpoint_client(
-                EndPointID::DeviceID {
-                    local_device_id: passive_device_id,
-                    remote_device_id: active_device_id,
-                },
-                Some((opening_key, sealing_key)),
-                crate::api::endpoint::EndPointStream::ActiveTCP(endpoint_addr),
-                Some(passive_visit_credentials),
-            )
-            .await
-            {
-                tracing::error!(?err, "create passive endpoint client failed");
-                return Err(VisitFailureReason::InternalError);
-            }
-
-            secret
-        }
+        Ok(v) => v,
         Err(err) => {
             return Err(err);
         }
     };
+
+    tokio::spawn(async move {
+        if let Err(err) = create_passive_endpoint_client(
+            EndPointID::DeviceID {
+                local_device_id: passive_device_id,
+                remote_device_id: active_device_id,
+            },
+            Some((opening_key, sealing_key)),
+            crate::api::endpoint::EndPointStream::ActiveTCP(endpoint_addr),
+            Some(passive_visit_credentials),
+        )
+        .await
+        {
+            tracing::error!(?err, "create passive endpoint client failed");
+        }
+    });
 
     Ok(secret)
 }

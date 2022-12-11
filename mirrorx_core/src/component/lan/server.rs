@@ -10,7 +10,7 @@ pub struct Server {
 
 impl Server {
     pub async fn new(local_lan_ip: IpAddr) -> CoreResult<Self> {
-        let listener = tokio::net::TcpListener::bind((local_lan_ip, 30000)).await?;
+        let listener = tokio::net::TcpListener::bind((local_lan_ip, 48001)).await?;
         let local_addr = listener.local_addr()?;
         let (exit_tx, mut exit_rx) = tokio::sync::oneshot::channel();
         tracing::info!(?local_addr, "local lan server listen");

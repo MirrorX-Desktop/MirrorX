@@ -58,7 +58,7 @@ pub async fn lan_connect(
     let remote_ip: IpAddr = addr
         .parse()
         .map_err(|_| core_error!("parse addr to IpAddr failed"))?;
-    let remote_addr = SocketAddr::new(remote_ip, 30000);
+    let remote_addr = SocketAddr::new(remote_ip, 48001);
     let window_label = format!("MirrorX {}", remote_ip);
 
     if let Err(err) = egui_plugin.create_window(

@@ -55,8 +55,8 @@ export function invoke_signaling_connect(force: boolean): Promise<void> {
 	return invoke('signaling_connect', { force });
 }
 
-export function invoke_signaling_visit(remote_device_id: string, password: string): Promise<void> {
-	return invoke('signaling_visit', { remote_device_id, password });
+export function invoke_signaling_visit(remoteDeviceId: string, password: string): Promise<void> {
+	return invoke('signaling_visit', { remoteDeviceId, password });
 }
 
 export function invoke_utility_generate_random_password(): Promise<string> {
