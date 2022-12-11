@@ -7,6 +7,7 @@
 	import type { EditDomainEvent } from './event';
 	import LL from '$lib/i18n/i18n-svelte';
 	import { invoke_config_domain_update } from '$lib/components/command';
+	import { formatDeviceID } from '$lib/components/utility';
 
 	let show: boolean = false;
 	let domain_id: number = 0;
@@ -20,16 +21,9 @@
 		unlisten_fn = await listen<EditDomainEvent>('settings:domain:show_edit_domain_dialog', (event) => {
 			domain_id = event.payload.domain_id;
 			domain_name = event.payload.domain_name;
+			domain_device_id = formatDeviceID(event.payload.domain_device_id);
 			domain_finger_print = event.payload.domain_finger_print;
 			domain_remarks = event.payload.domain_remarks;
-
-			let device_id_str = String(event.payload.domain_device_id).padStart(10, '0');
-			domain_device_id = `${device_id_str.substring(0, 2)}
-			-
-			${device_id_str.substring(2, 6)}
-			-
-			${device_id_str.substring(6, 10)}`;
-
 			show = true;
 		});
 	});

@@ -23,6 +23,7 @@
 	import { writeText, readText } from '@tauri-apps/api/clipboard';
 	import type { Domain } from '$lib/components/types';
 	import Fa from 'svelte-fa';
+	import { formatDeviceID } from '$lib/components/utility';
 
 	let domain: Domain | null = null;
 	let domain_unsubscribe: Unsubscriber | null = null;
@@ -146,7 +147,7 @@
 
 	const copy_domain_id = () => {
 		if (domain) {
-			writeText(String(domain.device_id));
+			writeText(formatDeviceID(domain.device_id));
 			domain_id_copied = true;
 		}
 	};
@@ -167,7 +168,7 @@
 			>
 				<div class="py-3 text-center text-4xl">
 					{#if domain}
-						{domain.device_id}
+						{formatDeviceID(domain.device_id)}
 					{:else}
 						<Fa class="w-full text-center" icon={faSpinner} spin={true} size={'sm'} />
 					{/if}

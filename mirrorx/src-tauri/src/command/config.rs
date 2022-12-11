@@ -37,8 +37,8 @@ pub async fn config_init(
     if domain_count == 0 {
         config_domain_create(
             app_state,
+            String::from("127.0.0.1:28000"),
             String::default(),
-            String::from("http://mirrorx.cloud"),
         )
         .await?;
     }
@@ -67,7 +67,7 @@ pub async fn config_domain_create(
         .parse::<SocketAddr>()
         .map(|addr| {
             Uri::builder()
-                .scheme("tcp")
+                .scheme("http")
                 .authority(addr.to_string())
                 .path_and_query("")
                 .build()
@@ -104,7 +104,7 @@ pub async fn config_domain_create(
         addr: uri.to_string(),
         signaling_port,
         subscribe_port,
-        is_primary: false,
+        is_primary: true,
         device_id: response.device_id,
         password: mirrorx_core::utility::rand::generate_random_password(),
         finger_print,
@@ -146,13 +146,14 @@ pub async fn config_domain_list(
     Ok(ConfigDomainListResponse { total, domains })
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ConfigDomainUpdateRequest {
     pub id: i64,
     pub update_type: ConfigDomainUpdateType,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum ConfigDomainUpdateType {
     SetPrimary,
     Password(String),
@@ -208,7 +209,7 @@ struct UpdateLanguageEvent {
 
 #[tauri::command]
 #[tracing::instrument(skip(app_state, app_handle))]
-pub async fn config_language_update(
+pub async fn config_language_set(
     app_state: State<'_, AppState>,
     app_handle: AppHandle,
     language: String,

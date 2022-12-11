@@ -26,9 +26,9 @@ export function invoke_config_domain_list(
 
 export function invoke_config_domain_update(
 	id: number,
-	update_type: { set_primary: boolean } | { password: string } | { remarks: string }
+	update_type: 'set_primary' | { password: string } | { remarks: string }
 ): Promise<void> {
-	return invoke('config_domain_update', { id, update_type });
+	return invoke('config_domain_update', { req: { id, update_type } });
 }
 
 export function invoke_config_language_get(): Promise<string> {

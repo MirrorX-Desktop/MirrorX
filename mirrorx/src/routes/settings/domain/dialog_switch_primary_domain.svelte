@@ -31,7 +31,7 @@
 
 	const yes = async () => {
 		try {
-			await invoke_config_domain_update(domain_id, { set_primary: true });
+			await invoke_config_domain_update(domain_id, 'set_primary');
 			let new_primary_domain = await invoke_config_domain_get();
 			current_domain.set(new_primary_domain);
 			await emit('home:switch_primary_domain');
