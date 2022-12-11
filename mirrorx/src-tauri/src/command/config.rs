@@ -36,9 +36,9 @@ pub async fn config_init(
 
     if domain_count == 0 {
         config_domain_create(
-            String::from("http://mirrorx.cloud"),
-            String::default(),
             app_state,
+            String::default(),
+            String::from("http://mirrorx.cloud"),
         )
         .await?;
     }
@@ -48,10 +48,20 @@ pub async fn config_init(
 
 #[tauri::command]
 #[tracing::instrument(skip(app_state))]
+pub async fn config_domain_get(app_state: State<'_, AppState>) -> CoreResult<Domain> {
+    let Some(ref storage) = *app_state.storage.lock().await else {
+        return Err(core_error!("storage not initialize"));
+    };
+
+    storage.domain().get_primary_domain()
+}
+
+#[tauri::command]
+#[tracing::instrument(skip(app_state))]
 pub async fn config_domain_create(
+    app_state: State<'_, AppState>,
     addr: String,
     remarks: String,
-    app_state: State<'_, AppState>,
 ) -> CoreResult<()> {
     let uri = addr
         .parse::<SocketAddr>()
@@ -152,8 +162,8 @@ pub enum ConfigDomainUpdateType {
 #[tauri::command]
 #[tracing::instrument(skip(app_state))]
 pub async fn config_domain_update(
-    req: ConfigDomainUpdateRequest,
     app_state: tauri::State<'_, AppState>,
+    req: ConfigDomainUpdateRequest,
 ) -> CoreResult<()> {
     let Some(ref storage) = *app_state.storage.lock().await else {
         return Err(core_error!("storage not initialize"));

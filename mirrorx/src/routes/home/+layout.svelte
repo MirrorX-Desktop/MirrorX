@@ -4,26 +4,31 @@
 	import { onDestroy, onMount } from 'svelte';
 	import Fa from 'svelte-fa';
 	import LL, { setLocale } from '../../i18n/i18n-svelte';
-	import DialogInputRemotePassword from './connect/dialog_input_remote_password.svelte';
-	import DialogVisitRequest from './connect/dialog_visit_request.svelte';
-	import HomeNotificationCenter, { emitHomeNotification } from './home_notification_center.svelte';
-	import type { Unsubscriber } from 'svelte/store';
+	import HomeNotificationCenter, { emitHomeNotification } from './notification_home.svelte';
+	import { get, type Unsubscriber } from 'svelte/store';
 	import { page } from '$app/stores';
-	import { current_domain, current_lan_discover_nodes, type CurrentDomain } from '../../components/stores';
-	import {
-		invoke_get_current_domain,
-		invoke_get_language,
-		invoke_get_lan_discover_nodes,
-		invoke_init,
-		invoke_init_lan,
-		invoke_init_signaling
-	} from '../../components/command';
+	import { current_domain, current_lan_discover_nodes } from '$lib/components/stores';
 	import { emit, listen, type UnlistenFn } from '@tauri-apps/api/event';
 	import DialogSelectLanguage from './dialog_select_language.svelte';
 	import type { UpdateLanguageEvent } from '$lib/components/rust_event';
 	import type { Locales } from '$lib/i18n/i18n-types';
+	import type { Domain } from '$lib/components/types';
+	import {
+		invoke_config_domain_get,
+		invoke_config_domain_list,
+		invoke_config_init,
+		invoke_config_language_get,
+		invoke_config_language_set,
+		invoke_lan_init,
+		invoke_lan_nodes_list,
+		invoke_signaling_connect
+	} from '$lib/components/command';
+	import DialogVisitRequest from './dialog_visit_request.svelte';
+	import DialogVisitPrepare from './dialog_visit_prepare.svelte';
+	import { detectLocale, isLocale } from '$lib/i18n/i18n-util';
+	import { navigatorDetector } from 'typesafe-i18n/detectors';
 
-	let domain: CurrentDomain | null = null;
+	let domain: Domain | null = null;
 	let domain_unsubscribe: Unsubscriber | null = null;
 	let switch_primary_unlisten_fn: UnlistenFn | null = null;
 	let update_language_unlisten_fn: UnlistenFn | null = null;
@@ -43,7 +48,7 @@
 
 		update_lan_discover_nodes_unlisten_fn = await listen<void>('update_lan_discover_nodes', async (_) => {
 			try {
-				let nodes = await invoke_get_lan_discover_nodes();
+				let nodes = await invoke_lan_nodes_list();
 				current_lan_discover_nodes.set(nodes);
 			} catch (error: any) {
 				await emitHomeNotification({ level: 'error', title: 'Error', message: error.toString() });
@@ -71,19 +76,28 @@
 
 	(async function () {
 		try {
-			await invoke_init();
+			await invoke_config_init();
 			console.log('finish init config');
 
-			await invoke_init_lan({ force: false });
+			await invoke_lan_init(false);
 			console.log('finish init lan discover');
 
-			await invoke_init_signaling({ force: false });
+			current_domain.set(await invoke_config_domain_get());
+			console.log(`current domain: ${get(current_domain)}`);
+
+			await invoke_signaling_connect(false);
 			console.log('finish init signaling');
 
-			setLocale((await invoke_get_language()) as Locales);
+			let language = await invoke_config_language_get();
+			if (isLocale(language)) {
+				setLocale(language);
+			} else {
+				const detect_language = detectLocale(navigatorDetector);
+				setLocale(detect_language);
+				await invoke_config_language_set(detect_language);
+			}
 			console.log('finish set locale');
 
-			current_domain.set(await invoke_get_current_domain());
 			console.log('finish init current domain');
 		} catch (error: any) {
 			console.log(error);
@@ -93,8 +107,7 @@
 
 	const switch_primary_domain = async () => {
 		try {
-			current_domain.set(await invoke_get_current_domain());
-			await invoke_init_signaling({ force: true });
+			await invoke_signaling_connect(true);
 		} catch (error: any) {
 			await emitHomeNotification({ level: 'error', title: 'Error', message: error.toString() });
 		}
@@ -198,7 +211,7 @@
 </div>
 
 <DialogVisitRequest />
-<DialogInputRemotePassword />
+<DialogVisitPrepare />
 <DialogSelectLanguage />
 <HomeNotificationCenter />
 

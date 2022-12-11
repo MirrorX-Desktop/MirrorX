@@ -1,10 +1,11 @@
 <script lang="ts">
 	import { emit, listen, type UnlistenFn } from '@tauri-apps/api/event';
-	import { invoke_switch_primary_domain } from '../../../components/command';
+	import { invoke_config_domain_get, invoke_config_domain_update } from '$lib/components/command';
 	import { onDestroy, onMount } from 'svelte';
 	import { emitSettingsNotification } from '../settings_notification_center.svelte';
 	import type { SwitchPrimaryDomainEvent } from './event';
 	import LL from '$lib/i18n/i18n-svelte';
+	import { current_domain } from '$lib/components/stores';
 
 	let show: boolean = false;
 	let unlisten_fn: UnlistenFn | null = null;
@@ -30,7 +31,9 @@
 
 	const yes = async () => {
 		try {
-			await invoke_switch_primary_domain({ id: domain_id });
+			await invoke_config_domain_update(domain_id, { set_primary: true });
+			let new_primary_domain = await invoke_config_domain_get();
+			current_domain.set(new_primary_domain);
 			await emit('home:switch_primary_domain');
 			await emit('settings:domain:update_domains');
 		} catch (error: any) {

@@ -11,7 +11,7 @@ export interface SwitchPrimaryDomainEvent {
 export interface EditDomainEvent {
 	domain_id: number;
 	domain_name: string;
-	domain_device_id: string;
+	domain_device_id: number;
 	domain_finger_print: string;
 	domain_remarks: string;
 }

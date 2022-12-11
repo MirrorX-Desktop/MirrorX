@@ -18,25 +18,19 @@
 	import DialogDeleteConfirm from './dialog_delete_confirm.svelte';
 	import type { DeleteConfirmEvent, EditDomainEvent, SwitchPrimaryDomainEvent } from './event';
 	import { emitSettingsNotification } from '../settings_notification_center.svelte';
-	import { invoke_get_domains } from '../../../components/command';
+	import { invoke_config_domain_get, invoke_config_domain_list } from '$lib/components/command';
 	import DialogSwitchPrimaryDomain from './dialog_switch_primary_domain.svelte';
 	import LL from '$lib/i18n/i18n-svelte';
 	import DialogEditDomain from './dialog_edit_domain.svelte';
+	import type { Domain } from '$lib/components/types';
 
 	const SINGLE_PAGE_LIMIT: number = 6;
 
 	let page = 1;
+	let primary_domain: Domain | null = null;
 	let resp: {
 		total: number;
-		current_domain_name: string;
-		domains: Array<{
-			id: number;
-			name: string;
-			addr: string;
-			device_id: string;
-			finger_print: string;
-			remarks: string;
-		}>;
+		domains: Array<Domain>;
 	} | null = null;
 	let unlisten_fn: UnlistenFn | null = null;
 
@@ -56,7 +50,8 @@
 
 	const get_domains = async () => {
 		try {
-			resp = await invoke_get_domains({ page, limit: SINGLE_PAGE_LIMIT });
+			primary_domain = await invoke_config_domain_get();
+			resp = await invoke_config_domain_list(page, SINGLE_PAGE_LIMIT);
 		} catch (error: any) {
 			await emitSettingsNotification({
 				level: 'error',
@@ -95,7 +90,7 @@
 	const show_edit_domain_dialog = async (
 		id: number,
 		name: string,
-		device_id: string,
+		device_id: number,
 		finger_print: string,
 		remarks: string
 	) => {
@@ -125,7 +120,7 @@
 		<div class="flex flex-row items-center justify-between py-3">
 			<div>
 				<span class="text-2xl">{$LL.Settings.Pages.Domain.Current()}</span>
-				<span class="text-2xl">{resp?.current_domain_name ?? ''}</span>
+				<span class="text-2xl">{primary_domain?.name ?? ''}</span>
 			</div>
 			<div class="tooltip tooltip-left" data-tip={$LL.Settings.Pages.Domain.Tooltips.Add()}>
 				<button class="btn btn-xs" on:click={show_add_domain_dialog}><Fa icon={faPlus} /></button>
@@ -149,7 +144,7 @@
 								</td>
 								<td class="text-right">
 									<div class="btn-group ">
-										{#if domain.name != resp.current_domain_name}
+										{#if domain.name != primary_domain?.name}
 											<button
 												class="btn btn-xs tooltip tooltip-bottom"
 												data-tip={$LL.Settings.Pages.Domain.Tooltips.SetPrimary()}
@@ -174,7 +169,7 @@
 											<Fa icon={faPenToSquare} />
 										</button>
 
-										{#if domain.name != resp.current_domain_name && domain.name != 'MirrorX.cloud'}
+										{#if domain.name != primary_domain?.name && domain.name != 'MirrorX.cloud'}
 											<button
 												class="btn btn-xs tooltip tooltip-bottom"
 												data-tip={$LL.Settings.Pages.Domain.Tooltips.Delete()}

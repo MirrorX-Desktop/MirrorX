@@ -18,7 +18,7 @@
 	import { onDestroy, onMount } from 'svelte';
 	import Fa from 'svelte-fa';
 	import { v4 as uuidv4 } from 'uuid';
-
+	
 	let notifications: Array<{ level_color: string; title: string; message: string; id: string }> = [];
 	let unlisten_fn: UnlistenFn | null = null;
 	$: notifications_reverse = notifications.reverse().slice(0, 2);
@@ -27,7 +27,7 @@
 		unlisten_fn = await listen<HomeNotificationEvent>('home_notification', (event) => {
 			console.log('home_notification_center: ' + event);
 
-			let level_color: string = '';
+			let level_color = '';
 			switch (event.payload.level) {
 				case 'info':
 					level_color = 'bg-info';
@@ -71,8 +71,8 @@
 								<button
 									class="btn btn-square btn-sm"
 									on:click={() => {
-										let index = notifications.findIndex((x) => x.id == notification.id);
-										if (index != -1) {
+										let index = notifications.findIndex((x) => x.id === notification.id);
+										if (index !== -1) {
 											notifications.splice(index, 1);
 											notifications = notifications;
 										}

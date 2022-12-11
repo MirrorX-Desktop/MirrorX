@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { invoke_get_lan_discover_nodes } from '$lib/components/command';
-	import { current_lan_discover_nodes, type LanDiscoverNode } from '$lib/components/stores';
-	import { listen, type UnlistenFn } from '@tauri-apps/api/event';
+	import { invoke_lan_nodes_list } from '$lib/components/command';
+	import { current_lan_discover_nodes } from '$lib/components/stores';
+	import type { LanDiscoverNode } from '$lib/components/types';
 	import { onDestroy, onMount } from 'svelte';
 	import type { Unsubscriber } from 'svelte/store';
 	import { get } from 'svelte/store';
-	import { emitHomeNotification } from '../home_notification_center.svelte';
+	import { emitHomeNotification } from '../notification_home.svelte';
 	import Panel from './panel.svelte';
 
 	let timer: NodeJS.Timer | null = null;
@@ -35,7 +35,7 @@
 
 	const get_lan_discover_nodes = async () => {
 		try {
-			nodes = await invoke_get_lan_discover_nodes();
+			nodes = await invoke_lan_nodes_list();
 			current_lan_discover_nodes.set(nodes);
 		} catch (error: any) {
 			await emitHomeNotification({ level: 'error', title: 'Error', message: error.toString() });

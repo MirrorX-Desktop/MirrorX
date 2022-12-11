@@ -7,12 +7,12 @@
 	import type { Locales } from '$lib/i18n/i18n-types';
 	import { WebviewWindow } from '@tauri-apps/api/window';
 	import type { UpdateLanguageEvent } from '$lib/components/rust_event';
-	import { invoke_get_language } from '$lib/components/command';
+	import { invoke_config_language_get } from '$lib/components/command';
 
 	let unlisten_fn: UnlistenFn | null = null;
 
 	onMount(async () => {
-		setLocale((await invoke_get_language()) as Locales);
+		setLocale((await invoke_config_language_get()) as Locales);
 
 		unlisten_fn = await listen<UpdateLanguageEvent>('update_language', (event) => {
 			setLocale(event.payload.language as Locales);

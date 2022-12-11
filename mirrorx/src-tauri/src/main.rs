@@ -53,6 +53,7 @@ async fn main() {
         })
         .invoke_handler(tauri::generate_handler![
             command::config::config_init,
+            command::config::config_domain_get,
             command::config::config_domain_create,
             command::config::config_domain_delete,
             command::config::config_domain_list,

@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { emit, listen, type UnlistenFn } from '@tauri-apps/api/event';
-	import { invoke } from '@tauri-apps/api/tauri';
-	import { invoke_delete_domain } from '../../../components/command';
+	import { invoke_config_domain_delete } from '$lib/components/command';
 	import { onDestroy, onMount } from 'svelte';
 	import { emitSettingsNotification } from '../settings_notification_center.svelte';
 	import type { DeleteConfirmEvent } from './event';
@@ -28,7 +27,7 @@
 
 	const yes = async () => {
 		try {
-			await invoke_delete_domain({ id: domain_id });
+			await invoke_config_domain_delete(domain_id);
 			await emit('settings:domain:update_domains');
 		} catch (error: any) {
 			await emitSettingsNotification({

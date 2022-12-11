@@ -11,22 +11,23 @@
 	} from '@fortawesome/free-solid-svg-icons';
 	import { emit, listen, type UnlistenFn } from '@tauri-apps/api/event';
 	import {
-		invoke_generate_random_password,
-		invoke_set_current_domain_device_password,
-		invoke_signaling_visit_request
-	} from '../../../components/command';
-	import { current_domain, type CurrentDomain } from '../../../components/stores';
+		invoke_utility_generate_random_password,
+		invoke_config_domain_update,
+		invoke_signaling_visit
+	} from '$lib/components/command';
+	import { current_domain } from '$lib/components/stores';
 	import { onDestroy, onMount } from 'svelte';
-	import Fa from 'svelte-fa';
 	import type { Unsubscriber } from 'svelte/store';
-	import LL from '../../../i18n/i18n-svelte';
-	import { emitHomeNotification } from '../home_notification_center.svelte';
+	import LL from '$lib/i18n/i18n-svelte';
+	import { emitHomeNotification } from '../notification_home.svelte';
 	import { writeText, readText } from '@tauri-apps/api/clipboard';
+	import type { Domain } from '$lib/components/types';
+	import Fa from 'svelte-fa';
 
-	let domain: CurrentDomain | null = null;
+	let domain: Domain | null = null;
 	let domain_unsubscribe: Unsubscriber | null = null;
-	let input_remote_device_id_before: string = '';
-	let input_remote_device_id: string = '';
+	let input_remote_device_id_before = '';
+	let input_remote_device_id = '';
 	let show_password = false;
 	let edit_password = false;
 	let random_password_generating = false;
@@ -35,6 +36,7 @@
 	let domain_id_copied = false;
 
 	$: device_password_display = domain?.password ?? '';
+
 	$: remote_device_valid = input_remote_device_id.length == 0 || /^\d{2}-\d{4}-\d{4}$/.test(input_remote_device_id);
 
 	onMount(async () => {
@@ -74,8 +76,7 @@
 		if (input_event.inputType == 'insertFromPaste') {
 			// paste device_id from clipboard
 			readText().then((v) => {
-				console.log('read clip text');
-				let matched_ids = v?.match(/^\d{2}-\d{4}-\d{4}$/g);
+				let matched_ids = v?.match(/^\d{2}-\d{4}-\d{4}$/);
 				if (matched_ids != null && matched_ids.length > 0) {
 					input_remote_device_id = matched_ids[0];
 				} else {
@@ -89,7 +90,7 @@
 			// delete should keep last '-' until next delete
 			input_remote_device_id = input_remote_device_id_before.substring(0, input_remote_device_id_before.length - 2);
 		} else {
-			var value = input_event.currentTarget.value.replace(/[^\d]/g, '');
+			let value = input_event.currentTarget.value.replace(/\D/g, '');
 
 			if (value.length >= 6) {
 				value = value.substring(0, 2) + '-' + value.substring(2, 6) + '-' + value.substring(6);
@@ -104,7 +105,7 @@
 	const generate_random_password = async () => {
 		try {
 			random_password_generating = true;
-			device_password_display = await invoke_generate_random_password();
+			device_password_display = await invoke_utility_generate_random_password();
 		} catch (error: any) {
 			await emitHomeNotification({ level: 'error', title: 'Error', message: error.toString() });
 		}
@@ -119,7 +120,7 @@
 
 	const commit_edit_password = async () => {
 		try {
-			await invoke_set_current_domain_device_password({ password: device_password_display });
+			await invoke_config_domain_update(domain?.id ?? 0, { password: device_password_display });
 			edit_password = false;
 			if (domain) {
 				domain.password = device_password_display;
@@ -136,7 +137,7 @@
 				return;
 			}
 			await emit('desktop_is_connecting', true);
-			await invoke_signaling_visit_request({ remoteDeviceId: input_remote_device_id });
+			await emit('/dialog/visit/prepare/open', { remote_device_id: input_remote_device_id });
 		} catch (error: any) {
 			await emit('desktop_is_connecting', false);
 			await emitHomeNotification({ level: 'error', title: 'Error', message: error.toString() });
@@ -145,8 +146,7 @@
 
 	const copy_domain_id = () => {
 		if (domain) {
-			writeText(domain.device_id);
-
+			writeText(String(domain.device_id));
 			domain_id_copied = true;
 		}
 	};
@@ -182,7 +182,7 @@
 						</button>
 
 						<input
-							id="remote_device_id_input"
+							id="password_input"
 							class="input input-bordered flex-1 text-center focus:border-blue-300 focus:outline-none focus:ring"
 							type="text"
 							placeholder={''}
@@ -268,25 +268,27 @@
 		</div>
 	{:else}
 		<div class="align-center flex h-full flex-col place-items-center justify-center">
-			<div class="flex-none"><Fa icon={faSpinner} spin={true} size={'2x'} /></div>
+			<div class="flex-none">
+				<Fa icon={faSpinner} spin={true} size={'2x'} />
+			</div>
 		</div>
 	{/if}
 </slot>
 
 <style>
 	/* #remote_device_id_input::-webkit-input-placeholder {
-		@apply text-center align-middle text-xl;
-	}
+        @apply text-center align-middle text-xl;
+    }
 
-	#remote_device_id_input::placeholder {
-		@apply text-center align-middle text-xl;
-	}
+    #remote_device_id_input::placeholder {
+        @apply text-center align-middle text-xl;
+    }
 
-	#remote_device_id_input::-moz-placeholder {
-		@apply text-center align-middle text-xl;
-	}
+    #remote_device_id_input::-moz-placeholder {
+        @apply text-center align-middle text-xl;
+    }
 
-	#remote_device_id_input::-ms-input-placeholder {
-		@apply text-center align-middle text-xl;
-	} */
+    #remote_device_id_input::-ms-input-placeholder {
+        @apply text-center align-middle text-xl;
+    } */
 </style>

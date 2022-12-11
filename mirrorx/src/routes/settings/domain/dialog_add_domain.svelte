@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { faSpinner, faXmarkCircle } from '@fortawesome/free-solid-svg-icons';
 	import { emit, listen, type UnlistenFn } from '@tauri-apps/api/event';
-	import { invoke_add_domain } from '../../../components/command';
+	import { invoke_config_domain_create } from '$lib/components/command';
 	import { onDestroy, onMount } from 'svelte';
 	import Fa from 'svelte-fa';
 	import LL from '$lib/i18n/i18n-svelte';
@@ -37,10 +37,7 @@
 				cancel_fn = reject;
 			});
 
-			let invoke_promise = invoke_add_domain({
-				addr: input_domain_address,
-				remarks: input_domain_remarks
-			});
+			let invoke_promise = invoke_config_domain_create(input_domain_address, input_domain_remarks);
 
 			await Promise.race([invoke_promise, cancel_promise]);
 

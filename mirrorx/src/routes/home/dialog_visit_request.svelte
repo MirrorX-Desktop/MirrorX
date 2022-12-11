@@ -1,8 +1,7 @@
 <script lang="ts">
 	import { emit, listen, type UnlistenFn } from '@tauri-apps/api/event';
-	import { invoke_signaling_reply_visit_request } from '../../../components/command';
 	import { onDestroy, onMount } from 'svelte';
-	import { emitHomeNotification } from '../home_notification_center.svelte';
+	import { emitHomeNotification } from './notification_home.svelte';
 	import LL from '$lib/i18n/i18n-svelte';
 
 	let active_device_id: string = '';
@@ -45,11 +44,11 @@
 	const decide = async (allow: boolean) => {
 		try {
 			show = false;
-			await invoke_signaling_reply_visit_request({
-				allow,
-				activeDeviceId: active_device_id,
-				passiveDeviceId: passive_device_id
-			});
+			// await invoke_signaling_reply_visit_request({
+			// 	allow,
+			// 	activeDeviceId: active_device_id,
+			// 	passiveDeviceId: passive_device_id
+			// });
 		} catch (error: any) {
 			await emitHomeNotification({ level: 'error', title: 'Error', message: error.toString() });
 		} finally {

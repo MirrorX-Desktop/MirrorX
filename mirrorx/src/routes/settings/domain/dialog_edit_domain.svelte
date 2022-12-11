@@ -1,12 +1,12 @@
 <script lang="ts">
-	import { faCircleExclamation, faSpinner } from '@fortawesome/free-solid-svg-icons';
+	import { faCircleExclamation } from '@fortawesome/free-solid-svg-icons';
 	import { emit, listen, type UnlistenFn } from '@tauri-apps/api/event';
-	import { invoke_add_domain, invoke_set_domain_remarks } from '../../../components/command';
 	import { onDestroy, onMount } from 'svelte';
 	import Fa from 'svelte-fa';
 	import { emitSettingsNotification } from '../settings_notification_center.svelte';
 	import type { EditDomainEvent } from './event';
 	import LL from '$lib/i18n/i18n-svelte';
+	import { invoke_config_domain_update } from '$lib/components/command';
 
 	let show: boolean = false;
 	let domain_id: number = 0;
@@ -20,9 +20,16 @@
 		unlisten_fn = await listen<EditDomainEvent>('settings:domain:show_edit_domain_dialog', (event) => {
 			domain_id = event.payload.domain_id;
 			domain_name = event.payload.domain_name;
-			domain_device_id = event.payload.domain_device_id;
 			domain_finger_print = event.payload.domain_finger_print;
 			domain_remarks = event.payload.domain_remarks;
+
+			let device_id_str = String(event.payload.domain_device_id).padStart(10, '0');
+			domain_device_id = `${device_id_str.substring(0, 2)}
+			-
+			${device_id_str.substring(2, 6)}
+			-
+			${device_id_str.substring(6, 10)}`;
+
 			show = true;
 		});
 	});
@@ -35,7 +42,7 @@
 
 	const ok = async () => {
 		try {
-			await invoke_set_domain_remarks({ id: domain_id, remarks: domain_remarks });
+			await invoke_config_domain_update(domain_id, { remarks: domain_remarks });
 			await emit('settings:domain:update_domains');
 		} catch (error: any) {
 			await emitSettingsNotification({

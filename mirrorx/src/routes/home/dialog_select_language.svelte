@@ -1,26 +1,21 @@
 <script lang="ts">
-	import { emit, listen, type UnlistenFn } from '@tauri-apps/api/event';
-	import { invoke } from '@tauri-apps/api/tauri';
-	import { isLocale, loadedLocales, locales } from '../../i18n/i18n-util';
+	import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 	import { onDestroy, onMount } from 'svelte';
-	import { setLocale } from '../../i18n/i18n-svelte';
-	import type { Locale } from 'typesafe-i18n/types/runtime/src/core.mjs';
-	import type { Locales } from 'src/i18n/i18n-types';
 	import Fa from 'svelte-fa';
 	import { faXmark } from '@fortawesome/free-solid-svg-icons';
 	import LL from '$lib/i18n/i18n-svelte';
-	import { emitHomeNotification } from './home_notification_center.svelte';
-	import { invoke_get_domains, invoke_get_language, invoke_set_language } from '$lib/components/command';
+	import { emitHomeNotification } from './notification_home.svelte';
+	import { invoke_config_language_get, invoke_config_language_set } from '$lib/components/command';
 
-	let show: boolean = false;
-	let language: string = '';
+	let show = false;
+	let language = '';
 	let unlisten_fn: UnlistenFn | null = null;
 
 	$: {
 		(async function () {
 			if (language && language.length > 0) {
 				try {
-					await invoke_set_language({ language });
+					await invoke_config_language_set(language);
 				} catch (error: any) {
 					await emitHomeNotification({
 						level: 'error',
@@ -44,7 +39,7 @@
 			show = true;
 		});
 
-		invoke_get_language().then((v) => (language = v));
+		invoke_config_language_get().then((v) => (language = v));
 	});
 
 	onDestroy(() => {

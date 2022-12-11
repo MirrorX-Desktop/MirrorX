@@ -1,29 +1,23 @@
 <script lang="ts">
 	import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
 	import { emit, listen, type UnlistenFn } from '@tauri-apps/api/event';
-	import { invoke_signaling_key_exchange } from '../../../components/command';
+	import { invoke_signaling_visit } from '$lib/components/command';
 	import { onDestroy, onMount } from 'svelte';
 	import Fa from 'svelte-fa';
-	import { emitHomeNotification } from '../home_notification_center.svelte';
+	import { emitHomeNotification } from './notification_home.svelte';
 	import LL from '$lib/i18n/i18n-svelte';
 
-	var active_device_id: string = '';
-	var passive_device_id: string = '';
-	var addr: string = '';
-	var show = false;
-	var input_password: string = '';
-	var show_password = false;
-	var unlisten_fn: UnlistenFn | null;
+	let remote_device_id: string = '';
+	let show = false;
+	let input_password = '';
+	let show_password = false;
+	let unlisten_fn: UnlistenFn | null;
 
 	onMount(async () => {
 		unlisten_fn = await listen<{
-			active_device_id: string;
-			passive_device_id: string;
-			addr: string;
-		}>('popup_dialog_input_remote_password', (event) => {
-			active_device_id = event.payload.active_device_id;
-			passive_device_id = event.payload.passive_device_id;
-			addr = event.payload.addr;
+			remote_device_id: string;
+		}>('/dialog/visit/prepare/open', (event) => {
+			remote_device_id = event.payload.remote_device_id;
 			show = true;
 		});
 	});
@@ -37,12 +31,7 @@
 	const ok = async () => {
 		try {
 			show = false;
-			await invoke_signaling_key_exchange({
-				addr,
-				localDeviceId: active_device_id,
-				remoteDeviceId: passive_device_id,
-				password: input_password
-			});
+			await invoke_signaling_visit(remote_device_id, input_password);
 		} catch (error: any) {
 			console.log(error);
 			let err: string = error.toString();
@@ -56,9 +45,7 @@
 
 			await emitHomeNotification({ level: 'error', title: 'Error', message: err.toString() });
 		} finally {
-			active_device_id = '';
-			passive_device_id = '';
-			addr = '';
+			remote_device_id = '';
 			input_password = '';
 			show_password = false;
 			await emit('desktop_is_connecting', false);
@@ -66,9 +53,7 @@
 	};
 
 	const cancel = async () => {
-		active_device_id = '';
-		passive_device_id = '';
-		addr = '';
+		remote_device_id = '';
 		input_password = '';
 		show_password = false;
 		console.log('emit desktop is connecting');
@@ -83,7 +68,7 @@
 			<h3 class="text-lg font-bold">{$LL.Home.Pages.Connect.Dialog.InputRemotePassword.Title()}</h3>
 			<div class="py-4">
 				<p class="py-1 text-lg">{$LL.Home.Pages.Connect.Dialog.InputRemotePassword.ContentPrefix()}</p>
-				<p class="py-1 text-center text-xl font-bold">{passive_device_id}</p>
+				<p class="py-1 text-center text-xl font-bold">{remote_device_id}</p>
 				<p class="py-1 text-lg">{$LL.Home.Pages.Connect.Dialog.InputRemotePassword.ContentSuffix()}</p>
 			</div>
 			<div class="input-group flex flex-row">

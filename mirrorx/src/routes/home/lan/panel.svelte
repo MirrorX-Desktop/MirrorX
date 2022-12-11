@@ -20,7 +20,7 @@
 		faNetworkWired,
 		faDiagramProject
 	} from '@fortawesome/free-solid-svg-icons';
-	import { emitHomeNotification } from '../home_notification_center.svelte';
+	import { emitHomeNotification } from '../notification_home.svelte';
 	import { invoke_lan_connect } from '$lib/components/command';
 
 	export let is_orphan: boolean;
@@ -33,7 +33,7 @@
 
 	const connect_lan = async () => {
 		try {
-			await invoke_lan_connect({ addr });
+			await invoke_lan_connect(addr);
 		} catch (error: any) {
 			await emitHomeNotification({ level: 'error', title: 'Error', message: error.toString() });
 		}
