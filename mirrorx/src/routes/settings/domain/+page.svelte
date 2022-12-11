@@ -23,6 +23,7 @@
 	import LL from '$lib/i18n/i18n-svelte';
 	import DialogEditDomain from './dialog_edit_domain.svelte';
 	import type { Domain } from '$lib/components/types';
+	import { formatDeviceID } from '$lib/components/utility';
 
 	const SINGLE_PAGE_LIMIT: number = 6;
 
@@ -140,7 +141,7 @@
 									<p class="text-xs">{domain.remarks}</p>
 								</td>
 								<td class="w-full text-center">
-									<p>{domain.device_id}</p>
+									<p>{formatDeviceID(domain.device_id)}</p>
 								</td>
 								<td class="text-right">
 									<div class="btn-group ">

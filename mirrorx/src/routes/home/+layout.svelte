@@ -15,7 +15,6 @@
 	import type { Domain } from '$lib/components/types';
 	import {
 		invoke_config_domain_get,
-		invoke_config_domain_list,
 		invoke_config_init,
 		invoke_config_language_get,
 		invoke_config_language_set,
