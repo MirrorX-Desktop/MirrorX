@@ -18,15 +18,15 @@ async fn main() {
     tracing_subscriber::fmt::init();
     tauri::async_runtime::set(tokio::runtime::Handle::current());
 
+    let tray = SystemTray::new();
+    #[cfg(target_os = "macos")]
+    let tray = tray
+        .with_icon(Icon::Raw(TRAY_ICON_MACOS.to_vec()))
+        .with_icon_as_template(true);
+
     tauri::Builder::default()
         .manage(command::AppState::new())
-        .system_tray(if cfg!(target_os = "macos") {
-            SystemTray::new()
-                .with_icon(Icon::Raw(TRAY_ICON_MACOS.to_vec()))
-                .with_icon_as_template(true)
-        } else {
-            SystemTray::new()
-        })
+        .system_tray(tray)
         .on_system_tray_event(|app, event| {
             if let SystemTrayEvent::DoubleClick { .. } = event {
                 app.windows().values().for_each(|window| {
