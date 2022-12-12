@@ -1,3 +1,6 @@
+<p align="center">
+    <a href="https://github.com/MirrorX-Desktop/MirrorX"><img width="128" src="https://raw.githubusercontent.com/MirrorX-Desktop/MirrorX/master/mirrorx/src-tauri/assets/icons/icon.png"></a>
+</p>
 <h1 align="center" style="border-bottom: none">
     MirrorX</br>
 </h1>
