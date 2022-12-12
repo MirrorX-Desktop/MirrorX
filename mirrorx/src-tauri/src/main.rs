@@ -8,7 +8,9 @@ mod platform;
 mod utility;
 mod window;
 
-use tauri::{Manager, SystemTray, SystemTrayEvent, WindowEvent};
+use tauri::{Icon, Manager, SystemTray, SystemTrayEvent, WindowEvent};
+
+static TRAY_ICON_MACOS: &[u8] = include_bytes!("../assets/icons/tray-macOS.png");
 
 #[tokio::main]
 #[tracing::instrument]
@@ -18,7 +20,13 @@ async fn main() {
 
     tauri::Builder::default()
         .manage(command::AppState::new())
-        .system_tray(SystemTray::new())
+        .system_tray(if cfg!(target_os = "macos") {
+            SystemTray::new()
+                .with_icon(Icon::Raw(TRAY_ICON_MACOS.to_vec()))
+                .with_icon_as_template(true)
+        } else {
+            SystemTray::new()
+        })
         .on_system_tray_event(|app, event| {
             if let SystemTrayEvent::DoubleClick { .. } = event {
                 app.windows().values().for_each(|window| {

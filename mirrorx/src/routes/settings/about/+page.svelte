@@ -4,6 +4,7 @@
 	import { getVersion, getTauriVersion } from '@tauri-apps/api/app';
 	import { onMount } from 'svelte';
 	import Fa from 'svelte-fa';
+	import icon from '../../../../src-tauri/assets/icons/icon.png';
 
 	let version: string | null = null;
 	let tauriVersion: string | null = null;
@@ -17,12 +18,8 @@
 <slot>
 	<div class="mx-2 flex h-full flex-row items-center justify-center">
 		<div class="text-center">
-			<div class="my-4">
-				<div class="avatar placeholder">
-					<div class="bg-neutral-focus text-neutral-content w-24 rounded-xl">
-						<span class="text-3xl">M</span>
-					</div>
-				</div>
+			<div class="my-4 flex flex-row justify-center">
+				<img src={icon} alt="MirrorX Icon" width="128" height="128" />
 			</div>
 			<div class="my-4 text-4xl">MirrorX</div>
 			<div class="my-4 flex items-center justify-evenly text-2xl">

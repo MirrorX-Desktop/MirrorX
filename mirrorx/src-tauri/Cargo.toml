@@ -18,7 +18,7 @@ tauri-build = { version = "1.2.1", features = [] }
 mirrorx_core = { path = "../../mirrorx_core" }
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
-tauri = { version = "1.2.2", features = ["api-all", "system-tray"] }
+tauri = { version = "1.2.2", features = ["api-all", "icon-png", "system-tray"] }
 tracing = "0.1.37"
 tracing-subscriber = "0.3.16"
 anyhow = "1.0.66"

@@ -46,15 +46,15 @@
         "timestampUrl": ""
       }
     },
+    "systemTray": {
+      "iconPath": "assets/icons/icon.png",
+      "iconAsTemplate": true
+    },
     "security": {
       "csp": null
     },
     "updater": {
       "active": false
-    },
-    "systemTray": {
-      "iconPath": "assets/icons/icon.png",
-      "iconAsTemplate": true
     },
     "windows": [
       {
