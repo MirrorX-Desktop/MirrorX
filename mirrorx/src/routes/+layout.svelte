@@ -11,6 +11,8 @@
 			document.addEventListener('contextmenu', (event) => event.preventDefault());
 		}
 	});
+
+	navigator.platform.toLowerCase().includes('mac');
 </script>
 
 <slot />

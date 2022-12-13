@@ -8,8 +8,12 @@ mod platform;
 mod utility;
 mod window;
 
-use tauri::{Icon, Manager, SystemTray, SystemTrayEvent, WindowEvent};
+#[cfg(target_os = "macos")]
+use tauri::Icon;
 
+use tauri::{Manager, SystemTray, SystemTrayEvent, WindowEvent};
+
+#[cfg(target_os = "macos")]
 static TRAY_ICON_MACOS: &[u8] = include_bytes!("../assets/icons/tray-macOS.png");
 
 #[tokio::main]
@@ -49,12 +53,19 @@ async fn main() {
         .setup(|app| {
             app.wry_plugin(tauri_egui::EguiPluginBuilder::new(app.handle()));
 
-            if let Some(win) = app.get_window("main") {
-                #[cfg(target_os = "macos")]
-                {
-                    use platform::window_ext::WindowExt;
-                    win.expand_title_bar();
-                }
+            let main_window = app.get_window("main").unwrap();
+
+            #[cfg(target_os = "macos")]
+            {
+                use platform::window_ext::WindowExt;
+                main_window.expand_title_bar();
+            }
+
+            #[cfg(target_os = "windows")]
+            {
+                use window_shadows::set_shadow;
+                let _ = main_window.set_decorations(false);
+                let _ = set_shadow(&main_window, true);
             }
 
             Ok(())

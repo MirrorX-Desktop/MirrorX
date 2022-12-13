@@ -1,40 +1,26 @@
 <!DOCTYPE html>
 <html lang="%lang%" data-theme="light">
-	<head>
-		<meta charset="utf-8" />
-		<meta name="viewport" content="width=device-width" />
-		<style>
-			html,
-			body {
-				width: 100vw;
-				height: 100vh;
-				margin: 0;
-				user-select: none;
-				-webkit-user-select: none;
-				-moz-user-select: none;
-			}
 
-			.title_move_region {
-				position: absolute;
-				top: 0;
-				right: 0;
-				left: 0;
-				height: 30px;
-				z-index: 9999;
-			}
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width" />
+	<style>
+		html,
+		body {
+			width: 100vw;
+			height: 100vh;
+			margin: 0;
+			border-radius: 10px;
+			user-select: none;
+			-webkit-user-select: none;
+			-moz-user-select: none;
+		}
+	</style>
+	%sveltekit.head%
+</head>
 
-			.content {
-				position: absolute;
-				top: 0;
-				right: 0;
-				bottom: 0;
-				left: 0;
-			}
-		</style>
-		%sveltekit.head%
-	</head>
+<body>
+	%sveltekit.body%
+</body>
 
-	<body>
-		<div data-tauri-drag-region class="content">%sveltekit.body%</div>
-	</body>
 </html>

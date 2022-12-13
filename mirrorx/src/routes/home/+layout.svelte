@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { faSpinner, faSliders, faGear, faLanguage } from '@fortawesome/free-solid-svg-icons';
+	import { faSpinner, faSliders, faGear, faLanguage, faMinus, faXmark } from '@fortawesome/free-solid-svg-icons';
 	import { WebviewWindow } from '@tauri-apps/api/window';
 	import { onDestroy, onMount } from 'svelte';
 	import Fa from 'svelte-fa';
@@ -26,6 +26,9 @@
 	import DialogVisitPrepare from './dialog_visit_prepare.svelte';
 	import { detectLocale, isLocale } from '$lib/i18n/i18n-util';
 	import { navigatorDetector } from 'typesafe-i18n/detectors';
+	import { appWindow } from '@tauri-apps/api/window';
+
+	const isMacOS = navigator.platform.toLowerCase().includes('mac');
 
 	let domain: Domain | null = null;
 	let domain_unsubscribe: Unsubscriber | null = null;
@@ -138,16 +141,17 @@
 	};
 </script>
 
-<div data-tauri-drag-region class="flex h-full flex-col">
-	<div data-tauri-drag-region class="mx-2 flex flex-none flex-col">
-		<div data-tauri-drag-region class=" z-10 mt-2 mb-2 flex flex-row items-center justify-between">
-			<button class="btn btn-xs invisible"><Fa icon={faSliders} /></button>
-			<div class="text-2xl">{$LL.Home.Layout.Domain()}</div>
-
+<div class="flex h-full flex-col">
+	{#if isMacOS}
+		<div data-tauri-drag-region />
+	{:else}
+		<div data-tauri-drag-region class="titlebar">
 			<div class="dropdown dropdown-end">
 				<!-- svelte-ignore a11y-label-has-associated-control -->
 				<!-- svelte-ignore a11y-no-noninteractive-tabindex -->
-				<label tabindex="0" class="btn btn-xs"><Fa icon={faSliders} /></label>
+				<label tabindex="0" class="titlebar-button">
+					<Fa icon={faSliders} />
+				</label>
 
 				<!-- svelte-ignore a11y-no-noninteractive-tabindex -->
 				<ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-box w-52 p-2 ring-1 ring-gray-300">
@@ -166,55 +170,129 @@
 					</li>
 				</ul>
 			</div>
-		</div>
-	</div>
-
-	<div class="mx-2 flex flex-1 flex-col overflow-hidden">
-		<div class="flex-none">
-			<div class="my-2 text-center text-4xl">
-				{#if domain}
-					{domain.name}
-				{:else}
-					<Fa class="w-full text-center" icon={faSpinner} spin={true} size={'sm'} />
-				{/if}
+			<div class="titlebar-button" id="titlebar-minimize" on:click={() => appWindow.minimize()}>
+				<Fa icon={faMinus} />
 			</div>
-			<div class="btn-group my-3 flex flex-row">
-				<a href="/home/connect" class="btn flex-1 {$page.url.pathname == '/home/connect' ? 'btn-active' : undefined}">
-					{$LL.Home.Layout.Connect()}
-				</a>
-				<a href="/home/lan" class="btn flex-1 {$page.url.pathname == '/home/lan' ? 'btn-active' : undefined}">
-					{$LL.Home.Layout.LAN()}
-				</a>
-				<a href="/home/history" class="btn flex-1 {$page.url.pathname == '/home/history' ? 'btn-active' : undefined}">
-					{$LL.Home.Layout.History()}
-				</a>
+			<div class="titlebar-button" id="titlebar-close" on:click={() => appWindow.hide()}>
+				<Fa icon={faXmark} />
 			</div>
 		</div>
+	{/if}
 
-		<div class="custom-scroll flex-1 overflow-y-auto">
-			<slot />
+	<div class="flex flex-1 flex-col">
+		<div class="mx-2 flex flex-none flex-col">
+			<div class=" z-10 mt-2 mb-2 flex flex-row items-center justify-between">
+				<button class="btn btn-xs invisible"><Fa icon={faSliders} /></button>
+				<div class="text-2xl">{$LL.Home.Layout.Domain()}</div>
+
+				<div class="dropdown dropdown-end">
+					<!-- svelte-ignore a11y-label-has-associated-control -->
+					<!-- svelte-ignore a11y-no-noninteractive-tabindex -->
+					<label tabindex="0" class="btn btn-xs"><Fa icon={faSliders} /></label>
+
+					<!-- svelte-ignore a11y-no-noninteractive-tabindex -->
+					<ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-box w-52 p-2 ring-1 ring-gray-300">
+						<li>
+							<button on:mouseup={open_settings_window}>
+								<Fa class="h-5 w-5" icon={faGear} />
+								{$LL.Home.Layout.Menu.Settings()}
+							</button>
+						</li>
+
+						<li>
+							<button on:mouseup={show_select_language_dialog}>
+								<Fa class="h-5 w-5" icon={faLanguage} />
+								{$LL.Home.Layout.Menu.Language()}
+							</button>
+						</li>
+					</ul>
+				</div>
+			</div>
 		</div>
 
-		<div class="flex-none text-center">
-			<hr />
-			<a
-				class="align-text-top text-xs text-blue-500 hover:text-blue-600"
-				rel="noreferrer"
-				target="_blank"
-				href="https://github.com/MirrorX-Desktop/MirrorX"
-			>
-				MirrorX
-			</a>
+		<div class="mx-2 flex flex-1 flex-col overflow-hidden">
+			<div class="flex-none">
+				<div class="my-2 text-center text-4xl">
+					{#if domain}
+						{domain.name}
+					{:else}
+						<Fa class="w-full text-center" icon={faSpinner} spin={true} size={'sm'} />
+					{/if}
+				</div>
+				<div class="btn-group my-3 flex flex-row">
+					<a href="/home/connect" class="btn flex-1 {$page.url.pathname == '/home/connect' ? 'btn-active' : undefined}">
+						{$LL.Home.Layout.Connect()}
+					</a>
+					<a href="/home/lan" class="btn flex-1 {$page.url.pathname == '/home/lan' ? 'btn-active' : undefined}">
+						{$LL.Home.Layout.LAN()}
+					</a>
+					<a href="/home/history" class="btn flex-1 {$page.url.pathname == '/home/history' ? 'btn-active' : undefined}">
+						{$LL.Home.Layout.History()}
+					</a>
+				</div>
+			</div>
+
+			<div class="custom-scroll flex-1 overflow-y-auto">
+				<slot />
+			</div>
+
+			<div class="flex-none text-center">
+				<hr />
+				<a
+					class="align-text-top text-xs text-blue-500 hover:text-blue-600"
+					rel="noreferrer"
+					target="_blank"
+					href="https://github.com/MirrorX-Desktop/MirrorX"
+				>
+					MirrorX
+				</a>
+			</div>
 		</div>
+		<DialogVisitRequest />
+		<DialogVisitPrepare />
+		<DialogSelectLanguage />
+
+		<!-- <HomeNotificationCenter /> -->
 	</div>
 </div>
 
-<DialogVisitRequest />
-<DialogVisitPrepare />
-<DialogSelectLanguage />
-<HomeNotificationCenter />
-
 <style>
+	.titlebar {
+		height: 26px;
+		background: #329ea3;
+		user-select: none;
+		display: flex;
+		justify-content: flex-end;
+		/* position: fixed;
+		top: 0;
+		left: 0;
+		right: 0; */
+	}
+	.titlebar-button {
+		display: inline-flex;
+		justify-content: center;
+		align-items: center;
+		width: 26px;
+		height: 26px;
+		transition: color 100ms linear;
+		transition: background-color 100ms linear;
+	}
+
+	.titlebar-button:hover {
+		color: white;
+		background-color: white;
+	}
+
+	#titlebar-minimize:hover {
+		color: white;
+		background-color: gray;
+	}
+
+	#titlebar-close:hover {
+		color: white;
+		background-color: #bb3333;
+	}
+
 	.custom-scroll::-webkit-scrollbar {
 		width: 14px;
 	}
