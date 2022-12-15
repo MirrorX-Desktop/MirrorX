@@ -38,7 +38,6 @@ cocoa = "0.24.1"
 objc = "0.2.7"
 
 [target.'cfg(target_os = "windows")'.dependencies]
-window-shadows = "0.2.0"
 
 [features]
 # by default Tauri runs in production mode
