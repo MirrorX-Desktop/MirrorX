@@ -56,17 +56,6 @@
     "updater": {
       "active": false
     },
-    "windows": [
-      {
-        "center": true,
-        "fullscreen": false,
-        "height": 640,
-        "resizable": false,
-        "title": "MirrorX",
-        "width": 360,
-        "maximized": false,
-        "url": "/home"
-      }
-    ]
+    "windows": []
   }
 }

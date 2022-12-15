@@ -9,6 +9,7 @@
 	import LL from '$lib/i18n/i18n-svelte';
 	import { v4 as uuidv4 } from 'uuid';
 
+	let isMacOS = navigator.platform.toLowerCase().includes('mac');
 	let show: boolean = false;
 	let notification_event: { level_color: string; title: string; message: string; id: string } | null = null;
 	let unlisten_fn: UnlistenFn | null = null;
@@ -58,12 +59,11 @@
 
 <slot>
 	<input type="checkbox" id="dialog_notification" class="modal-toggle" checked={show} />
-	<div class="modal">
+	<div class="modal {isMacOS ? '' : 'rounded-lg'}">
+		<!-- here rounded-lg used for mask layer on windows because windows has css rounded corners-->
 		<div class="modal-box {notification_event?.level_color}">
 			<h3 class="text-lg font-bold">{notification_event?.title}</h3>
-			<div class="py-4">
-				<p class="py-1 text-lg">{notification_event?.message}</p>
-			</div>
+			<div class="break-words py-4">{notification_event?.message}</div>
 			<div class="modal-action">
 				<button class="btn" on:click={dismiss}>{$LL.DialogActions.Ok()}</button>
 			</div>

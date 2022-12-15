@@ -53,20 +53,36 @@ async fn main() {
         .setup(|app| {
             app.wry_plugin(tauri_egui::EguiPluginBuilder::new(app.handle()));
 
-            let main_window = app.get_window("main").unwrap();
+            let handle = app.handle();
+            std::thread::spawn(move || {
+                let builder = tauri::WindowBuilder::new(
+                    &handle,
+                    "main",
+                    tauri::WindowUrl::App("/home".into()),
+                )
+                .center()
+                .fullscreen(false)
+                .resizable(false)
+                .maximized(false)
+                .inner_size(360., 640.);
 
-            #[cfg(target_os = "macos")]
-            {
-                use platform::window_ext::WindowExt;
-                main_window.expand_title_bar();
-            }
+                #[cfg(target_os = "macos")]
+                {
+                    use platform::window_ext::WindowExt;
 
-            #[cfg(target_os = "windows")]
-            {
-                use window_shadows::set_shadow;
-                let _ = main_window.set_decorations(false);
-                let _ = set_shadow(&main_window, true);
-            }
+                    let main_window = builder.build().unwrap();
+                    main_window.expand_title_bar();
+                }
+
+                #[cfg(target_os = "windows")]
+                {
+                    builder
+                        .decorations(false)
+                        .transparent(true)
+                        .build()
+                        .unwrap();
+                }
+            });
 
             Ok(())
         })
