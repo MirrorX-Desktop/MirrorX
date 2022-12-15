@@ -4,7 +4,7 @@
 	import { invoke_signaling_visit } from '$lib/components/command';
 	import { onDestroy, onMount } from 'svelte';
 	import Fa from 'svelte-fa';
-	import { emitHomeNotification } from './notification_home.svelte';
+	import { emitNotification } from '$lib/components/notification';
 	import LL from '$lib/i18n/i18n-svelte';
 
 	let remote_device_id: string = '';
@@ -16,7 +16,7 @@
 	onMount(async () => {
 		unlisten_fn = await listen<{
 			remote_device_id: string;
-		}>('/dialog/visit/prepare/open', (event) => {
+		}>('/dialog/visit_prepare', (event) => {
 			remote_device_id = event.payload.remote_device_id;
 			show = true;
 		});
@@ -43,7 +43,7 @@
 				err = 'Incorrect Password';
 			}
 
-			await emitHomeNotification({ level: 'error', title: 'Error', message: err.toString() });
+			await emitNotification({ level: 'error', title: 'Error', message: err.toString() });
 		} finally {
 			remote_device_id = '';
 			input_password = '';

@@ -37,7 +37,7 @@ pub struct Discover {
 }
 
 impl Discover {
-    pub async fn new(local_lan_ip: IpAddr) -> CoreResult<(Self, tokio::sync::mpsc::Receiver<()>)> {
+    pub async fn new(local_lan_ip: IpAddr) -> CoreResult<Self> {
         // why udp not polled when udp listen on specified ip on macOS?
         let listen_ip = if cfg!(target_os = "macos") {
             IpAddr::V4(Ipv4Addr::UNSPECIFIED)
@@ -67,7 +67,6 @@ impl Discover {
 
         let cache_copy = cache.clone();
 
-        let (event_tx, event_rx) = tokio::sync::mpsc::channel(1);
         tokio::spawn(async move {
             let mut buffer = [0u8; 256];
 
@@ -105,8 +104,6 @@ impl Discover {
 
                         tracing::info!(?target_addr, "lan discover target live");
 
-                        let should_notify = !cache_copy.contains_key(&target_addr.ip());
-
                         cache_copy
                             .insert(
                                 target_addr.ip(),
@@ -118,15 +115,10 @@ impl Discover {
                                 },
                             )
                             .await;
-
-                        if should_notify {
-                            let _ = event_tx.try_send(());
-                        }
                     }
                     BroadcastPacket::TargetDead => {
                         tracing::info!(?target_addr, "lan discover target dead");
                         cache_copy.invalidate(&target_addr.ip()).await;
-                        let _ = event_tx.try_send(());
                     }
                 }
             }
@@ -154,14 +146,11 @@ impl Discover {
             }
         });
 
-        Ok((
-            Self {
-                cache,
-                write_exit_tx: Some(write_exit_tx),
-                read_exit_tx: Some(read_exit_tx),
-            },
-            event_rx,
-        ))
+        Ok(Self {
+            cache,
+            write_exit_tx: Some(write_exit_tx),
+            read_exit_tx: Some(read_exit_tx),
+        })
     }
 
     pub fn nodes_snapshot(&self) -> Vec<Node> {

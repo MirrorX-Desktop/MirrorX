@@ -4,7 +4,7 @@
 	import Fa from 'svelte-fa';
 	import { faXmark } from '@fortawesome/free-solid-svg-icons';
 	import LL from '$lib/i18n/i18n-svelte';
-	import { emitHomeNotification } from './notification_home.svelte';
+	import { emitNotification } from '$lib/components/notification';
 	import { invoke_config_language_get, invoke_config_language_set } from '$lib/components/command';
 
 	let show = false;
@@ -17,7 +17,7 @@
 				try {
 					await invoke_config_language_set(language);
 				} catch (error: any) {
-					await emitHomeNotification({
+					await emitNotification({
 						level: 'error',
 						title: 'Error',
 						message: error.toString()

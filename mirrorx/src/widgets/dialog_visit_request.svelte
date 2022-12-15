@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { emit, listen, type UnlistenFn } from '@tauri-apps/api/event';
 	import { onDestroy, onMount } from 'svelte';
-	import { emitHomeNotification } from './notification_home.svelte';
+	import { emitNotification } from '$lib/components/notification';
 	import LL from '$lib/i18n/i18n-svelte';
 
 	let active_device_id: string = '';
@@ -50,7 +50,7 @@
 			// 	passiveDeviceId: passive_device_id
 			// });
 		} catch (error: any) {
-			await emitHomeNotification({ level: 'error', title: 'Error', message: error.toString() });
+			await emitNotification({ level: 'error', title: 'Error', message: error.toString() });
 		} finally {
 			clearCountdown();
 		}

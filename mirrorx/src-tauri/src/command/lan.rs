@@ -13,31 +13,13 @@ use std::net::{IpAddr, SocketAddr};
 use tauri_egui::EguiPluginHandle;
 
 #[tauri::command]
-#[tracing::instrument(skip(app_state, window))]
-pub async fn lan_init(
-    app_state: tauri::State<'_, AppState>,
-    window: tauri::Window,
-    force: bool,
-) -> CoreResult<()> {
+#[tracing::instrument(skip(app_state))]
+pub async fn lan_init(app_state: tauri::State<'_, AppState>, force: bool) -> CoreResult<()> {
     let mut lan_components = app_state.lan_components.lock().await;
 
     if force || lan_components.is_none() {
         let lan_ip = get_lan_ip().await?;
-        let (discover, mut event_rx) = Discover::new(lan_ip).await?;
-
-        tokio::spawn(async move {
-            loop {
-                match event_rx.recv().await {
-                    Some(_) => {
-                        let _ = window.emit("update_lan_discover_nodes", ());
-                    }
-                    None => {
-                        tracing::info!("discover notify process exit");
-                        return;
-                    }
-                }
-            }
-        });
+        let discover = Discover::new(lan_ip).await?;
 
         let old_components = lan_components.take();
         drop(old_components);

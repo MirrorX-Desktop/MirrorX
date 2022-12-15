@@ -1,26 +1,29 @@
 <!DOCTYPE html>
 <html lang="%lang%" data-theme="light">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width" />
+		<style>
+			html {
+				cursor: default;
+				scroll-behavior: smooth;
+			}
 
-<head>
-	<meta charset="utf-8" />
-	<meta name="viewport" content="width=device-width" />
-	<style>
-		html,
-		body {
-			width: 100vw;
-			height: 100vh;
-			margin: 0;
-			border-radius: 10px;
-			user-select: none;
-			-webkit-user-select: none;
-			-moz-user-select: none;
-		}
-	</style>
-	%sveltekit.head%
-</head>
+			html,
+			body {
+				width: 100vw;
+				height: 100vh;
+				margin: 0;
+				border-radius: 10px;
+				user-select: none;
+				-webkit-user-select: none;
+				-moz-user-select: none;
+			}
+		</style>
+		%sveltekit.head%
+	</head>
 
-<body>
-	%sveltekit.body%
-</body>
-
+	<body>
+		<div style="display: contents">%sveltekit.body%</div>
+	</body>
 </html>
