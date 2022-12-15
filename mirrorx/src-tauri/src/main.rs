@@ -31,8 +31,10 @@ async fn main() {
     tauri::Builder::default()
         .manage(command::AppState::new())
         .system_tray(tray)
+        .enable_macos_default_menu(false)
         .on_system_tray_event(|app, event| {
             if let SystemTrayEvent::DoubleClick { .. } = event {
+                tracing::info!("system tray double click");
                 app.windows().values().for_each(|window| {
                     let _ = window.show();
                 })
@@ -61,6 +63,7 @@ async fn main() {
                     tauri::WindowUrl::App("/home".into()),
                 )
                 .center()
+                .always_on_top(true)
                 .title("MirrorX")
                 .fullscreen(false)
                 .resizable(false)
