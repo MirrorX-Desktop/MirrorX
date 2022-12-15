@@ -33,7 +33,7 @@
 	import DialogNotification from '$lib/widgets/dialog_notification.svelte';
 	import DialogVisitPrepare from '$lib/widgets/dialog_visit_prepare.svelte';
 
-	let isMacOS: boolean = navigator.platform.toLowerCase().includes('macos');
+	let isMacOS: boolean = navigator.platform.toLowerCase().includes('mac');
 	let domain: Domain | null = null;
 	let domain_unsubscribe: Unsubscriber | null = null;
 	let switch_primary_unlisten_fn: UnlistenFn | null = null;
