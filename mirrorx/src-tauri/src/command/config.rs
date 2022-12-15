@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
 use tauri::{
     http::Uri, AppHandle, CustomMenuItem, Manager, State, SystemTrayMenu, SystemTrayMenuItem,
+    Window,
 };
 
 #[tauri::command]
@@ -208,10 +209,11 @@ struct UpdateLanguageEvent {
 }
 
 #[tauri::command]
-#[tracing::instrument(skip(app_state, app_handle))]
+#[tracing::instrument(skip(app_state, app_handle, window))]
 pub async fn config_language_set(
     app_state: State<'_, AppState>,
     app_handle: AppHandle,
+    window: Window,
     language: String,
 ) -> CoreResult<()> {
     let Some(ref storage) = *app_state.storage.lock().await else {
@@ -251,6 +253,27 @@ pub async fn config_language_set(
 
     if let Err(err) = app_handle.tray_handle().set_menu(tray_menu) {
         tracing::error!(?err, "set new tray menu failed");
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        let about_text = match language.as_str() {
+            "en" => "About",
+            "zh" => "关于",
+            _ => return Ok(()),
+        };
+
+        if let Err(err) = window
+            .menu_handle()
+            .get_item("about")
+            .set_title(format!("{about_text} MirrorX"))
+        {
+            tracing::error!(menu = "about", ?err, "set os menu failed");
+        }
+
+        if let Err(err) = window.menu_handle().get_item("quit").set_title(quit_text) {
+            tracing::error!(menu = "quit", ?err, "set os menu failed");
+        }
     }
 
     Ok(())

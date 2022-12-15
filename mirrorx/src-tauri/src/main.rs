@@ -52,8 +52,18 @@ async fn main() {
                 }
             }
         })
+        .on_menu_event(|event| {
+            if event.menu_item_id() == "about" {
+                // todo
+            }
+
+            if event.menu_item_id() == "quit" {
+                std::process::exit(0)
+            }
+        })
         .setup(|app| {
             app.wry_plugin(tauri_egui::EguiPluginBuilder::new(app.handle()));
+            let app_name = app.package_info().name.clone();
 
             let handle = app.handle();
             std::thread::spawn(move || {
@@ -73,12 +83,24 @@ async fn main() {
                 #[cfg(target_os = "macos")]
                 {
                     use platform::window_ext::WindowExt;
+                    use tauri::{CustomMenuItem, Menu, MenuItem, Submenu};
+
+                    let mut menu = Menu::new();
+                    menu = menu.add_submenu(Submenu::new(
+                        app_name.clone(),
+                        Menu::new()
+                            .add_item(CustomMenuItem::new("about", "About MirrorX"))
+                            .add_native_item(MenuItem::Separator)
+                            .add_item(CustomMenuItem::new("quit", "Quit")),
+                    ));
 
                     let main_window = builder
+                        .menu(menu)
                         .hidden_title(true)
                         .title_bar_style(tauri::TitleBarStyle::Overlay)
                         .build()
                         .unwrap();
+
                     main_window.expand_title_bar();
                 }
 
