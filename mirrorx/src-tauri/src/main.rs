@@ -34,9 +34,9 @@ async fn main() {
         .enable_macos_default_menu(false)
         .on_system_tray_event(|app, event| {
             if let SystemTrayEvent::DoubleClick { .. } = event {
-                tracing::info!("system tray double click");
                 app.windows().values().for_each(|window| {
                     let _ = window.show();
+                    let _ = window.unminimize();
                 })
             }
             if let SystemTrayEvent::MenuItemClick { id, .. } = event {

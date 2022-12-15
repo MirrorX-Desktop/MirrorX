@@ -32,6 +32,7 @@
 	import Notification from '$lib/widgets/dialog_notification.svelte';
 	import DialogNotification from '$lib/widgets/dialog_notification.svelte';
 	import DialogVisitPrepare from '$lib/widgets/dialog_visit_prepare.svelte';
+	import { hide } from '@tauri-apps/api/app';
 
 	let isMacOS: boolean = navigator.platform.toLowerCase().includes('mac');
 	let domain: Domain | null = null;
@@ -140,10 +141,10 @@
 
 	{#if !isMacOS}
 		<div data-tauri-drag-region class="titlebar gap-1">
-			<button class="titlebar-button" id="titlebar-minimize" on:click={() => appWindow.minimize()}>
+			<button class="titlebar-button" id="titlebar-minimize" on:click={async () => await appWindow.minimize()}>
 				<Fa icon={faMinus} size="xs" />
 			</button>
-			<button class="titlebar-button" id="titlebar-close" on:click={() => appWindow.hide()}>
+			<button class="titlebar-button" id="titlebar-close" on:click={async () => await appWindow.hide()}>
 				<Fa icon={faXmark} size="xs" />
 			</button>
 		</div>
