@@ -64,13 +64,12 @@
 			console.log('finish init config');
 
 			let language = await commands.invoke_config_language_get();
-			if (isLocale(language)) {
-				setLocale(language);
-			} else {
-				const detect_language = detectLocale(navigatorDetector);
-				setLocale(detect_language);
-				await commands.invoke_config_language_set(detect_language);
+			if (!isLocale(language)) {
+				language = detectLocale(navigatorDetector);
 			}
+			setLocale(language as Locales);
+			// always set language to make sure system tray menu use correct language
+			await commands.invoke_config_language_set(language);
 			console.log('finish set locale');
 
 			await commands.invoke_lan_init(false);
