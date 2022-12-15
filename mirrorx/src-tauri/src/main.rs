@@ -61,6 +61,7 @@ async fn main() {
                     tauri::WindowUrl::App("/home".into()),
                 )
                 .center()
+                .title("MirrorX")
                 .fullscreen(false)
                 .resizable(false)
                 .maximized(false)
@@ -70,7 +71,11 @@ async fn main() {
                 {
                     use platform::window_ext::WindowExt;
 
-                    let main_window = builder.build().unwrap();
+                    let main_window = builder
+                        .hidden_title(true)
+                        .title_bar_style(tauri::TitleBarStyle::Overlay)
+                        .build()
+                        .unwrap();
                     main_window.expand_title_bar();
                 }
 
