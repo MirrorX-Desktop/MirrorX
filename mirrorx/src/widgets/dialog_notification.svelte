@@ -59,7 +59,7 @@
 
 <slot>
 	<input type="checkbox" id="dialog_notification" class="modal-toggle" checked={show} />
-	<div class="modal {isMacOS ? '' : 'rounded-lg'}">
+	<div data-tauri-drag-region class="modal {isMacOS ? '' : 'rounded-lg'}">
 		<!-- here rounded-lg used for mask layer on windows because windows has css rounded corners-->
 		<div class="modal-box {notification_event?.level_color}">
 			<h3 class="text-lg font-bold">{notification_event?.title}</h3>
