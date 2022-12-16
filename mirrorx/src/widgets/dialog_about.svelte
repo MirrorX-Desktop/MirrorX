@@ -7,15 +7,17 @@
 	import { invoke_utility_detect_graphics_cards, invoke_utility_detect_os_platform } from '$lib/components/command';
 	import UAParser from 'ua-parser-js';
 
+	let isMacOS = navigator.platform.toLowerCase().includes('mac');
 	let show: boolean = false;
 	let unlisten_fn: UnlistenFn | null = null;
 
+	let ua = new UAParser();
 	let name = '';
 	let version = '';
 	let tauri_version = '';
 	let platform_info = '';
 	let graphics_cards: Array<{ name: string; is_default: boolean }> = [];
-	let webkit_version = new UAParser().getEngine().version;
+	let webkit_version = `${ua.getBrowser().version} (${ua.getBrowser().name})`;
 
 	onMount(async () => {
 		unlisten_fn = await listen<void>('/dialog/about', () => {
@@ -27,6 +29,9 @@
 		tauri_version = await getTauriVersion();
 		platform_info = await invoke_utility_detect_os_platform();
 		graphics_cards = await invoke_utility_detect_graphics_cards();
+
+		console.log(new UAParser().getResult());
+		console.log(navigator.userAgent);
 	});
 
 	onDestroy(() => {
@@ -38,7 +43,7 @@
 
 <slot>
 	<input type="checkbox" id="dialog_about" class="modal-toggle" checked={show} />
-	<div class="modal">
+	<div class="modal {isMacOS ? '' : 'rounded-lg'}">
 		<div class="modal-box">
 			<h3 class="text-center text-lg font-bold">{name}</h3>
 			<div class="flex flex-row items-center justify-center p-2">
@@ -48,7 +53,7 @@
 				<div>{$LL.Settings.Pages.About.Version()}:&nbsp;{version}</div>
 				<div>Tauri&nbsp;{$LL.Settings.Pages.About.Version()}:&nbsp;{tauri_version}</div>
 				<div>OS:&nbsp;{platform_info}</div>
-				<div>WebKit:&nbsp;{webkit_version}</div>
+				<div>WebView:&nbsp;{webkit_version}</div>
 				<div>Graphics Cards:</div>
 				<div class="flex flex-col items-center">
 					{#each graphics_cards as graphics_card}
