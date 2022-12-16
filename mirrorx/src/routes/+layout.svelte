@@ -33,6 +33,7 @@
 	import DialogNotification from '$lib/widgets/dialog_notification.svelte';
 	import DialogVisitPrepare from '$lib/widgets/dialog_visit_prepare.svelte';
 	import { hide } from '@tauri-apps/api/app';
+	import DialogAbout from '$lib/widgets/dialog_about.svelte';
 
 	let isMacOS: boolean = navigator.platform.toLowerCase().includes('mac');
 	let domain: Domain | null = null;
@@ -61,6 +62,9 @@
 		);
 
 		try {
+			// only has effect with macOS, other platform is no-op
+			await commands.invoke_utility_hide_macos_zoom_button();
+
 			await commands.invoke_config_init();
 			console.log('finish init config');
 
@@ -81,7 +85,7 @@
 
 			await commands.invoke_signaling_connect(false);
 			console.log('finish init signaling');
-        
+
 			console.log('finish init current domain');
 		} catch (error: any) {
 			console.log(error);
@@ -240,6 +244,7 @@
 	</div>
 </div>
 
+<DialogAbout />
 <DialogNotification />
 <DialogVisitPrepare />
 

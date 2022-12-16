@@ -432,6 +432,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/ua-parser-js@npm:^0.7.36":
+  version: 0.7.36
+  resolution: "@types/ua-parser-js@npm:0.7.36"
+  checksum: 8c24d4dc12ed1b8b98195838093391c358c81bf75e9cae0ecec8f7824b441e069daaa17b974a3e257172caddb671439f0c0b44bf43bfcf409b7a574a25aab948
+  languageName: node
+  linkType: hard
+
 "@types/uuid@npm:^8.3.4":
   version: 8.3.4
   resolution: "@types/uuid@npm:8.3.4"
@@ -2168,6 +2175,7 @@ __metadata:
     "@sveltejs/adapter-static": ^1.0.0-next.46
     "@sveltejs/kit": next
     "@tauri-apps/api": ^1.1.0
+    "@types/ua-parser-js": ^0.7.36
     "@types/uuid": ^8.3.4
     "@typescript-eslint/eslint-plugin": ^5.27.0
     "@typescript-eslint/parser": ^5.27.0
@@ -2187,6 +2195,7 @@ __metadata:
     tslib: ^2.3.1
     typesafe-i18n: ^5.14.0
     typescript: ^4.7.4
+    ua-parser-js: ^1.0.32
     uuid: ^9.0.0
     vite: ^4.0.1
   languageName: unknown
@@ -3215,6 +3224,13 @@ __metadata:
     tsc: bin/tsc
     tsserver: bin/tsserver
   checksum: 37f6e2c3c5e2aa5934b85b0fddbf32eeac8b1bacf3a5b51d01946936d03f5377fe86255d4e5a4ae628fd0cd553386355ad362c57f13b4635064400f3e8e05b9d
+  languageName: node
+  linkType: hard
+
+"ua-parser-js@npm:^1.0.32":
+  version: 1.0.32
+  resolution: "ua-parser-js@npm:1.0.32"
+  checksum: 79a80efd9c21511fdafc042ab748e0e93c8cdb0e8925bf6d48ad7dbb08e808c60fcecd49e679670def44ef428c005aa1810810f6773e7d8135a7817338080813
   languageName: node
   linkType: hard
 

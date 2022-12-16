@@ -4,7 +4,6 @@
 )]
 
 mod command;
-mod platform;
 mod utility;
 mod window;
 
@@ -99,7 +98,7 @@ fn build_app() -> App {
         })
         .on_menu_event(|event| {
             if event.menu_item_id() == "about" {
-                // todo
+                let _ = event.window().emit("/dialog/about", ());
             }
 
             if event.menu_item_id() == "quit" {
@@ -127,7 +126,6 @@ fn build_app() -> App {
 
                 #[cfg(target_os = "macos")]
                 {
-                    use platform::window_ext::WindowExt;
                     use tauri::{CustomMenuItem, Menu, MenuItem, Submenu};
 
                     let mut menu = Menu::new();
@@ -139,14 +137,12 @@ fn build_app() -> App {
                             .add_item(CustomMenuItem::new("quit", "Quit")),
                     ));
 
-                    let main_window = builder
+                    builder
                         .menu(menu)
                         .hidden_title(true)
                         .title_bar_style(tauri::TitleBarStyle::Overlay)
                         .build()
                         .unwrap();
-
-                    main_window.expand_title_bar();
                 }
 
                 #[cfg(target_os = "windows")]
@@ -176,6 +172,9 @@ fn build_app() -> App {
             command::signaling::signaling_connect,
             command::signaling::signaling_visit,
             command::utility::utility_generate_random_password,
+            command::utility::utility_detect_os_platform,
+            command::utility::utility_detect_graphics_cards,
+            command::utility::utility_hide_macos_zoom_button,
         ])
         .build(tauri::generate_context!())
         .expect("error while running tauri application")

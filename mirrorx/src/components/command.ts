@@ -62,3 +62,15 @@ export function invoke_signaling_visit(remoteDeviceId: string, password: string)
 export function invoke_utility_generate_random_password(): Promise<string> {
 	return invoke('utility_generate_random_password');
 }
+
+export function invoke_utility_detect_os_platform(): Promise<string> {
+	return invoke('utility_detect_os_platform');
+}
+
+export function invoke_utility_detect_graphics_cards(): Promise<Array<{ name: string; is_default: boolean }>> {
+	return invoke('utility_detect_graphics_cards');
+}
+
+export function invoke_utility_hide_macos_zoom_button(): Promise<void> {
+	return invoke('utility_hide_macos_zoom_button');
+}

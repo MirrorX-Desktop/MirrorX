@@ -2608,6 +2608,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "metal"
+version = "0.24.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "de11355d1f6781482d027a3b4d4de7825dcedb197bf573e0596d00008402d060"
+dependencies = [
+ "bitflags",
+ "block",
+ "core-graphics-types",
+ "foreign-types",
+ "log",
+ "objc",
+]
+
+[[package]]
 name = "mime"
 version = "0.3.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2648,9 +2662,11 @@ dependencies = [
  "cocoa",
  "egui_extras",
  "http",
+ "metal",
  "mirrorx_core",
  "objc",
  "once_cell",
+ "os_info",
  "ring",
  "serde",
  "serde_json",
