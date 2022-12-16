@@ -121,7 +121,7 @@ fn build_app() -> App {
                 )
                 .center()
                 .always_on_top(true)
-                .title("MirrorX")
+                .title(&app_name)
                 .fullscreen(false)
                 .resizable(false)
                 .maximized(false)
