@@ -92,6 +92,9 @@ fn build_app() -> App {
                     "hide" => app.windows().values().for_each(|window| {
                         let _ = window.hide();
                     }),
+                    "about" => {
+                        let _ = app.emit_all("/dialog/about", ());
+                    }
                     _ => {}
                 }
             }

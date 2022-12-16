@@ -236,20 +236,32 @@ pub async fn config_language_set(
 
     // update menu language
 
-    let (quit_text, show_text, hide_text) = match language.as_str() {
-        "en" => ("Quit", "Show", "Hide"),
-        "zh" => ("退出", "显示", "隐藏"),
+    let (quit_text, show_text, hide_text, about_text) = match language.as_str() {
+        "en" => ("Quit", "Show", "Hide", "About"),
+        "zh" => ("退出", "显示", "隐藏", "关于"),
         _ => return Ok(()),
     };
 
     let quit = CustomMenuItem::new("quit", quit_text);
     let show = CustomMenuItem::new("show", show_text);
     let hide = CustomMenuItem::new("hide", hide_text);
-    let tray_menu = SystemTrayMenu::new()
-        .add_item(hide)
-        .add_item(show)
-        .add_native_item(SystemTrayMenuItem::Separator)
-        .add_item(quit);
+    let about = CustomMenuItem::new("about", about_text);
+
+    let tray_menu = if cfg!(target_os = "macos") {
+        SystemTrayMenu::new()
+            .add_item(hide)
+            .add_item(show)
+            .add_native_item(SystemTrayMenuItem::Separator)
+            .add_item(quit)
+    } else {
+        SystemTrayMenu::new()
+            .add_item(hide)
+            .add_item(show)
+            .add_native_item(SystemTrayMenuItem::Separator)
+            .add_item(about)
+            .add_native_item(SystemTrayMenuItem::Separator)
+            .add_item(quit)
+    };
 
     if let Err(err) = app_handle.tray_handle().set_menu(tray_menu) {
         tracing::error!(?err, "set new tray menu failed");
