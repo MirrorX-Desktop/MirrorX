@@ -11,7 +11,8 @@ mod window;
 #[cfg(target_os = "macos")]
 use tauri::Icon;
 
-use tauri::{Manager, SystemTray, SystemTrayEvent, WindowEvent};
+use tauri::{App, Manager, SystemTray, SystemTrayEvent, WindowEvent};
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
 #[cfg(target_os = "macos")]
 static TRAY_ICON_MACOS: &[u8] = include_bytes!("../assets/icons/tray-macOS.png");
@@ -19,9 +20,53 @@ static TRAY_ICON_MACOS: &[u8] = include_bytes!("../assets/icons/tray-macOS.png")
 #[tokio::main]
 #[tracing::instrument]
 async fn main() {
-    tracing_subscriber::fmt::init();
     tauri::async_runtime::set(tokio::runtime::Handle::current());
 
+    let app = build_app();
+
+    let log_dir = app
+        .path_resolver()
+        .app_log_dir()
+        .expect("get app log dir failed")
+        .join("logs");
+
+    let file_appender = tracing_appender::rolling::daily(&log_dir, "mirrorx.log");
+    let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
+    let file_layer = tracing_subscriber::fmt::layer()
+        .with_ansi(false)
+        .with_writer(non_blocking);
+
+    let console_layer = tracing_subscriber::fmt::layer()
+        .pretty()
+        .with_writer(std::io::stderr);
+
+    tracing_subscriber::Registry::default()
+        .with(EnvFilter::from("info,tao=info"))
+        .with(console_layer)
+        .with(file_layer)
+        .init();
+
+    tracing::info!(path = ?log_dir, "log dir");
+
+    app.run(|app_handle, event| match event {
+        tauri::RunEvent::WindowEvent { label, event, .. } => {
+            if label == "main" {
+                if let WindowEvent::CloseRequested { api, .. } = event {
+                    if let Some(window) = app_handle.get_window(&label) {
+                        let _ = window.hide();
+                        api.prevent_close();
+                    }
+                }
+            }
+        }
+        tauri::RunEvent::ExitRequested { api, .. } => {
+            api.prevent_exit();
+        }
+        _ => {}
+    });
+}
+
+fn build_app() -> App {
     let tray = SystemTray::new();
     #[cfg(target_os = "macos")]
     let tray = tray
@@ -134,20 +179,4 @@ async fn main() {
         ])
         .build(tauri::generate_context!())
         .expect("error while running tauri application")
-        .run(|app_handle, event| match event {
-            tauri::RunEvent::WindowEvent { label, event, .. } => {
-                if label == "main" {
-                    if let WindowEvent::CloseRequested { api, .. } = event {
-                        if let Some(window) = app_handle.get_window(&label) {
-                            let _ = window.hide();
-                            api.prevent_close();
-                        }
-                    }
-                }
-            }
-            tauri::RunEvent::ExitRequested { api, .. } => {
-                api.prevent_exit();
-            }
-            _ => {}
-        });
 }

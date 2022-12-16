@@ -25,7 +25,7 @@ pub async fn config_init(
         .app_config_dir()
         .ok_or(core_error!("read app dir from path resolver failed"))?;
 
-    tracing::info!(?config_dir, "init config db");
+    tracing::info!(path = ?config_dir, "config dir");
     std::fs::create_dir_all(config_dir.clone())?;
 
     let storage = LocalStorage::new(&config_dir.join("mirrorx.db"))?;

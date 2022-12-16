@@ -81,7 +81,7 @@
 
 			await commands.invoke_signaling_connect(false);
 			console.log('finish init signaling');
-
+        
 			console.log('finish init current domain');
 		} catch (error: any) {
 			console.log(error);
