@@ -1,7 +1,10 @@
 use crate::command::AppState;
 use mirrorx_core::{
     api::{
-        config::{entity::domain::Domain, LocalStorage},
+        config::{
+            entity::{domain::Domain, kv::Theme},
+            LocalStorage,
+        },
         signaling::http_message::Response,
     },
     core_error,
@@ -287,6 +290,28 @@ pub async fn config_language_set(
             tracing::error!(menu = "quit", ?err, "set os menu failed");
         }
     }
+
+    Ok(())
+}
+
+#[tauri::command]
+#[tracing::instrument(skip(app_state))]
+pub async fn config_theme_get(app_state: State<'_, AppState>) -> CoreResult<Option<Theme>> {
+    let Some(ref storage) = *app_state.storage.lock().await else {
+        return Err(core_error!("storage not initialize"));
+    };
+
+    storage.kv().get_theme()
+}
+
+#[tauri::command]
+#[tracing::instrument(skip(app_state))]
+pub async fn config_theme_set(app_state: State<'_, AppState>, theme: Theme) -> CoreResult<()> {
+    let Some(ref storage) = *app_state.storage.lock().await else {
+        return Err(core_error!("storage not initialize"));
+    };
+
+    storage.kv().set_theme(theme)?;
 
     Ok(())
 }

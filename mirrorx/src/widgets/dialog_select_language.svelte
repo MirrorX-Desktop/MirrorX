@@ -6,6 +6,7 @@
 	import LL from '$lib/i18n/i18n-svelte';
 	import { emitNotification } from '$lib/components/notification';
 	import { invoke_config_language_get, invoke_config_language_set } from '$lib/components/command';
+	import { isMacOS } from '$lib/components/types';
 
 	let show = false;
 	let language = '';
@@ -35,7 +36,7 @@
 	];
 
 	onMount(async () => {
-		unlisten_fn = await listen<string>('home:show_select_language_dialog', (event) => {
+		unlisten_fn = await listen<string>('/dialog/select_language', (event) => {
 			show = true;
 		});
 
@@ -51,12 +52,12 @@
 
 <slot>
 	<input type="checkbox" id="dialog_select_language" class="modal-toggle" checked={show} />
-	<div class="modal">
+	<div data-tauri-drag-region class="modal {isMacOS ? '' : 'rounded-lg'}">
 		<div class="modal-box w-80">
 			<button on:click={() => (show = false)} class="btn btn-xs btn-circle btn-outline absolute right-2 top-2">
 				<Fa icon={faXmark} />
 			</button>
-			<h3 class="text-lg font-bold">{$LL.Home.Layout.Dialog.SelectLanguage.Title()}</h3>
+			<h3 class="text-lg font-bold">{$LL.Dialogs.SelectLanguage.Title()}</h3>
 			<div class="py-2">
 				{#each localeAndDisplayNames as ld}
 					<div class="form-control">

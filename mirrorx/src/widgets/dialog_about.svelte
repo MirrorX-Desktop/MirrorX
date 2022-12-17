@@ -6,8 +6,8 @@
 	import icon from '../../src-tauri/assets/icons/icon.png';
 	import { invoke_utility_detect_graphics_cards, invoke_utility_detect_os_platform } from '$lib/components/command';
 	import UAParser from 'ua-parser-js';
+	import { isMacOS } from '$lib/components/types';
 
-	let isMacOS = navigator.platform.toLowerCase().includes('mac');
 	let show: boolean = false;
 	let unlisten_fn: UnlistenFn | null = null;
 
@@ -43,7 +43,7 @@
 
 <slot>
 	<input type="checkbox" id="dialog_about" class="modal-toggle" checked={show} />
-	<div class="modal {isMacOS ? '' : 'rounded-lg'}">
+	<div data-tauri-drag-region class="modal {isMacOS ? '' : 'rounded-lg'}">
 		<div class="modal-box">
 			<h3 class="text-center text-lg font-bold">{name}</h3>
 			<div class="flex flex-row items-center justify-center p-2">
@@ -62,7 +62,7 @@
 				</div>
 			</div>
 			<div class="modal-action flex flex-row pt-2">
-				<button class="btn flex-1">Copy</button>
+				<button class="btn flex-1">{$LL.Dialogs.About.Copy()}</button>
 				<button class="btn flex-1" on:click={() => (show = false)}>{$LL.DialogActions.Ok()}</button>
 			</div>
 		</div>

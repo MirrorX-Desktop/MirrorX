@@ -157,7 +157,7 @@
 	<div class="flex h-full w-full flex-col p-2">
 		<div class="flex h-16 items-center justify-center">
 			<div class="text-3xl">
-				{$LL.Home.Layout.Domain()}
+				{$LL.Home.Domain()}
 			</div>
 		</div>
 		<div class=" flex h-16 items-center justify-center text-center">
@@ -169,7 +169,7 @@
 		</div>
 
 		<div class="flex h-16 items-center justify-center">
-			<div class="text-3xl">{$LL.Home.Pages.Connect.DeviceID()}</div>
+			<div class="text-3xl">{$LL.Home.DeviceID()}</div>
 		</div>
 
 		<div class="flex h-16 items-center justify-center">
@@ -177,8 +177,8 @@
 				<button
 					class="tooltip tooltip-bottom text-4xl hover:cursor-pointer"
 					data-tip={domain_id_copied
-						? $LL.Home.Pages.Connect.Tooltips.ClickToCopyDeviceIDCopied()
-						: $LL.Home.Pages.Connect.Tooltips.ClickToCopyDeviceID()}
+						? $LL.Home.ClickToCopyDeviceIDCopiedTooltip()
+						: $LL.Home.ClickToCopyDeviceIDTooltip()}
 					on:click={copy_domain_id}
 					on:mouseleave={() => (domain_id_copied = false)}
 				>
@@ -189,7 +189,7 @@
 			{/if}
 		</div>
 		<div class="flex h-16 items-center justify-center">
-			<div class="text-3xl">{$LL.Home.Pages.Connect.Password()}</div>
+			<div class="text-3xl">{$LL.Home.Password()}</div>
 		</div>
 
 		<div class="flex h-16 items-center justify-center">
@@ -204,7 +204,7 @@
 					on:change={(event) => (device_password_display = event.currentTarget.value)}
 				/>
 			{:else if show_password}
-				<p class="text-3xl">{device_password_display}</p>
+				<p class="text-2xl">{device_password_display}</p>
 			{:else}
 				<p class="text-4xl">＊＊＊＊＊＊</p>
 			{/if}
@@ -214,7 +214,7 @@
 			{#if edit_password}
 				<button
 					class="tooltip tooltip-bottom text-xl"
-					data-tip={$LL.Home.Pages.Connect.Tooltips.EditPasswordCancel()}
+					data-tip={$LL.Home.GenerateRandomPasswordTooltip()}
 					on:click={generate_random_password}
 				>
 					<Fa icon={faRotate} spin={random_password_generating} />
@@ -222,7 +222,7 @@
 
 				<button
 					class="tooltip tooltip-bottom text-xl"
-					data-tip={$LL.Home.Pages.Connect.Tooltips.EditPasswordCancel()}
+					data-tip={$LL.Home.EditPasswordTooltip()}
 					on:click={commit_edit_password}
 				>
 					<Fa icon={faCheck} />
@@ -230,7 +230,7 @@
 
 				<button
 					class="tooltip tooltip-bottom text-xl"
-					data-tip={$LL.Home.Pages.Connect.Tooltips.EditPasswordCancel()}
+					data-tip={$LL.Home.EditPasswordCancelTooltip()}
 					on:click={cancel_edit_password}
 				>
 					<Fa icon={faXmark} />
@@ -238,7 +238,7 @@
 			{:else}
 				<button
 					class="tooltip tooltip-bottom text-xl"
-					data-tip={$LL.Home.Pages.Connect.Tooltips.EditPassword()}
+					data-tip={$LL.Home.EditPasswordTooltip()}
 					on:click={() => (edit_password = true)}
 				>
 					<Fa icon={faPenToSquare} />
@@ -246,9 +246,7 @@
 
 				<button
 					class="tooltip tooltip-bottom text-xl"
-					data-tip={show_password
-						? $LL.Home.Pages.Connect.Tooltips.PasswordInvisible()
-						: $LL.Home.Pages.Connect.Tooltips.PasswordVisible()}
+					data-tip={show_password ? $LL.Home.PasswordInvisibleTooltip() : $LL.Home.PasswordVisibleTooltip()}
 					on:click={() => (show_password = true)}
 					on:mouseleave={() => (show_password = false)}
 				>
@@ -256,15 +254,16 @@
 				</button>
 			{/if}
 		</div>
-		<hr />
+		<div class="divider m-0">{$LL.Home.Connect()}</div>
+		<!-- <hr /> -->
 		<div class="flex h-full flex-1 flex-col place-items-center justify-evenly">
 			<input
 				id="remote_device_id_input"
-				class="w-5/6 rounded border p-2 text-center text-3xl {remote_device_valid
-					? 'ring-blue-400 focus:outline-none focus:ring'
-					: 'outline-none ring ring-red-500'}"
+				class="input input-bordered w-5/6 p-2 text-center text-3xl {remote_device_valid
+					? 'ring-info focus:border-info focus:outline-none focus:ring'
+					: 'ring-error focus:border-error focus:outline-none focus:ring'}"
 				type="text"
-				placeholder={$LL.Home.Pages.Connect.RemoteDeviceIDPlaceHolder()}
+				placeholder={$LL.Home.RemoteDeviceID()}
 				maxlength="12"
 				bind:value={input_remote_device_id}
 				on:beforeinput={(ev) => (input_remote_device_id_before = ev.currentTarget.value)}
@@ -278,12 +277,12 @@
 				{:else}
 					<button class="btn btn-active inline-flex" on:click={connect_desktop}>
 						<Fa class="mr-2" icon={faDisplay} />
-						{$LL.Home.Pages.Connect.Desktop()}
+						{$LL.Home.Desktop()}
 					</button>
 				{/if}
 
 				<button class="btn inline-flex">
-					<Fa class="mr-2" icon={faFolderTree} />{$LL.Home.Pages.Connect.Files()}
+					<Fa class="mr-2" icon={faFolderTree} />{$LL.Home.Files()}
 				</button>
 			</div>
 		</div>

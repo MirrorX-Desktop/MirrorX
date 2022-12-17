@@ -8,8 +8,8 @@
 	import { onDestroy, onMount } from 'svelte';
 	import LL from '$lib/i18n/i18n-svelte';
 	import { v4 as uuidv4 } from 'uuid';
+	import { isMacOS } from '$lib/components/types';
 
-	let isMacOS = navigator.platform.toLowerCase().includes('mac');
 	let show: boolean = false;
 	let notification_event: { level_color: string; title: string; message: string; id: string } | null = null;
 	let unlisten_fn: UnlistenFn | null = null;

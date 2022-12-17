@@ -6,6 +6,7 @@
 	import Fa from 'svelte-fa';
 	import { emitNotification } from '$lib/components/notification';
 	import LL from '$lib/i18n/i18n-svelte';
+	import { isMacOS } from '$lib/components/types';
 
 	let remote_device_id: string = '';
 	let show = false;
@@ -33,7 +34,6 @@
 			show = false;
 			await invoke_signaling_visit(remote_device_id, input_password);
 		} catch (error: any) {
-			console.log(error);
 			let err: string = error.toString();
 			if (err.includes('Internal')) {
 				err = 'Remote Device Internal Error';
@@ -53,23 +53,21 @@
 	};
 
 	const cancel = async () => {
+		show = false;
 		remote_device_id = '';
 		input_password = '';
 		show_password = false;
-		console.log('emit desktop is connecting');
 		await emit('desktop_is_connecting', false);
 	};
 </script>
 
 <slot>
-	<input type="checkbox" id="dialog_input_remote_password" class="modal-toggle" bind:checked={show} />
-	<div class="modal">
+	<input type="checkbox" id="dialog_visit_prepare" class="modal-toggle" bind:checked={show} />
+	<div data-tauri-drag-region class="modal {isMacOS ? '' : 'rounded-lg'}">
 		<div class="modal-box">
-			<h3 class="text-lg font-bold">{$LL.Home.Pages.Connect.Dialog.InputRemotePassword.Title()}</h3>
 			<div class="py-4">
-				<p class="py-1 text-lg">{$LL.Home.Pages.Connect.Dialog.InputRemotePassword.ContentPrefix()}</p>
 				<p class="py-1 text-center text-xl font-bold">{remote_device_id}</p>
-				<p class="py-1 text-lg">{$LL.Home.Pages.Connect.Dialog.InputRemotePassword.ContentSuffix()}</p>
+				<p class="py-1 text-center text-lg">{$LL.Dialogs.VisitPrepare.Content()}</p>
 			</div>
 			<div class="input-group flex flex-row">
 				<input
@@ -89,9 +87,9 @@
 				</button>
 			</div>
 
-			<div class="modal-action">
-				<button class="btn" on:click={ok}>{$LL.DialogActions.Ok()}</button>
-				<button class="btn" on:click={cancel}>{$LL.DialogActions.Cancel()}</button>
+			<div class="modal-action flex flex-row">
+				<button class="btn flex-1" on:click={ok}>{$LL.DialogActions.Ok()}</button>
+				<button class="btn flex-1" on:click={cancel}>{$LL.DialogActions.Cancel()}</button>
 			</div>
 		</div>
 	</div>

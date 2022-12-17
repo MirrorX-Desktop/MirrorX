@@ -13,26 +13,19 @@
 		faFreebsd,
 		faAmazon
 	} from '@fortawesome/free-brands-svg-icons';
-	import {
-		faDisplay,
-		faFolderTree,
-		faSpinner,
-		faNetworkWired,
-		faDiagramProject
-	} from '@fortawesome/free-solid-svg-icons';
-	import { invoke_lan_connect } from '$lib/components/command';
 	import { emitNotification } from '$lib/components/notification';
+	import { emit } from '@tauri-apps/api/event';
 
-	export let host_name: string;
+	export let hostname: string;
 	export let addr: string;
 	export let os: string;
 	export let os_version: string;
 
 	let show_connect_button: boolean = false;
 
-	const connect_lan = async () => {
+	const lan_connect = async () => {
 		try {
-			await invoke_lan_connect(addr);
+			await emit('/dialog/lan_connect', { addr, hostname });
 		} catch (error: any) {
 			await emitNotification({ level: 'error', title: 'Error', message: error.toString() });
 		}
@@ -43,12 +36,13 @@
 	<button
 		on:mouseenter={() => (show_connect_button = true)}
 		on:mouseleave={() => (show_connect_button = false)}
-		class="hover:bg-primary hover:text-primary-content flex flex-row items-center p-2 text-gray-600 hover:rounded-lg"
+		on:click={lan_connect}
+		class="hover:bg-primary hover:text-primary-content flex flex-row items-center p-2 hover:rounded-lg"
 		style="height: 76px"
 	>
 		<div class="w-full flex-1">
 			<div class=" w-48 overflow-hidden text-ellipsis whitespace-nowrap text-left text-lg">
-				{host_name}
+				{hostname}
 			</div>
 			<div class="w-48 overflow-hidden text-ellipsis whitespace-nowrap text-left text-xs">
 				{os}&nbsp;{os_version}

@@ -39,6 +39,14 @@ export function invoke_config_language_set(language: string): Promise<void> {
 	return invoke('config_language_set', { language });
 }
 
+export function invoke_config_theme_get(): Promise<'light' | 'dark' | 'auto' | null> {
+	return invoke('config_theme_get');
+}
+
+export function invoke_config_theme_set(theme: 'light' | 'dark' | 'auto'): Promise<void> {
+	return invoke('config_theme_set', { theme });
+}
+
 export function invoke_lan_init(force: boolean): Promise<void> {
 	return invoke('lan_init', { force });
 }

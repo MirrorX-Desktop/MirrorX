@@ -169,6 +169,8 @@ fn build_app() -> App {
             command::config::config_domain_update,
             command::config::config_language_get,
             command::config::config_language_set,
+            command::config::config_theme_get,
+            command::config::config_theme_set,
             command::lan::lan_init,
             command::lan::lan_connect,
             command::lan::lan_nodes_list,

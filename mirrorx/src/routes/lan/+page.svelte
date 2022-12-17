@@ -6,6 +6,7 @@
 	import * as commands from '$lib/components/command';
 	import Panel from './panel.svelte';
 	import { emitNotification } from '$lib/components/notification';
+	import LL from '$lib/i18n/i18n-svelte';
 
 	let timer: NodeJS.Timer | null = null;
 	let nodes: Array<LanDiscoverNode> = [];
@@ -32,13 +33,12 @@
 
 <slot>
 	<div class="flex h-full w-full flex-col py-2 px-2">
-		<!-- {#if nodes.length > 0} -->
 		<div class="flex flex-row gap-2">
 			<input
 				id="search_input"
 				type="text"
-				placeholder="Host name Or IP"
-				class="input input-bordered input-sm flex-1 text-center focus:border-blue-300 focus:outline-none focus:ring"
+				placeholder={$LL.LAN.HostnameOrIP()}
+				class="input input-bordered input-sm focus:border-info focus:ring-info flex-1 text-center focus:outline-none focus:ring"
 			/>
 			<div class="form-control">
 				<div class="input-group input-group-sm">
@@ -53,7 +53,7 @@
 			<!-- at most 7 panel here -->
 			<div class="flex flex-col ">
 				{#each nodes as node}
-					<Panel host_name={node.host_name} addr={node.addr} os={node.os} os_version={node.os_version} />
+					<Panel hostname={node.host_name} addr={node.addr} os={node.os} os_version={node.os_version} />
 				{/each}
 			</div>
 		</div>
@@ -61,38 +61,14 @@
 			<div class="form-control">
 				<label class="label flex cursor-pointer items-center gap-1">
 					<input type="checkbox" checked={true} class="checkbox checkbox-primary checkbox-xs" />
-					<span class="label-text">Discoverable</span>
+					<span class="label-text">{$LL.LAN.Discoverable()}</span>
 				</label>
 			</div>
 			<div class="btn-group">
 				<button class="btn btn-xs">«</button>
-				<button class="btn btn-xs">Page 22</button>
+				<button class="btn btn-xs">1 / 22</button>
 				<button class="btn btn-xs">»</button>
 			</div>
 		</div>
-		<!-- {:else}
-			<div class="flex h-full w-full items-center justify-center">
-				<label>ddd</label>
-			</div>
-		{/if} -->
 	</div>
 </slot>
-
-<style>
-	/* .custom-scrollbar::-webkit-scrollbar {
-		width: 10px;
-	} */
-
-	/* .custom-scrollbar::-webkit-scrollbar-thumb {
-		border: 1px solid rgba(0, 0, 0, 0);
-		border-radius: 9999px;
-		background-color: #aaaaaa;
-	} */
-
-	/* .custom-scrollbar::-webkit-scrollbar-track {
-		margin-top: 10px;
-		margin-left: 10px;
-		margin-bottom: 10px;
-		margin-right: 10px;
-	} */
-</style>
