@@ -40,7 +40,7 @@
 			show = true;
 		});
 
-		invoke_config_language_get().then((v) => (language = v));
+		language = await invoke_config_language_get();
 	});
 
 	onDestroy(() => {
