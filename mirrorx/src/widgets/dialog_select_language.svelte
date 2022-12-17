@@ -36,11 +36,10 @@
 	];
 
 	onMount(async () => {
-		unlisten_fn = await listen<string>('/dialog/select_language', (event) => {
+		unlisten_fn = await listen<string>('/dialog/select_language', async (event) => {
+			language = await invoke_config_language_get();
 			show = true;
 		});
-
-		language = await invoke_config_language_get();
 	});
 
 	onDestroy(() => {
