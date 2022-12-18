@@ -138,6 +138,10 @@ type RootTranslation = {
 			 * C​o​p​y
 			 */
 			Copy: string
+			/**
+			 * V​e​r​s​i​o​n
+			 */
+			Version: string
 		}
 		VisitPrepare: {
 			/**
@@ -285,6 +289,10 @@ export type TranslationFunctions = {
 			 * Copy
 			 */
 			Copy: () => LocalizedString
+			/**
+			 * Version
+			 */
+			Version: () => LocalizedString
 		}
 		VisitPrepare: {
 			/**

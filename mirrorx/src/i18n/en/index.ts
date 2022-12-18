@@ -89,7 +89,8 @@ const en: BaseTranslation = {
 	},
 	Dialogs: {
 		About: {
-			Copy: 'Copy'
+			Copy: 'Copy',
+			Version: 'Version'
 		},
 		VisitPrepare: {
 			Content: "Please input this device's password"

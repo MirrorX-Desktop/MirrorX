@@ -50,8 +50,8 @@
 				<img src={icon} width="48" class="text-center" alt="logo" />
 			</div>
 			<div class="flex select-auto flex-col items-center justify-center pb-2 text-sm">
-				<div>{$LL.Settings.Pages.About.Version()}:&nbsp;{version}</div>
-				<div>Tauri&nbsp;{$LL.Settings.Pages.About.Version()}:&nbsp;{tauri_version}</div>
+				<div>{$LL.Dialogs.About.Version()}:&nbsp;{version}</div>
+				<div>Tauri&nbsp;{$LL.Dialogs.About.Version()}:&nbsp;{tauri_version}</div>
 				<div>OS:&nbsp;{platform_info}</div>
 				<div>WebView:&nbsp;{webkit_version}</div>
 				<div>Graphics Cards:</div>

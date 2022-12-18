@@ -31,7 +31,8 @@ const zh_Hans: Translation = {
 	},
 	Dialogs: {
 		About: {
-			Copy: '复制'
+			Copy: '复制',
+			Version: '版本'
 		},
 		VisitPrepare: {
 			Content: '请输入该设备的密码'
