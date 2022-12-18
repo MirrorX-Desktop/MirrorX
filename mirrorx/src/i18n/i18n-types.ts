@@ -50,7 +50,7 @@ type RootTranslation = {
 		 */
 		DeviceID: string
 		/**
-		 * R​e​m​o​t​e​D​e​v​i​c​e​I​D
+		 * R​e​m​o​t​e​ ​D​e​v​i​c​e​ ​I​D
 		 */
 		RemoteDeviceID: string
 		/**
@@ -197,7 +197,7 @@ export type TranslationFunctions = {
 		 */
 		DeviceID: () => LocalizedString
 		/**
-		 * RemoteDeviceID
+		 * Remote Device ID
 		 */
 		RemoteDeviceID: () => LocalizedString
 		/**
