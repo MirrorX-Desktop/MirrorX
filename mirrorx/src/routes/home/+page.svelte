@@ -7,7 +7,8 @@
 		faFolderTree,
 		faPenToSquare,
 		faRotate,
-		faSpinner
+		faSpinner,
+		faAsterisk
 	} from '@fortawesome/free-solid-svg-icons';
 	import { emit, listen, type UnlistenFn } from '@tauri-apps/api/event';
 	import {
@@ -35,6 +36,8 @@
 	let desktop_is_connecting = false;
 	let desktop_is_connecting_unlisten_fn: UnlistenFn | null;
 	let domain_id_copied = false;
+	let remote_device_id_input: HTMLElement | null = null;
+	let remote_device_id_input_placeholder: HTMLElement | null = null;
 
 	$: device_password_display = domain?.password ?? '';
 
@@ -151,8 +154,22 @@
 			domain_id_copied = true;
 		}
 	};
+
+	const change_remote_device_id_input_placeholder_visible = (visible: boolean) => {
+		if (visible) {
+			if (remote_device_id_input_placeholder && input_remote_device_id.length == 0) {
+				remote_device_id_input_placeholder.classList.remove('invisible');
+				remote_device_id_input_placeholder.classList.add('visible');
+			}
+		} else {
+			remote_device_id_input_placeholder?.classList.remove('visible');
+			remote_device_id_input_placeholder?.classList.add('invisible');
+			remote_device_id_input?.focus();
+		}
+	};
 </script>
 
+<!-- svelte-ignore a11y-click-events-have-key-events -->
 <slot>
 	<div class="flex h-full w-full flex-col p-2">
 		<div class="flex h-16 items-center justify-center">
@@ -196,7 +213,7 @@
 			{#if edit_password}
 				<input
 					id="password_input"
-					class="input input-bordered flex-1 text-center focus:border-blue-300 focus:outline-none focus:ring"
+					class="input input-bordered ring-info focus:border-info flex-1 text-center focus:outline-none focus:ring"
 					type="text"
 					placeholder={''}
 					maxlength="20"
@@ -206,11 +223,17 @@
 			{:else if show_password}
 				<p class="text-2xl">{device_password_display}</p>
 			{:else}
-				<p class="text-4xl">＊＊＊＊＊＊</p>
+				<Fa icon={faAsterisk} class="px-1" />
+				<Fa icon={faAsterisk} class="px-1" />
+				<Fa icon={faAsterisk} class="px-1" />
+				<Fa icon={faAsterisk} class="px-1" />
+				<Fa icon={faAsterisk} class="px-1" />
+				<Fa icon={faAsterisk} class="px-1" />
+				<Fa icon={faAsterisk} class="px-1" />
 			{/if}
 		</div>
 
-		<div class="flex h-16 items-center justify-center gap-3">
+		<div class="flex h-8 items-center justify-center gap-3">
 			{#if edit_password}
 				<button
 					class="tooltip tooltip-bottom text-xl"
@@ -254,21 +277,33 @@
 				</button>
 			{/if}
 		</div>
-		<div class="divider m-0">{$LL.Home.Connect()}</div>
-		<!-- <hr /> -->
-		<div class="flex h-full flex-1 flex-col place-items-center justify-evenly">
-			<input
-				id="remote_device_id_input"
-				class="input input-bordered w-5/6 p-2 text-center text-3xl {remote_device_valid
-					? 'ring-info focus:border-info focus:outline-none focus:ring'
-					: 'ring-error focus:border-error focus:outline-none focus:ring'}"
-				type="text"
-				placeholder={$LL.Home.RemoteDeviceID()}
-				maxlength="12"
-				bind:value={input_remote_device_id}
-				on:beforeinput={(ev) => (input_remote_device_id_before = ev.currentTarget.value)}
-				on:input={(event) => on_remote_device_id_input(event)}
-			/>
+		<div class="divider mb-2">{$LL.Home.Connect()}</div>
+		<div class="flex h-full flex-1 flex-row items-center justify-center">
+			<div class="relative w-5/6">
+				<input
+					class="input input-bordered w-full  text-center text-3xl {remote_device_valid
+						? 'ring-info focus:border-info focus:outline-none focus:ring'
+						: 'ring-error focus:border-error focus:outline-none focus:ring'}"
+					type="text"
+					maxlength="12"
+					bind:this={remote_device_id_input}
+					bind:value={input_remote_device_id}
+					on:blur={() => change_remote_device_id_input_placeholder_visible(true)}
+					on:beforeinput={(ev) => (input_remote_device_id_before = ev.currentTarget.value)}
+					on:input={(event) => on_remote_device_id_input(event)}
+				/>
+
+				<div
+					bind:this={remote_device_id_input_placeholder}
+					on:click={() => change_remote_device_id_input_placeholder_visible(false)}
+					class="absolute top-0 h-full w-full cursor-text text-center align-middle text-lg"
+					style="line-height: 48px;"
+				>
+					{$LL.Home.RemoteDeviceID()}
+				</div>
+			</div>
+		</div>
+		<div class="flex flex-row items-center justify-center pb-2">
 			<div class="btn-group">
 				{#if desktop_is_connecting}
 					<button class="btn btn-active btn-disabled">
@@ -290,19 +325,4 @@
 </slot>
 
 <style>
-	/* #remote_device_id_input::-webkit-input-placeholder {
-        @apply text-center align-middle text-xl;
-    }
-
-    #remote_device_id_input::placeholder {
-        @apply text-center align-middle text-xl;
-    }
-
-    #remote_device_id_input::-moz-placeholder {
-        @apply text-center align-middle text-xl;
-    }
-
-    #remote_device_id_input::-ms-input-placeholder {
-        @apply text-center align-middle text-xl;
-    } */
 </style>

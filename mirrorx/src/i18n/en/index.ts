@@ -12,7 +12,7 @@ const en: BaseTranslation = {
 	Home: {
 		Domain: 'Domain',
 		DeviceID: 'DeviceID',
-		RemoteDeviceID: 'RemoteDeviceID',
+		RemoteDeviceID: 'Remote Device ID',
 		Password: 'Password',
 		Connect: 'Connect',
 		Desktop: 'Desktop',

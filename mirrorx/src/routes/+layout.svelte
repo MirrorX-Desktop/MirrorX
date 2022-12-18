@@ -345,14 +345,9 @@
 		transition: background-color 100ms linear;
 	}
 
-	.titlebar-button:hover {
-		color: white;
-		background-color: white;
-	}
-
 	#titlebar-minimize:hover {
+		@apply bg-base-300;
 		color: white;
-		background-color: rgb(185, 185, 185);
 	}
 
 	#titlebar-close:hover {
@@ -506,7 +501,7 @@
 		width: 100%;
 		height: 100%;
 		border-radius: 8px;
-		box-shadow: 0px 0px 16px var(--tw-shadow-color); /* rgba(198, 198, 198, 0.729);*/
+		box-shadow: 0px 0px 16px var(--tw-shadow-color);
 		z-index: 2;
 		flex: 1 1 0%;
 	}
