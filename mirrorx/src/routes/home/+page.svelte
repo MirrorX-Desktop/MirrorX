@@ -296,7 +296,7 @@
 				<div
 					bind:this={remote_device_id_input_placeholder}
 					on:click={() => change_remote_device_id_input_placeholder_visible(false)}
-					class="absolute top-0 h-full w-full cursor-text text-center align-middle text-lg"
+					class="absolute top-0 h-full w-full cursor-text text-center align-middle text-lg text-gray-400"
 					style="line-height: 48px;"
 				>
 					{$LL.Home.RemoteDeviceID()}
