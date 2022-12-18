@@ -161,6 +161,100 @@ type RootTranslation = {
 			 */
 			Title: string
 		}
+		DomainList: {
+			/**
+			 * C​u​r​r​e​n​t​:
+			 */
+			Current: string
+			Tooltips: {
+				/**
+				 * A​d​d​ ​n​e​w​ ​d​o​m​a​i​n
+				 */
+				Add: string
+				/**
+				 * S​e​t​ ​a​s​ ​p​r​i​m​a​r​y​ ​d​o​m​a​i​n
+				 */
+				SetPrimary: string
+				/**
+				 * E​d​i​t
+				 */
+				Edit: string
+				/**
+				 * D​e​l​e​t​e
+				 */
+				Delete: string
+			}
+		}
+		DomainEdit: {
+			/**
+			 * E​d​i​t​ ​D​o​m​a​i​n
+			 */
+			Title: string
+			/**
+			 * N​a​m​e
+			 */
+			Name: string
+			/**
+			 * D​e​v​i​c​e​ ​I​d
+			 */
+			DeviceId: string
+			FingerPrint: {
+				/**
+				 * F​i​n​g​e​r​P​r​i​n​t
+				 */
+				Label: string
+				/**
+				 * F​i​n​g​e​r​ ​p​r​i​n​t​ ​i​s​ ​a​ ​r​a​n​d​o​m​ ​s​t​r​i​n​g​ ​g​e​n​e​r​a​t​e​d​ ​a​t​ ​l​o​c​a​l​ ​o​n​c​e​ ​y​o​u​ ​c​o​n​n​e​c​t​e​d​ ​t​o​ ​a​ ​n​e​w​ ​d​o​m​a​i​n​.​ ​I​t​ ​i​s​ ​u​s​e​d​ ​t​o​ ​p​r​o​v​e​ ​y​o​u​r​ ​d​e​v​i​c​e​ ​h​a​s​ ​a​u​t​h​o​r​i​t​y​ ​t​o​ ​h​o​l​d​ ​a​ ​D​e​v​i​c​e​ ​I​d​ ​t​h​a​t​ ​D​o​m​a​i​n​ ​a​l​l​o​c​a​t​e​d​ ​f​o​r​ ​y​o​u​ ​f​o​r​ ​a​ ​w​h​i​l​e​ ​a​n​d​ ​i​t​ ​c​a​n​'​t​ ​b​e​ ​u​s​e​d​ ​t​o​ ​t​r​a​c​k​ ​y​o​u​r​ ​d​e​v​i​c​e​.
+				 */
+				Tooltip: string
+			}
+			/**
+			 * R​e​m​a​r​k​s
+			 */
+			Remarks: string
+		}
+		DomainAdd: {
+			/**
+			 * A​d​d​ ​D​o​m​a​i​n
+			 */
+			Title: string
+			/**
+			 * D​o​m​a​i​n​ ​A​d​d​r​e​s​s​ ​(​I​P​:​P​o​r​t​ ​o​r​ ​U​R​L​)
+			 */
+			AddressInputPlaceHolder: string
+			/**
+			 * R​e​m​a​r​k​s
+			 */
+			RemarksInputPlaceHolder: string
+		}
+		DomainSwitch: {
+			/**
+			 * S​e​t​ ​P​r​i​m​a​r​y​ ​D​o​m​a​i​n
+			 */
+			Title: string
+			/**
+			 * D​o​ ​y​o​u​ ​w​a​n​t​ ​t​o​ ​s​e​t
+			 */
+			ContentPrefix: string
+			/**
+			 * a​s​ ​p​r​i​m​a​r​y​ ​d​o​m​a​i​n​?
+			 */
+			ContentSuffix: string
+		}
+		DomainDelete: {
+			/**
+			 * D​e​l​e​t​e​ ​D​o​m​a​i​n
+			 */
+			Title: string
+			/**
+			 * D​o​ ​y​o​u​ ​w​a​n​t​ ​t​o​ ​d​e​l​e​t​e​ ​d​o​m​a​i​n
+			 */
+			ContentPrefix: string
+			/**
+			 * ?​ ​O​n​c​e​ ​y​o​u​ ​d​e​l​e​t​e​ ​i​t​ ​a​n​d​ ​y​o​u​ ​c​a​n​'​t​ ​r​e​c​o​v​e​r​y​!
+			 */
+			ContentSuffix: string
+		}
 	}
 }
 
@@ -311,6 +405,100 @@ export type TranslationFunctions = {
 			 * Select Language
 			 */
 			Title: () => LocalizedString
+		}
+		DomainList: {
+			/**
+			 * Current:
+			 */
+			Current: () => LocalizedString
+			Tooltips: {
+				/**
+				 * Add new domain
+				 */
+				Add: () => LocalizedString
+				/**
+				 * Set as primary domain
+				 */
+				SetPrimary: () => LocalizedString
+				/**
+				 * Edit
+				 */
+				Edit: () => LocalizedString
+				/**
+				 * Delete
+				 */
+				Delete: () => LocalizedString
+			}
+		}
+		DomainEdit: {
+			/**
+			 * Edit Domain
+			 */
+			Title: () => LocalizedString
+			/**
+			 * Name
+			 */
+			Name: () => LocalizedString
+			/**
+			 * Device Id
+			 */
+			DeviceId: () => LocalizedString
+			FingerPrint: {
+				/**
+				 * FingerPrint
+				 */
+				Label: () => LocalizedString
+				/**
+				 * Finger print is a random string generated at local once you connected to a new domain. It is used to prove your device has authority to hold a Device Id that Domain allocated for you for a while and it can't be used to track your device.
+				 */
+				Tooltip: () => LocalizedString
+			}
+			/**
+			 * Remarks
+			 */
+			Remarks: () => LocalizedString
+		}
+		DomainAdd: {
+			/**
+			 * Add Domain
+			 */
+			Title: () => LocalizedString
+			/**
+			 * Domain Address (IP:Port or URL)
+			 */
+			AddressInputPlaceHolder: () => LocalizedString
+			/**
+			 * Remarks
+			 */
+			RemarksInputPlaceHolder: () => LocalizedString
+		}
+		DomainSwitch: {
+			/**
+			 * Set Primary Domain
+			 */
+			Title: () => LocalizedString
+			/**
+			 * Do you want to set
+			 */
+			ContentPrefix: () => LocalizedString
+			/**
+			 * as primary domain?
+			 */
+			ContentSuffix: () => LocalizedString
+		}
+		DomainDelete: {
+			/**
+			 * Delete Domain
+			 */
+			Title: () => LocalizedString
+			/**
+			 * Do you want to delete domain
+			 */
+			ContentPrefix: () => LocalizedString
+			/**
+			 * ? Once you delete it and you can't recovery!
+			 */
+			ContentSuffix: () => LocalizedString
 		}
 	}
 }

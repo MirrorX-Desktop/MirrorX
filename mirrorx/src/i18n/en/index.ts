@@ -100,59 +100,42 @@ const en: BaseTranslation = {
 		},
 		SelectLanguage: {
 			Title: 'Select Language'
+		},
+		DomainList: {
+			Current: 'Current:',
+			Tooltips: {
+				Add: 'Add new domain',
+				SetPrimary: 'Set as primary domain',
+				Edit: 'Edit',
+				Delete: 'Delete'
+			}
+		},
+		DomainEdit: {
+			Title: 'Edit Domain',
+			Name: 'Name',
+			DeviceId: 'Device Id',
+			FingerPrint: {
+				Label: 'FingerPrint',
+				Tooltip: `Finger print is a random string generated at local once you connected to a new domain. It is used to prove your device has authority to hold a Device Id that Domain allocated for you for a while and it can't be used to track your device.`
+			},
+			Remarks: 'Remarks'
+		},
+		DomainAdd: {
+			Title: 'Add Domain',
+			AddressInputPlaceHolder: 'Domain Address (IP:Port or URL)',
+			RemarksInputPlaceHolder: 'Remarks'
+		},
+		DomainSwitch: {
+			Title: 'Set Primary Domain',
+			ContentPrefix: 'Do you want to set',
+			ContentSuffix: 'as primary domain?'
+		},
+		DomainDelete: {
+			Title: 'Delete Domain',
+			ContentPrefix: 'Do you want to delete domain',
+			ContentSuffix: `? Once you delete it and you can't recovery!`
 		}
 	}
-	// Settings: {
-	// 	WindowTitle: 'Settings',
-	// 	Layout: {
-	// 		Domain: 'Domain',
-	// 		About: 'About'
-	// 	},
-	// 	Pages: {
-	// 		Domain: {
-	// 			Current: 'Current:',
-	// 			Tooltips: {
-	// 				Add: 'Add new domain',
-	// 				SetPrimary: 'Set as primary domain',
-	// 				Edit: 'Edit',
-	// 				Delete: 'Delete'
-	// 			}
-	// 		},
-	// 		About: {
-	// 			Version: 'Version',
-	// 			Official: 'Official',
-	// 			SourceRepository: 'Source Repository',
-	// 			SupportAndHelp: 'Support&Help'
-	// 		},
-	// 		Dialog: {
-	// 			EditDomain: {
-	// 				Title: 'Edit Domain',
-	// 				Name: 'Name',
-	// 				DeviceId: 'Device Id',
-	// 				FingerPrint: {
-	// 					Label: 'FingerPrint',
-	// 					Tooltip: `Finger print is a random string generated at local once you connected to a new domain. It is used to prove your device has authority to hold a Device Id that Domain allocated for you for a while and it can't be used to track your device.`
-	// 				},
-	// 				Remarks: 'Remarks'
-	// 			},
-	// 			AddDomain: {
-	// 				Title: 'Add Domain',
-	// 				AddressInputPlaceHolder: 'Domain Address (IP:Port or URL)',
-	// 				RemarksInputPlaceHolder: 'Remarks'
-	// 			},
-	// 			SetPrimaryDomain: {
-	// 				Title: 'Set Primary Domain',
-	// 				ContentPrefix: 'Do you want to set',
-	// 				ContentSuffix: 'as primary domain?'
-	// 			},
-	// 			DeleteDomain: {
-	// 				Title: 'Delete Domain',
-	// 				ContentPrefix: 'Do you want to delete domain',
-	// 				ContentSuffix: `? Once you delete it and you can't recovery!`
-	// 			}
-	// 		}
-	// 	}
-	// }
 };
 
 export default en;

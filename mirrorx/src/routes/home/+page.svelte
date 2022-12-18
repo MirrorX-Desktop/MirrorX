@@ -8,7 +8,8 @@
 		faPenToSquare,
 		faRotate,
 		faSpinner,
-		faAsterisk
+		faAsterisk,
+		faCaretDown
 	} from '@fortawesome/free-solid-svg-icons';
 	import { emit, listen, type UnlistenFn } from '@tauri-apps/api/event';
 	import {
@@ -22,9 +23,9 @@
 	import LL from '$lib/i18n/i18n-svelte';
 	import { emitNotification } from '$lib/components/notification';
 	import { writeText, readText } from '@tauri-apps/api/clipboard';
-	import type { Domain } from '$lib/components/types';
 	import Fa from 'svelte-fa';
 	import { formatDeviceID } from '$lib/components/utility';
+	import type { Domain } from '$lib/components/types';
 
 	let domain: Domain | null = null;
 	let domain_unsubscribe: Unsubscriber | null = null;
@@ -167,16 +168,100 @@
 			remote_device_id_input?.focus();
 		}
 	};
+
+	const open_domain_list_dialog = async () => {
+		await emit('/dialog/domain_list');
+	};
 </script>
 
+<!-- svelte-ignore a11y-label-has-associated-control -->
+<!-- svelte-ignore a11y-no-noninteractive-tabindex -->
 <!-- svelte-ignore a11y-click-events-have-key-events -->
 <slot>
 	<div class="flex h-full w-full flex-col p-2">
-		<div class="flex h-16 items-center justify-center">
+		<div class="flex h-16 items-center justify-between ">
+			<button class="btn btn-xs btn-outline invisible"><Fa icon={faCaretDown} /></button>
 			<div class="text-3xl">
 				{$LL.Home.Domain()}
 			</div>
+			<div class="dropdown dropdown-bottom dropdown-end">
+				<label tabindex="0" class="btn btn-xs btn-outline visible">
+					<Fa icon={faCaretDown} />
+				</label>
+
+				<div tabindex="0" class="dropdown-content menu bg-base-200 rounded-box p-2 shadow">
+					<ul>
+						<li class="menu-title">
+							<span>Domain Actions</span>
+						</li>
+						<li>
+							<button on:click={open_domain_list_dialog}>Edit</button>
+						</li>
+						<li class="menu-title">
+							<span>Select Primary Domain</span>
+						</li>
+					</ul>
+					<div id="domain_select_range" class="max-h-60 w-56 overflow-y-auto">
+						<ul>
+							<li>
+								<div>
+									<label class="label cursor-pointer gap-2">
+										<input type="radio" name="radio-10" class="radio radio-sm" checked />
+										<span class="label-text">Red pill</span>
+									</label>
+								</div>
+							</li>
+
+							<li>
+								<div>
+									<label class="label cursor-pointer gap-2">
+										<input type="radio" name="radio-10" class="radio radio-sm" />
+										<span class="label-text">Red pill</span>
+									</label>
+								</div>
+							</li>
+
+							<li>
+								<div>
+									<label class="label cursor-pointer gap-2">
+										<input type="radio" name="radio-10" class="radio radio-sm" />
+										<span class="label-text">Red pill</span>
+									</label>
+								</div>
+							</li>
+
+							<li>
+								<div>
+									<label class="label cursor-pointer gap-2">
+										<input type="radio" name="radio-10" class="radio radio-sm" />
+										<span class="label-text">Red pill</span>
+									</label>
+								</div>
+							</li>
+
+							<li>
+								<div>
+									<label class="label cursor-pointer gap-2">
+										<input type="radio" name="radio-10" class="radio radio-sm" />
+										<span class="label-text">Red pill</span>
+									</label>
+								</div>
+							</li>
+
+							<li>
+								<div>
+									<label class="label cursor-pointer gap-2">
+										<input type="radio" name="radio-10" class="radio radio-sm" />
+										<span class="label-text">Red pill</span>
+									</label>
+								</div>
+							</li>
+						</ul>
+					</div>
+				</div>
+			</div>
 		</div>
+
 		<div class=" flex h-16 items-center justify-center text-center">
 			{#if domain}
 				<div class="text-4xl">{domain.name}</div>
@@ -325,4 +410,16 @@
 </slot>
 
 <style>
+	#domain_select_range::-webkit-scrollbar {
+		width: 8px;
+	}
+
+	#domain_select_range::-webkit-scrollbar-thumb {
+		@apply bg-base-300;
+		border-radius: 9999px;
+	}
+
+	#domain_select_range::-webkit-scrollbar-track {
+		background-color: transparent;
+	}
 </style>

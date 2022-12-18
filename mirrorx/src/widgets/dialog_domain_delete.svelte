@@ -2,9 +2,8 @@
 	import { emit, listen, type UnlistenFn } from '@tauri-apps/api/event';
 	import { invoke_config_domain_delete } from '$lib/components/command';
 	import { onDestroy, onMount } from 'svelte';
-	import { emitSettingsNotification } from '../settings_notification_center.svelte';
-	import type { DeleteConfirmEvent } from './event';
 	import LL from '$lib/i18n/i18n-svelte';
+	import { emitNotification } from '$lib/components/notification';
 
 	let show: boolean = false;
 	let unlisten_fn: UnlistenFn | null = null;
@@ -12,7 +11,7 @@
 	let domain_name: string = '';
 
 	onMount(async () => {
-		unlisten_fn = await listen<DeleteConfirmEvent>('settings:domain:show_delete_confirm_dialog', (event) => {
+		unlisten_fn = await listen<{ domain_id: number; domain_name: string }>('/dialog/domain_delete', (event) => {
 			domain_id = event.payload.domain_id;
 			domain_name = event.payload.domain_name;
 			show = true;
@@ -30,8 +29,9 @@
 			await invoke_config_domain_delete(domain_id);
 			await emit('settings:domain:update_domains');
 		} catch (error: any) {
-			await emitSettingsNotification({
+			await emitNotification({
 				level: 'error',
+				title: 'Error',
 				message: error.toString() as string
 			});
 		} finally {
@@ -48,11 +48,11 @@
 	<input type="checkbox" id="dialog_delete_confirm" class="modal-toggle" checked={show} />
 	<div class="modal">
 		<div class="modal-box w-96">
-			<h3 class="text-lg font-bold">{$LL.Settings.Pages.Dialog.DeleteDomain.Title()}</h3>
+			<h3 class="text-lg font-bold">{$LL.Dialogs.DomainDelete.Title()}</h3>
 			<div class="py-4">
-				{$LL.Settings.Pages.Dialog.DeleteDomain.ContentPrefix()}
+				{$LL.Dialogs.DomainDelete.ContentPrefix()}
 				<span class="font-bold">{domain_name}</span>
-				{$LL.Settings.Pages.Dialog.DeleteDomain.ContentSuffix()}
+				{$LL.Dialogs.DomainDelete.ContentSuffix()}
 			</div>
 			<div class="modal-action">
 				<button class="btn" on:click={yes}>{$LL.DialogActions.Yes()}</button>

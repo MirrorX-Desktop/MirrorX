@@ -2,10 +2,9 @@
 	import { emit, listen, type UnlistenFn } from '@tauri-apps/api/event';
 	import { invoke_config_domain_get, invoke_config_domain_update } from '$lib/components/command';
 	import { onDestroy, onMount } from 'svelte';
-	import { emitSettingsNotification } from '../settings_notification_center.svelte';
-	import type { SwitchPrimaryDomainEvent } from './event';
 	import LL from '$lib/i18n/i18n-svelte';
 	import { current_domain } from '$lib/components/stores';
+	import { emitNotification } from '$lib/components/notification';
 
 	let show: boolean = false;
 	let unlisten_fn: UnlistenFn | null = null;
@@ -13,14 +12,11 @@
 	let domain_name: string = '';
 
 	onMount(async () => {
-		unlisten_fn = await listen<SwitchPrimaryDomainEvent>(
-			'settings:domain:show_switch_primary_domain_dialog',
-			(event) => {
-				domain_id = event.payload.domain_id;
-				domain_name = event.payload.domain_name;
-				show = true;
-			}
-		);
+		unlisten_fn = await listen<{ domain_id: number; domain_name: string }>('/dialog/domain_switch', (event) => {
+			domain_id = event.payload.domain_id;
+			domain_name = event.payload.domain_name;
+			show = true;
+		});
 	});
 
 	onDestroy(() => {
@@ -37,8 +33,9 @@
 			await emit('home:switch_primary_domain');
 			await emit('settings:domain:update_domains');
 		} catch (error: any) {
-			await emitSettingsNotification({
+			await emitNotification({
 				level: 'error',
+				title: 'Error',
 				message: error.toString() as string
 			});
 		} finally {
@@ -55,11 +52,11 @@
 	<input type="checkbox" id="dialog_switch_primary_domain" class="modal-toggle" checked={show} />
 	<div class="modal">
 		<div class="modal-box w-96">
-			<h3 class="text-lg font-bold">{$LL.Settings.Pages.Dialog.SetPrimaryDomain.Title()}</h3>
+			<h3 class="text-lg font-bold">{$LL.Dialogs.DomainSwitch.Title()}</h3>
 			<div class="py-4">
-				{$LL.Settings.Pages.Dialog.SetPrimaryDomain.ContentPrefix()}
+				{$LL.Dialogs.DomainSwitch.ContentPrefix()}
 				<span class="font-bold">{domain_name}</span>
-				{$LL.Settings.Pages.Dialog.SetPrimaryDomain.ContentSuffix()}
+				{$LL.Dialogs.DomainSwitch.ContentSuffix()}
 			</div>
 			<div class="modal-action">
 				<button class="btn" on:click={yes}>{$LL.DialogActions.Yes()}</button>

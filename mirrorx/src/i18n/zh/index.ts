@@ -42,6 +42,40 @@ const zh_Hans: Translation = {
 		},
 		SelectLanguage: {
 			Title: '选择语言'
+		},
+		DomainList: {
+			Current: '当前：',
+			Tooltips: {
+				Add: '增加新的域',
+				SetPrimary: '设置为主域',
+				Edit: '编辑',
+				Delete: '删除'
+			}
+		},
+		DomainEdit: {
+			Title: '修改域',
+			Name: '名称',
+			DeviceId: '设备ID',
+			FingerPrint: {
+				Label: '指纹',
+				Tooltip: `指纹是一串在你连接到新的域时在本地随机生成的字符串。它用来证明你的设备有权利持有域分配给你的设备ID一段时间并且不会被用来追踪你的设备。`
+			},
+			Remarks: '备注'
+		},
+		DomainAdd: {
+			Title: '增加域',
+			AddressInputPlaceHolder: '域地址（IP:端口 或 链接）',
+			RemarksInputPlaceHolder: '备注'
+		},
+		DomainSwitch: {
+			Title: '设为主域',
+			ContentPrefix: '你想要设置',
+			ContentSuffix: '为主域吗？'
+		},
+		DomainDelete: {
+			Title: '删除域',
+			ContentPrefix: '你想要删除域',
+			ContentSuffix: `吗？一旦你删除将无法恢复！`
 		}
 	},
 	Settings: {
@@ -53,57 +87,6 @@ const zh_Hans: Translation = {
 			Auto: '自动'
 		}
 	}
-	// Settings: {
-	// 	WindowTitle: '设置',
-	// 	Layout: {
-	// 		Domain: '域',
-	// 		About: '关于'
-	// 	},
-	// 	Pages: {
-	// 		Domain: {
-	// 			Current: '当前：',
-	// 			Tooltips: {
-	// 				Add: '增加新的域',
-	// 				SetPrimary: '设置为主域',
-	// 				Edit: '编辑',
-	// 				Delete: '删除'
-	// 			}
-	// 		},
-	// 		About: {
-	// 			Version: '版本',
-	// 			Official: '官方网站',
-	// 			SourceRepository: '代码仓库',
-	// 			SupportAndHelp: '帮助支持'
-	// 		},
-	// 		Dialog: {
-	// 			EditDomain: {
-	// 				Title: '修改域',
-	// 				Name: '名称',
-	// 				DeviceId: '设备ID',
-	// 				FingerPrint: {
-	// 					Label: '指纹',
-	// 					Tooltip: `指纹是一串在你连接到新的域时在本地随机生成的字符串。它用来证明你的设备有权利持有域分配给你的设备ID一段时间并且不会被用来追踪你的设备。`
-	// 				},
-	// 				Remarks: '备注'
-	// 			},
-	// 			AddDomain: {
-	// 				Title: '增加域',
-	// 				AddressInputPlaceHolder: '域地址（IP:端口 或 链接）',
-	// 				RemarksInputPlaceHolder: '备注'
-	// 			},
-	// 			SetPrimaryDomain: {
-	// 				Title: '设为主域',
-	// 				ContentPrefix: '你想要设置',
-	// 				ContentSuffix: '为主域吗？'
-	// 			},
-	// 			DeleteDomain: {
-	// 				Title: '删除域',
-	// 				ContentPrefix: '你想要删除域',
-	// 				ContentSuffix: `吗？一旦你删除将无法恢复！`
-	// 			}
-	// 		}
-	// 	}
-	// }
 };
 
 export default zh_Hans;

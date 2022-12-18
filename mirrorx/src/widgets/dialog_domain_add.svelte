@@ -5,6 +5,7 @@
 	import { onDestroy, onMount } from 'svelte';
 	import Fa from 'svelte-fa';
 	import LL from '$lib/i18n/i18n-svelte';
+	import { isMacOS } from '$lib/components/types';
 
 	let show: boolean = false;
 	let input_domain_address: string = '';
@@ -15,7 +16,7 @@
 	let unlisten_fn: UnlistenFn | null = null;
 
 	onMount(async () => {
-		unlisten_fn = await listen('settings:domain:show_add_domain_dialog', (_) => {
+		unlisten_fn = await listen('/dialog/domain_add', (_) => {
 			show = true;
 		});
 	});
@@ -70,9 +71,9 @@
 
 <slot>
 	<input type="checkbox" id="dialog_add_domain" class="modal-toggle" bind:checked={show} />
-	<div class="modal">
-		<div class="modal-box w-96">
-			<h3 class="text-lg font-bold">{$LL.Settings.Pages.Dialog.AddDomain.Title()}</h3>
+	<div data-tauri-drag-region class="modal {isMacOS ? '' : 'rounded-lg'}">
+		<div class="modal-box">
+			<h3 class="text-lg font-bold">{$LL.Dialogs.DomainAdd.Title()}</h3>
 			{#if error_text != ''}
 				<div class="alert alert-error shadow-lg">
 					<div>
@@ -86,16 +87,16 @@
 					<input
 						type="text"
 						bind:value={input_domain_address}
-						placeholder={$LL.Settings.Pages.Dialog.AddDomain.AddressInputPlaceHolder()}
-						class="w-full rounded border p-2"
+						placeholder={$LL.Dialogs.DomainAdd.AddressInputPlaceHolder()}
+						class="input input-bordered ring-info focus:border-info w-full flex-1 p-2 focus:outline-none focus:ring"
 					/>
 				</div>
 				<div class="pt-2">
 					<input
 						type="text"
 						bind:value={input_domain_remarks}
-						placeholder={$LL.Settings.Pages.Dialog.AddDomain.RemarksInputPlaceHolder()}
-						class="w-full rounded border p-2"
+						placeholder={$LL.Dialogs.DomainAdd.RemarksInputPlaceHolder()}
+						class="input input-bordered ring-info focus:border-info w-full flex-1 p-2 focus:outline-none focus:ring"
 					/>
 				</div>
 			</div>

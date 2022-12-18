@@ -38,6 +38,11 @@
 	import DialogAbout from '$lib/widgets/dialog_about.svelte';
 	import DialogLanConnect from '$lib/widgets/dialog_lan_connect.svelte';
 	import DialogSelectLanguage from '$lib/widgets/dialog_select_language.svelte';
+	import DialogDomainList from '$lib/widgets/dialog_domain_list.svelte';
+	import DialogDomainAdd from '$lib/widgets/dialog_domain_add.svelte';
+	import DialogDomainDelete from '$lib/widgets/dialog_domain_delete.svelte';
+	import DialogDomainEdit from '$lib/widgets/dialog_domain_edit.svelte';
+	import DialogDomainSwitch from '$lib/widgets/dialog_domain_switch.svelte';
 
 	let isMacOS: boolean = navigator.platform.toLowerCase().includes('mac');
 	let domain: Domain | null = null;
@@ -168,26 +173,6 @@
 	const show_select_language_dialog = async () => {
 		await emit('/dialog/select_language');
 	};
-
-	const open_settings_window = () => {
-		// const webview = new WebviewWindow('window_settings', {
-		// 	url: '/settings/domain',
-		// 	resizable: false,
-		// 	maximized: false,
-		// 	maxWidth: 680,
-		// 	height: 580,
-		// 	center: true,
-		// 	title: $LL.Settings.WindowTitle()
-		// });
-		// since the webview window is created asynchronously,
-		// Tauri emits the `tauri://created` and `tauri://error` to notify you of the creation response
-		// webview.once('tauri://created', function () {
-		// 	// webview window successfully created
-		// });
-		// webview.once('tauri://error', function (e) {
-		// 	// an error happened creating the webview window
-		// });
-	};
 </script>
 
 <div
@@ -315,6 +300,11 @@
 <DialogVisitPrepare />
 <DialogLanConnect />
 <DialogSelectLanguage />
+<DialogDomainList />
+<DialogDomainAdd />
+<DialogDomainDelete />
+<DialogDomainEdit />
+<DialogDomainSwitch />
 
 <style>
 	:root {
