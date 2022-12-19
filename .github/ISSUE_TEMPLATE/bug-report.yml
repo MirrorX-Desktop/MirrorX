@@ -7,21 +7,14 @@ body:
     attributes:
       value: |
         Please fill out the following carefully in order to better fix the problem.
-  - type: input
-    id: mirrorx-version
+  - type: textarea
+    id: env
     attributes:
-      label: MirrorX-Version
+      label: Platform and environments
       description: |
         ### **Check if the issue is reproducible with the latest stable version.**
-        You can use the system tray `about` to view it
+        Open `About` dialog (by click system tray menu) and click `Copy` button to copy env variables.
       placeholder: latest
-    validations:
-      required: true
-  - type: input
-    id: os-version
-    attributes:
-      label: OS Version
-      placeholder: Windows 10
     validations:
       required: true
   - type: textarea
