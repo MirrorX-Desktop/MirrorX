@@ -13,7 +13,8 @@ body:
       label: Platform and environment variables
       description: |
         **Check if the issue is reproducible with the latest stable version.**
-      placeholder: **Open MirrorX `About` dialog (by click system tray menu) and click `Copy` button to copy environment variables then paste it here.**
+      placeholder: |
+        **Open MirrorX `About` dialog (by click system tray menu) and click `Copy` button to copy environment variables then paste it here.**
     validations:
       required: true
   - type: textarea
@@ -22,23 +23,23 @@ body:
       label: Step to reproduce
       description: |
         **After the replay is turned on, what actions do we need to perform to make the bug appear? Simple and clear steps can help us locate the problem more quickly. Please clearly describe the steps of reproducing the issue. Issues without clear reproducing steps will not be repaired. If the issue marked with 'need reproduction' does not provide relevant steps within 7 days, it will be closed directly.**
-      placeholder: Please Input
+      placeholder: Please filled
     validations:
       required: true
   - type: textarea
     id: expected
     attributes:
       label: What is expected
-      placeholder: Please Input
+      placeholder: Please filled
   - type: textarea
     id: actually
     attributes:
       label: What is actually happening
-      placeholder: Please Input
+      placeholder: Please filled
   - type: textarea
     id: additional-comments
     attributes:
       label: Any additional comments (optional)
       description: |
         **Some background / context of how you ran into this bug.**
-      placeholder: Please Input
+      placeholder: Please filled
