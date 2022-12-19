@@ -10,11 +10,10 @@ body:
   - type: textarea
     id: env
     attributes:
-      label: Platform and environments
+      label: Platform and environment variables
       description: |
         **Check if the issue is reproducible with the latest stable version.**
-        **Open MirrorX `About` dialog (by click system tray menu) and click `Copy` button to copy env variables.**
-      placeholder: latest
+      placeholder: **Open MirrorX `About` dialog (by click system tray menu) and click `Copy` button to copy environment variables then paste it here.**
     validations:
       required: true
   - type: textarea
