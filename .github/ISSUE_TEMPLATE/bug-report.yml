@@ -12,8 +12,8 @@ body:
     attributes:
       label: Platform and environments
       description: |
-        ### **Check if the issue is reproducible with the latest stable version.**
-        Open `About` dialog (by click system tray menu) and click `Copy` button to copy env variables.
+        ## **Check if the issue is reproducible with the latest stable version.**
+        ## **Open MirrorX `About` dialog (by click system tray menu) and click `Copy` button to copy env variables.**
       placeholder: latest
     validations:
       required: true
