@@ -7,6 +7,7 @@
 	import { invoke_utility_enum_graphics_cards, invoke_utility_detect_os_platform } from '$lib/components/command';
 	import UAParser from 'ua-parser-js';
 	import { isMacOS } from '$lib/components/types';
+	import { writeText } from '@tauri-apps/api/clipboard';
 
 	let show: boolean = false;
 	let unlisten_fn: UnlistenFn | null = null;
@@ -39,6 +40,17 @@
 			unlisten_fn();
 		}
 	});
+
+	const copyToClipboard = async () => {
+		let content = `Version: ${version}\n`;
+		content += `Tauri Version: ${tauri_version}\n`;
+		content += `OS: ${platform_info}\n`;
+		content += `Webview: ${webkit_version}\n`;
+		content += `GraphicsCards: ${graphics_cards.map((v) => v.name).join(',')}`;
+
+		await writeText(content);
+		show = false;
+	};
 </script>
 
 <slot>
@@ -62,7 +74,7 @@
 				</div>
 			</div>
 			<div class="modal-action flex flex-row pt-2">
-				<button class="btn flex-1">{$LL.Dialogs.About.Copy()}</button>
+				<button class="btn flex-1" on:click={copyToClipboard}>{$LL.Dialogs.About.Copy()}</button>
 				<button class="btn flex-1" on:click={() => (show = false)}>{$LL.DialogActions.Ok()}</button>
 			</div>
 		</div>
