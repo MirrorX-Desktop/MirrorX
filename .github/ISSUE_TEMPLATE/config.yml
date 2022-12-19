@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Questions or need help
+    url: https://github.com/MirrorX-Desktop/MirrorX/discussions
+    about: Questions about MirrorX should be posted as a GitHub discussion.
