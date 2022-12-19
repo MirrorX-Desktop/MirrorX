@@ -63,6 +63,18 @@ export function invoke_lan_nodes_list(): Promise<Array<LanDiscoverNode>> {
 	return invoke('lan_nodes_list');
 }
 
+export function invoke_lan_nodes_search(keyword: string): Promise<Array<LanDiscoverNode>> {
+	return invoke('lan_nodes_search', { keyword });
+}
+
+export function invoke_lan_discoverable_get(): Promise<boolean> {
+	return invoke('lan_discoverable_get');
+}
+
+export function invoke_lan_discoverable_set(discoverable: boolean): Promise<void> {
+	return invoke('lan_discoverable_set', { discoverable });
+}
+
 export function invoke_signaling_connect(force: boolean): Promise<void> {
 	return invoke('signaling_connect', { force });
 }

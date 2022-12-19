@@ -61,10 +61,10 @@
 			<div class="py-2">
 				{#each localeAndDisplayNames as ld}
 					<div
-						class="hover:bg-primary hover:text-primary-content flex cursor-pointer flex-row items-center justify-between p-2 hover:rounded-lg"
+						class="hover:bg-primary hover:text-primary-content flex cursor-pointer flex-row items-center justify-between rounded-lg p-2 transition hover:rounded-lg"
 						on:click={() => set_language(ld.code)}
 					>
-						<div>{ld.name}</div>
+						<div class="text-lg">{ld.name}</div>
 						{#if ld.code == $locale}
 							<Fa icon={faCircleDot} />
 						{:else}

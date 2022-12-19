@@ -87,3 +87,60 @@ pub async fn lan_nodes_list(app_state: tauri::State<'_, AppState>) -> CoreResult
 
     Ok(discover.nodes_snapshot())
 }
+
+#[tauri::command]
+#[tracing::instrument(skip(app_state))]
+pub async fn lan_nodes_search(
+    app_state: tauri::State<'_, AppState>,
+    keyword: String,
+) -> CoreResult<Vec<Node>> {
+    let Some((ref discover, _)) = *app_state
+        .lan_components
+        .lock()
+        .await else {
+            return Err(core_error!("lan discover is empty"))
+        };
+
+    let mut nodes = discover.nodes_snapshot();
+    let nodes_count = nodes.len();
+
+    for i in 0..nodes_count {
+        let hostname = &nodes[i].host_name;
+        let ip = nodes[i].addr.to_string();
+        if !(hostname.contains(&keyword) || ip.contains(&keyword)) {
+            nodes.remove(i);
+        }
+    }
+
+    Ok(nodes)
+}
+
+#[tauri::command]
+#[tracing::instrument(skip(app_state))]
+pub async fn lan_discoverable_set(
+    app_state: tauri::State<'_, AppState>,
+    discoverable: bool,
+) -> CoreResult<()> {
+    let Some((ref discover, _)) = *app_state
+        .lan_components
+        .lock()
+        .await else {
+            return Err(core_error!("lan discover is empty"))
+        };
+
+    discover.set_discoverable(discoverable);
+    Ok(())
+}
+
+#[tauri::command]
+#[tracing::instrument(skip(app_state))]
+pub async fn lan_discoverable_get(app_state: tauri::State<'_, AppState>) -> CoreResult<bool> {
+    let Some((ref discover, _)) = *app_state
+        .lan_components
+        .lock()
+        .await else {
+            return Err(core_error!("lan discover is empty"))
+        };
+
+    Ok(discover.discoverable())
+}

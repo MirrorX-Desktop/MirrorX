@@ -102,13 +102,6 @@
 			domain_remarks: remarks
 		});
 	};
-
-	const show_switch_domain_dialog = async (id: number, name: string) => {
-		await emit('/dialog/domain_switch', {
-			domain_id: id,
-			domain_name: name
-		});
-	};
 </script>
 
 <!-- svelte-ignore a11y-label-has-associated-control -->
@@ -133,7 +126,7 @@
 						<div class="w-full">
 							{#each resp.domains as domain, i}
 								<button
-									class="hover:bg-primary hover:text-primary-content flex w-full cursor-pointer flex-row items-center rounded-lg p-2 hover:rounded-lg"
+									class="hover:bg-primary hover:text-primary-content flex w-full cursor-pointer flex-row items-center rounded-lg p-2 transition-all hover:rounded-lg"
 									on:click={() =>
 										show_edit_domain_dialog(
 											domain.id,

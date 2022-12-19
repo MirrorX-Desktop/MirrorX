@@ -404,6 +404,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/debounce@npm:^1.2.1":
+  version: 1.2.1
+  resolution: "@types/debounce@npm:1.2.1"
+  checksum: bea6d414acefbee50adfe87cee10f8a855d033e4778567ab03bdc3cb2648b6bf9237ca53f4ee76fe4be75f77f86d4688411499626fe409bc870f53631d24231f
+  languageName: node
+  linkType: hard
+
 "@types/json-schema@npm:^7.0.9":
   version: 7.0.11
   resolution: "@types/json-schema@npm:7.0.11"
@@ -1021,6 +1028,13 @@ __metadata:
     autoprefixer: ^10.0.2
     postcss: ^8.1.6
   checksum: a40b94750477fed4a3f07e02159002babd4f61c933c8641be1ac29ac911bfd3f074cd4bc7a79cef84c43863efa9419d7515b1db03ffabd093f2d06e96d4e657a
+  languageName: node
+  linkType: hard
+
+"debounce@npm:^1.2.1":
+  version: 1.2.1
+  resolution: "debounce@npm:1.2.1"
+  checksum: 682a89506d9e54fb109526f4da255c5546102fbb8e3ae75eef3b04effaf5d4853756aee97475cd4650641869794e44f410eeb20ace2b18ea592287ab2038519e
   languageName: node
   linkType: hard
 
@@ -2185,12 +2199,14 @@ __metadata:
     "@sveltejs/adapter-static": ^1.0.0-next.46
     "@sveltejs/kit": next
     "@tauri-apps/api": ^1.1.0
+    "@types/debounce": ^1.2.1
     "@types/ua-parser-js": ^0.7.36
     "@types/uuid": ^8.3.4
     "@typescript-eslint/eslint-plugin": ^5.27.0
     "@typescript-eslint/parser": ^5.27.0
     autoprefixer: ^10.4.13
     daisyui: ^2.38.1
+    debounce: ^1.2.1
     eslint: ^8.16.0
     eslint-config-prettier: ^8.3.0
     eslint-plugin-svelte3: ^4.0.0

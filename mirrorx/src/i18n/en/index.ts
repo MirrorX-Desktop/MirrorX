@@ -29,7 +29,7 @@ const en: BaseTranslation = {
 		SelectPrimaryDomain: 'Select Primary Domain'
 	},
 	LAN: {
-		HostnameOrIP: 'Hostname or IP',
+		HostnameOrIP: 'Search Hostname or IP (Case Sensitive)',
 		Discoverable: 'Discoverable'
 	},
 	Settings: {
