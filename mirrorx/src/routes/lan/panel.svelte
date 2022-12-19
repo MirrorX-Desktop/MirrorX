@@ -37,7 +37,7 @@
 		on:mouseenter={() => (show_connect_button = true)}
 		on:mouseleave={() => (show_connect_button = false)}
 		on:click={lan_connect}
-		class="hover:bg-primary hover:text-primary-content flex flex-row items-center p-2 hover:rounded-lg"
+		class="hover:bg-primary hover:text-primary-content flex flex-row items-center rounded-lg p-2 transition-all hover:rounded-lg"
 		style="height: 76px"
 	>
 		<div class="w-full flex-1">

@@ -159,7 +159,7 @@
 		<div data-tauri-drag-region class="navigation">
 			<ul>
 				<li
-					class="navigation-item  p-1 {$page.url.pathname == '/home'
+					class="navigation-item p-1 {$page.url.pathname == '/home'
 						? isMacOS
 							? 'navigation-item-selected'
 							: 'navigation-item-selected-right'

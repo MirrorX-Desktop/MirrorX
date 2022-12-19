@@ -29,7 +29,7 @@ const zh_Hans: Translation = {
 		SelectPrimaryDomain: '选择主域'
 	},
 	LAN: {
-		HostnameOrIP: '主机名 或 IP',
+		HostnameOrIP: '搜索主机名或IP（大小写敏感）',
 		Discoverable: '可被发现'
 	},
 	Dialogs: {

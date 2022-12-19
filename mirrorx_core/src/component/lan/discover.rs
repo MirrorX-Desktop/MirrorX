@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use std::{
     ffi::OsStr,
     net::{IpAddr, Ipv4Addr},
-    sync::Arc,
+    sync::{atomic::AtomicBool, Arc},
     time::Duration,
 };
 
@@ -32,6 +32,7 @@ pub struct TargetLivePacket {
 
 pub struct Discover {
     cache: Cache<IpAddr, Node>,
+    discoverable: Arc<AtomicBool>,
     write_exit_tx: Option<tokio::sync::oneshot::Sender<()>>,
     read_exit_tx: Option<tokio::sync::oneshot::Sender<()>>,
 }
@@ -64,7 +65,7 @@ impl Discover {
 
         let (write_exit_tx, mut write_exit_rx) = tokio::sync::oneshot::channel();
         let (read_exit_tx, mut read_exit_rx) = tokio::sync::oneshot::channel();
-
+        let discoverable = Arc::new(AtomicBool::new(true));
         let cache_copy = cache.clone();
 
         tokio::spawn(async move {
@@ -124,6 +125,7 @@ impl Discover {
             }
         });
 
+        let discoverable_copy = discoverable.clone();
         tokio::spawn(async move {
             let mut ticker = tokio::time::interval(Duration::from_secs(11));
 
@@ -137,6 +139,10 @@ impl Discover {
                     }
                 };
 
+                if !discoverable_copy.load(std::sync::atomic::Ordering::SeqCst) {
+                    continue;
+                }
+
                 if let Err(err) = writer
                     .send_to(&live_packet, (Ipv4Addr::BROADCAST, 48000))
                     .await
@@ -148,6 +154,7 @@ impl Discover {
 
         Ok(Self {
             cache,
+            discoverable,
             write_exit_tx: Some(write_exit_tx),
             read_exit_tx: Some(read_exit_tx),
         })
@@ -155,6 +162,15 @@ impl Discover {
 
     pub fn nodes_snapshot(&self) -> Vec<Node> {
         self.cache.iter().map(|(_, node)| node).collect()
+    }
+
+    pub fn discoverable(&self) -> bool {
+        self.discoverable.load(std::sync::atomic::Ordering::SeqCst)
+    }
+
+    pub fn set_discoverable(&self, discoverable: bool) {
+        self.discoverable
+            .store(discoverable, std::sync::atomic::Ordering::SeqCst)
     }
 }
 

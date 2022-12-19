@@ -112,7 +112,7 @@ type RootTranslation = {
 	}
 	LAN: {
 		/**
-		 * H​o​s​t​n​a​m​e​ ​o​r​ ​I​P
+		 * S​e​a​r​c​h​ ​H​o​s​t​n​a​m​e​ ​o​r​ ​I​P​ ​(​C​a​s​e​ ​S​e​n​s​i​t​i​v​e​)
 		 */
 		HostnameOrIP: string
 		/**
@@ -377,7 +377,7 @@ export type TranslationFunctions = {
 	}
 	LAN: {
 		/**
-		 * Hostname or IP
+		 * Search Hostname or IP (Case Sensitive)
 		 */
 		HostnameOrIP: () => LocalizedString
 		/**
