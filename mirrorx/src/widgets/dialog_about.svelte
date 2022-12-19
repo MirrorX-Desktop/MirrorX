@@ -4,7 +4,7 @@
 	import LL from '$lib/i18n/i18n-svelte';
 	import { getName, getTauriVersion, getVersion } from '@tauri-apps/api/app';
 	import icon from '../../src-tauri/assets/icons/icon.png';
-	import { invoke_utility_detect_graphics_cards, invoke_utility_detect_os_platform } from '$lib/components/command';
+	import { invoke_utility_enum_graphics_cards, invoke_utility_detect_os_platform } from '$lib/components/command';
 	import UAParser from 'ua-parser-js';
 	import { isMacOS } from '$lib/components/types';
 
@@ -28,7 +28,7 @@
 		version = await getVersion();
 		tauri_version = await getTauriVersion();
 		platform_info = await invoke_utility_detect_os_platform();
-		graphics_cards = await invoke_utility_detect_graphics_cards();
+		graphics_cards = await invoke_utility_enum_graphics_cards();
 
 		console.log(new UAParser().getResult());
 		console.log(navigator.userAgent);

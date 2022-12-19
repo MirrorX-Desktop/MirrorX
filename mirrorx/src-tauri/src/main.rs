@@ -179,7 +179,7 @@ fn build_app() -> App {
             command::signaling::signaling_visit,
             command::utility::utility_generate_random_password,
             command::utility::utility_detect_os_platform,
-            command::utility::utility_detect_graphics_cards,
+            command::utility::utility_enum_graphics_cards,
             command::utility::utility_hide_macos_zoom_button,
         ])
         .build(tauri::generate_context!())

@@ -1,3 +1,4 @@
+use mirrorx_core::{error::CoreResult, utility::os::GraphicsCards};
 use serde::Serialize;
 
 #[tauri::command]
@@ -22,38 +23,10 @@ pub fn utility_detect_os_platform() -> String {
     format!("{type_name} {arch} {version}")
 }
 
-#[derive(Debug, Serialize)]
-pub struct GraphicsCards {
-    name: String,
-    is_default: bool,
-}
-
 #[tauri::command]
 #[tracing::instrument]
-pub fn utility_detect_graphics_cards() -> Vec<GraphicsCards> {
-    let mut graphics_cards = Vec::new();
-
-    #[cfg(target_os = "macos")]
-    {
-        let default_device = metal::Device::system_default();
-        let default_device_name =
-            default_device.map_or(String::default(), |device| device.name().to_string());
-
-        let devices = metal::Device::all();
-        for device in devices {
-            let device_name = device.name().to_string();
-            let is_default = device_name == default_device_name;
-            graphics_cards.push(GraphicsCards {
-                name: device_name,
-                is_default,
-            });
-        }
-    }
-
-    #[cfg(target_os = "windows")]
-    {}
-
-    graphics_cards
+pub fn utility_enum_graphics_cards() -> CoreResult<Vec<GraphicsCards>> {
+    mirrorx_core::utility::os::enum_graphics_cards()
 }
 
 #[tauri::command]
@@ -74,6 +47,3 @@ pub fn utility_hide_macos_zoom_button(window: tauri::Window) {
         }
     }
 }
-
-#[test]
-fn test_device() {}

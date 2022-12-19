@@ -38,9 +38,10 @@ http = "0.2.8"
 [target.'cfg(target_os = "macos")'.dependencies]
 cocoa = "0.24.1"
 objc = "0.2.7"
-metal = "0.24.0"
+
 
 [target.'cfg(target_os = "windows")'.dependencies]
+
 
 [features]
 # by default Tauri runs in production mode

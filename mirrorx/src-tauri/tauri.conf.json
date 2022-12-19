@@ -1,7 +1,7 @@
 {
   "build": {
-    "beforeBuildCommand": "yarn run build",
-    "beforeDevCommand": "yarn run dev",
+    "beforeBuildCommand": "yarn install && yarn run build",
+    "beforeDevCommand": "yarn install && yarn run dev",
     "devPath": "http://localhost:5173",
     "distDir": "../build"
   },

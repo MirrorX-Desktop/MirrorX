@@ -630,6 +630,37 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3d7b894f5411737b7867f4827955924d7c254fc9f4d91a6aad6b097804b1018b"
 
 [[package]]
+name = "com"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7e17887fd17353b65b1b2ef1c526c83e26cd72e74f598a8dc1bee13a48f3d9f6"
+dependencies = [
+ "com_macros",
+]
+
+[[package]]
+name = "com_macros"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d375883580a668c7481ea6631fc1a8863e33cc335bf56bfad8d7e6d4b04b13a5"
+dependencies = [
+ "com_macros_support",
+ "proc-macro2",
+ "syn",
+]
+
+[[package]]
+name = "com_macros_support"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ad899a1087a9296d5644792d7cb72b8e34c1bec8e7d4fbc002230169a6e8710c"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "combine"
 version = "4.6.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2662,7 +2693,6 @@ dependencies = [
  "cocoa",
  "egui_extras",
  "http",
- "metal",
  "mirrorx_core",
  "objc",
  "once_cell",
@@ -2706,6 +2736,7 @@ dependencies = [
  "hostname",
  "image",
  "libc",
+ "metal",
  "mirrorx_native",
  "moka",
  "objc",
@@ -2737,6 +2768,7 @@ dependencies = [
  "url",
  "uuid 1.2.2",
  "windows 0.43.0",
+ "wmi",
 ]
 
 [[package]]
@@ -5822,7 +5854,7 @@ dependencies = [
  "ndk-glue",
  "url",
  "web-sys",
- "widestring",
+ "widestring 0.5.1",
  "winapi",
 ]
 
@@ -5931,6 +5963,12 @@ name = "widestring"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "17882f045410753661207383517a6f62ec3dbeb6a4ed2acce01f0728238d1983"
+
+[[package]]
+name = "widestring"
+version = "1.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "653f141f39ec16bba3c5abe400a0c60da7468261cc2cbf36805022876bc721a8"
 
 [[package]]
 name = "winapi"
@@ -6222,6 +6260,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b68db261ef59e9e52806f688020631e987592bd83619edccda9c47d42cde4f6c"
 dependencies = [
  "toml",
+]
+
+[[package]]
+name = "wmi"
+version = "0.11.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b8c8d5af750290e68a5bfc45cc4ca326de7dcf1c8d801d3a6dfa838cedc02194"
+dependencies = [
+ "chrono",
+ "com",
+ "futures",
+ "log",
+ "serde",
+ "thiserror",
+ "widestring 1.0.2",
+ "winapi",
 ]
 
 [[package]]

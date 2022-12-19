@@ -79,8 +79,8 @@ export function invoke_utility_detect_os_platform(): Promise<string> {
 	return invoke('utility_detect_os_platform');
 }
 
-export function invoke_utility_detect_graphics_cards(): Promise<Array<{ name: string; is_default: boolean }>> {
-	return invoke('utility_detect_graphics_cards');
+export function invoke_utility_enum_graphics_cards(): Promise<Array<{ name: string; is_default: boolean }>> {
+	return invoke('utility_enum_graphics_cards');
 }
 
 export function invoke_utility_hide_macos_zoom_button(): Promise<void> {
