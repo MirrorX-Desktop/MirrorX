@@ -1,4 +1,4 @@
-<script lang="ts">
+<!-- <script lang="ts">
 	import { emit, listen, type UnlistenFn } from '@tauri-apps/api/event';
 	import { onDestroy, onMount } from 'svelte';
 	import { emitNotification } from '$lib/components/notification';
@@ -92,4 +92,4 @@
 			</div>
 		</div>
 	</div>
-</slot>
+</slot> -->
