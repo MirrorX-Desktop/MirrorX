@@ -1,7 +1,7 @@
 name: ✨ Feature Request
 description: Propose new features to MirrorX to improve it.
-title: '✨ [Feature]: '
-labels: ['✨ feature']
+title: '[FEATURE] '
+labels: ['feature-request']
 body:
   - type: textarea
     id: feature-solve
