@@ -23,7 +23,10 @@ const zh_Hans: Translation = {
 		EditPasswordCancelTooltip: '取消',
 		ClickToCopyDeviceIDTooltip: '点击以复制',
 		ClickToCopyDeviceIDCopiedTooltip: '已复制',
-		GenerateRandomPasswordTooltip: '生成随机密码'
+		GenerateRandomPasswordTooltip: '生成随机密码',
+		DomainActions: '域操作',
+		DomainActionsEdit: '编辑',
+		SelectPrimaryDomain: '选择主域'
 	},
 	LAN: {
 		HostnameOrIP: '主机名 或 IP',
@@ -60,7 +63,9 @@ const zh_Hans: Translation = {
 				Label: '指纹',
 				Tooltip: `指纹是一串在你连接到新的域时在本地随机生成的字符串。它用来证明你的设备有权利持有域分配给你的设备ID一段时间并且不会被用来追踪你的设备。`
 			},
-			Remarks: '备注'
+			Remarks: '备注',
+			Delete: '删除',
+			Edit: '修改'
 		},
 		DomainAdd: {
 			Title: '增加域',

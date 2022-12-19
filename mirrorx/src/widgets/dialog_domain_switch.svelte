@@ -1,6 +1,10 @@
 <script lang="ts">
 	import { emit, listen, type UnlistenFn } from '@tauri-apps/api/event';
-	import { invoke_config_domain_get, invoke_config_domain_update } from '$lib/components/command';
+	import {
+		invoke_config_domain_get,
+		invoke_config_domain_update,
+		invoke_signaling_connect
+	} from '$lib/components/command';
 	import { onDestroy, onMount } from 'svelte';
 	import LL from '$lib/i18n/i18n-svelte';
 	import { current_domain } from '$lib/components/stores';
@@ -28,10 +32,10 @@
 	const yes = async () => {
 		try {
 			await invoke_config_domain_update(domain_id, 'set_primary');
+			await invoke_signaling_connect(true);
 			let new_primary_domain = await invoke_config_domain_get();
 			current_domain.set(new_primary_domain);
-			await emit('home:switch_primary_domain');
-			await emit('settings:domain:update_domains');
+			await emit('update_domains');
 		} catch (error: any) {
 			await emitNotification({
 				level: 'error',
@@ -51,7 +55,7 @@
 <slot>
 	<input type="checkbox" id="dialog_switch_primary_domain" class="modal-toggle" checked={show} />
 	<div class="modal">
-		<div class="modal-box w-96">
+		<div class="modal-box">
 			<h3 class="text-lg font-bold">{$LL.Dialogs.DomainSwitch.Title()}</h3>
 			<div class="py-4">
 				{$LL.Dialogs.DomainSwitch.ContentPrefix()}

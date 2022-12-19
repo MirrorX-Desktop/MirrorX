@@ -9,6 +9,10 @@ export function invoke_config_domain_get(): Promise<Domain> {
 	return invoke('config_domain_get');
 }
 
+export function invoke_config_domain_get_id_and_names(): Promise<Array<[number, string]>> {
+	return invoke('config_domain_get_id_and_names');
+}
+
 export function invoke_config_domain_create(addr: string, remarks: string): Promise<void> {
 	return invoke('config_domain_create', { addr, remarks });
 }

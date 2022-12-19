@@ -4,10 +4,11 @@
 	import { onDestroy, onMount } from 'svelte';
 	import Fa from 'svelte-fa';
 	import LL from '$lib/i18n/i18n-svelte';
-	import { invoke_config_domain_update } from '$lib/components/command';
+	import { invoke_config_domain_get, invoke_config_domain_update } from '$lib/components/command';
 	import { formatDeviceID } from '$lib/components/utility';
 	import { emitNotification } from '$lib/components/notification';
 	import { isMacOS } from '$lib/components/types';
+	import { current_domain } from '$lib/components/stores';
 
 	let show: boolean = false;
 	let domain_id: number = 0;
@@ -40,10 +41,19 @@
 		}
 	});
 
+	const show_delete_confirm_dialog = async (id: number, name: string) => {
+		await emit('/dialog/domain_delete', {
+			domain_id: id,
+			domain_name: name
+		});
+	};
+
 	const ok = async () => {
 		try {
 			await invoke_config_domain_update(domain_id, { remarks: domain_remarks });
-			await emit('settings:domain:update_domains');
+			let new_domain = await invoke_config_domain_get();
+			current_domain.set(new_domain);
+			await emit('update_domains');
 		} catch (error: any) {
 			await emitNotification({
 				level: 'error',
@@ -94,9 +104,18 @@
 					</div>
 				</div>
 			</div>
-			<div class="modal-action mt-0">
-				<button class="btn" on:click={ok}>{$LL.DialogActions.Ok()}</button>
-				<button class="btn" on:click={cancel}>{$LL.DialogActions.Cancel()}</button>
+			<div class="modal-action mt-0 flex flex-row">
+				{#if domain_name != 'MirrorX.cloud'}
+					<button
+						class="btn btn-error flex-1"
+						data-tip={$LL.Dialogs.DomainList.Tooltips.Delete()}
+						on:click={() => show_delete_confirm_dialog(domain_id, domain_name)}
+					>
+						{$LL.Dialogs.DomainEdit.Delete()}
+					</button>
+				{/if}
+				<button class="btn flex-1" on:click={ok}>{$LL.Dialogs.DomainEdit.Edit()}</button>
+				<button class="btn flex-1" on:click={cancel}>{$LL.DialogActions.Cancel()}</button>
 			</div>
 		</div>
 	</div>

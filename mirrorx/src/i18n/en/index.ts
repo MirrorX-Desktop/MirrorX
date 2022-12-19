@@ -23,56 +23,10 @@ const en: BaseTranslation = {
 		EditPasswordCancelTooltip: 'Cancel',
 		ClickToCopyDeviceIDTooltip: 'Click to Copy',
 		ClickToCopyDeviceIDCopiedTooltip: 'Copied',
-		GenerateRandomPasswordTooltip: 'Generate Random Password'
-		// Layout: {
-		// 	Domain: 'Domain',
-		// 	Connect: 'Connect',
-		// 	LAN: 'LAN',
-		// 	History: 'History',
-		// 	Menu: {
-		// 		Tooltip: 'Settings',
-		// 		Settings: 'Settings',
-		// 		Language: 'Language'
-		// 	},
-		// 	Dialog: {
-		// 		SelectLanguage: {
-		// 			Title: 'Select Language'
-		// 		}
-		// 	}
-		// },
-		// Pages: {
-		// 	Connect: {
-		// 		DeviceID: 'DeviceID',
-		// 		Password: 'Password',
-		// 		RemoteDeviceIDPlaceHolder: 'Remote Device ID',
-		// 		Desktop: 'Desktop',
-		// 		Files: 'Files',
-		// 		Tooltips: {
-		// 			EditPassword: 'Edit Password',
-		// 			PasswordVisible: 'Click to show plain password',
-		// 			PasswordInvisible: 'Hide password when mouse leave',
-		// 			EditPasswordCancel: 'Cancel',
-		// 			ClickToCopyDeviceID: 'Click to Copy',
-		// 			ClickToCopyDeviceIDCopied: 'Copied'
-		// 		},
-		// 		Dialog: {
-		// 			InputRemotePassword: {
-		// 				Title: 'Input Password',
-		// 				ContentPrefix: 'Remote Device',
-		// 				ContentSuffix: 'accept your visit request, please input remote device password here'
-		// 			},
-		// 			VisitRequest: {
-		// 				Title: 'VisitRequest',
-		// 				ContentPrefix: 'Remote Device',
-		// 				ContentSuffix: 'want to visit your',
-		// 				ResourceType: {
-		// 					Desktop: 'Desktop',
-		// 					Files: 'Files'
-		// 				}
-		// 			}
-		// 		}
-		// 	}
-		// }
+		GenerateRandomPasswordTooltip: 'Generate Random Password',
+		DomainActions: 'Domain Actions',
+		DomainActionsEdit: 'Edit',
+		SelectPrimaryDomain: 'Select Primary Domain'
 	},
 	LAN: {
 		HostnameOrIP: 'Hostname or IP',
@@ -118,7 +72,9 @@ const en: BaseTranslation = {
 				Label: 'FingerPrint',
 				Tooltip: `Finger print is a random string generated at local once you connected to a new domain. It is used to prove your device has authority to hold a Device Id that Domain allocated for you for a while and it can't be used to track your device.`
 			},
-			Remarks: 'Remarks'
+			Remarks: 'Remarks',
+			Delete: 'Delete',
+			Edit: 'Edit'
 		},
 		DomainAdd: {
 			Title: 'Add Domain',

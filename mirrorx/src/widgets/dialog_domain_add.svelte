@@ -42,7 +42,7 @@
 
 			await Promise.race([invoke_promise, cancel_promise]);
 
-			await emit('settings:domain:update_domains');
+			await emit('update_domains');
 
 			show = false;
 			input_domain_address = '';

@@ -3,32 +3,16 @@
 	import { onDestroy, onMount } from 'svelte';
 	import Fa from 'svelte-fa';
 	import { faXmark } from '@fortawesome/free-solid-svg-icons';
-	import LL from '$lib/i18n/i18n-svelte';
+	import { faCircle, faCircleDot } from '@fortawesome/free-regular-svg-icons';
+	import LL, { locale, setLocale } from '$lib/i18n/i18n-svelte';
 	import { emitNotification } from '$lib/components/notification';
 	import { invoke_config_language_get, invoke_config_language_set } from '$lib/components/command';
 	import { isMacOS } from '$lib/components/types';
+	import type { Locales } from '$lib/i18n/i18n-types';
 
 	let show = false;
 	let language = '';
 	let unlisten_fn: UnlistenFn | null = null;
-
-	$: {
-		(async function () {
-			if (language && language.length > 0) {
-				try {
-					await invoke_config_language_set(language);
-				} catch (error: any) {
-					await emitNotification({
-						level: 'error',
-						title: 'Error',
-						message: error.toString()
-					});
-				} finally {
-					show = false;
-				}
-			}
-		})();
-	}
 
 	const localeAndDisplayNames: Array<{ code: string; name: string }> = [
 		{ code: 'en', name: 'English' },
@@ -36,8 +20,8 @@
 	];
 
 	onMount(async () => {
-		unlisten_fn = await listen<string>('/dialog/select_language', async (event) => {
-			language = await invoke_config_language_get();
+		unlisten_fn = await listen<string>('/dialog/select_language', (event) => {
+			language = $locale;
 			show = true;
 		});
 	});
@@ -47,8 +31,25 @@
 			unlisten_fn();
 		}
 	});
+
+	const set_language = async (lang: string) => {
+		try {
+			language = lang;
+			await invoke_config_language_set(lang);
+			setLocale(lang as Locales);
+		} catch (error: any) {
+			await emitNotification({
+				level: 'error',
+				title: 'Error',
+				message: error.toString()
+			});
+		} finally {
+			show = false;
+		}
+	};
 </script>
 
+<!-- svelte-ignore a11y-click-events-have-key-events -->
 <slot>
 	<input type="checkbox" id="dialog_select_language" class="modal-toggle" checked={show} />
 	<div data-tauri-drag-region class="modal {isMacOS ? '' : 'rounded-lg'}">
@@ -59,11 +60,16 @@
 			<h3 class="text-lg font-bold">{$LL.Dialogs.SelectLanguage.Title()}</h3>
 			<div class="py-2">
 				{#each localeAndDisplayNames as ld}
-					<div class="form-control">
-						<label class="label cursor-pointer">
-							<span class="label-text">{ld.name}</span>
-							<input type="radio" bind:group={language} name="languages" class="radio" value={ld.code} />
-						</label>
+					<div
+						class="hover:bg-primary hover:text-primary-content flex cursor-pointer flex-row items-center justify-between p-2 hover:rounded-lg"
+						on:click={() => set_language(ld.code)}
+					>
+						<div>{ld.name}</div>
+						{#if ld.code == $locale}
+							<Fa icon={faCircleDot} />
+						{:else}
+							<Fa icon={faCircle} />
+						{/if}
 					</div>
 				{/each}
 			</div>

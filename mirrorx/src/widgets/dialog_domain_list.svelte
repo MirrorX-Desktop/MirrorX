@@ -20,7 +20,7 @@
 	import { formatDeviceID } from '$lib/components/utility';
 	import { emitNotification } from '$lib/components/notification';
 
-	const SINGLE_PAGE_LIMIT: number = 6;
+	const SINGLE_PAGE_LIMIT: number = 5;
 
 	let show: boolean = false;
 	let page = 1;
@@ -41,7 +41,7 @@
 			show = true;
 		});
 
-		update_domains_unlisten_fn = await listen('settings:domain:update_domains', (event) => {
+		update_domains_unlisten_fn = await listen('update_domains', (event) => {
 			get_domains();
 		});
 	});
@@ -87,13 +87,6 @@
 		await emit('/dialog/domain_add');
 	};
 
-	const show_delete_confirm_dialog = async (id: number, name: string) => {
-		await emit('/dialog/domain_delete', {
-			domain_id: id,
-			domain_name: name
-		});
-	};
-
 	const show_edit_domain_dialog = async (
 		id: number,
 		name: string,
@@ -133,67 +126,41 @@
 					{$LL.Dialogs.DomainList.Current() + primary_domain?.name ?? ''}
 				</div>
 
-				<hr />
+				<hr class="mb-2" />
 
 				{#if resp != null}
-					<div id="domain-table" class="h-60 max-h-60 w-full overflow-y-auto overflow-x-hidden">
-						<table class="table-compact table w-full">
-							<tbody>
-								{#each resp.domains as domain, i}
-									<tr>
-										<th style="z-index: 0 !important;">{(page - 1) * SINGLE_PAGE_LIMIT + i + 1}</th>
-										<td>
-											<p class="text-xl">{domain.name}</p>
+					<div id="domain-table" class="h-72 max-h-72 w-full overflow-y-auto overflow-x-hidden">
+						<div class="w-full">
+							{#each resp.domains as domain, i}
+								<button
+									class="hover:bg-primary hover:text-primary-content flex w-full cursor-pointer flex-row items-center rounded-lg p-2 hover:rounded-lg"
+									on:click={() =>
+										show_edit_domain_dialog(
+											domain.id,
+											domain.name,
+											domain.device_id,
+											domain.finger_print,
+											domain.remarks
+										)}
+								>
+									<div class="pr-2">
+										<div class="w-8 text-center">{(page - 1) * SINGLE_PAGE_LIMIT + i + 1}</div>
+									</div>
+									<div class="w-full flex-1 text-left">
+										<p class="w-48 overflow-hidden text-ellipsis text-xl">{domain.name}</p>
+										<p class="text-xs">{formatDeviceID(domain.device_id)}</p>
+										{#if domain.remarks.length > 0}
 											<p class="text-xs">{domain.remarks}</p>
-										</td>
-
-										<td class="text-right">
-											<div class="btn-group ">
-												{#if domain.name != primary_domain?.name}
-													<button
-														class="btn btn-xs tooltip tooltip-bottom"
-														data-tip={$LL.Dialogs.DomainList.Tooltips.SetPrimary()}
-														on:click={() => show_switch_domain_dialog(domain.id, domain.name)}
-													>
-														<Fa icon={faThumbTack} />
-													</button>
-												{/if}
-
-												<button
-													class="btn btn-xs tooltip tooltip-bottom"
-													data-tip={$LL.Dialogs.DomainList.Tooltips.Edit()}
-													on:click={() =>
-														show_edit_domain_dialog(
-															domain.id,
-															domain.name,
-															domain.device_id,
-															domain.finger_print,
-															domain.remarks
-														)}
-												>
-													<Fa icon={faPenToSquare} />
-												</button>
-
-												{#if domain.name != primary_domain?.name && domain.name != 'MirrorX.cloud'}
-													<button
-														class="btn btn-xs tooltip tooltip-bottom"
-														data-tip={$LL.Dialogs.DomainList.Tooltips.Delete()}
-														on:click={() => show_delete_confirm_dialog(domain.id, domain.name)}
-													>
-														<Fa icon={faTrashCan} />
-													</button>
-												{/if}
-											</div>
-										</td>
-									</tr>
-								{/each}
-							</tbody>
-						</table>
+										{/if}
+									</div>
+								</button>
+							{/each}
+						</div>
 					</div>
 				{:else}
 					<Fa icon={faSpinner} spin />
 				{/if}
-				<hr />
+				<hr class="mt-2" />
 				<div class="flex flex-row items-center justify-between py-2">
 					<div class="tooltip tooltip-top" data-tip={$LL.Dialogs.DomainList.Tooltips.Add()}>
 						<button class="btn btn-xs" on:click={show_add_domain_dialog}><Fa icon={faPlus} /></button>

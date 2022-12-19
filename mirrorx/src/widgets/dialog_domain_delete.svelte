@@ -27,7 +27,7 @@
 	const yes = async () => {
 		try {
 			await invoke_config_domain_delete(domain_id);
-			await emit('settings:domain:update_domains');
+			await emit('update_domains');
 		} catch (error: any) {
 			await emitNotification({
 				level: 'error',
@@ -47,7 +47,7 @@
 <slot>
 	<input type="checkbox" id="dialog_delete_confirm" class="modal-toggle" checked={show} />
 	<div class="modal">
-		<div class="modal-box w-96">
+		<div class="modal-box">
 			<h3 class="text-lg font-bold">{$LL.Dialogs.DomainDelete.Title()}</h3>
 			<div class="py-4">
 				{$LL.Dialogs.DomainDelete.ContentPrefix()}

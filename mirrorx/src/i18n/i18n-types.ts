@@ -97,6 +97,18 @@ type RootTranslation = {
 		 * G​e​n​e​r​a​t​e​ ​R​a​n​d​o​m​ ​P​a​s​s​w​o​r​d
 		 */
 		GenerateRandomPasswordTooltip: string
+		/**
+		 * D​o​m​a​i​n​ ​A​c​t​i​o​n​s
+		 */
+		DomainActions: string
+		/**
+		 * E​d​i​t
+		 */
+		DomainActionsEdit: string
+		/**
+		 * S​e​l​e​c​t​ ​P​r​i​m​a​r​y​ ​D​o​m​a​i​n
+		 */
+		SelectPrimaryDomain: string
 	}
 	LAN: {
 		/**
@@ -212,6 +224,14 @@ type RootTranslation = {
 			 * R​e​m​a​r​k​s
 			 */
 			Remarks: string
+			/**
+			 * D​e​l​e​t​e
+			 */
+			Delete: string
+			/**
+			 * E​d​i​t
+			 */
+			Edit: string
 		}
 		DomainAdd: {
 			/**
@@ -342,6 +362,18 @@ export type TranslationFunctions = {
 		 * Generate Random Password
 		 */
 		GenerateRandomPasswordTooltip: () => LocalizedString
+		/**
+		 * Domain Actions
+		 */
+		DomainActions: () => LocalizedString
+		/**
+		 * Edit
+		 */
+		DomainActionsEdit: () => LocalizedString
+		/**
+		 * Select Primary Domain
+		 */
+		SelectPrimaryDomain: () => LocalizedString
 	}
 	LAN: {
 		/**
@@ -457,6 +489,14 @@ export type TranslationFunctions = {
 			 * Remarks
 			 */
 			Remarks: () => LocalizedString
+			/**
+			 * Delete
+			 */
+			Delete: () => LocalizedString
+			/**
+			 * Edit
+			 */
+			Edit: () => LocalizedString
 		}
 		DomainAdd: {
 			/**

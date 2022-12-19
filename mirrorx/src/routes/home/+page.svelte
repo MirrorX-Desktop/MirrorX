@@ -11,11 +11,12 @@
 		faAsterisk,
 		faCaretDown
 	} from '@fortawesome/free-solid-svg-icons';
+	import { faCircle, faCircleDot } from '@fortawesome/free-regular-svg-icons';
 	import { emit, listen, type UnlistenFn } from '@tauri-apps/api/event';
 	import {
 		invoke_utility_generate_random_password,
 		invoke_config_domain_update,
-		invoke_signaling_visit
+		invoke_config_domain_get_id_and_names
 	} from '$lib/components/command';
 	import { current_domain } from '$lib/components/stores';
 	import { onDestroy, onMount } from 'svelte';
@@ -39,14 +40,16 @@
 	let domain_id_copied = false;
 	let remote_device_id_input: HTMLElement | null = null;
 	let remote_device_id_input_placeholder: HTMLElement | null = null;
+	let domain_id_and_names: Array<[number, string]> = [];
 
 	$: device_password_display = domain?.password ?? '';
 
 	$: remote_device_valid = input_remote_device_id.length == 0 || /^\d{2}-\d{4}-\d{4}$/.test(input_remote_device_id);
 
 	onMount(async () => {
-		domain_unsubscribe = current_domain.subscribe((value) => {
+		domain_unsubscribe = current_domain.subscribe(async (value) => {
 			domain = value;
+			await get_domain_id_and_names();
 		});
 
 		desktop_is_connecting_unlisten_fn = await listen<boolean>('desktop_is_connecting', (event) => {
@@ -77,7 +80,7 @@
 		let input_event = event as InputEvent & {
 			currentTarget: EventTarget & HTMLInputElement;
 		};
-		console.log(input_event);
+
 		if (input_event.inputType == 'insertFromPaste') {
 			// paste device_id from clipboard
 			readText().then((v) => {
@@ -172,6 +175,16 @@
 	const open_domain_list_dialog = async () => {
 		await emit('/dialog/domain_list');
 	};
+
+	const get_domain_id_and_names = async () => {
+		domain_id_and_names = await invoke_config_domain_get_id_and_names();
+	};
+
+	const switch_primary_domain = async (id_and_name: [number, string]) => {
+		if (id_and_name[0] != domain?.id) {
+			await emit('/dialog/domain_switch', { domain_id: id_and_name[0], domain_name: id_and_name[1] });
+		}
+	};
 </script>
 
 <!-- svelte-ignore a11y-label-has-associated-control -->
@@ -192,79 +205,41 @@
 				<div tabindex="0" class="dropdown-content menu bg-base-200 rounded-box p-2 shadow">
 					<ul>
 						<li class="menu-title">
-							<span>Domain Actions</span>
+							<span>{$LL.Home.DomainActions()}</span>
 						</li>
 						<li>
-							<button on:click={open_domain_list_dialog}>Edit</button>
+							<button on:click={open_domain_list_dialog}>{$LL.Home.DomainActionsEdit()}</button>
 						</li>
 						<li class="menu-title">
-							<span>Select Primary Domain</span>
+							<span>{$LL.Home.SelectPrimaryDomain()}</span>
 						</li>
 					</ul>
 					<div id="domain_select_range" class="max-h-60 w-56 overflow-y-auto">
 						<ul>
-							<li>
-								<div>
-									<label class="label cursor-pointer gap-2">
-										<input type="radio" name="radio-10" class="radio radio-sm" checked />
-										<span class="label-text">Red pill</span>
-									</label>
-								</div>
-							</li>
-
-							<li>
-								<div>
-									<label class="label cursor-pointer gap-2">
-										<input type="radio" name="radio-10" class="radio radio-sm" />
-										<span class="label-text">Red pill</span>
-									</label>
-								</div>
-							</li>
-
-							<li>
-								<div>
-									<label class="label cursor-pointer gap-2">
-										<input type="radio" name="radio-10" class="radio radio-sm" />
-										<span class="label-text">Red pill</span>
-									</label>
-								</div>
-							</li>
-
-							<li>
-								<div>
-									<label class="label cursor-pointer gap-2">
-										<input type="radio" name="radio-10" class="radio radio-sm" />
-										<span class="label-text">Red pill</span>
-									</label>
-								</div>
-							</li>
-
-							<li>
-								<div>
-									<label class="label cursor-pointer gap-2">
-										<input type="radio" name="radio-10" class="radio radio-sm" />
-										<span class="label-text">Red pill</span>
-									</label>
-								</div>
-							</li>
-
-							<li>
-								<div>
-									<label class="label cursor-pointer gap-2">
-										<input type="radio" name="radio-10" class="radio radio-sm" />
-										<span class="label-text">Red pill</span>
-									</label>
-								</div>
-							</li>
+							{#each domain_id_and_names as domain_id_and_name}
+								<li>
+									<button on:click={() => switch_primary_domain(domain_id_and_name)}>
+										{#if domain_id_and_name[0] == domain?.id}
+											<Fa icon={faCircleDot} />
+										{:else}
+											<Fa icon={faCircle} />
+										{/if}
+										{domain_id_and_name[1]}
+									</button>
+								</li>
+							{/each}
 						</ul>
 					</div>
 				</div>
 			</div>
 		</div>
 
-		<div class=" flex h-16 items-center justify-center text-center">
+		<div class="flex h-16 flex-col items-center justify-center text-center">
 			{#if domain}
 				<div class="text-4xl">{domain.name}</div>
+				{#if domain.remarks.length > 0}
+					<div class="text-sm">({domain.remarks})</div>
+				{/if}
 			{:else}
 				<Fa class="w-full text-center" icon={faSpinner} spin={true} size={'sm'} />
 			{/if}

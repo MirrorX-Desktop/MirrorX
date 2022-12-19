@@ -106,19 +106,21 @@ impl DomainRepository {
         Ok(res.is_some())
     }
 
-    pub fn get_domain_names(&self) -> CoreResult<Vec<String>> {
-        const COMMAND: &str = r"SELECT name FROM domains";
+    pub fn get_domain_id_and_names(&self) -> CoreResult<Vec<(i64, String)>> {
+        const COMMAND: &str = r"SELECT id, name FROM domains";
 
         let conn = self.get_connection()?;
         let mut stmt = conn.prepare(COMMAND)?;
-        let rows = stmt.query_and_then::<String, CoreError, _, _>([], |row| Ok(row.get(0)?))?;
+        let rows = stmt.query_and_then::<(i64, String), CoreError, _, _>([], |row| {
+            Ok((row.get(0)?, row.get(1)?))
+        })?;
 
-        let mut names = Vec::new();
+        let mut id_and_names = Vec::new();
         for row in rows {
-            names.push(row?);
+            id_and_names.push(row?);
         }
 
-        Ok(names)
+        Ok(id_and_names)
     }
 
     pub fn get_domain_by_name(&self, name: String) -> CoreResult<Domain> {

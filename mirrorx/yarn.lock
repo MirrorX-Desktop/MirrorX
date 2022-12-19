@@ -192,6 +192,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@fortawesome/free-regular-svg-icons@npm:^6.2.1":
+  version: 6.2.1
+  resolution: "@fortawesome/free-regular-svg-icons@npm:6.2.1"
+  dependencies:
+    "@fortawesome/fontawesome-common-types": 6.2.1
+  checksum: 1f591d2a0bb10783b58586fcef5c1affdfb61c3e92de885e633add130e17e28d2e62c3f780b3cf819ec25ac9e332a186be32c9ed6d03e3ff31f36f7789b88e6c
+  languageName: node
+  linkType: hard
+
 "@fortawesome/free-solid-svg-icons@npm:^6.2.0":
   version: 6.2.1
   resolution: "@fortawesome/free-solid-svg-icons@npm:6.2.1"
@@ -2170,6 +2179,7 @@ __metadata:
   resolution: "mirrorx@workspace:."
   dependencies:
     "@fortawesome/free-brands-svg-icons": ^6.2.1
+    "@fortawesome/free-regular-svg-icons": ^6.2.1
     "@fortawesome/free-solid-svg-icons": ^6.2.0
     "@sveltejs/adapter-auto": next
     "@sveltejs/adapter-static": ^1.0.0-next.46

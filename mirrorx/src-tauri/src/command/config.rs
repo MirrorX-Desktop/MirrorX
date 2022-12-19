@@ -62,6 +62,18 @@ pub async fn config_domain_get(app_state: State<'_, AppState>) -> CoreResult<Dom
 
 #[tauri::command]
 #[tracing::instrument(skip(app_state))]
+pub async fn config_domain_get_id_and_names(
+    app_state: State<'_, AppState>,
+) -> CoreResult<Vec<(i64, String)>> {
+    let Some(ref storage) = *app_state.storage.lock().await else {
+        return Err(core_error!("storage not initialize"));
+    };
+
+    storage.domain().get_domain_id_and_names()
+}
+
+#[tauri::command]
+#[tracing::instrument(skip(app_state))]
 pub async fn config_domain_create(
     app_state: State<'_, AppState>,
     addr: String,
@@ -108,7 +120,7 @@ pub async fn config_domain_create(
         addr: uri.to_string(),
         signaling_port,
         subscribe_port,
-        is_primary: true,
+        is_primary: false,
         device_id: response.device_id,
         password: mirrorx_core::utility::rand::generate_random_password(),
         finger_print,
@@ -183,7 +195,7 @@ pub async fn config_domain_update(
                 }
             }
 
-            // todo
+            storage.domain().set_domain_is_primary(req.id)?;
         }
         ConfigDomainUpdateType::Password(new_password) => storage
             .domain()
