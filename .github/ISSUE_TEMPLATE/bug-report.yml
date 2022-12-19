@@ -14,7 +14,7 @@ body:
       description: |
         **Check if the issue is reproducible with the latest stable version.**
       placeholder: |
-        **Open MirrorX `About` dialog (by click system tray menu) and click `Copy` button to copy environment variables then paste it here.**
+        Open MirrorX "About" dialog (by click system tray menu) and click "Copy" button to copy environment variables to clipboard then paste it here.
     validations:
       required: true
   - type: textarea
