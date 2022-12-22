@@ -17,8 +17,8 @@
 </p>
   
 <p align="center">
-<img src="https://raw.githubusercontent.com/MirrorX-Desktop/MirrorX/master/screenshot1.png" width="50%" height="50%">
-<img src="https://raw.githubusercontent.com/MirrorX-Desktop/MirrorX/master/screenshot2.png" width="50%" height="50%">
+<img src="https://raw.githubusercontent.com/MirrorX-Desktop/MirrorX/master/screenshot1.png" width="30%" height="30%">
+<img src="https://raw.githubusercontent.com/MirrorX-Desktop/MirrorX/master/screenshot2.png" width="30%" height="30%">
 </p>
 
 <p align="center">
@@ -57,9 +57,8 @@ MirrorX 是一个使用 [Rust](https://github.com/rust-lang/rust) 构建的远�
 
 ### 先决条件
 
-1. 已安装 `nodejs && npm && yarn` 。
-2. 在环境变量中加入 `ProtoBuf Compiler (protoc)` 的路径。
-3. 安装 `tauri-cli` 。
+1. 已安装 `nodejs && yarn(v3)` 。
+2. 安装 `tauri-cli` 。
 
 ```console
 cargo install tauri-cli
