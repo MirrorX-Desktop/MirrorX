@@ -17,8 +17,8 @@ Secure, Fast and Light remote desktop & file manager tool
 </p>
   
 <p align="center">
-<img src="https://raw.githubusercontent.com/MirrorX-Desktop/MirrorX/master/screenshot1.png" width="50%" height="50%">
-<img src="https://raw.githubusercontent.com/MirrorX-Desktop/MirrorX/master/screenshot2.png" width="50%" height="50%">
+<img src="https://raw.githubusercontent.com/MirrorX-Desktop/MirrorX/master/screenshot1.png" width="30%" height="30%">
+<img src="https://raw.githubusercontent.com/MirrorX-Desktop/MirrorX/master/screenshot2.png" width="30%" height="30%">
 </p>
 
 <p align="center">
@@ -57,9 +57,8 @@ MirrorX is a remote desktop control tool powered by [Rust](https://github.com/ru
 
 ### Prerequisite
 
-1. Install `nodejs && npm && yarn`.
-2. Path for `ProtoBuf Compiler (protoc)` added to PATH.
-3. Install `tauri-cli`.
+1. Install `nodejs && yarn(v3)`.
+2. Install `tauri-cli`.
 
 ```console
 cargo install tauri-cli
