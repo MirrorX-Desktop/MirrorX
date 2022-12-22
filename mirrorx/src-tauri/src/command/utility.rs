@@ -1,5 +1,4 @@
 use mirrorx_core::{error::CoreResult, utility::os::GraphicsCards};
-use serde::Serialize;
 
 #[tauri::command]
 #[tracing::instrument]

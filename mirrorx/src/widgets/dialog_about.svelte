@@ -8,6 +8,7 @@
 	import UAParser from 'ua-parser-js';
 	import { isMacOS } from '$lib/components/types';
 	import { writeText } from '@tauri-apps/api/clipboard';
+	import { appWindow } from '@tauri-apps/api/window';
 
 	let show: boolean = false;
 	let unlisten_fn: UnlistenFn | null = null;
@@ -21,7 +22,13 @@
 	let webkit_version = `${ua.getBrowser().version} (${ua.getBrowser().name})`;
 
 	onMount(async () => {
-		unlisten_fn = await listen<void>('/dialog/about', () => {
+		unlisten_fn = await listen<void>('/dialog/about', async () => {
+			const windowVisible = await appWindow.isVisible();
+			if (!windowVisible) {
+				await appWindow.show();
+				await appWindow.unminimize();
+			}
+
 			show = true;
 		});
 
