@@ -41,7 +41,8 @@ pub async fn config_init(
     if domain_count == 0 {
         config_domain_create(
             app_state,
-            String::from("mirrorx.cloud:28000"),
+            String::from("http://mirrorx.cloud:28000"),
+            true,
             String::default(),
         )
         .await?;
@@ -77,6 +78,7 @@ pub async fn config_domain_get_id_and_names(
 pub async fn config_domain_create(
     app_state: State<'_, AppState>,
     addr: String,
+    is_primary: bool,
     remarks: String,
 ) -> CoreResult<()> {
     let uri = addr
@@ -120,7 +122,7 @@ pub async fn config_domain_create(
         addr: uri.to_string(),
         signaling_port,
         subscribe_port,
-        is_primary: false,
+        is_primary,
         device_id: response.device_id,
         password: mirrorx_core::utility::rand::generate_random_password(),
         finger_print,

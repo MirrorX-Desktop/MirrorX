@@ -11,7 +11,13 @@
 	import { isMacOS } from '$lib/components/types';
 
 	let show: boolean = false;
-	let notification_event: { level_color: string; title: string; message: string; id: string } | null = null;
+	let notification_event: {
+		level_color: string;
+		text_color: string;
+		title: string;
+		message: string;
+		id: string;
+	} | null = null;
 	let unlisten_fn: UnlistenFn | null = null;
 
 	onMount(async () => {
@@ -19,23 +25,29 @@
 			console.log('/dialog/notification: ' + JSON.stringify(event));
 
 			let level_color = '';
+			let text_color = '';
 			switch (event.payload.level) {
 				case 'info':
 					level_color = 'bg-info';
+					text_color = 'text-info-content';
 					break;
 				case 'success':
 					level_color = 'bg-success';
+					text_color = 'text-success-content';
 					break;
 				case 'warning':
 					level_color = 'bg-warning';
+					text_color = 'text-warning-content';
 					break;
 				case 'error':
 					level_color = 'bg-error';
+					text_color = 'text-error-content';
 					break;
 			}
 
 			notification_event = {
 				level_color: level_color,
+				text_color: text_color,
 				title: event.payload.title,
 				message: event.payload.message,
 				id: uuidv4()
@@ -62,8 +74,8 @@
 	<div data-tauri-drag-region class="modal {isMacOS ? '' : 'rounded-lg'}">
 		<!-- here rounded-lg used for mask layer on windows because windows has css rounded corners-->
 		<div class="modal-box {notification_event?.level_color}">
-			<h3 class="text-lg font-bold">{notification_event?.title}</h3>
-			<div class="break-words py-4">{notification_event?.message}</div>
+			<h3 class="{notification_event?.text_color} text-lg font-bold">{notification_event?.title}</h3>
+			<div class="{notification_event?.text_color} break-words py-4">{notification_event?.message}</div>
 			<div class="modal-action">
 				<button class="btn" on:click={dismiss}>{$LL.DialogActions.Ok()}</button>
 			</div>
