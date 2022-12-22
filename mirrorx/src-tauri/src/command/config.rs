@@ -41,7 +41,7 @@ pub async fn config_init(
     if domain_count == 0 {
         config_domain_create(
             app_state,
-            String::from("127.0.0.1:28000"),
+            String::from("mirrorx.cloud:28000"),
             String::default(),
         )
         .await?;
