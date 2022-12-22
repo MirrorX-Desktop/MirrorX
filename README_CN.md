@@ -17,7 +17,7 @@
 </p>
   
 <p align="center">
-<img src="https://raw.githubusercontent.com/MirrorX-Desktop/MirrorX/master/screenshot.png" width="50%" height="50%">
+<img src="https://raw.githubusercontent.com/MirrorX-Desktop/MirrorX/master/screenshot1.png" width="50%" height="50%">
 </p>
 
 <p align="center">
