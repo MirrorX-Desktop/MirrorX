@@ -17,8 +17,8 @@
 </p>
   
 <p align="center">
-<img src="https://raw.githubusercontent.com/MirrorX-Desktop/MirrorX/master/screenshot1.png" width="30%" height="30%">
-<img src="https://raw.githubusercontent.com/MirrorX-Desktop/MirrorX/master/screenshot2.png" width="30%" height="30%">
+<img src="https://raw.githubusercontent.com/MirrorX-Desktop/MirrorX/master/screenshot1.png?" width="30%" height="30%">
+<img src="https://raw.githubusercontent.com/MirrorX-Desktop/MirrorX/master/screenshot2.png?" width="30%" height="30%">
 </p>
 
 <p align="center">
