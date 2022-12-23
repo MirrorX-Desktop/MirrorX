@@ -41,7 +41,7 @@ pub async fn serve_udp(
         serve_udp_handshake(remote_addr, &mut framed, visit_credentials, endpoint_id).await?;
     }
 
-    let (tx, rx) = tokio::sync::mpsc::channel(1);
+    let (tx, rx) = tokio::sync::mpsc::channel(32);
     let (sink, stream) = framed.split();
     serve_udp_write(remote_addr, rx, sealing_key, sink);
     let rx = serve_udp_read(remote_addr, opening_key, stream)?;

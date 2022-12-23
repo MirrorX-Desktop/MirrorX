@@ -43,7 +43,7 @@ pub async fn serve_tcp(
         serve_handshake(&mut framed, visit_credentials, endpoint_id).await?;
     }
 
-    let (tx, rx) = tokio::sync::mpsc::channel(1);
+    let (tx, rx) = tokio::sync::mpsc::channel(32);
     let (sink, stream) = framed.split();
     serve_tcp_write(endpoint_id, rx, sealing_key, sink);
     let rx = serve_tcp_read(endpoint_id, opening_key, stream)?;

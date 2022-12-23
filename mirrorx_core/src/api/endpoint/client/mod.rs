@@ -156,6 +156,13 @@ impl EndPointClient {
 }
 
 impl EndPointClient {
+    pub fn try_send(&self, message: &EndPointMessage) -> CoreResult<()> {
+        let buffer = bincode_serialize(message)?;
+        self.tx
+            .try_send(buffer)
+            .map_err(|_| CoreError::OutgoingMessageChannelDisconnect)
+    }
+
     pub fn blocking_send(&self, message: &EndPointMessage) -> CoreResult<()> {
         let buffer = bincode_serialize(message)?;
         self.tx

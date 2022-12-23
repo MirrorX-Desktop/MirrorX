@@ -32,10 +32,9 @@ static ICON_SCALE_BYTES:&[u8]=br#"<svg xmlns="http://www.w3.org/2000/svg" viewBo
 pub struct DesktopWindow {
     state: State,
     desktop_render: Arc<Mutex<DesktopRender>>,
-    input_commands: Vec<InputEvent>,
-    last_mouse_pos: Pos2,
-    last_send_input_commands: Instant,
-
+    // input_commands: Vec<InputEvent>,
+    // last_mouse_pos: Pos2,
+    // last_send_input_commands: Instant,
     icon_maximize: RetainedImage,
     icon_scale: RetainedImage,
 }
@@ -57,9 +56,9 @@ impl DesktopWindow {
         Self {
             state,
             desktop_render: Arc::new(Mutex::new(desktop_render)),
-            input_commands: Vec::new(),
-            last_mouse_pos: Pos2::ZERO,
-            last_send_input_commands: Instant::now(),
+            // input_commands: Vec::new(),
+            // last_mouse_pos: Pos2::ZERO,
+            // last_send_input_commands: Instant::now(),
             icon_maximize: RetainedImage::from_color_image(
                 "fa_maximize",
                 egui_extras::image::load_svg_bytes(ICON_MAXIMIZE_BYTES).unwrap(),
@@ -312,19 +311,20 @@ impl DesktopWindow {
         events: &[tauri_egui::egui::Event],
         pos_calc_fn: impl Fn(Pos2) -> Option<Pos2>,
     ) {
+        let mut input_commands = Vec::new();
         for event in events.iter() {
             match event {
                 tauri_egui::egui::Event::PointerMoved(pos) => {
                     if let Some(mouse_pos) = pos_calc_fn(*pos) {
-                        if mouse_pos != self.last_mouse_pos {
-                            self.input_commands.push(InputEvent::Mouse(MouseEvent::Move(
-                                MouseKey::None,
-                                mouse_pos.x,
-                                mouse_pos.y,
-                            )));
+                        // if mouse_pos != self.last_mouse_pos {
+                        input_commands.push(InputEvent::Mouse(MouseEvent::Move(
+                            MouseKey::None,
+                            mouse_pos.x,
+                            mouse_pos.y,
+                        )));
 
-                            self.last_mouse_pos = mouse_pos;
-                        }
+                        // self.last_mouse_pos = mouse_pos;
+                        // }
                     }
                 }
                 tauri_egui::egui::Event::PointerButton {
@@ -351,10 +351,10 @@ impl DesktopWindow {
                         MouseEvent::Up(mouse_key, mouse_pos.x, mouse_pos.y)
                     };
 
-                    self.input_commands.push(InputEvent::Mouse(mouse_event));
+                    input_commands.push(InputEvent::Mouse(mouse_event));
                 }
                 tauri_egui::egui::Event::Scroll(scroll_vector) => {
-                    self.input_commands
+                    input_commands
                         .push(InputEvent::Mouse(MouseEvent::ScrollWheel(scroll_vector.y)));
                 }
                 tauri_egui::egui::Event::RawKeyInput { key, pressed } => {
@@ -366,10 +366,21 @@ impl DesktopWindow {
                         KeyboardEvent::KeyUp(*key)
                     };
 
-                    self.input_commands
-                        .push(InputEvent::Keyboard(keyboard_event))
+                    input_commands.push(InputEvent::Keyboard(keyboard_event))
                 }
                 _ => {}
+            }
+        }
+
+        if input_commands.is_empty() {
+            return;
+        }
+
+        if let Some(client) = self.state.endpoint_client() {
+            if let Err(err) = client.try_send(&EndPointMessage::InputCommand(EndPointInput {
+                events: input_commands,
+            })) {
+                tracing::error!(?err, "send input event failed");
             }
         }
     }
@@ -387,26 +398,26 @@ impl tauri_egui::eframe::App for DesktopWindow {
                 self.build_panel(ui);
             });
 
-        if !self.input_commands.is_empty()
-            && self.last_send_input_commands.elapsed().as_millis() >= 60
-        {
-            tracing::info!(?self.input_commands, "input series");
+        // if !self.input_commands.is_empty()
+        //     && self.last_send_input_commands.elapsed().as_millis() >= 60
+        // {
+        //     tracing::info!(?self.input_commands, "input series");
 
-            if let Some(client) = self.state.endpoint_client() {
-                let events = self.input_commands.clone();
-                tokio::spawn(async move {
-                    if let Err(err) = client
-                        .send(&EndPointMessage::InputCommand(EndPointInput { events }))
-                        .await
-                    {
-                        tracing::error!(?err, "endpoint input failed");
-                    }
-                });
-            }
+        //     if let Some(client) = self.state.endpoint_client() {
+        //         let events = self.input_commands.clone();
+        //         tokio::spawn(async move {
+        //             if let Err(err) = client
+        //                 .send(&EndPointMessage::InputCommand(EndPointInput { events }))
+        //                 .await
+        //             {
+        //                 tracing::error!(?err, "endpoint input failed");
+        //             }
+        //         });
+        //     }
 
-            self.input_commands.clear();
-            self.last_send_input_commands = Instant::now();
-        }
+        //     self.input_commands.clear();
+        //     self.last_send_input_commands = Instant::now();
+        // }
 
         // ctx.request_repaint();
         let cost = update_instant.elapsed();
