@@ -9,6 +9,7 @@
 	import LL from '$lib/i18n/i18n-svelte';
 	import { current_domain } from '$lib/components/stores';
 	import { emitNotification } from '$lib/components/notification';
+	import { isMacOS } from '$lib/components/types';
 
 	let show: boolean = false;
 	let unlisten_fn: UnlistenFn | null = null;
@@ -54,7 +55,7 @@
 
 <slot>
 	<input type="checkbox" id="dialog_switch_primary_domain" class="modal-toggle" checked={show} />
-	<div class="modal">
+	<div data-tauri-drag-region class="modal {isMacOS ? '' : 'rounded-lg'}">
 		<div class="modal-box">
 			<h3 class="text-lg font-bold">{$LL.Dialogs.DomainSwitch.Title()}</h3>
 			<div class="py-4">

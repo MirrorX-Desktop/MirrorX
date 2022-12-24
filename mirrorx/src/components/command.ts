@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api';
-import type { Domain, LanDiscoverNode } from '$lib/components/types';
+import type { Domain, HistoryRecord, LanDiscoverNode } from '$lib/components/types';
 
 export function invoke_config_init(): Promise<void> {
 	return invoke('config_init');
@@ -7,6 +7,10 @@ export function invoke_config_init(): Promise<void> {
 
 export function invoke_config_domain_get(): Promise<Domain> {
 	return invoke('config_domain_get');
+}
+
+export function invoke_config_domain_get_by_name(name: string): Promise<Domain> {
+	return invoke('config_domain_get_by_name', { name });
 }
 
 export function invoke_config_domain_get_id_and_names(): Promise<Array<[number, string]>> {
@@ -49,6 +53,10 @@ export function invoke_config_theme_get(): Promise<'light' | 'dark' | 'auto' | n
 
 export function invoke_config_theme_set(theme: 'light' | 'dark' | 'auto'): Promise<void> {
 	return invoke('config_theme_set', { theme });
+}
+
+export function invoke_config_history_get(time_range: [number, number] | null): Promise<Array<HistoryRecord>> {
+	return invoke('config_history_get', { timeRange: time_range });
 }
 
 export function invoke_lan_init(force: boolean): Promise<void> {

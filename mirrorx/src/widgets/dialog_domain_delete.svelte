@@ -4,6 +4,7 @@
 	import { onDestroy, onMount } from 'svelte';
 	import LL from '$lib/i18n/i18n-svelte';
 	import { emitNotification } from '$lib/components/notification';
+	import { isMacOS } from '$lib/components/types';
 
 	let show: boolean = false;
 	let unlisten_fn: UnlistenFn | null = null;
@@ -46,7 +47,7 @@
 
 <slot>
 	<input type="checkbox" id="dialog_delete_confirm" class="modal-toggle" checked={show} />
-	<div class="modal">
+	<div data-tauri-drag-region class="modal {isMacOS ? '' : 'rounded-lg'}">
 		<div class="modal-box">
 			<h3 class="text-lg font-bold">{$LL.Dialogs.DomainDelete.Title()}</h3>
 			<div class="py-4">

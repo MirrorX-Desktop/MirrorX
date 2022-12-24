@@ -19,3 +19,10 @@ export interface LanDiscoverNode {
 	os: string;
 	os_version: string;
 }
+
+export interface HistoryRecord {
+	id: number;
+	device_id: number;
+	domain: string;
+	timestamp: number;
+}

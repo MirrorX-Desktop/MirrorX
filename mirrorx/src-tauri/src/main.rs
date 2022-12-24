@@ -163,6 +163,7 @@ fn build_app() -> App {
         .invoke_handler(tauri::generate_handler![
             command::config::config_init,
             command::config::config_domain_get,
+            command::config::config_domain_get_by_name,
             command::config::config_domain_get_id_and_names,
             command::config::config_domain_create,
             command::config::config_domain_delete,
@@ -172,6 +173,7 @@ fn build_app() -> App {
             command::config::config_language_set,
             command::config::config_theme_get,
             command::config::config_theme_set,
+            command::config::config_history_get,
             command::lan::lan_init,
             command::lan::lan_connect,
             command::lan::lan_nodes_list,

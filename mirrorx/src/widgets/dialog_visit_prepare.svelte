@@ -65,14 +65,14 @@
 	<input type="checkbox" id="dialog_visit_prepare" class="modal-toggle" bind:checked={show} />
 	<div data-tauri-drag-region class="modal {isMacOS ? '' : 'rounded-lg'}">
 		<div class="modal-box">
-			<div class="py-4">
-				<p class="py-1 text-center text-xl font-bold">{remote_device_id}</p>
-				<p class="py-1 text-center text-lg">{$LL.Dialogs.VisitPrepare.Content()}</p>
+			<div class="pb-4">
+				<p class="py-1 text-center text-3xl font-bold">{remote_device_id}</p>
+				<p class="py-1 text-center">{$LL.Dialogs.VisitPrepare.Content()}</p>
 			</div>
 			<div class="input-group flex flex-row">
 				<input
 					type={show_password ? 'text' : 'password'}
-					class="w-full rounded border text-center focus:border-blue-300 focus:outline-none focus:ring"
+					class="input input-bordered focus:border-info focus:ring-info w-full text-center focus:outline-none focus:ring"
 					maxlength="20"
 					value={input_password}
 					on:input={(event) => (input_password = event.currentTarget.value)}

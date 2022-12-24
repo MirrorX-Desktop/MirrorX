@@ -365,16 +365,17 @@
 		</div>
 		<div class="flex flex-row items-center justify-center pb-2">
 			<div class="btn-group">
-				{#if desktop_is_connecting}
-					<button class="btn btn-active btn-disabled">
+				<button
+					class="btn btn-active {desktop_is_connecting ? 'btn-disabled' : 'inline-flex'}"
+					on:click={connect_desktop}
+				>
+					{#if desktop_is_connecting}
 						<Fa icon={faSpinner} spin />
-					</button>
-				{:else}
-					<button class="btn btn-active inline-flex" on:click={connect_desktop}>
+					{:else}
 						<Fa class="mr-2" icon={faDisplay} />
 						{$LL.Home.Desktop()}
-					</button>
-				{/if}
+					{/if}
+				</button>
 
 				<button class="btn inline-flex">
 					<Fa class="mr-2" icon={faFolderTree} />{$LL.Home.Files()}

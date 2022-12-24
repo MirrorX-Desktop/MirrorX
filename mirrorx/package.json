@@ -44,6 +44,7 @@
 		"@tauri-apps/api": "^1.1.0",
 		"daisyui": "^2.38.1",
 		"debounce": "^1.2.1",
+		"moment": "^2.29.4",
 		"tailwindcss": "^3.2.2",
 		"typesafe-i18n": "^5.14.0",
 		"ua-parser-js": "^1.0.32",

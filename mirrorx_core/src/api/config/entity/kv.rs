@@ -1,10 +1,9 @@
-use std::str::FromStr;
-
 use crate::{core_error, error::CoreResult};
-use r2d2::{Pool, PooledConnection};
+use r2d2::Pool;
 use r2d2_sqlite::SqliteConnectionManager;
 use rusqlite::OptionalExtension;
 use serde::{Deserialize, Serialize};
+use std::str::FromStr;
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -47,7 +46,7 @@ impl KVRepository {
     }
 
     pub fn ensure_table(&self) -> CoreResult<()> {
-        let conn = self.get_connection()?;
+        let conn = self.pool.get()?;
 
         const COMMAND: &str = r"
         CREATE TABLE IF NOT EXISTS kv(
@@ -87,9 +86,7 @@ impl KVRepository {
         const COMMAND: &str =
             r"INSERT INTO kv(key, value) VALUES(?, ?) ON CONFLICT DO UPDATE SET value = ?";
 
-        let _ = self
-            .get_connection()?
-            .execute(COMMAND, [key, value, value])?;
+        let _ = self.pool.get()?.execute(COMMAND, [key, value, value])?;
 
         Ok(())
     }
@@ -98,19 +95,11 @@ impl KVRepository {
         const COMMAND: &str = r"SELECT value FROM kv WHERE key = ? LIMIT 1";
 
         let value = self
-            .get_connection()?
+            .pool
+            .get()?
             .query_row(COMMAND, [key], |row| row.get(0))
             .optional()?;
 
         Ok(value)
-    }
-
-    fn get_connection(&self) -> CoreResult<PooledConnection<SqliteConnectionManager>> {
-        let conn = self
-            .pool
-            .get()
-            .map_err(|err| core_error!("get db connection failed ({})", err))?;
-
-        Ok(conn)
     }
 }

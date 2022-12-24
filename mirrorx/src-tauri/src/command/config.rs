@@ -2,7 +2,7 @@ use crate::command::AppState;
 use mirrorx_core::{
     api::{
         config::{
-            entity::{domain::Domain, kv::Theme},
+            entity::{domain::Domain, history::Record, kv::Theme},
             LocalStorage,
         },
         signaling::http_message::Response,
@@ -59,6 +59,19 @@ pub async fn config_domain_get(app_state: State<'_, AppState>) -> CoreResult<Dom
     };
 
     storage.domain().get_primary_domain()
+}
+
+#[tauri::command]
+#[tracing::instrument(skip(app_state))]
+pub async fn config_domain_get_by_name(
+    app_state: State<'_, AppState>,
+    name: String,
+) -> CoreResult<Domain> {
+    let Some(ref storage) = *app_state.storage.lock().await else {
+        return Err(core_error!("storage not initialize"));
+    };
+
+    storage.domain().get_domain_by_name(name)
 }
 
 #[tauri::command]
@@ -139,7 +152,11 @@ pub async fn config_domain_delete(id: i64, app_state: State<'_, AppState>) -> Co
         return Err(core_error!("storage not initialize"));
     };
 
-    storage.domain().delete_domain(id)
+    let domain = storage.domain().get_domain_by_id(id)?;
+    storage.domain().delete_domain(id)?;
+    storage.history().delete_domain_related(&domain.name)?;
+
+    Ok(())
 }
 
 #[derive(Serialize)]
@@ -328,4 +345,20 @@ pub async fn config_theme_set(app_state: State<'_, AppState>, theme: Theme) -> C
     storage.kv().set_theme(theme)?;
 
     Ok(())
+}
+
+#[tauri::command]
+#[tracing::instrument(skip(app_state))]
+pub async fn config_history_get(
+    app_state: State<'_, AppState>,
+    time_range: Option<(i64, i64)>,
+) -> CoreResult<Vec<Record>> {
+    let Some(ref storage) = *app_state.storage.lock().await else {
+        return Err(core_error!("storage not initialize"));
+    };
+
+    tracing::info!(?time_range, "query");
+    let records = storage.history().query(time_range)?;
+
+    Ok(records)
 }

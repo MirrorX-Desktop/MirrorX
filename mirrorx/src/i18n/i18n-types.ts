@@ -120,6 +120,24 @@ type RootTranslation = {
 		 */
 		Discoverable: string
 	}
+	History: {
+		/**
+		 * A​l​l
+		 */
+		All: string
+		/**
+		 * 1​ ​D​a​y
+		 */
+		Day1: string
+		/**
+		 * 7​ ​D​a​y​s
+		 */
+		Days7: string
+		/**
+		 * 3​0​ ​D​a​y​s
+		 */
+		Days30: string
+	}
 	Settings: {
 		Appearance: {
 			/**
@@ -275,6 +293,12 @@ type RootTranslation = {
 			 */
 			ContentSuffix: string
 		}
+		HistoryConnect: {
+			/**
+			 * A​u​t​o​m​a​t​i​c​a​l​l​y​ ​S​w​i​t​c​h​ ​D​o​m​a​i​n
+			 */
+			Tip: string
+		}
 	}
 }
 
@@ -384,6 +408,24 @@ export type TranslationFunctions = {
 		 * Discoverable
 		 */
 		Discoverable: () => LocalizedString
+	}
+	History: {
+		/**
+		 * All
+		 */
+		All: () => LocalizedString
+		/**
+		 * 1 Day
+		 */
+		Day1: () => LocalizedString
+		/**
+		 * 7 Days
+		 */
+		Days7: () => LocalizedString
+		/**
+		 * 30 Days
+		 */
+		Days30: () => LocalizedString
 	}
 	Settings: {
 		Appearance: {
@@ -539,6 +581,12 @@ export type TranslationFunctions = {
 			 * ? Once you delete it and you can't recovery!
 			 */
 			ContentSuffix: () => LocalizedString
+		}
+		HistoryConnect: {
+			/**
+			 * Automatically Switch Domain
+			 */
+			Tip: () => LocalizedString
 		}
 	}
 }

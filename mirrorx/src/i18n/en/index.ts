@@ -32,6 +32,12 @@ const en: BaseTranslation = {
 		HostnameOrIP: 'Search Hostname or IP (Case Sensitive)',
 		Discoverable: 'Discoverable'
 	},
+	History: {
+		All: 'All',
+		Day1: '1 Day',
+		Days7: '7 Days',
+		Days30: '30 Days'
+	},
 	Settings: {
 		Appearance: {
 			Title: 'Appearance',
@@ -90,6 +96,9 @@ const en: BaseTranslation = {
 			Title: 'Delete Domain',
 			ContentPrefix: 'Do you want to delete domain',
 			ContentSuffix: `? Once you delete it and you can't recovery!`
+		},
+		HistoryConnect: {
+			Tip: 'Automatically Switch Domain'
 		}
 	}
 };

@@ -43,6 +43,7 @@
 	import DialogDomainDelete from '$lib/widgets/dialog_domain_delete.svelte';
 	import DialogDomainEdit from '$lib/widgets/dialog_domain_edit.svelte';
 	import DialogDomainSwitch from '$lib/widgets/dialog_domain_switch.svelte';
+	import DialogHistoryConnect from '$lib/widgets/dialog_history_connect.svelte';
 
 	const observer = new MutationObserver((mutations: MutationRecord[], observer: MutationObserver) => {
 		for (const mutation of mutations) {
@@ -248,6 +249,7 @@
 <DialogDomainEdit />
 <DialogDomainSwitch />
 <DialogDomainDelete />
+<DialogHistoryConnect />
 
 <style>
 	:root {

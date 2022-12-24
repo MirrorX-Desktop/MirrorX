@@ -1,8 +1,5 @@
-use crate::{
-    core_error,
-    error::{CoreError, CoreResult},
-};
-use r2d2::{Pool, PooledConnection};
+use crate::error::{CoreError, CoreResult};
+use r2d2::Pool;
 use r2d2_sqlite::SqliteConnectionManager;
 use rusqlite::{params, OptionalExtension, Row};
 use serde::Serialize;
@@ -31,7 +28,7 @@ impl DomainRepository {
     }
 
     pub fn ensure_table(&self) -> CoreResult<()> {
-        let conn = self.get_connection()?;
+        let conn = self.pool.get()?;
 
         const COMMAND: &str = r"
         CREATE TABLE IF NOT EXISTS domains(
@@ -67,7 +64,7 @@ impl DomainRepository {
         )
         VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)"#;
 
-        let conn = self.get_connection()?;
+        let conn = self.pool.get()?;
         conn.execute(
             COMMAND,
             params![
@@ -91,15 +88,17 @@ impl DomainRepository {
     pub fn get_primary_domain(&self) -> CoreResult<Domain> {
         const COMMAND: &str = r"SELECT * FROM domains WHERE is_primary = 1 LIMIT 1";
 
-        self.get_connection()?
-            .query_row_and_then::<Domain, CoreError, _, _>(COMMAND, [], parse_domain)
+        self.pool
+            .get()?
+            .query_row_and_then(COMMAND, [], parse_domain)
     }
 
     pub fn domain_exist(&self, name: &str) -> CoreResult<bool> {
         const COMMAND: &str = r"SELECT 1 FROM domains WHERE name = ?";
 
         let res = self
-            .get_connection()?
+            .pool
+            .get()?
             .query_row(COMMAND, [name], |row| row.get::<_, u32>(0))
             .optional()?;
 
@@ -109,9 +108,9 @@ impl DomainRepository {
     pub fn get_domain_id_and_names(&self) -> CoreResult<Vec<(i64, String)>> {
         const COMMAND: &str = r"SELECT id, name FROM domains";
 
-        let conn = self.get_connection()?;
+        let conn = self.pool.get()?;
         let mut stmt = conn.prepare(COMMAND)?;
-        let rows = stmt.query_and_then::<(i64, String), CoreError, _, _>([], |row| {
+        let rows = stmt.query_and_then([], |row| -> CoreResult<(i64, String)> {
             Ok((row.get(0)?, row.get(1)?))
         })?;
 
@@ -127,7 +126,8 @@ impl DomainRepository {
         const COMMAND: &str = r"SELECT * FROM domains WHERE name = ? LIMIT 1";
 
         let domain = self
-            .get_connection()?
+            .pool
+            .get()?
             .query_row_and_then(COMMAND, [name], parse_domain)?;
 
         Ok(domain)
@@ -136,9 +136,10 @@ impl DomainRepository {
     pub fn get_domain_by_id(&self, domain_id: i64) -> CoreResult<Domain> {
         const COMMAND: &str = r"SELECT * FROM domains WHERE id = ?";
 
-        let domain =
-            self.get_connection()?
-                .query_row_and_then(COMMAND, [domain_id], parse_domain)?;
+        let domain = self
+            .pool
+            .get()?
+            .query_row_and_then(COMMAND, [domain_id], parse_domain)?;
 
         Ok(domain)
     }
@@ -147,14 +148,14 @@ impl DomainRepository {
         const COUNT_COMMAND: &str = r"SELECT COUNT(*) FROM domains";
         const PAGINATION_COMMAND: &str = r"SELECT * FROM domains LIMIT ? OFFSET ?";
 
-        let conn = self.get_connection()?;
+        let conn = self.pool.get()?;
 
-        let count = conn
-            .query_row_and_then::<u32, CoreError, _, _>(COUNT_COMMAND, [], |row| Ok(row.get(0)?))?;
+        let count = conn.query_row_and_then(COUNT_COMMAND, [], |row| -> CoreResult<u32> {
+            Ok(row.get(0)?)
+        })?;
 
         let mut stmt = conn.prepare(PAGINATION_COMMAND)?;
-        let rows = stmt
-            .query_and_then::<Domain, CoreError, _, _>([limit, (page - 1) * limit], parse_domain)?;
+        let rows = stmt.query_and_then([limit, (page - 1) * limit], parse_domain)?;
 
         let mut domains = Vec::new();
         for row in rows {
@@ -166,7 +167,8 @@ impl DomainRepository {
 
     pub fn get_domain_count(&self) -> CoreResult<u32> {
         const COMMAND: &str = r"SELECT COUNT(*) FROM domains";
-        self.get_connection()?
+        self.pool
+            .get()?
             .query_row_and_then(COMMAND, [], |row| Ok(row.get(0)?))
     }
 
@@ -175,7 +177,7 @@ impl DomainRepository {
             r"UPDATE domains SET is_primary = 0 WHERE is_primary = 1";
         const SET_PRIMARY_COMMAND: &str = r"UPDATE domains SET is_primary = 1 WHERE id = ?";
 
-        let mut conn = self.get_connection()?;
+        let mut conn = self.pool.get()?;
         let tx = conn.transaction()?;
         if let Err(err) = tx.execute(UNSET_PRIMARY_COMMAND, []) {
             tx.rollback()?;
@@ -195,7 +197,8 @@ impl DomainRepository {
     pub fn set_domain_device_id(&self, domain_id: i64, device_id: i64) -> CoreResult<()> {
         const COMMAND: &str = r"UPDATE domains SET device_id = ? WHERE id =?";
 
-        self.get_connection()?
+        self.pool
+            .get()?
             .execute(COMMAND, params![device_id, domain_id])?;
 
         Ok(())
@@ -204,7 +207,8 @@ impl DomainRepository {
     pub fn set_domain_device_password(&self, domain_id: i64, password: &str) -> CoreResult<()> {
         const COMMAND: &str = r"UPDATE domains SET password = ? WHERE id =?";
 
-        self.get_connection()?
+        self.pool
+            .get()?
             .execute(COMMAND, params![password, domain_id])?;
 
         Ok(())
@@ -213,7 +217,8 @@ impl DomainRepository {
     pub fn set_domain_remarks(&self, domain_id: i64, remarks: &str) -> CoreResult<()> {
         const COMMAND: &str = r"UPDATE domains SET remarks = ? WHERE id =?";
 
-        self.get_connection()?
+        self.pool
+            .get()?
             .execute(COMMAND, params![remarks, domain_id])?;
 
         Ok(())
@@ -222,18 +227,9 @@ impl DomainRepository {
     pub fn delete_domain(&self, domain_id: i64) -> CoreResult<()> {
         const COMMAND: &str = r"DELETE FROM domains WHERE id = ?";
 
-        self.get_connection()?.execute(COMMAND, [domain_id])?;
+        self.pool.get()?.execute(COMMAND, [domain_id])?;
 
         Ok(())
-    }
-
-    fn get_connection(&self) -> CoreResult<PooledConnection<SqliteConnectionManager>> {
-        let conn = self
-            .pool
-            .get()
-            .map_err(|err| core_error!("get db connection failed ({})", err))?;
-
-        Ok(conn)
     }
 }
 

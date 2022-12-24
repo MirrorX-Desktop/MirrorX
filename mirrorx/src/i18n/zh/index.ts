@@ -32,6 +32,12 @@ const zh_Hans: Translation = {
 		HostnameOrIP: '搜索主机名或IP（大小写敏感）',
 		Discoverable: '可被发现'
 	},
+	History: {
+		All: '所有',
+		Day1: '1天',
+		Days7: '7天',
+		Days30: '30天'
+	},
 	Dialogs: {
 		About: {
 			Copy: '复制',
@@ -81,6 +87,9 @@ const zh_Hans: Translation = {
 			Title: '删除域',
 			ContentPrefix: '你想要删除域',
 			ContentSuffix: `吗？一旦你删除将无法恢复！`
+		},
+		HistoryConnect: {
+			Tip: '自动切换域'
 		}
 	},
 	Settings: {

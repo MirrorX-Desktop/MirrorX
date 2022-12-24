@@ -79,6 +79,9 @@ pub enum CoreError {
 
     #[error("audio device get default config failed ({0:?})")]
     AudioDeviceDefaultConfigError(#[from] cpal::DefaultStreamConfigError),
+
+    #[error("r2d2 connection pool error ({0:?})")]
+    R2D2PoolError(#[from] r2d2::Error),
 }
 
 impl serde::Serialize for CoreError {

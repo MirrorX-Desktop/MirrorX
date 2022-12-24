@@ -107,9 +107,10 @@ pub async fn signaling_visit(
         return Err(core_error!("storage not initialize"));
     };
 
-    let local_device_id = storage.domain().get_primary_domain()?.device_id;
+    let primary_domain = storage.domain().get_primary_domain()?;
+    let local_device_id = primary_domain.device_id;
     let resp = signaling_client
-        .visit(local_device_id, remote_device_id, password)
+        .visit(primary_domain.device_id, remote_device_id, password)
         .await?;
 
     let (endpoint_addr, visit_credentials, opening_key, sealing_key) = match resp {
@@ -154,6 +155,10 @@ pub async fn signaling_visit(
         tracing::error!(?err, "create desktop window failed");
         return Err(core_error!("create remote desktop window failed"));
     }
+
+    let _ = storage
+        .history()
+        .create(remote_device_id, &primary_domain.name);
 
     Ok(())
 }
