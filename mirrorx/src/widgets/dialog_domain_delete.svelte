@@ -29,6 +29,7 @@
 		try {
 			await invoke_config_domain_delete(domain_id);
 			await emit('update_domains');
+			await emit('/dialog/domain_edit/close');
 		} catch (error: any) {
 			await emitNotification({
 				level: 'error',

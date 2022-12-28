@@ -16,10 +16,11 @@
 	let domain_device_id: string = '';
 	let domain_finger_print: string = '';
 	let domain_remarks: string = '';
-	let unlisten_fn: UnlistenFn | null = null;
+	let open_unlisten_fn: UnlistenFn | null = null;
+	let close_unlisten_fn: UnlistenFn | null = null;
 
 	onMount(async () => {
-		unlisten_fn = await listen<{
+		open_unlisten_fn = await listen<{
 			domain_id: number;
 			domain_name: string;
 			domain_device_id: number;
@@ -33,11 +34,19 @@
 			domain_remarks = event.payload.domain_remarks;
 			show = true;
 		});
+
+		close_unlisten_fn = await listen('/dialog/domain_edit/close', (event) => {
+			show = false;
+		});
 	});
 
 	onDestroy(() => {
-		if (unlisten_fn) {
-			unlisten_fn();
+		if (open_unlisten_fn) {
+			open_unlisten_fn();
+		}
+
+		if (close_unlisten_fn) {
+			close_unlisten_fn();
 		}
 	});
 
