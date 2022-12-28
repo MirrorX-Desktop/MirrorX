@@ -18,7 +18,7 @@ export function invoke_config_domain_get_id_and_names(): Promise<Array<[number, 
 }
 
 export function invoke_config_domain_create(addr: string, remarks: string): Promise<void> {
-	return invoke('config_domain_create', { addr, is_primary: false, remarks });
+	return invoke('config_domain_create', { addr, isPrimary: false, remarks });
 }
 
 export function invoke_config_domain_delete(id: number): Promise<void> {
