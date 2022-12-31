@@ -46,7 +46,7 @@ pub fn read_root_directory() -> CoreResult<Directory> {
             let disk = [b'A' + i as u8, b':', b'\\'];
 
             sub_dirs.push(DirEntry {
-                path: PathBuf::from_str(&disk)?,
+                path: PathBuf::from_str(String::from_utf8_lossy(&disk).as_ref())?,
                 modified_time: 0,
             });
         }

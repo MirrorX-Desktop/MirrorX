@@ -82,6 +82,9 @@ pub enum CoreError {
 
     #[error("r2d2 connection pool error ({0:?})")]
     R2D2PoolError(#[from] r2d2::Error),
+
+    #[error("convert error ({0:?})")]
+    ConvertError(#[from] std::convert::Infallible),
 }
 
 impl serde::Serialize for CoreError {
