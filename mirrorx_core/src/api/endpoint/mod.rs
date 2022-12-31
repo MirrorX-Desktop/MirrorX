@@ -24,7 +24,7 @@ pub enum EndPointStream {
     },
 }
 
-pub async fn create_active_endpoint_client(
+pub async fn create_desktop_active_endpoint_client(
     endpoint_id: EndPointID,
     key_pair: Option<(OpeningKey<NonceValue>, SealingKey<NonceValue>)>,
     stream: EndPointStream,
@@ -41,7 +41,7 @@ pub async fn create_active_endpoint_client(
     let video_frame_tx = serve_video_decode(endpoint_id, render_frame_tx);
     serve_audio_decode(endpoint_id, audio_frame_rx);
 
-    let client = EndPointClient::new_active(
+    let client = EndPointClient::new_desktop_active(
         endpoint_id,
         key_pair,
         stream,
@@ -53,6 +53,29 @@ pub async fn create_active_endpoint_client(
     .await?;
 
     Ok((client, render_frame_rx, directory_rx))
+}
+
+pub async fn create_file_manager_active_endpoint_client(
+    endpoint_id: EndPointID,
+    key_pair: Option<(OpeningKey<NonceValue>, SealingKey<NonceValue>)>,
+    stream: EndPointStream,
+    visit_credentials: Option<Vec<u8>>,
+) -> CoreResult<(
+    Arc<EndPointClient>,
+    tokio::sync::mpsc::Receiver<EndPointDirectoryResponse>,
+)> {
+    let (directory_tx, directory_rx) = tokio::sync::mpsc::channel(1);
+
+    let client = EndPointClient::new_file_manager_active(
+        endpoint_id,
+        key_pair,
+        stream,
+        directory_tx,
+        visit_credentials,
+    )
+    .await?;
+
+    Ok((client, directory_rx))
 }
 
 pub async fn create_passive_endpoint_client(

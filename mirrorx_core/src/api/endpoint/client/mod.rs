@@ -34,7 +34,7 @@ pub struct EndPointClient {
 }
 
 impl EndPointClient {
-    pub async fn new_active(
+    pub async fn new_desktop_active(
         endpoint_id: EndPointID,
         stream_key: Option<(OpeningKey<NonceValue>, SealingKey<NonceValue>)>,
         stream: EndPointStream,
@@ -50,6 +50,26 @@ impl EndPointClient {
             stream,
             Some(video_frame_tx),
             Some(audio_frame_tx),
+            Some(directory_tx),
+            visit_credentials,
+        )
+        .await
+    }
+
+    pub async fn new_file_manager_active(
+        endpoint_id: EndPointID,
+        stream_key: Option<(OpeningKey<NonceValue>, SealingKey<NonceValue>)>,
+        stream: EndPointStream,
+        directory_tx: Sender<EndPointDirectoryResponse>,
+        visit_credentials: Option<Vec<u8>>,
+    ) -> CoreResult<Arc<EndPointClient>> {
+        EndPointClient::create(
+            true,
+            endpoint_id,
+            stream_key,
+            stream,
+            None,
+            None,
             Some(directory_tx),
             visit_credentials,
         )
@@ -131,7 +151,7 @@ impl EndPointClient {
         };
 
         // active endpoint should start negotiate with passive endpoint
-        let primary_monitor = if active {
+        let primary_monitor = if active && video_frame_tx.is_some() && audio_frame_tx.is_some() {
             let params = serve_active_negotiate(&tx, &mut rx).await?;
             Some(Arc::new(params.primary_monitor))
         } else {

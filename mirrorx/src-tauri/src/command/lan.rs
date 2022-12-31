@@ -1,6 +1,6 @@
 use crate::{command::AppState, window::create_desktop_window};
 use mirrorx_core::{
-    api::endpoint::{create_active_endpoint_client, id::EndPointID, EndPointStream},
+    api::endpoint::{create_desktop_active_endpoint_client, id::EndPointID, EndPointStream},
     component::lan::{
         discover::{Discover, Node},
         server::Server,
@@ -48,7 +48,7 @@ pub async fn lan_connect(
         remote_ip,
     };
 
-    let (client, render_frame_rx, directory_rx) = create_active_endpoint_client(
+    let (client, render_frame_rx, directory_rx) = create_desktop_active_endpoint_client(
         endpoint_id,
         None,
         EndPointStream::ActiveTCP(remote_addr),

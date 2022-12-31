@@ -2,7 +2,10 @@ use super::AppState;
 use crate::window::create_desktop_window;
 use mirrorx_core::{
     api::{
-        endpoint::{create_active_endpoint_client, id::EndPointID, EndPointStream},
+        endpoint::{
+            create_desktop_active_endpoint_client, create_file_manager_active_endpoint_client,
+            id::EndPointID, EndPointStream,
+        },
         signaling::{http_message::Response, SignalingClient},
     },
     core_error,
@@ -139,15 +142,15 @@ pub async fn signaling_visit(
         remote_device_id,
     };
 
-    let (client, render_frame_rx, directory_rx) = create_active_endpoint_client(
-        endpoint_id,
-        Some((opening_key, sealing_key)),
-        EndPointStream::ActiveTCP(endpoint_addr),
-        Some(visit_credentials),
-    )
-    .await?;
-
     if visit_desktop {
+        let (client, render_frame_rx, directory_rx) = create_desktop_active_endpoint_client(
+            endpoint_id,
+            Some((opening_key, sealing_key)),
+            EndPointStream::ActiveTCP(endpoint_addr),
+            Some(visit_credentials),
+        )
+        .await?;
+
         if let Err(err) = egui_plugin.create_window(
             window_label.clone(),
             Box::new(move |cc| {
@@ -174,6 +177,14 @@ pub async fn signaling_visit(
             return Err(core_error!("create remote desktop window failed"));
         }
     } else {
+        let (client, directory_rx) = create_file_manager_active_endpoint_client(
+            endpoint_id,
+            Some((opening_key, sealing_key)),
+            EndPointStream::ActiveTCP(endpoint_addr),
+            Some(visit_credentials),
+        )
+        .await?;
+
         app_state
             .files_endpoints
             .insert(endpoint_id, (client, directory_rx));
