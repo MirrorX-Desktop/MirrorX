@@ -2691,6 +2691,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "cocoa",
+ "dashmap",
  "egui_extras",
  "http",
  "mirrorx_core",

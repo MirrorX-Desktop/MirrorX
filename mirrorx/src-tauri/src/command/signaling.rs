@@ -2,7 +2,7 @@ use super::AppState;
 use crate::window::create_desktop_window;
 use mirrorx_core::{
     api::{
-        endpoint::id::EndPointID,
+        endpoint::{create_active_endpoint_client, id::EndPointID, EndPointStream},
         signaling::{http_message::Response, SignalingClient},
     },
     core_error,
@@ -89,12 +89,14 @@ pub async fn signaling_connect(
 }
 
 #[tauri::command]
-#[tracing::instrument(skip(app_state, egui_plugin))]
+#[tracing::instrument(skip(app_handle, app_state, egui_plugin))]
 pub async fn signaling_visit(
+    app_handle: tauri::AppHandle,
     app_state: tauri::State<'_, AppState>,
     egui_plugin: tauri::State<'_, EguiPluginHandle>,
     remote_device_id: String,
     password: String,
+    visit_desktop: bool,
 ) -> CoreResult<()> {
     let window_label = format!("MirrorX {}", remote_device_id);
     let remote_device_id: i64 = remote_device_id.replace('-', "").parse()?;
@@ -110,7 +112,12 @@ pub async fn signaling_visit(
     let primary_domain = storage.domain().get_primary_domain()?;
     let local_device_id = primary_domain.device_id;
     let resp = signaling_client
-        .visit(primary_domain.device_id, remote_device_id, password)
+        .visit(
+            primary_domain.device_id,
+            remote_device_id,
+            password,
+            visit_desktop,
+        )
         .await?;
 
     let (endpoint_addr, visit_credentials, opening_key, sealing_key) = match resp {
@@ -127,33 +134,62 @@ pub async fn signaling_visit(
 
     tracing::info!(?local_device_id, ?remote_device_id, "key exchange success");
 
-    if let Err(err) = egui_plugin.create_window(
-        window_label.clone(),
-        Box::new(move |cc| {
-            if let Some(gl_context) = cc.gl.as_ref() {
-                Box::new(create_desktop_window(
-                    cc,
-                    gl_context.clone(),
-                    EndPointID::DeviceID {
-                        local_device_id,
-                        remote_device_id,
-                    },
-                    Some((opening_key, sealing_key)),
-                    Some(visit_credentials),
-                    endpoint_addr,
-                ))
-            } else {
-                panic!("get gl context failed");
-            }
-        }),
-        window_label,
-        tauri_egui::eframe::NativeOptions {
-            // hardware_acceleration: HardwareAcceleration::Required,
-            ..Default::default()
-        },
-    ) {
-        tracing::error!(?err, "create desktop window failed");
-        return Err(core_error!("create remote desktop window failed"));
+    let endpoint_id = EndPointID::DeviceID {
+        local_device_id,
+        remote_device_id,
+    };
+
+    let (client, render_frame_rx, directory_rx) = create_active_endpoint_client(
+        endpoint_id,
+        Some((opening_key, sealing_key)),
+        EndPointStream::ActiveTCP(endpoint_addr),
+        Some(visit_credentials),
+    )
+    .await?;
+
+    if visit_desktop {
+        if let Err(err) = egui_plugin.create_window(
+            window_label.clone(),
+            Box::new(move |cc| {
+                if let Some(gl_context) = cc.gl.as_ref() {
+                    Box::new(create_desktop_window(
+                        cc,
+                        gl_context.clone(),
+                        endpoint_id,
+                        client,
+                        render_frame_rx,
+                        directory_rx,
+                    ))
+                } else {
+                    panic!("get gl context failed");
+                }
+            }),
+            window_label,
+            tauri_egui::eframe::NativeOptions {
+                // hardware_acceleration: HardwareAcceleration::Required,
+                ..Default::default()
+            },
+        ) {
+            tracing::error!(?err, "create desktop window failed");
+            return Err(core_error!("create remote desktop window failed"));
+        }
+    } else {
+        app_state
+            .files_endpoints
+            .insert(endpoint_id, (client, directory_rx));
+
+        if let Err(err) = tauri::WindowBuilder::new(
+            &app_handle,
+            endpoint_id.to_string(),
+            tauri::WindowUrl::App("/files".into()),
+        )
+        .center()
+        .min_inner_size(640., 1280.)
+        .build()
+        {
+            app_state.files_endpoints.remove(&endpoint_id);
+            tracing::error!(?err, "build file manager window failed");
+        }
     }
 
     let _ = storage

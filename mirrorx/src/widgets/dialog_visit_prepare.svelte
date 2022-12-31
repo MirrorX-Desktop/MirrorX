@@ -12,13 +12,16 @@
 	let show = false;
 	let input_password = '';
 	let show_password = false;
+	let visit_desktop: boolean = true;
 	let unlisten_fn: UnlistenFn | null;
 
 	onMount(async () => {
 		unlisten_fn = await listen<{
 			remote_device_id: string;
+			visit_desktop: boolean;
 		}>('/dialog/visit_prepare', (event) => {
 			remote_device_id = event.payload.remote_device_id;
+			visit_desktop = event.payload.visit_desktop;
 			show = true;
 		});
 	});
@@ -32,7 +35,7 @@
 	const ok = async () => {
 		try {
 			show = false;
-			await invoke_signaling_visit(remote_device_id, input_password);
+			await invoke_signaling_visit(remote_device_id, input_password, visit_desktop);
 		} catch (error: any) {
 			let err: string = error.toString();
 			if (err.includes('Internal')) {

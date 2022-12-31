@@ -104,6 +104,7 @@ impl SignalingClient {
         local_device_id: i64,
         remote_device_id: i64,
         password: String,
+        visit_desktop: bool,
     ) -> CoreResult<
         Response<
             Result<
@@ -184,7 +185,7 @@ impl SignalingClient {
             .json(&VisitRequest {
                 active_device_id: local_device_id,
                 passive_device_id: remote_device_id,
-                visit_desktop: true,
+                visit_desktop,
                 password_salt: base64::encode(active_device_secret_salt),
                 secret: base64::encode(active_device_secret_buffer),
                 secret_nonce: base64::encode(active_device_secret_sealing_nonce),

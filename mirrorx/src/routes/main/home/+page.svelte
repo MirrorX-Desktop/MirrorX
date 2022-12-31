@@ -37,6 +37,8 @@
 	let random_password_generating = false;
 	let desktop_is_connecting = false;
 	let desktop_is_connecting_unlisten_fn: UnlistenFn | null;
+	let file_manager_is_connecting = false;
+	let file_manager_is_connecting_unlisten_fn: UnlistenFn | null;
 	let domain_id_copied = false;
 	let remote_device_id_input: HTMLElement | null = null;
 	let remote_device_id_input_placeholder: HTMLElement | null = null;
@@ -60,6 +62,15 @@
 				input_remote_device_id_before = '';
 			}
 		});
+
+		file_manager_is_connecting_unlisten_fn = await listen<boolean>('file_manager_is_connecting', (event) => {
+			file_manager_is_connecting = event.payload;
+
+			if (!event.payload) {
+				input_remote_device_id = '';
+				input_remote_device_id_before = '';
+			}
+		});
 	});
 
 	onDestroy(() => {
@@ -69,6 +80,10 @@
 
 		if (desktop_is_connecting_unlisten_fn) {
 			desktop_is_connecting_unlisten_fn();
+		}
+
+		if (file_manager_is_connecting_unlisten_fn) {
+			file_manager_is_connecting_unlisten_fn();
 		}
 	});
 
@@ -145,9 +160,22 @@
 				return;
 			}
 			await emit('desktop_is_connecting', true);
-			await emit('/dialog/visit_prepare', { remote_device_id: input_remote_device_id });
+			await emit('/dialog/visit_prepare', { remote_device_id: input_remote_device_id, visit_desktop: true });
 		} catch (error: any) {
 			await emit('desktop_is_connecting', false);
+			await emitNotification({ level: 'error', title: 'Error', message: error.toString() });
+		}
+	};
+
+	const connect_file_manager = async () => {
+		try {
+			if (!/^\d{2}-\d{4}-\d{4}$/.test(input_remote_device_id)) {
+				return;
+			}
+			await emit('file_manager_is_connecting', true);
+			await emit('/dialog/visit_prepare', { remote_device_id: input_remote_device_id, visit_desktop: false });
+		} catch (error: any) {
+			await emit('file_manager_is_connecting', false);
 			await emitNotification({ level: 'error', title: 'Error', message: error.toString() });
 		}
 	};
@@ -377,8 +405,16 @@
 					{/if}
 				</button>
 
-				<button class="btn inline-flex">
-					<Fa class="mr-2" icon={faFolderTree} />{$LL.Home.Files()}
+				<button
+					class="btn {file_manager_is_connecting ? 'btn-disabled' : 'inline-flex'}"
+					on:click={connect_file_manager}
+				>
+					{#if file_manager_is_connecting}
+						<Fa icon={faSpinner} spin />
+					{:else}
+						<Fa class="mr-2" icon={faFolderTree} />
+						{$LL.Home.Files()}
+					{/if}
 				</button>
 			</div>
 		</div>

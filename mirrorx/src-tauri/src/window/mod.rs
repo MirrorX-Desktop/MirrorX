@@ -1,7 +1,11 @@
 mod desktop;
 
 use self::desktop::DesktopWindow;
-use mirrorx_core::{api::endpoint::id::EndPointID, utility::nonce_value::NonceValue};
+use mirrorx_core::{
+    api::endpoint::{client::EndPointClient, id::EndPointID, message::EndPointDirectoryResponse},
+    utility::nonce_value::NonceValue,
+    DesktopDecodeFrame,
+};
 use once_cell::sync::Lazy;
 use ring::aead::{OpeningKey, SealingKey};
 use std::{collections::HashMap, net::SocketAddr, sync::Arc};
@@ -51,9 +55,9 @@ pub fn create_desktop_window(
     cc: &CreationContext,
     gl_context: Arc<tauri_egui::eframe::glow::Context>,
     endpoint_id: EndPointID,
-    key_pair: Option<(OpeningKey<NonceValue>, SealingKey<NonceValue>)>,
-    visit_credentials: Option<Vec<u8>>,
-    addr: SocketAddr,
+    client: Arc<EndPointClient>,
+    render_frame_rx: tokio::sync::mpsc::Receiver<DesktopDecodeFrame>,
+    directory_rx: tokio::sync::mpsc::Receiver<EndPointDirectoryResponse>,
 ) -> DesktopWindow {
     set_fonts(&cc.egui_ctx);
 
@@ -61,10 +65,10 @@ pub fn create_desktop_window(
 
     crate::window::desktop::DesktopWindow::new(
         endpoint_id,
-        key_pair,
-        visit_credentials,
-        addr,
         gl_context,
+        client,
+        render_frame_rx,
+        directory_rx,
     )
 }
 

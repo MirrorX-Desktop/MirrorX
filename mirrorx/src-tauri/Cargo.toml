@@ -34,6 +34,7 @@ ring = { version = "0.16.20", features = ["std"] }
 strum_macros = "0.24.3"
 tao = "0.15.6"
 http = "0.2.8"
+dashmap = "5.4.0"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 cocoa = "0.24.1"

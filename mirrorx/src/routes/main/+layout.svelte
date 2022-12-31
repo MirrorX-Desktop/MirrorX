@@ -1,5 +1,5 @@
 <script lang="ts">
-	import '../app.css';
+	import './main.css';
 	import { onDestroy, onMount } from 'svelte';
 	import { loadAllLocalesAsync } from '$lib/i18n/i18n-util.async';
 	import { loadAllLocales } from '$lib/i18n/i18n-util.sync';
@@ -15,8 +15,8 @@
 		faLanguage
 	} from '@fortawesome/free-solid-svg-icons';
 	import { faGithub } from '@fortawesome/free-brands-svg-icons';
-	import logoLight from '../../src-tauri/assets/icons/org.png';
-	import logoDark from '../../src-tauri/assets/icons/tray-macOS.png';
+	import logoLight from '$lib/../src-tauri/assets/icons/org.png';
+	import logoDark from '$lib/../src-tauri/assets/icons/tray-macOS.png';
 	import { appWindow } from '@tauri-apps/api/window';
 	import { current_domain } from '$lib/components/stores';
 	import { emit, listen, type UnlistenFn } from '@tauri-apps/api/event';
@@ -160,13 +160,13 @@
 		<div data-tauri-drag-region class="navigation">
 			<ul>
 				<li
-					class="navigation-item p-1 {$page.url.pathname == '/home'
+					class="navigation-item p-1 {$page.url.pathname == '/main/home'
 						? isMacOS
 							? 'navigation-item-selected'
 							: 'navigation-item-selected-right'
 						: 'navigation-item-unselected'}"
 				>
-					<a href="/home" class="flex h-full w-full items-center justify-center hover:cursor-pointer">
+					<a href="/main/home" class="flex h-full w-full items-center justify-center hover:cursor-pointer">
 						{#if currentTheme == 'light'}
 							<img src={logoLight} width="32" alt="main navigation tab" />
 						{:else}
@@ -175,35 +175,35 @@
 					</a>
 				</li>
 				<li
-					class="navigation-item p-1 {$page.url.pathname == '/lan'
+					class="navigation-item p-1 {$page.url.pathname == '/main/lan'
 						? isMacOS
 							? 'navigation-item-selected'
 							: 'navigation-item-selected-right'
 						: 'navigation-item-unselected'}"
 				>
-					<a href="/lan" class="flex h-full w-full items-center justify-center hover:cursor-pointer">
+					<a href="/main/lan" class="flex h-full w-full items-center justify-center hover:cursor-pointer">
 						<Fa icon={faNetworkWired} />
 					</a>
 				</li>
 				<li
-					class="navigation-item p-1 {$page.url.pathname == '/history'
+					class="navigation-item p-1 {$page.url.pathname == '/main/history'
 						? isMacOS
 							? 'navigation-item-selected'
 							: 'navigation-item-selected-right'
 						: 'navigation-item-unselected'}"
 				>
-					<a href="/history" class="flex h-full w-full items-center justify-center hover:cursor-pointer">
+					<a href="/main/history" class="flex h-full w-full items-center justify-center hover:cursor-pointer">
 						<Fa icon={faClock} />
 					</a>
 				</li>
 				<li
-					class="navigation-item p-1 {$page.url.pathname == '/settings'
+					class="navigation-item p-1 {$page.url.pathname == '/main/settings'
 						? isMacOS
 							? 'navigation-item-selected'
 							: 'navigation-item-selected-right'
 						: 'navigation-item-unselected'}"
 				>
-					<a href="/settings" class="flex h-full w-full items-center justify-center hover:cursor-pointer">
+					<a href="/main/settings" class="flex h-full w-full items-center justify-center hover:cursor-pointer">
 						<Fa icon={faSlidersH} />
 					</a>
 				</li>

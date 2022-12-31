@@ -1,6 +1,6 @@
 use crate::{command::AppState, window::create_desktop_window};
 use mirrorx_core::{
-    api::endpoint::id::EndPointID,
+    api::endpoint::{create_active_endpoint_client, id::EndPointID, EndPointStream},
     component::lan::{
         discover::{Discover, Node},
         server::Server,
@@ -43,6 +43,19 @@ pub async fn lan_connect(
     let remote_addr = SocketAddr::new(remote_ip, 48001);
     let window_label = format!("MirrorX {}", remote_ip);
 
+    let endpoint_id = EndPointID::LANID {
+        local_ip,
+        remote_ip,
+    };
+
+    let (client, render_frame_rx, directory_rx) = create_active_endpoint_client(
+        endpoint_id,
+        None,
+        EndPointStream::ActiveTCP(remote_addr),
+        None,
+    )
+    .await?;
+
     if let Err(err) = egui_plugin.create_window(
         window_label.clone(),
         Box::new(move |cc| {
@@ -50,13 +63,10 @@ pub async fn lan_connect(
                 Box::new(create_desktop_window(
                     cc,
                     gl_context.clone(),
-                    EndPointID::LANID {
-                        local_ip,
-                        remote_ip,
-                    },
-                    None,
-                    None,
-                    remote_addr,
+                    endpoint_id,
+                    client,
+                    render_frame_rx,
+                    directory_rx,
                 ))
             } else {
                 panic!("get gl context failed");

@@ -1,23 +1,22 @@
-mod desktop_render;
+mod render;
 mod state;
 
-use self::desktop_render::DesktopRender;
+use self::render::Render;
 use egui_extras::RetainedImage;
 use mirrorx_core::{
     api::endpoint::{
+        client::EndPointClient,
         id::EndPointID,
-        message::{EndPointInput, EndPointMessage, InputEvent, KeyboardEvent, MouseEvent},
+        message::{
+            EndPointDirectoryResponse, EndPointInput, EndPointMessage, InputEvent, KeyboardEvent,
+            MouseEvent,
+        },
     },
     component::input::key::MouseKey,
-    utility::nonce_value::NonceValue,
+    DesktopDecodeFrame,
 };
-use ring::aead::{OpeningKey, SealingKey};
 use state::State;
-use std::{
-    net::SocketAddr,
-    sync::Arc,
-    time::{Duration, Instant},
-};
+use std::{sync::Arc, time::Duration};
 use tauri_egui::{
     eframe::glow::{self, Context},
     egui::{
@@ -31,10 +30,7 @@ static ICON_SCALE_BYTES:&[u8]=br#"<svg xmlns="http://www.w3.org/2000/svg" viewBo
 
 pub struct DesktopWindow {
     state: State,
-    desktop_render: Arc<Mutex<DesktopRender>>,
-    // input_commands: Vec<InputEvent>,
-    // last_mouse_pos: Pos2,
-    // last_send_input_commands: Instant,
+    desktop_render: Arc<Mutex<Render>>,
     icon_maximize: RetainedImage,
     icon_scale: RetainedImage,
 }
@@ -43,15 +39,15 @@ impl DesktopWindow {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         endpoint_id: EndPointID,
-        key_pair: Option<(OpeningKey<NonceValue>, SealingKey<NonceValue>)>,
-        visit_credentials: Option<Vec<u8>>,
-        addr: SocketAddr,
         gl_context: Arc<Context>,
+        client: Arc<EndPointClient>,
+        render_frame_rx: tokio::sync::mpsc::Receiver<DesktopDecodeFrame>,
+        directory_rx: tokio::sync::mpsc::Receiver<EndPointDirectoryResponse>,
     ) -> Self {
-        let state = State::new(endpoint_id, key_pair, visit_credentials, addr);
+        let state = State::new(endpoint_id, client, render_frame_rx, directory_rx);
 
         let desktop_render =
-            DesktopRender::new(gl_context.as_ref()).expect("create desktop render failed");
+            Render::new(gl_context.as_ref()).expect("create desktop render failed");
 
         Self {
             state,
@@ -376,12 +372,14 @@ impl DesktopWindow {
             return;
         }
 
-        if let Some(client) = self.state.endpoint_client() {
-            if let Err(err) = client.try_send(&EndPointMessage::InputCommand(EndPointInput {
+        if let Err(err) = self
+            .state
+            .endpoint_client()
+            .try_send(&EndPointMessage::InputCommand(EndPointInput {
                 events: input_commands,
-            })) {
-                tracing::error!(?err, "send input event failed");
-            }
+            }))
+        {
+            tracing::error!(?err, "send input event failed");
         }
     }
 }
@@ -390,36 +388,12 @@ impl tauri_egui::eframe::App for DesktopWindow {
     fn update(&mut self, ctx: &tauri_egui::egui::Context, _: &mut tauri_egui::eframe::Frame) {
         let update_instant = std::time::Instant::now();
 
-        self.state.handle_event(ctx);
-
         CentralPanel::default()
             .frame(tauri_egui::egui::Frame::none())
             .show(ctx, |ui| {
                 self.build_panel(ui);
             });
 
-        // if !self.input_commands.is_empty()
-        //     && self.last_send_input_commands.elapsed().as_millis() >= 60
-        // {
-        //     tracing::info!(?self.input_commands, "input series");
-
-        //     if let Some(client) = self.state.endpoint_client() {
-        //         let events = self.input_commands.clone();
-        //         tokio::spawn(async move {
-        //             if let Err(err) = client
-        //                 .send(&EndPointMessage::InputCommand(EndPointInput { events }))
-        //                 .await
-        //             {
-        //                 tracing::error!(?err, "endpoint input failed");
-        //             }
-        //         });
-        //     }
-
-        //     self.input_commands.clear();
-        //     self.last_send_input_commands = Instant::now();
-        // }
-
-        // ctx.request_repaint();
         let cost = update_instant.elapsed();
 
         if let Some(wait) = cost.checked_sub(Duration::from_millis(16)) {

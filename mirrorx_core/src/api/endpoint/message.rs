@@ -1,4 +1,6 @@
-use crate::component::{desktop::monitor::Monitor, input::key::MouseKey};
+use std::path::PathBuf;
+
+use crate::component::{desktop::monitor::Monitor, fs::Directory, input::key::MouseKey};
 use cpal::SampleFormat;
 use serde::{Deserialize, Serialize};
 
@@ -23,6 +25,8 @@ pub enum EndPointMessage {
     VideoFrame(EndPointVideoFrame),
     AudioFrame(EndPointAudioFrame),
     InputCommand(EndPointInput),
+    DirectoryRequest(EndPointDirectoryRequest),
+    DirectoryResponse(EndPointDirectoryResponse),
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
@@ -141,4 +145,14 @@ pub enum InputEvent {
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct EndPointInput {
     pub events: Vec<InputEvent>,
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
+pub struct EndPointDirectoryRequest {
+    pub path: PathBuf,
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+pub struct EndPointDirectoryResponse {
+    pub result: Result<Directory, String>,
 }

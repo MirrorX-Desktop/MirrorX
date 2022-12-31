@@ -29,7 +29,7 @@ const VERTICES_INDICES_SLICE: &[u8] = unsafe {
     )
 };
 
-pub struct DesktopRender {
+pub struct Render {
     program: Program,
     textures: Vec<NativeTexture>,
     vao: NativeVertexArray,
@@ -41,7 +41,7 @@ pub struct DesktopRender {
     frame_count_instant: Option<std::time::Instant>,
 }
 
-impl DesktopRender {
+impl Render {
     pub fn new(gl: &Context) -> Result<Self, String> {
         unsafe {
             tracing::info!("OpenGL version: {:?}", gl.version());

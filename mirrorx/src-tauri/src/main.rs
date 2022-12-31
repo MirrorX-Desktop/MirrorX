@@ -117,7 +117,7 @@ fn build_app() -> App {
                 let builder = tauri::WindowBuilder::new(
                     &handle,
                     "main",
-                    tauri::WindowUrl::App("/home".into()),
+                    tauri::WindowUrl::App("/main/home".into()),
                 )
                 .center()
                 .always_on_top(true)
