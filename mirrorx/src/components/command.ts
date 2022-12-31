@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api';
-import type { Domain, HistoryRecord, LanDiscoverNode } from '$lib/components/types';
+import type { Directory, Domain, HistoryRecord, LanDiscoverNode } from '$lib/components/types';
 
 export function invoke_config_init(): Promise<void> {
 	return invoke('config_init');
@@ -89,6 +89,10 @@ export function invoke_signaling_connect(force: boolean): Promise<void> {
 
 export function invoke_signaling_visit(remoteDeviceId: string, password: string, visitDesktop: boolean): Promise<void> {
 	return invoke('signaling_visit', { remoteDeviceId, password, visitDesktop });
+}
+
+export function invoke_file_manager_visit(remoteDeviceId: string, path: string | null): Promise<Directory> {
+	return invoke('file_manager_visit', { remoteDeviceId, path });
 }
 
 export function invoke_utility_generate_random_password(): Promise<string> {

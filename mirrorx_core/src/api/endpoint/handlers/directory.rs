@@ -5,17 +5,13 @@ use crate::{
     },
     component::fs::{read_directory, read_root_directory},
 };
-use once_cell::sync::Lazy;
-use std::{path::PathBuf, sync::Arc};
-
-static UNIX_ROOT: Lazy<PathBuf> = Lazy::new(|| PathBuf::from("/"));
-static WINDOWS_ROOT: Lazy<PathBuf> = Lazy::new(|| PathBuf::from(r"\"));
+use std::sync::Arc;
 
 pub async fn handle_directory_request(client: Arc<EndPointClient>, req: EndPointDirectoryRequest) {
-    let dir = if req.path == UNIX_ROOT.as_path() || req.path == WINDOWS_ROOT.as_path() {
-        read_root_directory()
+    let dir = if let Some(path) = req.path {
+        read_directory(path)
     } else {
-        read_directory(req.path)
+        read_root_directory()
     };
 
     if let Err(err) = client

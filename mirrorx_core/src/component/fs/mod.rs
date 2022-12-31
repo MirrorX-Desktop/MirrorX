@@ -19,7 +19,7 @@ pub struct DirEntry {
 pub struct FileEntry {
     pub path: PathBuf,
     pub modified_time: i64,
-    pub file_size: u64,
+    pub size: u64,
     #[serde(with = "serde_bytes")]
     pub icon: Option<Vec<u8>>,
 }
@@ -85,7 +85,7 @@ where
             files.push(FileEntry {
                 path: entry.path(),
                 modified_time,
-                file_size: meta.len(),
+                size: meta.len(),
                 icon: None,
             });
         }

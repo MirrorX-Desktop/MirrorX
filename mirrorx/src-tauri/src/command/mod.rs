@@ -1,4 +1,5 @@
 pub mod config;
+pub mod file_manager;
 pub mod lan;
 pub mod signaling;
 pub mod utility;
@@ -20,7 +21,7 @@ pub struct AppState {
     signaling_client: Mutex<Option<(i64, SignalingClient)>>,
     lan_components: Mutex<Option<(Discover, Server)>>,
     files_endpoints: DashMap<
-        EndPointID,
+        String,
         (
             Arc<EndPointClient>,
             tokio::sync::mpsc::Receiver<EndPointDirectoryResponse>,

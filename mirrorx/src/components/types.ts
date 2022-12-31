@@ -26,3 +26,21 @@ export interface HistoryRecord {
 	domain: string;
 	timestamp: number;
 }
+
+export interface Directory {
+	path: string;
+	sub_dirs: Array<DirEntry>;
+	files: Array<FileEntry>;
+}
+
+export interface DirEntry {
+	path: string;
+	modified_time: number;
+}
+
+export interface FileEntry {
+	path: string;
+	modified_time: number;
+	size: number;
+	icon: Blob | null;
+}
