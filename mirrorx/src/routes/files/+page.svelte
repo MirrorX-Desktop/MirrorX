@@ -2,34 +2,32 @@
 	import { page } from '$app/stores';
 	import { invoke_file_manager_visit } from '$lib/components/command';
 	import type { Directory } from '$lib/components/types';
-	import { onMount } from 'svelte/types/runtime/internal/lifecycle';
+	import { faSpinner } from '@fortawesome/free-solid-svg-icons';
+	import { onMount } from 'svelte';
+	import Fa from 'svelte-fa';
+	import DirView from './dir_view.svelte';
 
 	let remote_device_id: string = $page.url.searchParams.get('device_id')!;
 	let currentDirectory: Directory | null = null;
 
 	onMount(async () => {
-		await request_dir();
+		await request_dir(null);
 	});
 
-	const request_dir = async () => {
-		let path: string | null = null;
-		if (currentDirectory) {
-			if (currentDirectory.path != '/' && currentDirectory.path != '\\') {
-				path = currentDirectory.path;
-			}
-		}
-
+	const request_dir = async (path: string | null) => {
 		currentDirectory = await invoke_file_manager_visit(remote_device_id, path);
 	};
 </script>
 
-<div>
+<div class="flex h-full w-full flex-row">
 	{#if currentDirectory}
-		{#each currentDirectory.sub_dirs as dir}
-			<div>{dir.path}&nbsp;{dir.modified_time}</div>
-		{/each}
-		{#each currentDirectory.files as file}
-			<div>{file.path}&nbsp;{file.modified_time}&nbsp;{file.size}</div>
-		{/each}
+		<div class="h-full flex-1">
+			<!-- <DirView directory={currentDirectory} clickItem={(path) => request_dir(path)} /> -->
+		</div>
+		<div class="h-full flex-1">
+			<DirView directory={currentDirectory} clickItem={(path) => request_dir(path)} />
+		</div>
+	{:else}
+		<div><Fa icon={faSpinner} spin /></div>
 	{/if}
 </div>
