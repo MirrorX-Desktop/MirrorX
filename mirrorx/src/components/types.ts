@@ -36,11 +36,12 @@ export interface Directory {
 export interface DirEntry {
 	path: string;
 	modified_time: number;
+	icon: Uint8Array | null;
 }
 
 export interface FileEntry {
 	path: string;
 	modified_time: number;
 	size: number;
-	icon: Blob | null;
+	icon: Uint8Array | null;
 }

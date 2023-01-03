@@ -82,7 +82,7 @@ where
             .naive_utc()
             .timestamp();
 
-        let icon = read_icon(entry.path().as_path()).map_or(None, |v| Some(v));
+        let icon = read_icon(entry.path().as_path()).ok();
 
         if file_type.is_dir() {
             sub_dirs.push(DirEntry {
@@ -105,6 +105,13 @@ where
         sub_dirs,
         files,
     })
+}
+
+#[cfg(not(target_os = "windows"))]
+fn read_icon(path: &Path) -> CoreResult<Vec<u8>> {
+    use crate::core_error;
+
+    Err(core_error!("not implement yet"))
 }
 
 #[cfg(target_os = "windows")]
