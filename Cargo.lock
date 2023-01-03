@@ -2768,6 +2768,7 @@ dependencies = [
  "tracing",
  "url",
  "uuid 1.2.2",
+ "widestring 1.0.2",
  "windows 0.43.0",
  "wmi",
 ]
