@@ -7,7 +7,7 @@
 </h1>
 
 <p align="center">
-安全、快速与轻量的远程桌面&文件管理工具
+面向企业、团队与个人的远程控制工具
 </p>
 
 <p align="center">
@@ -26,7 +26,7 @@
     <a href="https://github.com/MirrorX-Desktop/MirrorX/blob/master/README_CN.md">简体中文</a>
 <p align="center">
 
-MirrorX 是一个使用 [Rust](https://github.com/rust-lang/rust) 构建的远程桌面控制软件。配合完全开源的客户端与服务端、原生支持的端到端加密，用户可以构造快速且安全的远程控制网络，并且完全处于用户控制之下。
+MirrorX 是一款面向企业、团队与个人用户的远程控制工具。配合完全开源的客户端与服务端、端到端加密与域支持等，无论你是团队管理者还是个人用户，都可以在短时间内构造一个快速且安全的远程控制网络，并且所有数据都处于用户控制之下。
 
 > **MirrorX 项目还处于早期积极开发阶段。请原谅我们暂时还无法做出任何向后兼容的承诺。**
 

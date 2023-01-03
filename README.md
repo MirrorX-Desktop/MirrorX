@@ -7,7 +7,7 @@
 </h1>
 
 <p align="center">
-Secure, Fast and Light remote desktop & file manager tool
+Remote control tool for enterprise, teams and individuals
 </p>
 
 <p align="center">
@@ -26,7 +26,7 @@ Secure, Fast and Light remote desktop & file manager tool
     <a href="https://github.com/MirrorX-Desktop/MirrorX/blob/master/README_CN.md">简体中文</a>
 <p align="center">
 
-MirrorX is a remote desktop control tool powered by [Rust](https://github.com/rust-lang/rust). With fully open-source client and server, native E2EE support, users can build SECURITY and FAST remote control network, which is fully under control of users.
+MirrorX is a remote control tool for enterprise, teams and individuals with fully open-source client and server, End-to-End Encryption, Domain support, etc. Whether you are a team manager or an individual user, you can build SECURITY and FAST remote control network in a short time, and all DATA is under control of users.
 
 > **MirrorX is on the early stage with active developing now. Please forgive us that we cannot make any backward compatibility commitments at this time.**
 
