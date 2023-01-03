@@ -24,6 +24,7 @@
 	let domain_name: string = '';
 	let input_password = '';
 	let show_password = false;
+	let visit_desktop: boolean = true;
 	let remote_device_id: string = '';
 	let is_connecting: boolean = false;
 
@@ -58,7 +59,7 @@
 				current_domain.set(new_primary_domain);
 				await emit('update_domains');
 			}
-			await invoke_signaling_visit(remote_device_id, input_password);
+			await invoke_signaling_visit(remote_device_id, input_password, visit_desktop);
 		} catch (error: any) {
 			let err: string = error.toString();
 			if (err.includes('Internal')) {
