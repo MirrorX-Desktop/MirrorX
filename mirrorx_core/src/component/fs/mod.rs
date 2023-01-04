@@ -48,7 +48,7 @@ pub fn read_root_directory() -> CoreResult<Directory> {
                 continue;
             }
 
-            let disk = [b'A' + i as u8, b':', b'\\'];
+            let disk = [b'A' + i as u8, b':'];
             let disk_str = std::str::from_utf8_unchecked(&disk);
             let path = PathBuf::from_str(disk_str)?;
 
