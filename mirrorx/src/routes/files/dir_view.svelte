@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Directory } from '$lib/components/types';
 	import { faSpinner } from '@fortawesome/free-solid-svg-icons';
+	import moment from 'moment';
 	import Fa from 'svelte-fa';
 
 	export let directory: Directory;
@@ -18,16 +19,43 @@
 	};
 
 	const get_basename = (path: string): string => {
+		const regexp = /^[A-Za-z]:\\$/;
+		if (regexp.test(path)) {
+			return path;
+		}
+
 		let slashPosition = path.lastIndexOf('/');
 		if (slashPosition == -1) {
 			slashPosition = path.lastIndexOf('\\');
 		}
 
-		if (slashPosition == -1) {
-			slashPosition = 0;
+		return path.slice(slashPosition + 1);
+	};
+
+	const get_extname = (path: string): string => {
+		const baseName = get_basename(path);
+		const parts = baseName.split('.');
+
+		switch (parts[parts.length - 1]) {
+			case 'ext':
+				return 'Application';
+			case 'zip':
+			case 'rar':
+			case '7z':
+				return 'Compress Archive';
+			default:
+				return 'File';
 		}
-		console.log(slashPosition);
-		return path.slice(slashPosition);
+	};
+
+	const get_filesize = (size: number): string => {
+		var num = 1024.0; //byte
+
+		if (size < num) return size + 'B';
+		if (size < Math.pow(num, 2)) return (size / num).toFixed(2) + 'K'; //kb
+		if (size < Math.pow(num, 3)) return (size / Math.pow(num, 2)).toFixed(2) + 'M'; //M
+		if (size < Math.pow(num, 4)) return (size / Math.pow(num, 3)).toFixed(2) + 'G'; //G
+		return (size / Math.pow(num, 4)).toFixed(2) + 'T'; //T
 	};
 </script>
 
@@ -64,7 +92,8 @@
 						<!--Modified Date-->
 						<td>
 							{#if dir.modified_time != 0}
-								{dir.modified_time}
+								<p>{moment.unix(dir.modified_time).format('YYYY-MM-DD')}</p>
+								<p>{moment.unix(dir.modified_time).format('hh:mm')}</p>
 							{/if}
 						</td>
 						<!--Size-->
@@ -82,6 +111,7 @@
 								<div class="avatar">
 									<div class="mask mask-squircle flex h-12 w-12 flex-row items-center justify-center">
 										{#if file.icon}
+											{console.log(file.icon)}
 											<img
 												style="width: 32px; height:32px"
 												src={'data:image/png;base64,' + file.icon}
@@ -99,13 +129,14 @@
 						<!--Modified Date-->
 						<td>
 							{#if file.modified_time != 0}
-								{file.modified_time}
+								<p>{moment.unix(file.modified_time).format('YYYY-MM-DD')}</p>
+								<p>{moment.unix(file.modified_time).format('hh:mm')}</p>
 							{/if}
 						</td>
 						<!--Size-->
-						<td>{file.size}</td>
+						<td>{get_filesize(file.size)}</td>
 						<!--Type-->
-						<td> Directory </td>
+						<td>{get_extname(file.path)}</td>
 					</tr>
 				{/each}
 			</tbody>

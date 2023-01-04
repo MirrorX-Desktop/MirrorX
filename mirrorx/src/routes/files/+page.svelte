@@ -17,10 +17,6 @@
 
 	const request_dir = async (path: string | null) => {
 		console.log('request dir: ' + path);
-		if (path) {
-			path = encode(path);
-		}
-		console.log(path);
 		currentDirectory = await invoke_file_manager_visit(remote_device_id, path);
 	};
 </script>

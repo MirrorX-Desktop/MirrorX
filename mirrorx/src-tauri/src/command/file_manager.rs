@@ -1,12 +1,11 @@
 use super::AppState;
 use mirrorx_core::{
     api::endpoint::message::{EndPointDirectoryRequest, EndPointMessage},
-    component::fs::Directory,
     core_error,
     error::CoreResult,
 };
 use serde::Serialize;
-use std::path::PathBuf;
+use std::{path::PathBuf, time::Duration};
 
 #[derive(Serialize)]
 pub struct DirectoryResult {
@@ -35,16 +34,8 @@ pub struct FileEntryResult {
 pub async fn file_manager_visit(
     app_state: tauri::State<'_, AppState>,
     remote_device_id: String,
-    path: Option<String>,
+    path: Option<PathBuf>,
 ) -> CoreResult<DirectoryResult> {
-    let path = match path {
-        Some(v) => {
-            let path = base64::decode(v)?;
-            Some(PathBuf::from(String::from_utf8(path)?))
-        }
-        None => None,
-    };
-
     let mut v = app_state
         .files_endpoints
         .get_mut(&remote_device_id)
@@ -58,9 +49,8 @@ pub async fn file_manager_visit(
         ))
         .await?;
 
-    let directory = directory_rx
-        .recv()
-        .await
+    let directory = tokio::time::timeout(Duration::from_secs(30), directory_rx.recv())
+        .await?
         .ok_or_else(|| core_error!("request remote file failed"))?
         .result
         .map_err(|err| core_error!("{}", err))?;
@@ -76,6 +66,7 @@ pub async fn file_manager_visit(
 
     let mut files = Vec::new();
     for ele in directory.files {
+        tracing::info!("{:?}", ele.icon.as_ref().map(|v| v.len()));
         files.push(FileEntryResult {
             path: ele.path,
             modified_time: ele.modified_time,

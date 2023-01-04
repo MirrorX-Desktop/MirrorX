@@ -80,7 +80,6 @@ where
 
     for entry in dir {
         let entry = entry?;
-        let path = entry.path().canonicalize()?;
         let file_type = entry.file_type()?;
         let meta = entry.metadata()?;
         let modified_time = chrono::DateTime::<chrono::Local>::from(meta.modified()?)
@@ -91,16 +90,16 @@ where
 
         if file_type.is_dir() {
             sub_dirs.push(DirEntry {
-                path,
+                path: entry.path(),
                 modified_time,
                 icon,
             });
         } else {
             files.push(FileEntry {
-                path,
+                path: entry.path(),
                 modified_time,
                 size: meta.len(),
-                icon: None,
+                icon,
             });
         }
     }

@@ -92,7 +92,6 @@ export function invoke_signaling_visit(remoteDeviceId: string, password: string,
 }
 
 export function invoke_file_manager_visit(remoteDeviceId: string, path: string | null): Promise<Directory> {
-	console.log(JSON.stringify({ remoteDeviceId, path }));
 	return invoke('file_manager_visit', { remoteDeviceId, path });
 }
 
