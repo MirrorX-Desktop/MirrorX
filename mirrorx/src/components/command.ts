@@ -91,7 +91,7 @@ export function invoke_signaling_visit(remoteDeviceId: string, password: string,
 	return invoke('signaling_visit', { remoteDeviceId, password, visitDesktop });
 }
 
-export function invoke_file_manager_visit(remoteDeviceId: string, path: Array<string> | null): Promise<Directory> {
+export function invoke_file_manager_visit(remoteDeviceId: string, path: string | null): Promise<Directory> {
 	return invoke('file_manager_visit', { remoteDeviceId, path });
 }
 

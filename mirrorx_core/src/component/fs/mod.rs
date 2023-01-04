@@ -7,14 +7,14 @@ use std::{
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct Directory {
-    pub path: Vec<String>,
+    pub path: PathBuf,
     pub sub_dirs: Vec<DirEntry>,
     pub files: Vec<FileEntry>,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub struct DirEntry {
-    pub path: Vec<String>,
+    pub path: PathBuf,
     pub modified_time: i64,
     #[serde(with = "serde_bytes")]
     pub icon: Option<Vec<u8>>,
@@ -22,7 +22,7 @@ pub struct DirEntry {
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub struct FileEntry {
-    pub path: Vec<String>,
+    pub path: PathBuf,
     pub modified_time: i64,
     pub size: u64,
     #[serde(with = "serde_bytes")]
@@ -48,7 +48,7 @@ pub fn read_root_directory() -> CoreResult<Directory> {
                 continue;
             }
 
-            let disk = [b'A' + i as u8, b':'];
+            let disk = [b'A' + i as u8, b':', b'\\'];
             let disk_str = std::str::from_utf8_unchecked(&disk);
             let path = PathBuf::from_str(disk_str)?;
 
@@ -63,7 +63,7 @@ pub fn read_root_directory() -> CoreResult<Directory> {
     }
 
     Ok(Directory {
-        path: vec![String::from("\\")],
+        path: PathBuf::from(r"\"),
         sub_dirs,
         files: Vec::new(),
     })
@@ -89,21 +89,15 @@ where
 
         let icon = read_icon(entry.path().as_path()).ok();
 
-        let path_components: Vec<String> = path
-            .iter()
-            .map(|v| v.to_os_string())
-            .map_while(|v| v.into_string().ok())
-            .collect();
-
         if file_type.is_dir() {
             sub_dirs.push(DirEntry {
-                path: path_components,
+                path,
                 modified_time,
                 icon,
             });
         } else {
             files.push(FileEntry {
-                path: path_components,
+                path,
                 modified_time,
                 size: meta.len(),
                 icon: None,
@@ -111,15 +105,8 @@ where
         }
     }
 
-    let path_components: Vec<String> = path
-        .into()
-        .iter()
-        .map(|v| v.to_os_string())
-        .map_while(|v| v.into_string().ok())
-        .collect();
-
     Ok(Directory {
-        path: path_components,
+        path: path.into(),
         sub_dirs,
         files,
     })

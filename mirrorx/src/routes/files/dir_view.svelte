@@ -2,10 +2,9 @@
 	import type { Directory } from '$lib/components/types';
 	import { faSpinner } from '@fortawesome/free-solid-svg-icons';
 	import Fa from 'svelte-fa';
-	import path from 'path';
 
 	export let directory: Directory;
-	export let clickItem: (path: Array<string>) => void;
+	export let clickItem: (path: string) => void;
 
 	const convert_png = async (bytes: Uint8Array): Promise<string | ArrayBuffer | null> => {
 		let blob = new Blob([bytes], { type: 'image/png' });
@@ -18,8 +17,17 @@
 		});
 	};
 
-	const get_filename = (p: string) => {
-		return path.basename(p);
+	const get_basename = (path: string): string => {
+		let slashPosition = path.lastIndexOf('/');
+		if (slashPosition == -1) {
+			slashPosition = path.lastIndexOf('\\');
+		}
+
+		if (slashPosition == -1) {
+			slashPosition = 0;
+		}
+
+		return path.slice(slashPosition);
 	};
 </script>
 
@@ -48,7 +56,7 @@
 									</div>
 								</div>
 								<div>
-									<div class="font-bold">{dir.path[dir.path.length - 1]}</div>
+									<div class="font-bold">{get_basename(dir.path)}</div>
 									<!-- <div class="text-sm opacity-50">United States</div> -->
 								</div>
 							</div>
@@ -83,7 +91,7 @@
 									</div>
 								</div>
 								<div>
-									<div class="font-bold">{file.path[file.path.length - 1]}</div>
+									<div class="font-bold">{get_basename(file.path)}</div>
 									<!-- <div class="text-sm opacity-50">United States</div> -->
 								</div>
 							</div>

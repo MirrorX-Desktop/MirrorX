@@ -10,21 +10,21 @@ use std::path::PathBuf;
 
 #[derive(Serialize)]
 pub struct DirectoryResult {
-    pub path: Vec<String>,
+    pub path: PathBuf,
     pub sub_dirs: Vec<DirEntryResult>,
     pub files: Vec<FileEntryResult>,
 }
 
 #[derive(Serialize)]
 pub struct DirEntryResult {
-    pub path: Vec<String>,
+    pub path: PathBuf,
     pub modified_time: i64,
     pub icon: Option<String>,
 }
 
 #[derive(Serialize)]
 pub struct FileEntryResult {
-    pub path: Vec<String>,
+    pub path: PathBuf,
     pub modified_time: i64,
     pub size: u64,
     pub icon: Option<String>,
@@ -35,7 +35,7 @@ pub struct FileEntryResult {
 pub async fn file_manager_visit(
     app_state: tauri::State<'_, AppState>,
     remote_device_id: String,
-    path: Option<Vec<String>>,
+    path: Option<PathBuf>,
 ) -> CoreResult<DirectoryResult> {
     let mut v = app_state
         .files_endpoints

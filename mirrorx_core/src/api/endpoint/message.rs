@@ -149,7 +149,7 @@ pub struct EndPointInput {
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub struct EndPointDirectoryRequest {
-    pub path: Option<Vec<String>>,
+    pub path: Option<PathBuf>,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]

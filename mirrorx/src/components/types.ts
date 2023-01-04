@@ -28,19 +28,19 @@ export interface HistoryRecord {
 }
 
 export interface Directory {
-	path: Array<string>;
+	path: string;
 	sub_dirs: Array<DirEntry>;
 	files: Array<FileEntry>;
 }
 
 export interface DirEntry {
-	path: Array<string>;
+	path: string;
 	modified_time: number;
 	icon: Uint8Array | null;
 }
 
 export interface FileEntry {
-	path: Array<string>;
+	path: string;
 	modified_time: number;
 	size: number;
 	icon: Uint8Array | null;
