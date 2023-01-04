@@ -49,12 +49,13 @@ pub fn read_root_directory() -> CoreResult<Directory> {
             }
 
             let disk = [b'A' + i as u8, b':', b'\\'];
-            let path = PathBuf::from_str(String::from_utf8_lossy(&disk).as_ref())?;
+            let disk_str = std::str::from_utf8_unchecked(&disk);
+            let path = PathBuf::from_str(disk_str)?;
 
             let icon = read_icon(&path).map_or(None, |v| Some(v));
 
             sub_dirs.push(DirEntry {
-                path,
+                path: vec![disk_str.to_string()],
                 modified_time: 0,
                 icon,
             });
@@ -62,7 +63,7 @@ pub fn read_root_directory() -> CoreResult<Directory> {
     }
 
     Ok(Directory {
-        path: PathBuf::from_str("\\")?,
+        path: vec![String::from("\\")],
         sub_dirs,
         files: Vec::new(),
     })
