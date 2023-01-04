@@ -207,7 +207,8 @@ pub async fn signaling_visit(
             ),
         )
         .center()
-        .min_inner_size(640., 480.)
+        .inner_size(960., 680.)
+        .min_inner_size(960., 680.)
         .title(window_title)
         .build()
         {

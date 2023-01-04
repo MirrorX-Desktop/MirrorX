@@ -1,11 +1,11 @@
 <script lang="ts">
 	import type { Directory } from '$lib/components/types';
-	import { faSpinner } from '@fortawesome/free-solid-svg-icons';
+	import { faHome, faArrowLeft, faArrowRight, faArrowUp } from '@fortawesome/free-solid-svg-icons';
 	import moment from 'moment';
 	import Fa from 'svelte-fa';
 
 	export let directory: Directory;
-	export let clickItem: (path: string) => void;
+	export let clickItem: (path: string | null) => void;
 
 	const convert_png = async (bytes: Uint8Array): Promise<string | ArrayBuffer | null> => {
 		let blob = new Blob([bytes], { type: 'image/png' });
@@ -37,7 +37,7 @@
 		const parts = baseName.split('.');
 
 		switch (parts[parts.length - 1]) {
-			case 'ext':
+			case 'exe':
 				return 'Application';
 			case 'zip':
 			case 'rar':
@@ -57,89 +57,131 @@
 		if (size < Math.pow(num, 4)) return (size / Math.pow(num, 3)).toFixed(2) + 'G'; //G
 		return (size / Math.pow(num, 4)).toFixed(2) + 'T'; //T
 	};
+
+	const goto_home = () => {
+		clickItem(null);
+	};
 </script>
 
-<div class="h-full w-full">
-	<div class="w-full overflow-x-auto">
-		<table class="table-compact table w-full">
+<div class="flex h-full w-full flex-col p-2">
+	<!--ToolBar-->
+	<div class="flex w-full flex-row">
+		<div class="tooltip tooltip-bottom z-50" data-tip="Root Directory">
+			<button class="btn btn-sm rounded-tr-none rounded-br-none" on:click={goto_home}><Fa icon={faHome} /></button>
+		</div>
+
+		<div class="tooltip tooltip-bottom z-50" data-tip="hello">
+			<button class="btn btn-sm rounded-none"><Fa icon={faArrowLeft} /></button>
+		</div>
+
+		<div class="tooltip tooltip-bottom z-50" data-tip="hello">
+			<button class="btn btn-sm rounded-none"><Fa icon={faArrowRight} /></button>
+		</div>
+
+		<div class="tooltip tooltip-bottom z-50" data-tip="hello">
+			<button class="btn btn-sm rounded-tl-none rounded-bl-none"><Fa icon={faArrowUp} /></button>
+		</div>
+	</div>
+	<div class="file-view w-full flex-1 overflow-x-auto">
+		<table class="w-full table-fixed">
 			<thead>
 				<tr>
-					<th>Name</th>
-					<th>Modified Date</th>
-					<th>Size</th>
-					<th>Type</th>
+					<th style="width: 48px;" />
+					<th class="text-left" style="width: calc(60%-48px);">Name</th>
+					<th class="text-right" style="width: 20%;">Modified Date</th>
+					<th class="text-center" style="width: 20%;">Size</th>
 				</tr>
 			</thead>
 			<tbody>
 				{#each directory.sub_dirs as dir}
 					<tr class="hover" on:click={() => clickItem(dir.path)}>
+						<!--Icon-->
+						<td>
+							<div class="flex h-full flex-row items-center justify-center">
+								{#if dir.icon}
+									<img style="width: 32px; height:32px;" src={'data:image/png;base64,' + dir.icon} alt="File Icon" />
+								{/if}
+							</div>
+						</td>
 						<!--Name-->
 						<td>
-							<div class="flex items-center space-x-3">
-								<div class="avatar">
-									<div class="mask mask-squircle flex h-12 w-12 flex-row items-center justify-center">
-										{#if dir.icon}
-											<img style="width: 32px; height:32px" src={'data:image/png;base64,' + dir.icon} alt="File Icon" />
-										{/if}
-									</div>
-								</div>
-								<div>
-									<div class="font-bold">{get_basename(dir.path)}</div>
-									<!-- <div class="text-sm opacity-50">United States</div> -->
-								</div>
-							</div>
+							<div class="name-content">{get_basename(dir.path)}</div>
 						</td>
 						<!--Modified Date-->
 						<td>
 							{#if dir.modified_time != 0}
-								<p>{moment.unix(dir.modified_time).format('YYYY-MM-DD')}</p>
-								<p>{moment.unix(dir.modified_time).format('hh:mm')}</p>
+								<p class="text-right text-sm">{moment.unix(dir.modified_time).format('YYYY-MM-DD')}</p>
+								<p class="text-right text-sm">{moment.unix(dir.modified_time).format('hh:mm')}</p>
 							{/if}
 						</td>
 						<!--Size-->
 						<td />
-						<!--Type-->
-						<td> Directory </td>
 					</tr>
 				{/each}
 
 				{#each directory.files as file}
 					<tr class="hover">
+						<!--Icon-->
+						<td>
+							<div class="flex h-full flex-row items-center justify-center">
+								{#if file.icon}
+									<img style="width: 32px; height:32px" src={'data:image/png;base64,' + file.icon} alt="File Icon" />
+								{/if}
+							</div>
+						</td>
 						<!--Name-->
 						<td>
-							<div class="flex items-center space-x-3">
-								<div class="avatar">
-									<div class="mask mask-squircle flex h-12 w-12 flex-row items-center justify-center">
-										{#if file.icon}
-											{console.log(file.icon)}
-											<img
-												style="width: 32px; height:32px"
-												src={'data:image/png;base64,' + file.icon}
-												alt="File Icon"
-											/>
-										{/if}
-									</div>
-								</div>
-								<div>
-									<div class="font-bold">{get_basename(file.path)}</div>
-									<!-- <div class="text-sm opacity-50">United States</div> -->
-								</div>
-							</div>
+							<div class="name-content">{get_basename(file.path)}</div>
+							<div class="text-xs opacity-50">{get_extname(file.path)}</div>
 						</td>
 						<!--Modified Date-->
 						<td>
 							{#if file.modified_time != 0}
-								<p>{moment.unix(file.modified_time).format('YYYY-MM-DD')}</p>
-								<p>{moment.unix(file.modified_time).format('hh:mm')}</p>
+								<p class="text-right text-sm">{moment.unix(file.modified_time).format('YYYY-MM-DD')}</p>
+								<p class="text-right text-sm">{moment.unix(file.modified_time).format('hh:mm')}</p>
 							{/if}
 						</td>
 						<!--Size-->
-						<td>{get_filesize(file.size)}</td>
-						<!--Type-->
-						<td>{get_extname(file.path)}</td>
+						<td class="text-center text-sm">{get_filesize(file.size)}</td>
 					</tr>
 				{/each}
 			</tbody>
 		</table>
 	</div>
 </div>
+
+<style>
+	table > thead > tr :where(th) {
+		@apply bg-base-300 text-base-content sticky top-0 z-10 text-sm;
+	}
+
+	table > tbody :where(td) {
+		@apply border-b p-1;
+	}
+
+	table > tbody :where(tr):hover {
+		@apply bg-base-300;
+	}
+
+	.name-content {
+		@apply text-sm font-bold;
+		display: -webkit-box !important;
+		-webkit-box-orient: vertical !important;
+		-webkit-line-clamp: 2 !important;
+		overflow: hidden !important;
+		word-break: break-all !important;
+		white-space: normal !important;
+	}
+
+	.file-view::-webkit-scrollbar {
+		@apply w-1;
+	}
+
+	.file-view::-webkit-scrollbar-thumb {
+		@apply bg-base-300 rounded-full;
+	}
+
+	.file-view::-webkit-scrollbar-track {
+		@apply bg-transparent;
+	}
+</style>

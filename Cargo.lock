@@ -2731,6 +2731,7 @@ dependencies = [
  "block",
  "bytes",
  "chrono",
+ "cocoa",
  "core-foundation",
  "core-graphics",
  "cpal",

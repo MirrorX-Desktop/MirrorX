@@ -1,11 +1,11 @@
+#[cfg(target_os = "macos")]
+mod macos;
+
 use crate::error::CoreResult;
 use serde::{Deserialize, Serialize};
-use std::{
-    ffi::OsStr,
-    path::{Path, PathBuf},
-};
+use std::path::{Path, PathBuf};
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub struct Directory {
     pub path: PathBuf,
     pub sub_dirs: Vec<DirEntry>,
@@ -113,9 +113,7 @@ where
 
 #[cfg(not(target_os = "windows"))]
 fn read_icon(path: &Path) -> CoreResult<Vec<u8>> {
-    use crate::core_error;
-
-    Err(core_error!("not implement yet"))
+    self::macos::NSWorkspace::sharedWorkspace()?.iconForFile(path)
 }
 
 #[cfg(target_os = "windows")]

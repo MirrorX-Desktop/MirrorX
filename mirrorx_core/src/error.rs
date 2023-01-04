@@ -91,6 +91,9 @@ pub enum CoreError {
 
     #[error("convert error ({0:?})")]
     ConvertError(#[from] std::convert::Infallible),
+
+    #[error("image process error ({0:?})")]
+    ImageError(#[from] image::ImageError),
 }
 
 impl serde::Serialize for CoreError {

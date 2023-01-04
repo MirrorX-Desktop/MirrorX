@@ -3,12 +3,10 @@ mod desktop;
 use self::desktop::DesktopWindow;
 use mirrorx_core::{
     api::endpoint::{client::EndPointClient, id::EndPointID, message::EndPointDirectoryResponse},
-    utility::nonce_value::NonceValue,
     DesktopDecodeFrame,
 };
 use once_cell::sync::Lazy;
-use ring::aead::{OpeningKey, SealingKey};
-use std::{collections::HashMap, net::SocketAddr, sync::Arc};
+use std::{collections::HashMap, sync::Arc};
 use tauri_egui::{
     eframe::CreationContext,
     egui::{FontData, FontDefinitions, FontFamily},

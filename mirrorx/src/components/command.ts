@@ -91,8 +91,12 @@ export function invoke_signaling_visit(remoteDeviceId: string, password: string,
 	return invoke('signaling_visit', { remoteDeviceId, password, visitDesktop });
 }
 
-export function invoke_file_manager_visit(remoteDeviceId: string, path: string | null): Promise<Directory> {
-	return invoke('file_manager_visit', { remoteDeviceId, path });
+export function invoke_file_manager_visit_remote(remoteDeviceId: string, path: string | null): Promise<Directory> {
+	return invoke('file_manager_visit_remote', { remoteDeviceId, path });
+}
+
+export function invoke_file_manager_visit_local(path: string | null): Promise<Directory> {
+	return invoke('file_manager_visit_local', { path });
 }
 
 export function invoke_utility_generate_random_password(): Promise<string> {

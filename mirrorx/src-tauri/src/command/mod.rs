@@ -8,7 +8,7 @@ use dashmap::DashMap;
 use mirrorx_core::{
     api::{
         config::LocalStorage,
-        endpoint::{client::EndPointClient, id::EndPointID, message::EndPointDirectoryResponse},
+        endpoint::{client::EndPointClient, message::EndPointDirectoryResponse},
         signaling::SignalingClient,
     },
     component::lan::{discover::Discover, server::Server},
