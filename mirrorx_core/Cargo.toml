@@ -36,7 +36,7 @@ thiserror = "1.0.37"
 hex = "0.4.3"
 cpal = "0.14.2"
 rtrb = "0.2.2"
-async-broadcast = "0.4.1"
+async-broadcast = "0.5.0"
 either = "1.8.0"
 uuid = { version = "1.2.2", features = ["v4"] }
 fxhash = "0.2.1"
@@ -49,7 +49,7 @@ moka = { version = "0.9.6", features = ["future"] }
 async-trait = "0.1.59"
 reqwest = { version = "0.11.13", features = ["json"] }
 url = "2.3.1"
-base64 = "0.13.1"
+base64 = "0.20.0"
 
 [target.x86_64-apple-darwin.dependencies]
 objc = { version = "0.2.7" }

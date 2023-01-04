@@ -35,8 +35,16 @@ pub struct FileEntryResult {
 pub async fn file_manager_visit(
     app_state: tauri::State<'_, AppState>,
     remote_device_id: String,
-    path: Option<PathBuf>,
+    path: Option<String>,
 ) -> CoreResult<DirectoryResult> {
+    let path = match path {
+        Some(v) => {
+            let path = base64::decode(v)?;
+            Some(PathBuf::from(String::from_utf8(path)?))
+        }
+        None => None,
+    };
+
     let mut v = app_state
         .files_endpoints
         .get_mut(&remote_device_id)

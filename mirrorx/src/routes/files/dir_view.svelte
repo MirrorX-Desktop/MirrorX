@@ -26,7 +26,7 @@
 		if (slashPosition == -1) {
 			slashPosition = 0;
 		}
-
+		console.log(slashPosition);
 		return path.slice(slashPosition);
 	};
 </script>

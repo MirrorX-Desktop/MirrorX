@@ -6,6 +6,7 @@
 	import { onMount } from 'svelte';
 	import Fa from 'svelte-fa';
 	import DirView from './dir_view.svelte';
+	import { encode } from 'js-base64';
 
 	let remote_device_id: string = $page.url.searchParams.get('device_id')!;
 	let currentDirectory: Directory | null = null;
@@ -16,6 +17,10 @@
 
 	const request_dir = async (path: string | null) => {
 		console.log('request dir: ' + path);
+		if (path) {
+			path = encode(path);
+		}
+		console.log(path);
 		currentDirectory = await invoke_file_manager_visit(remote_device_id, path);
 	};
 </script>
