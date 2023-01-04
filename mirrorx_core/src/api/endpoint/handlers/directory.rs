@@ -5,10 +5,15 @@ use crate::{
     },
     component::fs::{read_directory, read_root_directory},
 };
-use std::sync::Arc;
+use std::{path::PathBuf, sync::Arc};
 
 pub async fn handle_directory_request(client: Arc<EndPointClient>, req: EndPointDirectoryRequest) {
-    let dir = if let Some(path) = req.path {
+    let dir = if let Some(path_components) = req.path {
+        let mut path = PathBuf::new();
+        for p in path_components {
+            path.push(p)
+        }
+
         read_directory(path)
     } else {
         read_root_directory()

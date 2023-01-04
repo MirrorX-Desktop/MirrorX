@@ -1,17 +1,20 @@
 use crate::error::CoreResult;
 use serde::{Deserialize, Serialize};
-use std::path::{Path, PathBuf};
+use std::{
+    ffi::OsStr,
+    path::{Path, PathBuf},
+};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct Directory {
-    pub path: PathBuf,
+    pub path: Vec<String>,
     pub sub_dirs: Vec<DirEntry>,
     pub files: Vec<FileEntry>,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub struct DirEntry {
-    pub path: PathBuf,
+    pub path: Vec<String>,
     pub modified_time: i64,
     #[serde(with = "serde_bytes")]
     pub icon: Option<Vec<u8>>,
@@ -19,7 +22,7 @@ pub struct DirEntry {
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub struct FileEntry {
-    pub path: PathBuf,
+    pub path: Vec<String>,
     pub modified_time: i64,
     pub size: u64,
     #[serde(with = "serde_bytes")]
@@ -76,6 +79,7 @@ where
 
     for entry in dir {
         let entry = entry?;
+        let path = entry.path().canonicalize()?;
         let file_type = entry.file_type()?;
         let meta = entry.metadata()?;
         let modified_time = chrono::DateTime::<chrono::Local>::from(meta.modified()?)
@@ -84,15 +88,21 @@ where
 
         let icon = read_icon(entry.path().as_path()).ok();
 
+        let path_components: Vec<String> = path
+            .iter()
+            .map(|v| v.to_os_string())
+            .map_while(|v| v.into_string().ok())
+            .collect();
+
         if file_type.is_dir() {
             sub_dirs.push(DirEntry {
-                path: entry.path(),
+                path: path_components,
                 modified_time,
                 icon,
             });
         } else {
             files.push(FileEntry {
-                path: entry.path(),
+                path: path_components,
                 modified_time,
                 size: meta.len(),
                 icon: None,
@@ -100,8 +110,15 @@ where
         }
     }
 
+    let path_components: Vec<String> = path
+        .into()
+        .iter()
+        .map(|v| v.to_os_string())
+        .map_while(|v| v.into_string().ok())
+        .collect();
+
     Ok(Directory {
-        path: path.into(),
+        path: path_components,
         sub_dirs,
         files,
     })

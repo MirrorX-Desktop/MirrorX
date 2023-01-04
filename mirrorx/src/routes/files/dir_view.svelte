@@ -2,9 +2,10 @@
 	import type { Directory } from '$lib/components/types';
 	import { faSpinner } from '@fortawesome/free-solid-svg-icons';
 	import Fa from 'svelte-fa';
+	import path from 'path';
 
 	export let directory: Directory;
-	export let clickItem: (path: string) => void;
+	export let clickItem: (path: Array<string>) => void;
 
 	const convert_png = async (bytes: Uint8Array): Promise<string | ArrayBuffer | null> => {
 		let blob = new Blob([bytes], { type: 'image/png' });
@@ -15,6 +16,10 @@
 			reader.onloadend = () => resolve(reader.result);
 			reader.readAsDataURL(blob);
 		});
+	};
+
+	const get_filename = (p: string) => {
+		return path.basename(p);
 	};
 </script>
 
@@ -43,7 +48,7 @@
 									</div>
 								</div>
 								<div>
-									<div class="font-bold">{dir.path}</div>
+									<div class="font-bold">{dir.path[dir.path.length - 1]}</div>
 									<!-- <div class="text-sm opacity-50">United States</div> -->
 								</div>
 							</div>
@@ -60,11 +65,42 @@
 						<td> Directory </td>
 					</tr>
 				{/each}
+
+				{#each directory.files as file}
+					<tr class="hover">
+						<!--Name-->
+						<td>
+							<div class="flex items-center space-x-3">
+								<div class="avatar">
+									<div class="mask mask-squircle flex h-12 w-12 flex-row items-center justify-center">
+										{#if file.icon}
+											<img
+												style="width: 32px; height:32px"
+												src={'data:image/png;base64,' + file.icon}
+												alt="File Icon"
+											/>
+										{/if}
+									</div>
+								</div>
+								<div>
+									<div class="font-bold">{file.path[file.path.length - 1]}</div>
+									<!-- <div class="text-sm opacity-50">United States</div> -->
+								</div>
+							</div>
+						</td>
+						<!--Modified Date-->
+						<td>
+							{#if file.modified_time != 0}
+								{file.modified_time}
+							{/if}
+						</td>
+						<!--Size-->
+						<td>{file.size}</td>
+						<!--Type-->
+						<td> Directory </td>
+					</tr>
+				{/each}
 			</tbody>
 		</table>
 	</div>
-
-	{#each directory.files as file}
-		<div>{file.path}&nbsp;{file.modified_time}&nbsp;{file.size}</div>
-	{/each}
 </div>

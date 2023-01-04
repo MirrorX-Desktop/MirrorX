@@ -162,8 +162,9 @@
 			await emit('desktop_is_connecting', true);
 			await emit('/dialog/visit_prepare', { remote_device_id: input_remote_device_id, visit_desktop: true });
 		} catch (error: any) {
-			await emit('desktop_is_connecting', false);
 			await emitNotification({ level: 'error', title: 'Error', message: error.toString() });
+		} finally {
+			await emit('desktop_is_connecting', false);
 		}
 	};
 
@@ -175,8 +176,9 @@
 			await emit('file_manager_is_connecting', true);
 			await emit('/dialog/visit_prepare', { remote_device_id: input_remote_device_id, visit_desktop: false });
 		} catch (error: any) {
-			await emit('file_manager_is_connecting', false);
 			await emitNotification({ level: 'error', title: 'Error', message: error.toString() });
+		} finally {
+			await emit('file_manager_is_connecting', false);
 		}
 	};
 
