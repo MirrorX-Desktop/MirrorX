@@ -55,7 +55,7 @@ pub fn read_root_directory() -> CoreResult<Directory> {
             let icon = read_icon(&path).map_or(None, |v| Some(v));
 
             sub_dirs.push(DirEntry {
-                path: vec![disk_str.to_string()],
+                path,
                 modified_time: 0,
                 icon,
             });
