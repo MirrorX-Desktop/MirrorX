@@ -32,7 +32,7 @@ pub fn read_root_directory() -> CoreResult<Directory> {
     use std::str::FromStr;
     use windows::Win32::Storage::FileSystem::GetLogicalDrives;
 
-    let mut sub_dirs = Vec::new();
+    let mut entries = Vec::new();
 
     unsafe {
         let mask = GetLogicalDrives();
@@ -47,9 +47,11 @@ pub fn read_root_directory() -> CoreResult<Directory> {
 
             let icon = read_icon(&path).map_or(None, |v| Some(v));
 
-            sub_dirs.push(DirEntry {
+            entries.push(Entry {
+                is_dir: true,
                 path,
                 modified_time: 0,
+                size: 0,
                 icon,
             });
         }
@@ -57,8 +59,7 @@ pub fn read_root_directory() -> CoreResult<Directory> {
 
     Ok(Directory {
         path: PathBuf::from(r"\"),
-        sub_dirs,
-        files: Vec::new(),
+        entries,
     })
 }
 
