@@ -4,25 +4,19 @@ use mirrorx_core::{
     core_error,
     error::CoreResult,
 };
+use rayon::prelude::*;
 use serde::Serialize;
 use std::{path::PathBuf, time::Duration};
 
 #[derive(Serialize)]
 pub struct DirectoryResult {
     pub path: PathBuf,
-    pub sub_dirs: Vec<DirEntryResult>,
-    pub files: Vec<FileEntryResult>,
+    pub entries: Vec<EntryResult>,
 }
 
 #[derive(Serialize)]
-pub struct DirEntryResult {
-    pub path: PathBuf,
-    pub modified_time: i64,
-    pub icon: Option<String>,
-}
-
-#[derive(Serialize)]
-pub struct FileEntryResult {
+pub struct EntryResult {
+    pub is_dir: bool,
     pub path: PathBuf,
     pub modified_time: i64,
     pub size: u64,
@@ -55,33 +49,26 @@ pub async fn file_manager_visit_remote(
         .result
         .map_err(|err| core_error!("{}", err))?;
 
-    let mut sub_dirs = Vec::new();
-    for ele in directory.sub_dirs {
-        sub_dirs.push(DirEntryResult {
-            path: ele.path,
-            modified_time: ele.modified_time,
-            icon: ele.icon.map(|v| base64::encode(&v)),
-        });
-    }
+    let path = directory.path;
+    let (tx, rx) = tokio::sync::oneshot::channel();
+    tokio::task::spawn_blocking(move || {
+        let entries: Vec<EntryResult> = directory
+            .entries
+            .into_par_iter()
+            .map(|entry| EntryResult {
+                is_dir: entry.is_dir,
+                path: entry.path,
+                modified_time: entry.modified_time,
+                size: entry.size,
+                icon: entry.icon.map(|v| base64::encode(&v)),
+            })
+            .collect();
 
-    let mut files = Vec::new();
-    for ele in directory.files {
-        tracing::info!("{:?}", ele.icon.as_ref().map(|v| v.len()));
-        files.push(FileEntryResult {
-            path: ele.path,
-            modified_time: ele.modified_time,
-            size: ele.size,
-            icon: ele.icon.map(|v| base64::encode(&v)),
-        });
-    }
+        let _ = tx.send(entries);
+    });
+    let entries = rx.await?;
 
-    let result = DirectoryResult {
-        path: directory.path,
-        sub_dirs,
-        files,
-    };
-
-    Ok(result)
+    Ok(DirectoryResult { path, entries })
 }
 
 #[tauri::command]
@@ -94,31 +81,24 @@ pub async fn file_manager_visit_local(path: Option<PathBuf>) -> CoreResult<Direc
         mirrorx_core::component::fs::read_root_directory()
     }?;
 
-    let mut sub_dirs = Vec::new();
-    for ele in directory.sub_dirs {
-        sub_dirs.push(DirEntryResult {
-            path: ele.path,
-            modified_time: ele.modified_time,
-            icon: ele.icon.map(|v| base64::encode(&v)),
-        });
-    }
+    let path = directory.path;
+    let (tx, rx) = tokio::sync::oneshot::channel();
+    tokio::task::spawn_blocking(move || {
+        let entries: Vec<EntryResult> = directory
+            .entries
+            .into_par_iter()
+            .map(|entry| EntryResult {
+                is_dir: entry.is_dir,
+                path: entry.path,
+                modified_time: entry.modified_time,
+                size: entry.size,
+                icon: entry.icon.map(|v| base64::encode(&v)),
+            })
+            .collect();
 
-    let mut files = Vec::new();
-    for ele in directory.files {
-        tracing::info!("{:?}", ele.icon.as_ref().map(|v| v.len()));
-        files.push(FileEntryResult {
-            path: ele.path,
-            modified_time: ele.modified_time,
-            size: ele.size,
-            icon: ele.icon.map(|v| base64::encode(&v)),
-        });
-    }
+        let _ = tx.send(entries);
+    });
+    let entries = rx.await?;
 
-    let result = DirectoryResult {
-        path: directory.path,
-        sub_dirs,
-        files,
-    };
-
-    Ok(result)
+    Ok(DirectoryResult { path, entries })
 }

@@ -2,26 +2,19 @@
 mod macos;
 
 use crate::error::CoreResult;
+use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub struct Directory {
     pub path: PathBuf,
-    pub sub_dirs: Vec<DirEntry>,
-    pub files: Vec<FileEntry>,
+    pub entries: Vec<Entry>,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
-pub struct DirEntry {
-    pub path: PathBuf,
-    pub modified_time: i64,
-    #[serde(with = "serde_bytes")]
-    pub icon: Option<Vec<u8>>,
-}
-
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
-pub struct FileEntry {
+pub struct Entry {
+    pub is_dir: bool,
     pub path: PathBuf,
     pub modified_time: i64,
     pub size: u64,
@@ -73,11 +66,15 @@ pub fn read_directory<P>(path: P) -> CoreResult<Directory>
 where
     P: AsRef<Path> + Into<PathBuf>,
 {
+    struct EntryStat {
+        path: PathBuf,
+        is_dir: bool,
+        modified_time: i64,
+        size: u64,
+    }
+
     let dir = std::fs::read_dir(&path)?;
-
-    let mut sub_dirs = Vec::new();
-    let mut files = Vec::new();
-
+    let mut entries = Vec::new();
     for entry in dir {
         let entry = entry?;
         let file_type = entry.file_type()?;
@@ -86,28 +83,42 @@ where
             .naive_utc()
             .timestamp();
 
-        let icon = read_icon(entry.path().as_path()).ok();
-
-        if file_type.is_dir() {
-            sub_dirs.push(DirEntry {
-                path: entry.path(),
-                modified_time,
-                icon,
-            });
-        } else {
-            files.push(FileEntry {
-                path: entry.path(),
-                modified_time,
-                size: meta.len(),
-                icon,
-            });
-        }
+        entries.push(EntryStat {
+            path: entry.path(),
+            is_dir: file_type.is_dir(),
+            modified_time,
+            size: meta.len(),
+        });
     }
+
+    let mut entries: Vec<Entry> = entries
+        .into_par_iter()
+        .map(|entry| {
+            let icon = read_icon(&entry.path).ok();
+
+            Entry {
+                is_dir: entry.is_dir,
+                path: entry.path,
+                modified_time: entry.modified_time,
+                size: entry.size,
+                icon,
+            }
+        })
+        .collect();
+
+    entries.sort_by(|a, b| {
+        if (a.is_dir && b.is_dir) || (!a.is_dir && !b.is_dir) {
+            a.path.cmp(&b.path)
+        } else if a.is_dir && !b.is_dir {
+            std::cmp::Ordering::Greater
+        } else {
+            std::cmp::Ordering::Less
+        }
+    });
 
     Ok(Directory {
         path: path.into(),
-        sub_dirs,
-        files,
+        entries,
     })
 }
 

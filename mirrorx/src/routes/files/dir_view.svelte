@@ -93,56 +93,32 @@
 				</tr>
 			</thead>
 			<tbody>
-				{#each directory.sub_dirs as dir}
-					<tr class="hover" on:click={() => clickItem(dir.path)}>
-						<!--Icon-->
-						<td>
-							<div class="flex h-full flex-row items-center justify-center">
-								{#if dir.icon}
-									<img style="width: 32px; height:32px;" src={'data:image/png;base64,' + dir.icon} alt="File Icon" />
-								{/if}
-							</div>
-						</td>
-						<!--Name-->
-						<td>
-							<div class="name-content">{get_basename(dir.path)}</div>
-						</td>
-						<!--Modified Date-->
-						<td>
-							{#if dir.modified_time != 0}
-								<p class="text-right text-sm">{moment.unix(dir.modified_time).format('YYYY-MM-DD')}</p>
-								<p class="text-right text-sm">{moment.unix(dir.modified_time).format('hh:mm')}</p>
-							{/if}
-						</td>
-						<!--Size-->
-						<td />
-					</tr>
-				{/each}
-
-				{#each directory.files as file}
+				{#each directory.entries as entry}
 					<tr class="hover">
 						<!--Icon-->
 						<td>
 							<div class="flex h-full flex-row items-center justify-center">
-								{#if file.icon}
-									<img style="width: 32px; height:32px" src={'data:image/png;base64,' + file.icon} alt="File Icon" />
+								{#if entry.icon}
+									<img style="width: 32px; height:32px" src={'data:image/png;base64,' + entry.icon} alt="File Icon" />
 								{/if}
 							</div>
 						</td>
 						<!--Name-->
 						<td>
-							<div class="name-content">{get_basename(file.path)}</div>
-							<div class="text-xs opacity-50">{get_extname(file.path)}</div>
+							<div class="name-content">{get_basename(entry.path)}</div>
+							{#if !entry.is_dir}
+								<div class="text-xs opacity-50">{get_extname(entry.path)}</div>
+							{/if}
 						</td>
 						<!--Modified Date-->
 						<td>
-							{#if file.modified_time != 0}
-								<p class="text-right text-sm">{moment.unix(file.modified_time).format('YYYY-MM-DD')}</p>
-								<p class="text-right text-sm">{moment.unix(file.modified_time).format('hh:mm')}</p>
+							{#if entry.modified_time != 0}
+								<p class="text-right text-sm">{moment.unix(entry.modified_time).format('YYYY-MM-DD')}</p>
+								<p class="text-right text-sm">{moment.unix(entry.modified_time).format('hh:mm')}</p>
 							{/if}
 						</td>
 						<!--Size-->
-						<td class="text-center text-sm">{get_filesize(file.size)}</td>
+						<td class="text-center text-sm">{get_filesize(entry.size)}</td>
 					</tr>
 				{/each}
 			</tbody>

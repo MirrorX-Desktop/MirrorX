@@ -1,5 +1,9 @@
 use crate::{core_error, error::CoreResult};
-use cocoa::{appkit::NSImage, foundation::NSData};
+use cocoa::{
+    appkit::NSImage,
+    base::id,
+    foundation::{NSData, NSSize},
+};
 use objc::{
     class, msg_send,
     runtime::{Class, Object},
@@ -7,7 +11,54 @@ use objc::{
 };
 use objc_foundation::{INSObject, INSString, NSString};
 use objc_id::{Id, Owned};
-use std::{io::Cursor, path::Path};
+use std::path::Path;
+
+struct NSBitmapImageRepClass {}
+
+unsafe impl objc::Message for NSBitmapImageRepClass {}
+
+impl INSObject for NSBitmapImageRepClass {
+    fn class() -> &'static objc::runtime::Class {
+        Class::get("NSBitmapImageRep").unwrap()
+    }
+}
+
+pub struct NSBitmapImageRep {
+    class: Id<NSBitmapImageRepClass>,
+}
+
+impl NSBitmapImageRep {
+    #[allow(non_snake_case)]
+    pub fn initWithCGImage(cg_image_ref: id) -> CoreResult<NSBitmapImageRep> {
+        unsafe {
+            let ns_bitmap_image_rep_ptr: *mut Object = msg_send![class!(NSBitmapImageRep), alloc];
+            let ns_bitmap_image_rep_ptr: *mut NSBitmapImageRepClass =
+                msg_send![ns_bitmap_image_rep_ptr, initWithCGImage: cg_image_ref];
+
+            if ns_bitmap_image_rep_ptr.is_null() {
+                return Err(core_error!("NSBitmapImageRep.alloc returns null"));
+            }
+
+            let id: Id<_, Owned> = Id::from_ptr(ns_bitmap_image_rep_ptr);
+
+            Ok(NSBitmapImageRep { class: id })
+        }
+    }
+
+    #[allow(non_snake_case)]
+    pub fn setSize(&self, size: NSSize) {
+        unsafe {
+            let _: () = msg_send![self.class, setSize: size];
+        }
+    }
+
+    // - (NSData *)representationUsingType:(NSBitmapImageFileType)storageType
+    // properties:(NSDictionary<NSBitmapImageRepPropertyKey, id> *)properties;
+    #[allow(non_snake_case)]
+    pub fn representationUsingTypeForPNG(&self) -> id {
+        unsafe { msg_send![self.class, representationUsingType:4 properties:cocoa::base::nil] }
+    }
+}
 
 struct NSWorkspaceClass {}
 
@@ -52,21 +103,22 @@ impl NSWorkspace {
                 return Err(core_error!("get iconForFile failed"));
             }
 
-            let ns_data = ns_image.TIFFRepresentation();
+            let cg_ref: id = msg_send![
+                ns_image,
+                CGImageForProposedRect: cocoa::base::nil
+                context: cocoa::base::nil
+                hints: cocoa::base::nil
+            ];
 
-            let tiff = image::load_from_memory_with_format(
-                std::slice::from_raw_parts(ns_data.bytes() as *const u8, ns_data.length() as usize),
-                image::ImageFormat::Tiff,
-            )?;
+            let rep = NSBitmapImageRep::initWithCGImage(cg_ref)?;
+            rep.setSize(ns_image.size());
 
-            let tiff = tiff.thumbnail(32, 32);
+            let ns_data = rep.representationUsingTypeForPNG();
 
-            let mut buffer = Vec::with_capacity(4096);
-            let mut writer = Cursor::new(&mut buffer);
-
-            tiff.write_to(&mut writer, image::ImageOutputFormat::Png)?;
-
-            Ok(buffer)
+            Ok(
+                std::slice::from_raw_parts(ns_data.bytes() as *const u8, ns_data.length() as usize)
+                    .to_vec(),
+            )
         }
     }
 }
