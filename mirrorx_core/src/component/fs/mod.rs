@@ -80,13 +80,21 @@ where
         let entry = entry?;
         let file_type = entry.file_type()?;
         let meta = entry.metadata()?;
+
+        let is_dir = if file_type.is_symlink() {
+            let link_path = std::fs::read_link(entry.path())?;
+            link_path.is_dir()
+        } else {
+            file_type.is_dir()
+        };
+
         let modified_time = chrono::DateTime::<chrono::Local>::from(meta.modified()?)
             .naive_utc()
             .timestamp();
 
         entries.push(EntryStat {
             path: entry.path(),
-            is_dir: file_type.is_dir(),
+            is_dir,
             modified_time,
             size: meta.len(),
         });
