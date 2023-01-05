@@ -94,7 +94,7 @@
 			</thead>
 			<tbody>
 				{#each directory.entries as entry}
-					<tr class="hover">
+					<tr class="hover" on:click={() => clickItem(entry.path)}>
 						<!--Icon-->
 						<td>
 							<div class="flex h-full flex-row items-center justify-center">

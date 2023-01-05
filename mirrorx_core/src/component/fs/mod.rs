@@ -92,7 +92,7 @@ where
         });
     }
 
-    let mut entries: Vec<Entry> = entries
+    let entries: Vec<Entry> = entries
         .into_par_iter()
         .map(|entry| {
             let icon = read_icon(&entry.path).ok();
@@ -106,16 +106,6 @@ where
             }
         })
         .collect();
-
-    entries.sort_by(|a, b| {
-        if (a.is_dir && b.is_dir) || (!a.is_dir && !b.is_dir) {
-            a.path.cmp(&b.path)
-        } else if a.is_dir && !b.is_dir {
-            std::cmp::Ordering::Greater
-        } else {
-            std::cmp::Ordering::Less
-        }
-    });
 
     Ok(Directory {
         path: path.into(),
