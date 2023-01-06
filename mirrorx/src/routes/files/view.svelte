@@ -13,7 +13,6 @@
 	import moment from 'moment';
 	import Fa from 'svelte-fa';
 	import { onMount } from 'svelte';
-	import { path } from '@tauri-apps/api';
 	import Bread from './bread.svelte';
 
 	export let remoteDeviceID: string | null;
@@ -21,6 +20,10 @@
 
 	let directory: Directory | null = null;
 	let path_input: HTMLInputElement;
+	let path_input_value: string;
+	let path_input_record: Array<string> = [];
+	$: path_input_record_display = path_input_record.slice().reverse();
+
 	let has_parent: boolean = false;
 	let has_back: boolean = false;
 	let has_forward: boolean = false;
@@ -179,6 +182,37 @@
 		update_has_parent();
 	};
 
+	const input_goto = async (event: KeyboardEvent) => {
+		if (path_input_value && path_input_value.length > 0 && event.code == 'Enter') {
+			let goto_path: string | null = path_input_value;
+			if (path_input_value == '/' || path_input_value == '\\') {
+				goto_path = null;
+			}
+
+			try {
+				let new_dir = await visit_dir(goto_path);
+				visit_record = visit_record.slice(0, visit_pos); // discard old forward records
+				visit_record.push(new_dir.path);
+				visit_pos++;
+				directory = new_dir;
+
+				update_toolbar();
+
+				if (!path_input_record.includes(new_dir.path)) {
+					if (path_input_record.length == 10) {
+						path_input_record.shift();
+					}
+
+					path_input_record.push(new_dir.path);
+					path_input_record = path_input_record;
+					console.log(path_input_record);
+				}
+			} catch (err: any) {
+				console.log(err);
+			}
+		}
+	};
+
 	const visit_dir = async (path: string | null): Promise<Directory> => {
 		let dir: Directory;
 
@@ -198,32 +232,21 @@
 		<!--ToolBar-->
 		<div class="flex-0 flex w-full flex-row gap-2">
 			<div class="btn-group flex-0">
-				<div class="tooltip tooltip-bottom z-50" data-tip="Root Directory">
-					<button class="btn btn-sm rounded-tr-none rounded-br-none" on:click={goto_root}>
-						<Fa icon={faHome} />
-					</button>
-				</div>
+				<button class="btn btn-sm" on:click={goto_root}>
+					<Fa icon={faHome} />
+				</button>
 
-				<div class="tooltip tooltip-bottom z-50" data-tip="hello">
-					<button class="btn btn-sm rounded-none {has_back ? '' : 'btn-disabled'}" on:click={goto_back}>
-						<Fa icon={faArrowLeft} />
-					</button>
-				</div>
+				<button class="btn btn-sm {has_back ? '' : 'btn-disabled'}" on:click={goto_back}>
+					<Fa icon={faArrowLeft} />
+				</button>
 
-				<div class="tooltip tooltip-bottom z-50" data-tip="hello">
-					<button class="btn btn-sm rounded-none {has_forward ? '' : 'btn-disabled'}" on:click={goto_forward}>
-						<Fa icon={faArrowRight} />
-					</button>
-				</div>
+				<button class="btn btn-sm {has_forward ? '' : 'btn-disabled'}" on:click={goto_forward}>
+					<Fa icon={faArrowRight} />
+				</button>
 
-				<div class="tooltip tooltip-bottom z-50" data-tip="hello">
-					<button
-						class="btn btn-sm rounded-tl-none rounded-bl-none {has_parent ? '' : 'btn-disabled'}"
-						on:click={goto_parent}
-					>
-						<Fa icon={faArrowUp} />
-					</button>
-				</div>
+				<button class="btn btn-sm {has_parent ? '' : 'btn-disabled'}" on:click={goto_parent}>
+					<Fa icon={faArrowUp} />
+				</button>
 			</div>
 
 			<div class="form-control flex-1">
@@ -231,12 +254,43 @@
 					<input
 						bind:this={path_input}
 						type="text"
-						class="input input-sm input-bordered ring-info focus:border-info w-full text-center focus:outline-none focus:ring"
+						class="input input-sm input-bordered ring-info focus:border-info z-10 w-full text-center focus:outline-none focus:ring"
 						placeholder={get_basename(directory.path)}
+						bind:value={path_input_value}
+						on:keyup={input_goto}
 					/>
-					<button class="btn btn-sm">
-						<Fa icon={faChevronDown} />
-					</button>
+					<!-- <button class="btn btn-sm">
+						
+					</button> -->
+					<div class="dropdown dropdown-bottom dropdown-end">
+						<!-- svelte-ignore a11y-no-noninteractive-tabindex -->
+						<!-- svelte-ignore a11y-label-has-associated-control -->
+						<label tabindex="0" class="btn btn-sm z-0 rounded-tl-none rounded-bl-none">
+							<Fa icon={faChevronDown} />
+						</label>
+						<!--/Users/chenbaiyu/workspace/EvenBetterAuthorizationSample-->
+						<!-- svelte-ignore a11y-no-noninteractive-tabindex -->
+						<ul
+							tabindex="0"
+							class="dropdown-content menu bg-base-300 mt-1 overflow-hidden overflow-ellipsis rounded-lg p-2 shadow"
+							style="min-width: 160px; max-width: calc(100vw / 2 * 0.8)"
+						>
+							<li class="menu-title">
+								<span>Recent 10 records</span>
+							</li>
+							{#if path_input_record_display.length > 0}
+								{#each path_input_record_display as record}
+									<li class="w-full">
+										<button class="inline w-full overflow-hidden overflow-ellipsis whitespace-nowrap text-left">
+											{record}
+										</button>
+									</li>
+								{/each}
+							{:else}
+								<li class="text-base-content text-center text-sm text-opacity-60">Empty</li>
+							{/if}
+						</ul>
+					</div>
 				</div>
 			</div>
 

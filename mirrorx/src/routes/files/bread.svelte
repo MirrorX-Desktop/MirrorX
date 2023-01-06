@@ -15,7 +15,6 @@
 
 		for (let i = path.length; i >= 0; i--) {
 			if (path[i] == '/' || path[i] == '\\') {
-				console.log(path.slice(i + 1, end));
 				parts.push(path.slice(i + 1, end));
 				end = i;
 				i -= 1;
@@ -76,7 +75,6 @@
 		const x = e.pageX - slider.offsetLeft;
 		const walk = (x - startX) * 2;
 		slider.scrollLeft = scrollLeft - walk;
-		console.log(slider.scrollLeft);
 	};
 </script>
 

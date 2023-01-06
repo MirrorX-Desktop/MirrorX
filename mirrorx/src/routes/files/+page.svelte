@@ -11,7 +11,7 @@
 	let remote_device_id: string = $page.url.searchParams.get('device_id')!;
 </script>
 
-<div class="flex h-full w-full flex-row">
+<div class="flex h-full w-full flex-row justify-between">
 	<div class="flex h-full flex-1 flex-row items-center justify-center py-2 pl-2" style="max-width: 49%;min-width: 49%">
 		<View remoteDeviceID={null} />
 	</div>
