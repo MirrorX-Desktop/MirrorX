@@ -18,6 +18,8 @@
 	export let remoteDeviceID: string | null;
 	$: isLocal = remoteDeviceID == null;
 
+	let view: HTMLDivElement;
+
 	let directory: Directory | null = null;
 	let path_input: HTMLInputElement;
 	let path_input_value: string;
@@ -29,6 +31,9 @@
 	let has_forward: boolean = false;
 	let visit_record: Array<string | null> = [];
 	let visit_pos: number = 0;
+
+	let contextMenu: HTMLDivElement;
+	let showMenu: boolean = false;
 
 	onMount(async () => {
 		await goto(null);
@@ -225,140 +230,211 @@
 		dir.entries = sort_entries(dir.entries);
 		return dir;
 	};
+
+	const showFileMenu = (event: MouseEvent, entry: Entry) => {
+		event.preventDefault();
+
+		if (entry.is_dir) {
+			return;
+		}
+
+		console.log('click menu at :' + entry.path);
+
+		showMenu = true;
+
+		// make sure context menu will not overflow the view
+
+		let left = event.clientX;
+		let top = event.clientY;
+
+		if (event.clientX + contextMenu.clientWidth > view.offsetLeft + view.clientWidth) {
+			left = event.clientX - contextMenu.clientWidth;
+		}
+
+		if (event.clientY + contextMenu.clientHeight > view.offsetTop + view.clientHeight) {
+			top = event.clientY - contextMenu.clientHeight;
+		}
+
+		contextMenu.style.left = left + 'px';
+		contextMenu.style.top = top + 'px';
+	};
+
+	const checkShouldDismissFileMenu = (event: MouseEvent) => {
+		if (showMenu && contextMenu) {
+			let menuRect = contextMenu.getBoundingClientRect();
+
+			if (
+				!(
+					event.clientX >= menuRect.left &&
+					event.clientX <= menuRect.left + menuRect.width &&
+					event.clientY >= menuRect.top &&
+					event.clientY <= menuRect.top + menuRect.height
+				)
+			) {
+				// event.stopPropagation();
+				showMenu = false;
+			}
+		}
+	};
+
+	const send_to = () => {
+		showMenu = false;
+	};
 </script>
 
-<div class="flex h-full w-full flex-col items-center justify-center">
-	{#if directory}
-		<!--ToolBar-->
-		<div class="flex-0 flex w-full flex-row gap-2">
-			<div class="btn-group flex-0">
-				<button class="btn btn-sm" on:click={goto_root}>
-					<Fa icon={faHome} />
-				</button>
+<!-- svelte-ignore a11y-click-events-have-key-events -->
+<div bind:this={view} class="h-full w-full" on:click={checkShouldDismissFileMenu}>
+	<div bind:this={contextMenu} class="absolute z-50 {showMenu ? 'visible' : 'invisible'}">
+		<ul class="menu bg-base-100 rounded-box w-56 p-2 shadow">
+			{#if isLocal}
+				<li><button on:click={send_to}>Send to Remote</button></li>
+			{:else}
+				<li><button on:click={send_to}>Download to Local</button></li>
+			{/if}
+		</ul>
+	</div>
 
-				<button class="btn btn-sm {has_back ? '' : 'btn-disabled'}" on:click={goto_back}>
-					<Fa icon={faArrowLeft} />
-				</button>
+	<div class="flex h-full w-full flex-col items-center justify-center">
+		{#if directory}
+			<!--ToolBar-->
+			<div class="flex-0 flex w-full flex-row gap-2">
+				<div class="btn-group flex-0">
+					<button class="btn btn-sm" on:click={goto_root}>
+						<Fa icon={faHome} />
+					</button>
 
-				<button class="btn btn-sm {has_forward ? '' : 'btn-disabled'}" on:click={goto_forward}>
-					<Fa icon={faArrowRight} />
-				</button>
+					<button class="btn btn-sm {has_back ? '' : 'btn-disabled'}" on:click={goto_back}>
+						<Fa icon={faArrowLeft} />
+					</button>
 
-				<button class="btn btn-sm {has_parent ? '' : 'btn-disabled'}" on:click={goto_parent}>
-					<Fa icon={faArrowUp} />
-				</button>
-			</div>
+					<button class="btn btn-sm {has_forward ? '' : 'btn-disabled'}" on:click={goto_forward}>
+						<Fa icon={faArrowRight} />
+					</button>
 
-			<div class="form-control flex-1">
-				<div class="input-group">
-					<input
-						bind:this={path_input}
-						type="text"
-						class="input input-sm input-bordered ring-info focus:border-info z-10 w-full text-center focus:outline-none focus:ring"
-						placeholder={get_basename(directory.path)}
-						bind:value={path_input_value}
-						on:keyup={input_goto}
-					/>
-					<!-- <button class="btn btn-sm">
+					<button class="btn btn-sm {has_parent ? '' : 'btn-disabled'}" on:click={goto_parent}>
+						<Fa icon={faArrowUp} />
+					</button>
+				</div>
+
+				<div class="form-control flex-1">
+					<div class="input-group">
+						<input
+							bind:this={path_input}
+							type="text"
+							class="input input-sm input-bordered ring-info focus:border-info z-10 w-full text-center focus:outline-none focus:ring"
+							placeholder={get_basename(directory.path)}
+							bind:value={path_input_value}
+							on:keyup={input_goto}
+						/>
+						<!-- <button class="btn btn-sm">
 						
 					</button> -->
-					<div class="dropdown dropdown-bottom dropdown-end">
-						<!-- svelte-ignore a11y-no-noninteractive-tabindex -->
-						<!-- svelte-ignore a11y-label-has-associated-control -->
-						<label tabindex="0" class="btn btn-sm z-0 rounded-tl-none rounded-bl-none">
-							<Fa icon={faChevronDown} />
-						</label>
-						<!--/Users/chenbaiyu/workspace/EvenBetterAuthorizationSample-->
-						<!-- svelte-ignore a11y-no-noninteractive-tabindex -->
-						<ul
-							tabindex="0"
-							class="dropdown-content menu bg-base-300 mt-1 overflow-hidden overflow-ellipsis rounded-lg p-2 shadow"
-							style="min-width: 160px; max-width: calc(100vw / 2 * 0.8)"
-						>
-							<li class="menu-title">
-								<span>Recent 10 records</span>
-							</li>
-							{#if path_input_record_display.length > 0}
-								{#each path_input_record_display as record}
-									<li class="w-full">
-										<button class="inline w-full overflow-hidden overflow-ellipsis whitespace-nowrap text-left">
-											{record}
-										</button>
-									</li>
-								{/each}
-							{:else}
-								<li class="text-base-content text-center text-sm text-opacity-60">Empty</li>
-							{/if}
-						</ul>
+						<div class="dropdown dropdown-bottom dropdown-end">
+							<!-- svelte-ignore a11y-no-noninteractive-tabindex -->
+							<!-- svelte-ignore a11y-label-has-associated-control -->
+							<label tabindex="0" class="btn btn-sm z-0 rounded-tl-none rounded-bl-none">
+								<Fa icon={faChevronDown} />
+							</label>
+							<!-- svelte-ignore a11y-no-noninteractive-tabindex -->
+							<ul
+								tabindex="0"
+								class="dropdown-content menu bg-base-300 mt-1 overflow-hidden overflow-ellipsis rounded-lg p-2 shadow"
+								style="min-width: 160px; max-width: calc(100vw / 2 * 0.8)"
+							>
+								<li class="menu-title">
+									<span>Recent 10 records</span>
+								</li>
+								{#if path_input_record_display.length > 0}
+									{#each path_input_record_display as record}
+										<li class="w-full">
+											<button class="inline w-full overflow-hidden overflow-ellipsis whitespace-nowrap text-left">
+												{record}
+											</button>
+										</li>
+									{/each}
+								{:else}
+									<li class="text-base-content text-center text-sm text-opacity-60">Empty</li>
+								{/if}
+							</ul>
+						</div>
 					</div>
 				</div>
-			</div>
 
-			<!-- <div class="flex-0">
+				<!-- <div class="flex-0">
 				<button class="btn btn-sm"><Fa icon={faArrowDownAZ} /></button>
 			</div> -->
-		</div>
+			</div>
 
-		<div class="flex-0 max-w-full">
-			<Bread path={directory.path} />
-		</div>
+			<div class="flex-0 max-w-full">
+				<Bread path={directory.path} />
+			</div>
 
-		<div class="file-view w-full flex-1 overflow-x-auto">
-			<table class="w-full table-fixed">
-				<thead>
-					<tr>
-						<th style="width: 48px;" />
-						<th class="text-left" style="width: calc(60%-48px);">Name</th>
-						<th class="text-right" style="width: 20%;">Modified Date</th>
-						<th class="text-center" style="width: 20%;">Size</th>
-					</tr>
-				</thead>
-				<tbody>
-					{#each directory.entries as entry}
-						<tr
-							class="hover"
-							on:click={() => {
-								if (entry.is_dir) {
-									goto(entry.path);
-								}
-							}}
-						>
-							<!--Icon-->
-							<td>
-								<div class="flex h-full flex-row items-center justify-center">
-									{#if entry.icon}
-										<img style="width: 32px; height:32px" src={'data:image/png;base64,' + entry.icon} alt="File Icon" />
-									{/if}
-								</div>
-							</td>
-							<!--Name-->
-							<td>
-								<div class="name-content">{get_basename(entry.path)}</div>
-								{#if !entry.is_dir}
-									<div class="text-xs opacity-50">{get_extname(entry.path)}</div>
-								{/if}
-							</td>
-							<!--Modified Date-->
-							<td>
-								{#if entry.modified_time != 0}
-									<p class="text-right text-sm">{moment.unix(entry.modified_time).format('YYYY-MM-DD')}</p>
-									<p class="text-right text-sm">{moment.unix(entry.modified_time).format('hh:mm')}</p>
-								{/if}
-							</td>
-							<!--Size-->
-							<td class="text-center text-sm">
-								{#if !entry.is_dir}
-									{get_filesize(entry.size)}
-								{/if}
-							</td>
+			<div class="file-view w-full flex-1 overflow-x-auto">
+				<table class="w-full table-fixed">
+					<thead>
+						<tr>
+							<th style="width: 48px;" />
+							<th class="text-left" style="width: calc(60%-48px);">Name</th>
+							<th class="text-right" style="width: 20%;">Modified Date</th>
+							<th class="text-center" style="width: 20%;">Size</th>
 						</tr>
-					{/each}
-				</tbody>
-			</table>
-		</div>
-	{:else}
-		<Fa icon={faSpinner} spin />
-	{/if}
+					</thead>
+					<tbody>
+						{#each directory.entries as entry}
+							<tr
+								class="hover"
+								on:click={() => {
+									if (showMenu) {
+										return;
+									}
+
+									if (entry.is_dir) {
+										goto(entry.path);
+									}
+								}}
+								on:contextmenu={(event) => showFileMenu(event, entry)}
+							>
+								<!--Icon-->
+								<td>
+									<div class="flex h-full flex-row items-center justify-center">
+										{#if entry.icon}
+											<img
+												style="width: 32px; height:32px"
+												src={'data:image/png;base64,' + entry.icon}
+												alt="File Icon"
+											/>
+										{/if}
+									</div>
+								</td>
+								<!--Name-->
+								<td>
+									<div class="name-content">{get_basename(entry.path)}</div>
+									{#if !entry.is_dir}
+										<div class="text-xs opacity-50">{get_extname(entry.path)}</div>
+									{/if}
+								</td>
+								<!--Modified Date-->
+								<td>
+									{#if entry.modified_time != 0}
+										<p class="text-right text-sm">{moment.unix(entry.modified_time).format('YYYY-MM-DD')}</p>
+										<p class="text-right text-sm">{moment.unix(entry.modified_time).format('hh:mm')}</p>
+									{/if}
+								</td>
+								<!--Size-->
+								<td class="text-center text-sm">
+									{#if !entry.is_dir}
+										{get_filesize(entry.size)}
+									{/if}
+								</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
+		{:else}
+			<Fa icon={faSpinner} spin />
+		{/if}
+	</div>
 </div>
 
 <style>
