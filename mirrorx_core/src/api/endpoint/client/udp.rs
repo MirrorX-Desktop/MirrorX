@@ -71,7 +71,8 @@ async fn serve_udp_handshake(
     // should we try receive 3 or more times because udp is connect less?
     let (handshake_response_buffer, response_remote_addr) =
         tokio::time::timeout(RECV_MESSAGE_TIMEOUT, stream.next())
-            .await?
+            .await
+            .map_err(|_| CoreError::Timeout)?
             .ok_or(CoreError::OutgoingMessageChannelDisconnect)??;
 
     if response_remote_addr != remote_addr {

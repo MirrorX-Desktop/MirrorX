@@ -48,7 +48,7 @@ pub async fn lan_connect(
         remote_ip,
     };
 
-    let (client, render_frame_rx, directory_rx) = create_desktop_active_endpoint_client(
+    let (client, render_frame_rx) = create_desktop_active_endpoint_client(
         endpoint_id,
         None,
         EndPointStream::ActiveTCP(remote_addr),
@@ -66,7 +66,6 @@ pub async fn lan_connect(
                     endpoint_id,
                     client,
                     render_frame_rx,
-                    directory_rx,
                 ))
             } else {
                 panic!("get gl context failed");

@@ -7,10 +7,7 @@ use mirrorx_core::{
     api::endpoint::{
         client::EndPointClient,
         id::EndPointID,
-        message::{
-            EndPointDirectoryResponse, EndPointInput, EndPointMessage, InputEvent, KeyboardEvent,
-            MouseEvent,
-        },
+        message::{EndPointInput, EndPointMessage, InputEvent, KeyboardEvent, MouseEvent},
     },
     component::input::key::MouseKey,
     DesktopDecodeFrame,
@@ -42,9 +39,8 @@ impl DesktopWindow {
         gl_context: Arc<Context>,
         client: Arc<EndPointClient>,
         render_frame_rx: tokio::sync::mpsc::Receiver<DesktopDecodeFrame>,
-        directory_rx: tokio::sync::mpsc::Receiver<EndPointDirectoryResponse>,
     ) -> Self {
-        let state = State::new(endpoint_id, client, render_frame_rx, directory_rx);
+        let state = State::new(endpoint_id, client, render_frame_rx);
 
         let desktop_render =
             Render::new(gl_context.as_ref()).expect("create desktop render failed");
@@ -67,52 +63,52 @@ impl DesktopWindow {
     }
 
     fn build_panel(&mut self, ui: &mut Ui) {
-        match self.state.visit_state() {
-            state::VisitState::Connecting => {
-                ui.centered_and_justified(|ui| {
-                    let (rect, response) = ui.allocate_exact_size(
-                        Vec2::new(160.0, 80.0),
-                        Sense::focusable_noninteractive(),
-                    );
+        // match self.state.visit_state() {
+        //     state::VisitState::Connecting => {
+        //         ui.centered_and_justified(|ui| {
+        //             let (rect, response) = ui.allocate_exact_size(
+        //                 Vec2::new(160.0, 80.0),
+        //                 Sense::focusable_noninteractive(),
+        //             );
 
-                    ui.allocate_ui_at_rect(rect, |ui| {
-                        ui.spinner();
-                        ui.label("connecting");
-                    });
+        //             ui.allocate_ui_at_rect(rect, |ui| {
+        //                 ui.spinner();
+        //                 ui.label("connecting");
+        //             });
 
-                    response
-                });
-            }
-            state::VisitState::Negotiating => {
-                ui.centered_and_justified(|ui| {
-                    let (rect, response) = ui.allocate_exact_size(
-                        Vec2::new(160.0, 80.0),
-                        Sense::focusable_noninteractive(),
-                    );
+        //             response
+        //         });
+        //     }
+        //     state::VisitState::Negotiating => {
+        //         ui.centered_and_justified(|ui| {
+        //             let (rect, response) = ui.allocate_exact_size(
+        //                 Vec2::new(160.0, 80.0),
+        //                 Sense::focusable_noninteractive(),
+        //             );
 
-                    ui.allocate_ui_at_rect(rect, |ui| {
-                        ui.spinner();
-                        ui.label("negotiating");
-                    });
+        //             ui.allocate_ui_at_rect(rect, |ui| {
+        //                 ui.spinner();
+        //                 ui.label("negotiating");
+        //             });
 
-                    response
-                });
-            }
-            state::VisitState::Serving => {
-                self.build_desktop_texture(ui);
-                self.build_toolbar(ui);
-            }
-            state::VisitState::ErrorOccurred => {
-                ui.centered_and_justified(|ui| {
-                    ui.label(
-                        self.state
-                            .last_error()
-                            .map(|err| err.to_string())
-                            .unwrap_or_else(|| String::from("An unknown error occurred")),
-                    );
-                });
-            }
-        }
+        //             response
+        //         });
+        //     }
+        //     state::VisitState::Serving => {
+        self.build_desktop_texture(ui);
+        self.build_toolbar(ui);
+        //     }
+        //     state::VisitState::ErrorOccurred => {
+        //         ui.centered_and_justified(|ui| {
+        //             ui.label(
+        //                 self.state
+        //                     .last_error()
+        //                     .map(|err| err.to_string())
+        //                     .unwrap_or_else(|| String::from("An unknown error occurred")),
+        //             );
+        //         });
+        //     }
+        // }
     }
 
     fn build_desktop_texture(&mut self, ui: &mut Ui) {

@@ -153,7 +153,7 @@ pub async fn signaling_visit(
     };
 
     if visit_desktop {
-        let (client, render_frame_rx, directory_rx) = create_desktop_active_endpoint_client(
+        let (client, render_frame_rx) = create_desktop_active_endpoint_client(
             endpoint_id,
             Some((opening_key, sealing_key)),
             EndPointStream::ActiveTCP(endpoint_addr),
@@ -171,7 +171,6 @@ pub async fn signaling_visit(
                         endpoint_id,
                         client,
                         render_frame_rx,
-                        directory_rx,
                     ))
                 } else {
                     panic!("get gl context failed");
@@ -187,7 +186,7 @@ pub async fn signaling_visit(
             return Err(core_error!("create remote desktop window failed"));
         }
     } else {
-        let (client, directory_rx) = create_file_manager_active_endpoint_client(
+        let client = create_file_manager_active_endpoint_client(
             endpoint_id,
             Some((opening_key, sealing_key)),
             EndPointStream::ActiveTCP(endpoint_addr),
@@ -197,22 +196,41 @@ pub async fn signaling_visit(
 
         app_state
             .files_endpoints
-            .insert(remote_device_id.to_owned(), (client, directory_rx));
+            .lock()
+            .await
+            .insert(remote_device_id.clone(), client)
+            .await;
 
-        if let Err(err) = tauri::WindowBuilder::new(
-            &app_handle,
-            window_label,
-            tauri::WindowUrl::App(
-                format!("/files?device_id={}", remote_device_id.to_owned()).into(),
-            ),
-        )
-        .center()
-        .inner_size(960., 680.)
-        .min_inner_size(960., 680.)
-        .title(window_title)
-        .build()
-        {
-            app_state.files_endpoints.remove(&remote_device_id);
+        let (tx, rx) = tokio::sync::oneshot::channel();
+
+        let device_id = remote_device_id.clone();
+        tokio::spawn(async move {
+            if let Err(err) = tauri::WindowBuilder::new(
+                &app_handle,
+                window_label,
+                tauri::WindowUrl::App(format!("/files?device_id={device_id}").into()),
+            )
+            .center()
+            .inner_size(960., 680.)
+            .min_inner_size(960., 680.)
+            .title(window_title)
+            .build()
+            {
+                let _ = tx.send(Some(err));
+            } else {
+                let _ = tx.send(None);
+            }
+        });
+
+        let create_result = rx.await.map_err(|_| core_error!("create window failed"))?;
+
+        if let Some(err) = create_result {
+            app_state
+                .files_endpoints
+                .lock()
+                .await
+                .invalidate(&remote_device_id)
+                .await;
             tracing::error!(?err, "create file manager window failed");
             return Err(core_error!("create remote file manager window failed"));
         }

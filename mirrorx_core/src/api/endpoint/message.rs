@@ -1,8 +1,7 @@
-use std::path::PathBuf;
-
 use crate::component::{desktop::monitor::Monitor, fs::Directory, input::key::MouseKey};
 use cpal::SampleFormat;
 use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub struct EndPointHandshakeRequest {
@@ -19,14 +18,23 @@ pub struct EndPointHandshakeResponse {
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub enum EndPointMessage {
     Error,
+    CallRequest(u16, EndPointCallRequest),
+    CallReply(u16, #[serde(with = "serde_bytes")] Vec<u8>), // Vec -> Result<T, String>
     NegotiateDesktopParamsRequest(EndPointNegotiateDesktopParamsRequest),
     NegotiateDesktopParamsResponse(EndPointNegotiateDesktopParamsResponse),
     NegotiateFinishedRequest(EndPointNegotiateFinishedRequest),
     VideoFrame(EndPointVideoFrame),
     AudioFrame(EndPointAudioFrame),
     InputCommand(EndPointInput),
-    DirectoryRequest(EndPointDirectoryRequest),
-    DirectoryResponse(EndPointDirectoryResponse),
+    FileTransferBlock(EndPointFileTransferBlock),
+    FileTransferTerminate(EndPointFileTransferTerminate),
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
+pub enum EndPointCallRequest {
+    VisitDirectoryRequest(EndPointVisitDirectoryRequest),
+    SendFileRequest(EndPointSendFileRequest),
+    DownloadFileRequest(EndPointDownloadFileRequest),
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
@@ -148,11 +156,45 @@ pub struct EndPointInput {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
-pub struct EndPointDirectoryRequest {
+pub struct EndPointVisitDirectoryRequest {
     pub path: Option<PathBuf>,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-pub struct EndPointDirectoryResponse {
-    pub result: Result<Directory, String>,
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
+pub struct EndPointVisitDirectoryResponse {
+    pub dir: Directory,
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
+pub struct EndPointSendFileRequest {
+    pub id: String,
+    pub remote_path: PathBuf,
+    pub size: u64,
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
+pub struct EndPointSendFileReply {}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
+pub struct EndPointFileTransferBlock {
+    pub id: String,
+    pub finish: bool,
+    #[serde(with = "serde_bytes")]
+    pub data: Vec<u8>,
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
+pub struct EndPointDownloadFileRequest {
+    pub id: String,
+    pub path: PathBuf,
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
+pub struct EndPointDownloadFileReply {
+    pub size: u64,
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
+pub struct EndPointFileTransferTerminate {
+    pub id: String,
 }
