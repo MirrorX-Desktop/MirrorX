@@ -141,7 +141,7 @@ fn read_icon(path: &Path) -> CoreResult<Vec<u8>> {
             },
             Storage::FileSystem::FILE_ATTRIBUTE_NORMAL,
             UI::{
-                Shell::{SHGetFileInfoW, SHFILEINFOW, SHGFI_ICON},
+                Shell::{SHGetFileInfoW, SHFILEINFOW, SHGFI_ICON, SHGFI_LARGEICON},
                 WindowsAndMessaging::{DestroyIcon, GetIconInfo, ICONINFO},
             },
         },
@@ -158,7 +158,7 @@ fn read_icon(path: &Path) -> CoreResult<Vec<u8>> {
             FILE_ATTRIBUTE_NORMAL,
             Some(&mut psfi),
             std::mem::size_of::<SHFILEINFOW>() as _,
-            SHGFI_ICON,
+            SHGFI_ICON | SHGFI_LARGEICON,
         );
 
         if ret == 0 {
