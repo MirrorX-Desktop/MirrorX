@@ -70,7 +70,8 @@ async fn serve_handshake(
         .map_err(|_| CoreError::OutgoingMessageChannelDisconnect)?;
 
     let handshake_response_buffer = tokio::time::timeout(RECV_MESSAGE_TIMEOUT, stream.next())
-        .await?
+        .await
+        .map_err(|_| CoreError::Timeout)?
         .ok_or(CoreError::OutgoingMessageChannelDisconnect)??;
 
     let resp: EndPointHandshakeResponse = bincode_deserialize(handshake_response_buffer.deref())?;

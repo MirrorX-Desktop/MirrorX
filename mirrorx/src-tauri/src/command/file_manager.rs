@@ -1,12 +1,17 @@
 use super::AppState;
 use mirrorx_core::{
-    api::endpoint::message::{EndPointDirectoryRequest, EndPointMessage},
+    api::endpoint::message::{
+        EndPointCallRequest, EndPointDownloadFileReply, EndPointDownloadFileRequest,
+        EndPointFileTransferTerminate, EndPointMessage, EndPointSendFileReply,
+        EndPointSendFileRequest, EndPointVisitDirectoryRequest, EndPointVisitDirectoryResponse,
+    },
+    component::fs::transfer::{create_file_transfer_session, read_file_block},
     core_error,
     error::CoreResult,
 };
 use rayon::prelude::*;
 use serde::Serialize;
-use std::{path::PathBuf, time::Duration};
+use std::path::PathBuf;
 
 #[derive(Serialize)]
 pub struct DirectoryResult {
@@ -30,29 +35,24 @@ pub async fn file_manager_visit_remote(
     remote_device_id: String,
     path: Option<PathBuf>,
 ) -> CoreResult<DirectoryResult> {
-    let mut v = app_state
+    let client = app_state
         .files_endpoints
-        .get_mut(&remote_device_id)
+        .lock()
+        .await
+        .get(&remote_device_id)
         .ok_or_else(|| core_error!("remote file manager not exist"))?;
 
-    let (client, directory_rx) = v.value_mut();
-
-    client
-        .send(&EndPointMessage::DirectoryRequest(
-            EndPointDirectoryRequest { path },
+    let reply: EndPointVisitDirectoryResponse = client
+        .call(EndPointCallRequest::VisitDirectoryRequest(
+            EndPointVisitDirectoryRequest { path },
         ))
         .await?;
 
-    let directory = tokio::time::timeout(Duration::from_secs(30), directory_rx.recv())
-        .await?
-        .ok_or_else(|| core_error!("request remote file failed"))?
-        .result
-        .map_err(|err| core_error!("{}", err))?;
-
-    let path = directory.path;
+    let path = reply.dir.path;
     let (tx, rx) = tokio::sync::oneshot::channel();
     tokio::task::spawn_blocking(move || {
-        let entries: Vec<EntryResult> = directory
+        let entries: Vec<EntryResult> = reply
+            .dir
             .entries
             .into_par_iter()
             .map(|entry| EntryResult {
@@ -101,4 +101,86 @@ pub async fn file_manager_visit_local(path: Option<PathBuf>) -> CoreResult<Direc
     let entries = rx.await?;
 
     Ok(DirectoryResult { path, entries })
+}
+
+#[tauri::command]
+#[tracing::instrument(skip(app_state))]
+pub async fn file_manager_send_file(
+    app_state: tauri::State<'_, AppState>,
+    remote_device_id: String,
+    local_path: PathBuf,
+    remote_path: PathBuf,
+) -> CoreResult<String> {
+    if !local_path.is_file() {
+        return Err(core_error!("local path is not a file"));
+    }
+
+    let meta = local_path.metadata()?;
+    let size = meta.len();
+
+    let id = uuid::Uuid::new_v4().to_string();
+
+    let client = app_state
+        .files_endpoints
+        .lock()
+        .await
+        .get(&remote_device_id)
+        .ok_or_else(|| core_error!("remote file manager not exist"))?;
+
+    let _: EndPointSendFileReply = client
+        .call(EndPointCallRequest::SendFileRequest(
+            EndPointSendFileRequest {
+                id: id.clone(),
+                remote_path,
+                size,
+            },
+        ))
+        .await?;
+
+    read_file_block(id.clone(), client, &local_path).await?;
+
+    Ok(id)
+}
+
+#[tauri::command]
+#[tracing::instrument(skip(app_state))]
+pub async fn file_manager_download_file(
+    app_state: tauri::State<'_, AppState>,
+    remote_device_id: String,
+    local_path: PathBuf,
+    remote_path: PathBuf,
+) -> CoreResult<(String, u64)> {
+    if local_path.exists() {
+        return Err(core_error!("local path is not a file"));
+    }
+
+    let id = uuid::Uuid::new_v4().to_string();
+
+    let client = app_state
+        .files_endpoints
+        .lock()
+        .await
+        .get(&remote_device_id)
+        .ok_or_else(|| core_error!("remote file manager not exist"))?;
+
+    let reply: EndPointDownloadFileReply = client
+        .call(EndPointCallRequest::DownloadFileRequest(
+            EndPointDownloadFileRequest {
+                id: id.clone(),
+                path: remote_path,
+            },
+        ))
+        .await?;
+
+    if let Err(err) = create_file_transfer_session(id.clone(), &local_path).await {
+        let _ = client
+            .send(&EndPointMessage::FileTransferTerminate(
+                EndPointFileTransferTerminate { id: id.clone() },
+            ))
+            .await;
+
+        return Err(err);
+    }
+
+    Ok((id, reply.size))
 }

@@ -99,6 +99,22 @@ export function invoke_file_manager_visit_local(path: string | null): Promise<Di
 	return invoke('file_manager_visit_local', { path });
 }
 
+export function invoke_file_manager_send_file(
+	remoteDeviceId: string,
+	localPath: string,
+	remotePath: string
+): Promise<string> {
+	return invoke('file_manager_send_file', { remoteDeviceId, localPath, remotePath });
+}
+
+export function invoke_file_manager_download_file(
+	remoteDeviceId: string,
+	localPath: string,
+	remotePath: string
+): Promise<[string, number]> {
+	return invoke('file_manager_download_file', { remoteDeviceId, localPath, remotePath });
+}
+
 export function invoke_utility_generate_random_password(): Promise<string> {
 	return invoke('utility_generate_random_password');
 }

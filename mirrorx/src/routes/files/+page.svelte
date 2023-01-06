@@ -7,8 +7,24 @@
 	import Fa from 'svelte-fa';
 	import View from './view.svelte';
 	import { encode } from 'js-base64';
+	import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 
 	let remote_device_id: string = $page.url.searchParams.get('device_id')!;
+
+	let send_file_to_remote_unlisten_fn: UnlistenFn | null = null;
+	let download_file_to_local_unlisten_fn: UnlistenFn | null = null;
+
+	onMount(async () => {
+		send_file_to_remote_unlisten_fn = await listen<{ entry: Entry; path: string }>(
+			'send_file_to_remote',
+			(event) => {}
+		);
+
+		download_file_to_local_unlisten_fn = await listen<{ localPath: string; remotePath: string }>(
+			'download_file_to_local',
+			(event) => {}
+		);
+	});
 </script>
 
 <div class="flex h-full w-full flex-row justify-between">

@@ -12,8 +12,12 @@
 	} from '@fortawesome/free-solid-svg-icons';
 	import moment from 'moment';
 	import Fa from 'svelte-fa';
-	import { onMount } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
 	import Bread from './bread.svelte';
+	import { current_remote_directory } from '$lib/components/stores';
+	import type { Unsubscriber } from 'svelte/store';
+	import { emit } from '@tauri-apps/api/event';
+	import { save } from '@tauri-apps/api/dialog';
 
 	export let remoteDeviceID: string | null;
 	$: isLocal = remoteDeviceID == null;
@@ -21,6 +25,7 @@
 	let view: HTMLDivElement;
 
 	let directory: Directory | null = null;
+	let remote_directory: Directory | null = null;
 	let path_input: HTMLInputElement;
 	let path_input_value: string;
 	let path_input_record: Array<string> = [];
@@ -34,9 +39,24 @@
 
 	let contextMenu: HTMLDivElement;
 	let showMenu: boolean = false;
+	let contextMenuRelatedEntry: Entry | null = null;
+
+	let current_remote_directory_unsubscriber: Unsubscriber | null = null;
 
 	onMount(async () => {
+		if (isLocal) {
+			current_remote_directory_unsubscriber = current_remote_directory.subscribe((dir) => {
+				remote_directory = dir;
+			});
+		}
+
 		await goto(null);
+	});
+
+	onDestroy(() => {
+		if (current_remote_directory_unsubscriber) {
+			current_remote_directory_unsubscriber();
+		}
 	});
 
 	const sort_entries = (entries: Array<Entry>): Array<Entry> => {
@@ -259,6 +279,11 @@
 		contextMenu.style.top = top + 'px';
 	};
 
+	const dismissFileMenu = () => {
+		showMenu = false;
+		contextMenuRelatedEntry = null;
+	};
+
 	const checkShouldDismissFileMenu = (event: MouseEvent) => {
 		if (showMenu && contextMenu) {
 			let menuRect = contextMenu.getBoundingClientRect();
@@ -271,14 +296,58 @@
 					event.clientY <= menuRect.top + menuRect.height
 				)
 			) {
-				// event.stopPropagation();
-				showMenu = false;
+				dismissFileMenu();
 			}
 		}
 	};
 
-	const send_to = () => {
-		showMenu = false;
+	const send_to = async () => {
+		const entry = contextMenuRelatedEntry;
+		dismissFileMenu();
+
+		if (!entry) {
+			return;
+		}
+
+		if (isLocal) {
+			// send to remote
+
+			if (!remote_directory) {
+				return;
+			}
+
+			if (remote_directory.path == '/' || remote_directory.path == '\\') {
+				// todo: notify send data to root dir is disallowed
+				return;
+			}
+
+			await emit('send_file_to_remote', { entry, path: remote_directory.path });
+		} else {
+			// download to local
+
+			let basename = get_basename(entry.path);
+			let nameAndExtension = basename.split('.');
+			let name = nameAndExtension[0];
+			let extensions: Array<string> = [];
+			if (nameAndExtension.length == 2) {
+				extensions = [nameAndExtension[1]];
+			}
+
+			const filePath = await save({
+				filters: [
+					{
+						name,
+						extensions
+					}
+				]
+			});
+
+			if (!filePath) {
+				return;
+			}
+
+			await emit('download_file_to_local', { localPath: filePath, remotePath: entry.path });
+		}
 	};
 </script>
 

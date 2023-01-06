@@ -8,10 +8,15 @@ use super::{
 };
 use crate::{
     api::endpoint::handlers::{
-        directory::handle_directory_request, input::handle_input,
+        fs_download_file::handle_download_file_request, fs_send_file::handle_send_file_request,
+        fs_visit_directory::handle_visit_directory_request, input::handle_input,
         negotiate_finished::handle_negotiate_finished_request,
     },
-    component::desktop::monitor::Monitor,
+    call,
+    component::{
+        desktop::monitor::Monitor,
+        fs::transfer::{delete_transfer_session, write_file_block},
+    },
     core_error,
     error::{CoreError, CoreResult},
     utility::{
@@ -21,7 +26,14 @@ use crate::{
 };
 use bytes::Bytes;
 use ring::aead::{OpeningKey, SealingKey};
-use std::{fmt::Display, ops::Deref, sync::Arc, time::Duration};
+use scopeguard::defer;
+use serde::de::DeserializeOwned;
+use std::{
+    fmt::Display,
+    ops::Deref,
+    sync::{atomic::AtomicU16, Arc},
+    time::Duration,
+};
 use tokio::sync::{mpsc::Sender, RwLock};
 
 const RECV_MESSAGE_TIMEOUT: Duration = Duration::from_secs(30);
@@ -31,6 +43,8 @@ pub struct EndPointClient {
     endpoint_id: EndPointID,
     monitor: Arc<RwLock<Option<Arc<Monitor>>>>,
     tx: Sender<Vec<u8>>,
+    call_id: Arc<AtomicU16>,
+    call_store: Arc<moka::sync::Cache<u16, Sender<Vec<u8>>>>,
 }
 
 impl EndPointClient {
@@ -40,7 +54,6 @@ impl EndPointClient {
         stream: EndPointStream,
         video_frame_tx: Sender<EndPointVideoFrame>,
         audio_frame_tx: Sender<EndPointAudioFrame>,
-        directory_tx: Sender<EndPointDirectoryResponse>,
         visit_credentials: Option<Vec<u8>>,
     ) -> CoreResult<Arc<EndPointClient>> {
         EndPointClient::create(
@@ -50,7 +63,6 @@ impl EndPointClient {
             stream,
             Some(video_frame_tx),
             Some(audio_frame_tx),
-            Some(directory_tx),
             visit_credentials,
         )
         .await
@@ -60,7 +72,6 @@ impl EndPointClient {
         endpoint_id: EndPointID,
         stream_key: Option<(OpeningKey<NonceValue>, SealingKey<NonceValue>)>,
         stream: EndPointStream,
-        directory_tx: Sender<EndPointDirectoryResponse>,
         visit_credentials: Option<Vec<u8>>,
     ) -> CoreResult<Arc<EndPointClient>> {
         EndPointClient::create(
@@ -70,7 +81,6 @@ impl EndPointClient {
             stream,
             None,
             None,
-            Some(directory_tx),
             visit_credentials,
         )
         .await
@@ -89,13 +99,13 @@ impl EndPointClient {
             stream,
             None,
             None,
-            None,
             visit_credentials,
         )
         .await?;
         Ok(())
     }
 
+    #[allow(clippy::too_many_arguments)]
     async fn create(
         active: bool,
         endpoint_id: EndPointID,
@@ -103,7 +113,6 @@ impl EndPointClient {
         stream: EndPointStream,
         video_frame_tx: Option<Sender<EndPointVideoFrame>>,
         audio_frame_tx: Option<Sender<EndPointAudioFrame>>,
-        directory_tx: Option<Sender<EndPointDirectoryResponse>>,
         visit_credentials: Option<Vec<u8>>,
     ) -> CoreResult<Arc<EndPointClient>> {
         let (opening_key, sealing_key) = match key_pair {
@@ -117,7 +126,9 @@ impl EndPointClient {
                     Duration::from_secs(10),
                     tokio::net::TcpStream::connect(addr),
                 )
-                .await??;
+                .await
+                .map_err(|_| CoreError::Timeout)??;
+
                 serve_tcp(
                     stream,
                     endpoint_id,
@@ -158,19 +169,19 @@ impl EndPointClient {
             None
         };
 
+        let call_store = moka::sync::CacheBuilder::new(32)
+            .time_to_live(Duration::from_secs(60))
+            .build();
+
         let client = Arc::new(EndPointClient {
             endpoint_id,
             monitor: Arc::new(RwLock::new(primary_monitor)),
             tx,
+            call_id: Arc::new(AtomicU16::new(0)),
+            call_store: Arc::new(call_store),
         });
 
-        handle_message(
-            client.clone(),
-            rx,
-            video_frame_tx,
-            audio_frame_tx,
-            directory_tx,
-        );
+        handle_message(client.clone(), rx, video_frame_tx, audio_frame_tx);
 
         Ok(client)
     }
@@ -208,6 +219,30 @@ impl EndPointClient {
             .await
             .map_err(|_| CoreError::OutgoingMessageChannelDisconnect)
     }
+
+    pub async fn call<TReply>(&self, message: EndPointCallRequest) -> CoreResult<TReply>
+    where
+        TReply: DeserializeOwned,
+    {
+        let call_id = self
+            .call_id
+            .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+
+        let (tx, mut rx) = tokio::sync::mpsc::channel(1);
+
+        self.call_store.insert(call_id, tx);
+        defer! {
+            self.call_store.invalidate(&call_id);
+        }
+
+        self.send(&EndPointMessage::CallRequest(call_id, message))
+            .await?;
+
+        let reply_bytes = rx.recv().await.ok_or(CoreError::Timeout)?;
+
+        bincode_deserialize::<Result<TReply, String>>(&reply_bytes)?
+            .map_err(|err_str| core_error!("{}", err_str))
+    }
 }
 
 impl Display for EndPointClient {
@@ -231,7 +266,8 @@ async fn serve_active_negotiate(
         .map_err(|_| CoreError::OutgoingMessageChannelDisconnect)?;
 
     let negotiate_response_buffer = tokio::time::timeout(RECV_MESSAGE_TIMEOUT, rx.recv())
-        .await?
+        .await
+        .map_err(|_| CoreError::Timeout)?
         .ok_or(CoreError::OutgoingMessageChannelDisconnect)?;
 
     let EndPointMessage::NegotiateDesktopParamsResponse(negotiate_response) =
@@ -272,7 +308,6 @@ fn handle_message(
     mut rx: tokio::sync::mpsc::Receiver<Bytes>,
     video_frame_tx: Option<Sender<EndPointVideoFrame>>,
     audio_frame_tx: Option<Sender<EndPointAudioFrame>>,
-    directory_tx: Option<Sender<EndPointDirectoryResponse>>,
 ) {
     tokio::spawn(async move {
         loop {
@@ -329,20 +364,40 @@ fn handle_message(
                 EndPointMessage::InputCommand(input_event) => {
                     handle_input(client.clone(), input_event).await
                 }
-                EndPointMessage::DirectoryRequest(req) => {
-                    handle_directory_request(client.clone(), req).await
-                }
-                EndPointMessage::DirectoryResponse(resp) => {
-                    if let Some(ref tx) = directory_tx {
-                        if let Err(err) = tx.send(resp).await {
-                            tracing::error!(%err, "endpoint directory message channel send failed");
-                            return;
+                EndPointMessage::CallRequest(call_id, message) => {
+                    let client = client.clone();
+                    tokio::spawn(async move {
+                        let reply = match message {
+                            EndPointCallRequest::VisitDirectoryRequest(req) => {
+                                call!(handle_visit_directory_request(req).await)
+                            }
+                            EndPointCallRequest::SendFileRequest(req) => {
+                                call!(handle_send_file_request(req).await)
+                            }
+                            EndPointCallRequest::DownloadFileRequest(req) => {
+                                call!(handle_download_file_request(client.clone(), req).await)
+                            }
+                        };
+
+                        if let Ok(reply_bytes) = reply {
+                            let _ = client
+                                .send(&EndPointMessage::CallReply(call_id, reply_bytes))
+                                .await;
                         }
-                    } else {
-                        tracing::error!(
-                            "as passive endpoint, shouldn't receive directory response"
-                        );
+                    });
+                }
+                EndPointMessage::CallReply(call_id, reply) => {
+                    if let Some(tx) = client.call_store.get(&call_id) {
+                        let _ = tx.send(reply);
                     }
+
+                    client.call_store.invalidate(&call_id)
+                }
+                EndPointMessage::FileTransferBlock(block) => {
+                    let _ = write_file_block(block).await;
+                }
+                EndPointMessage::FileTransferTerminate(message) => {
+                    delete_transfer_session(&message.id).await
                 }
             }
         }

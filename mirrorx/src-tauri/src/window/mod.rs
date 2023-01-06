@@ -2,7 +2,7 @@ mod desktop;
 
 use self::desktop::DesktopWindow;
 use mirrorx_core::{
-    api::endpoint::{client::EndPointClient, id::EndPointID, message::EndPointDirectoryResponse},
+    api::endpoint::{client::EndPointClient, id::EndPointID},
     DesktopDecodeFrame,
 };
 use once_cell::sync::Lazy;
@@ -55,19 +55,12 @@ pub fn create_desktop_window(
     endpoint_id: EndPointID,
     client: Arc<EndPointClient>,
     render_frame_rx: tokio::sync::mpsc::Receiver<DesktopDecodeFrame>,
-    directory_rx: tokio::sync::mpsc::Receiver<EndPointDirectoryResponse>,
 ) -> DesktopWindow {
     set_fonts(&cc.egui_ctx);
 
     // cc.egui_ctx.set_debug_on_hover(true);
 
-    crate::window::desktop::DesktopWindow::new(
-        endpoint_id,
-        gl_context,
-        client,
-        render_frame_rx,
-        directory_rx,
-    )
+    crate::window::desktop::DesktopWindow::new(endpoint_id, gl_context, client, render_frame_rx)
 }
 
 fn set_fonts(ctx: &tauri_egui::egui::Context) {

@@ -4,6 +4,8 @@ mod macos;
 #[cfg(target_os = "windows")]
 mod windows;
 
+pub mod transfer;
+
 use crate::error::CoreResult;
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};

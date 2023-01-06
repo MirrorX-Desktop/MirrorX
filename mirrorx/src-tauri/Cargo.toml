@@ -37,6 +37,8 @@ http = "0.2.8"
 dashmap = "5.4.0"
 base64 = "0.20.0"
 rayon = "1.6.1"
+moka = { version = "0.9.6", features = ["future"] }
+uuid = { version = "1.2.2", features = ["v4", "fast-rng"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 cocoa = "0.24.1"

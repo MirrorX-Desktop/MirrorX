@@ -34,7 +34,7 @@ pub enum CoreError {
     SQLiteError(#[from] rusqlite::Error),
 
     #[error("operation timeout")]
-    Timeout(#[from] tokio::time::error::Elapsed),
+    Timeout,
 
     #[error("tokio oneshot channel receive error ({0:?})")]
     OneshotReceiveError(#[from] tokio::sync::oneshot::error::RecvError),

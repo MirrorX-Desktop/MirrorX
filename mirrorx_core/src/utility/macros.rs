@@ -20,3 +20,10 @@ macro_rules! core_error {
         }
     };
 }
+
+#[macro_export]
+macro_rules! call {
+    ($exp:expr) => {
+        bincode_serialize(&$exp.map_err(|err| err.to_string()))
+    };
+}
