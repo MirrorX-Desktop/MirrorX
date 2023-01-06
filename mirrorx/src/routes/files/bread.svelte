@@ -1,6 +1,4 @@
 <script lang="ts">
-	import { afterUpdate, onMount } from 'svelte';
-
 	export let path: string;
 	$: path_parts = calc_path_parts(path);
 
@@ -9,6 +7,7 @@
 	let startX = 0;
 	let scrollLeft = 0;
 	let active: boolean = false;
+	let timeoutHandler: NodeJS.Timeout | null;
 
 	const calc_path_parts = (path: string): Array<string> => {
 		let parts: Array<string> = [];
@@ -34,12 +33,22 @@
 
 		parts = parts.reverse();
 
-		setTimeout(() => {
+		update_breadcrumbs();
+
+		return parts;
+	};
+
+	const update_breadcrumbs = () => {
+		if (timeoutHandler) {
+			clearTimeout(timeoutHandler);
+			timeoutHandler = null;
+		}
+
+		timeoutHandler = setTimeout(() => {
 			if (path_parts && slider && !isDown) {
 				slider.scrollLeft = slider.scrollWidth;
 			}
 		}, 100);
-		return parts;
 	};
 
 	const mouse_down = (e: MouseEvent) => {
