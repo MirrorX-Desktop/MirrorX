@@ -24,7 +24,7 @@ tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
 tracing-appender = "0.2.2"
 os_info = "3.5.1"
 anyhow = "1.0.66"
-tokio = "1.23.0"
+tokio = "1.23.1"
 tauri-egui = { git = "https://github.com/MirrorX-Desktop/tauri-egui.git" }
 egui_extras = { version = "0.19.0", features = [
     "svg",
