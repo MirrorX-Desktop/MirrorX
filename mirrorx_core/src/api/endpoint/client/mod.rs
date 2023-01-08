@@ -379,16 +379,25 @@ fn handle_message(
                             }
                         };
 
-                        if let Ok(reply_bytes) = reply {
-                            let _ = client
-                                .send(&EndPointMessage::CallReply(call_id, reply_bytes))
-                                .await;
+                        match reply {
+                            Ok(reply_bytes) => {
+                                if let Err(err) = client
+                                    .send(&EndPointMessage::CallReply(call_id, reply_bytes))
+                                    .await
+                                {
+                                    tracing::error!(?err, "reply Call send message failed");
+                                }
+                            }
+                            Err(err) => {
+                                tracing::error!(?err, "reply Call failed");
+                            }
                         }
                     });
                 }
                 EndPointMessage::CallReply(call_id, reply) => {
+                    tracing::info!(?call_id, "receive call reply");
                     if let Some(tx) = client.call_store.get(&call_id) {
-                        let _ = tx.send(reply);
+                        let _ = tx.send(reply).await;
                     }
 
                     client.call_store.invalidate(&call_id)
