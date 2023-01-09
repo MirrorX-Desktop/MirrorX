@@ -10,13 +10,17 @@ use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
     ffi::OsStr,
+    os::unix::prelude::PermissionsExt,
     path::{Path, PathBuf},
 };
+
+use math
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub struct Directory {
     pub path: PathBuf,
     pub entries: Vec<Entry>,
+    pub icon_cache: HashMap<HashableIconType, Option<Vec<u8>>>,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
@@ -25,8 +29,21 @@ pub struct Entry {
     pub path: PathBuf,
     pub modified_time: i64,
     pub size: u64,
+    pub icon: IconType,
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
+pub enum IconType {
+    Hash(HashableIconType),
     #[serde(with = "serde_bytes")]
-    pub icon: Option<Vec<u8>>,
+    Bytes(Option<Vec<u8>>),
+}
+
+#[derive(Hash, Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
+pub enum HashableIconType {
+    Ext(String),    // extension suffix (exclusive .exe), like: png, jpg, mp4, etc.
+    UnixExecutable, // Unix Executable File
+    OrdinaryDir,    // Ordinary Directory
 }
 
 pub fn read_root_directory() -> CoreResult<Directory> {
@@ -57,12 +74,20 @@ where
         size: u64,
     }
 
+    let mut executableFiles: Vec<PathBuf> = Vec::new();
+
     let dir = std::fs::read_dir(&path)?;
     let mut entries = Vec::new();
     for entry in dir {
         let entry = entry?;
         let file_type = entry.file_type()?;
         let meta = entry.metadata()?;
+
+        // check if it's unix executable file
+        // TODO mode() -> base 10 to base 8
+        if meta.permissions().mode() % 1000 / 100 % 2 == 1 {
+            executableFiles.push(entry.path());
+        }
 
         let is_dir = if file_type.is_symlink() {
             let link_path = std::fs::read_link(entry.path())?;
@@ -84,45 +109,41 @@ where
     }
 
     // icon cache (reduce repeated file operations)
-    let mut icon_cache = HashMap::new();
+    let icon_cache = HashMap::new();
 
     let entries: Vec<Entry> = entries
         .into_par_iter()
         .map(|entry| {
-            let icon: Option<Vec<u8>> = match entry.path.extension() {
+            // HashableIconType
+            let iconType: Option<HashableIconType> = match entry.path.extension() {
                 Some(extension) => {
                     // entry with Extensions
-                    println!(
-                        "with extension: {:?}, {:?}",
-                        entry.path,
-                        entry.path.extension()
-                    );
+                    let extension = extension.to_str();
 
-                    if extension == OsStr::new("exe") {
-                        read_icon(&entry.path).ok()
-                    } else {
-                        let might_icon = icon_cache.get(&extension);
-                        let icon: Option<Vec<u8>> = match might_icon {
-                            Some(i) => i.clone(),
-                            None => {
-                                let try_icon = read_icon(&entry.path).ok();
-                                _ = icon_cache.insert(&extension, try_icon);
-                                try_icon.clone()
-                            }
-                        };
-
-                        icon
+                    match extension {
+                        Some(e) if e != "exe" => Some(HashableIconType::Ext(e.to_string())),
+                        _ => None,
                     }
                 }
                 None => {
                     // entry without Extensions
-                    println!(
-                        "without extension: {:?}, {:?}",
-                        entry.path,
-                        entry.path.extension()
-                    );
 
-                    read_icon(&entry.path).ok()
+                    // Unix Executable File
+                    if !entry.is_dir && executableFiles.contains(&entry.path) {
+                        Some(HashableIconType::UnixExecutable)
+                    } else {
+                        None
+                    }
+                }
+            };
+
+            println!("path: {:?}, iconType: {:?}", entry.path, iconType);
+
+            let icon = match iconType {
+                Some(i) => IconType::Hash(i),
+                None => {
+                    let icon = read_icon(&entry.path).ok();
+                    IconType::Bytes(icon)
                 }
             };
 
@@ -139,5 +160,23 @@ where
     Ok(Directory {
         path: path.into(),
         entries,
+        icon_cache,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    // use super::read_directory;
+
+    // #[test]
+    // fn check_extension() {
+    // _ = read_directory("/Users/fujianbang/Downloads");
+    // }
+
+    #[test]
+    fn check_permission() {
+        let perm: u32 = 100755;
+
+        println!("{:b}", perm);
+    }
 }
