@@ -7,7 +7,11 @@ mod windows;
 use crate::error::CoreResult;
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
-use std::path::{Path, PathBuf};
+use std::{
+    collections::HashMap,
+    ffi::OsStr,
+    path::{Path, PathBuf},
+};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub struct Directory {
@@ -45,6 +49,7 @@ pub fn read_directory<P>(path: P) -> CoreResult<Directory>
 where
     P: AsRef<Path> + Into<PathBuf>,
 {
+    #[derive(Debug)]
     struct EntryStat {
         path: PathBuf,
         is_dir: bool,
@@ -78,10 +83,48 @@ where
         });
     }
 
+    // icon cache (reduce repeated file operations)
+    let mut icon_cache = HashMap::new();
+
     let entries: Vec<Entry> = entries
         .into_par_iter()
         .map(|entry| {
-            let icon = read_icon(&entry.path).ok();
+            let icon: Option<Vec<u8>> = match entry.path.extension() {
+                Some(extension) => {
+                    // entry with Extensions
+                    println!(
+                        "with extension: {:?}, {:?}",
+                        entry.path,
+                        entry.path.extension()
+                    );
+
+                    if extension == OsStr::new("exe") {
+                        read_icon(&entry.path).ok()
+                    } else {
+                        let might_icon = icon_cache.get(&extension);
+                        let icon: Option<Vec<u8>> = match might_icon {
+                            Some(i) => i.clone(),
+                            None => {
+                                let try_icon = read_icon(&entry.path).ok();
+                                _ = icon_cache.insert(&extension, try_icon);
+                                try_icon.clone()
+                            }
+                        };
+
+                        icon
+                    }
+                }
+                None => {
+                    // entry without Extensions
+                    println!(
+                        "without extension: {:?}, {:?}",
+                        entry.path,
+                        entry.path.extension()
+                    );
+
+                    read_icon(&entry.path).ok()
+                }
+            };
 
             Entry {
                 is_dir: entry.is_dir,
