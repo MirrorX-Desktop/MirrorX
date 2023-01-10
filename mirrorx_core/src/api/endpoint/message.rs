@@ -168,7 +168,8 @@ pub struct EndPointVisitDirectoryResponse {
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub struct EndPointSendFileRequest {
     pub id: String,
-    pub remote_path: PathBuf,
+    pub filename: String,
+    pub path: PathBuf,
     pub size: u64,
 }
 

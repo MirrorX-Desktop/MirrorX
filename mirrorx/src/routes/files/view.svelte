@@ -18,6 +18,7 @@
 	import type { Unsubscriber } from 'svelte/store';
 	import { emit } from '@tauri-apps/api/event';
 	import { save } from '@tauri-apps/api/dialog';
+	import { deepCopy } from '$lib/components/utility';
 
 	export let remoteDeviceID: string | null;
 	$: isLocal = remoteDeviceID == null;
@@ -248,6 +249,11 @@
 		}
 
 		dir.entries = sort_entries(dir.entries);
+
+		if (!isLocal){
+			current_remote_directory.set(dir);
+		}
+
 		return dir;
 	};
 
@@ -260,6 +266,7 @@
 
 		console.log('click menu at :' + entry.path);
 
+		contextMenuRelatedEntry = entry;
 		showMenu = true;
 
 		// make sure context menu will not overflow the view
@@ -302,10 +309,14 @@
 	};
 
 	const send_to = async () => {
-		const entry = contextMenuRelatedEntry;
+		if (contextMenuRelatedEntry == null){
+			console.log("original entry is null");
+		}
+		const entry:Entry|null =deepCopy( contextMenuRelatedEntry);
 		dismissFileMenu();
 
 		if (!entry) {
+			console.log("entry is null");
 			return;
 		}
 
@@ -313,11 +324,13 @@
 			// send to remote
 
 			if (!remote_directory) {
+				console.log("remote directory invalid");
 				return;
 			}
 
 			if (remote_directory.path == '/' || remote_directory.path == '\\') {
 				// todo: notify send data to root dir is disallowed
+				console.log("remote directory root invalid");
 				return;
 			}
 

@@ -115,6 +115,15 @@ pub async fn file_manager_send_file(
         return Err(core_error!("local path is not a file"));
     }
 
+    let Some(filename) = local_path.file_name() else {
+         return Err(core_error!("local path get filename failed"));
+    };
+
+    let filename = filename
+        .to_str()
+        .ok_or_else(|| core_error!("convert filename failed"))?
+        .to_string();
+
     let meta = local_path.metadata()?;
     let size = meta.len();
 
@@ -131,7 +140,8 @@ pub async fn file_manager_send_file(
         .call(EndPointCallRequest::SendFileRequest(
             EndPointSendFileRequest {
                 id: id.clone(),
-                remote_path,
+                filename,
+                path: remote_path,
                 size,
             },
         ))
