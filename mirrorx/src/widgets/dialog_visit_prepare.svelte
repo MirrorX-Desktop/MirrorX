@@ -52,6 +52,7 @@
 			input_password = '';
 			show_password = false;
 			await emit('desktop_is_connecting', false);
+			await emit('file_manager_is_connecting', false);
 		}
 	};
 
