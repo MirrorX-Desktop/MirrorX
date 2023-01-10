@@ -86,8 +86,7 @@ where
         let meta = entry.metadata()?;
 
         // check if it's unix executable file
-        // TODO mode() -> base 10 to base 8
-        if meta.permissions().mode() % 1000 / 100 % 2 == 1 {
+        if ((meta.permissions().mode() >> 8 ) & 1) == 1 {
             executableFiles.push(entry.path());
         }
 
