@@ -16,8 +16,6 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use math
-
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub struct Directory {
     pub path: PathBuf,
@@ -86,7 +84,7 @@ where
         let meta = entry.metadata()?;
 
         // check if it's unix executable file
-        if ((meta.permissions().mode() >> 8 ) & 1) == 1 {
+        if ((meta.permissions().mode() >> 8) & 1) == 1 {
             executableFiles.push(entry.path());
         }
 
@@ -163,21 +161,4 @@ where
         entries,
         icon_cache,
     })
-}
-
-#[cfg(test)]
-mod tests {
-    // use super::read_directory;
-
-    // #[test]
-    // fn check_extension() {
-    // _ = read_directory("/Users/fujianbang/Downloads");
-    // }
-
-    #[test]
-    fn check_permission() {
-        let perm: u32 = 100755;
-
-        println!("{:b}", perm);
-    }
 }
