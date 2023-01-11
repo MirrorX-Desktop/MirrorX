@@ -59,6 +59,7 @@ pub fn read_root_directory() -> CoreResult<Directory> {
     Ok(Directory {
         path: PathBuf::from(r"\"),
         entries,
+        icon_cache: HashMap::new(),
     })
 }
 

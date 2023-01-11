@@ -90,6 +90,7 @@ where
             file_type.is_dir()
         };
 
+        #[cfg(not(target_os = "windows"))]
         // check if it's unix executable file
         if !is_dir && ((meta.permissions().mode() >> 6) & 1) == 1 {
             executableFiles.push(entry.path());
@@ -117,7 +118,9 @@ where
                     let extension = extension.to_str();
 
                     match extension {
-                        Some(e) if e != "exe" => Some(HashableIconType::Ext(e.to_string())),
+                        Some(e) if e != "exe" && e != "app" && e != "dmg" => {
+                            Some(HashableIconType::Ext(e.to_string()))
+                        }
                         _ => None,
                     }
                 }
@@ -181,7 +184,6 @@ where
             }
         });
 
-    println!("icon cache: {:?}", icon_cache);
     let mut guard = icon_cache.lock().unwrap();
     if let Some(icon_cache) = guard.take() {
         Ok(Directory {
