@@ -2,10 +2,10 @@ use super::AppState;
 use mirrorx_core::{
     api::endpoint::message::{
         EndPointCallRequest, EndPointDownloadFileReply, EndPointDownloadFileRequest,
-        EndPointFileTransferTerminate, EndPointMessage, EndPointSendFileReply,
-        EndPointSendFileRequest, EndPointVisitDirectoryRequest, EndPointVisitDirectoryResponse,
+        EndPointFileTransferError, EndPointMessage, EndPointSendFileReply, EndPointSendFileRequest,
+        EndPointVisitDirectoryRequest, EndPointVisitDirectoryResponse,
     },
-    component::fs::transfer::{create_file_transfer_session, read_file_block},
+    component::fs::transfer::{create_file_append_session, send_file_to_remote},
     core_error,
     error::CoreResult,
 };
@@ -60,7 +60,7 @@ pub async fn file_manager_visit_remote(
                 path: entry.path,
                 modified_time: entry.modified_time,
                 size: entry.size,
-                icon: entry.icon.map(|v| base64::encode(&v)),
+                icon: entry.icon.map(base64::encode),
             })
             .collect();
 
@@ -92,7 +92,7 @@ pub async fn file_manager_visit_local(path: Option<PathBuf>) -> CoreResult<Direc
                 path: entry.path,
                 modified_time: entry.modified_time,
                 size: entry.size,
-                icon: entry.icon.map(|v| base64::encode(&v)),
+                icon: entry.icon.map(base64::encode),
             })
             .collect();
 
@@ -147,7 +147,7 @@ pub async fn file_manager_send_file(
         ))
         .await?;
 
-    read_file_block(id.clone(), client, &local_path).await?;
+    send_file_to_remote(id.clone(), client, &local_path).await?;
 
     Ok(id)
 }
@@ -182,10 +182,10 @@ pub async fn file_manager_download_file(
         ))
         .await?;
 
-    if let Err(err) = create_file_transfer_session(id.clone(), &local_path).await {
+    if let Err(err) = create_file_append_session(id.clone(), &local_path).await {
         let _ = client
-            .send(&EndPointMessage::FileTransferTerminate(
-                EndPointFileTransferTerminate { id: id.clone() },
+            .send(&EndPointMessage::FileTransferError(
+                EndPointFileTransferError { id: id.clone() },
             ))
             .await;
 

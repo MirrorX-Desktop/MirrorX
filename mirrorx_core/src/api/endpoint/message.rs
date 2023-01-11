@@ -27,7 +27,7 @@ pub enum EndPointMessage {
     AudioFrame(EndPointAudioFrame),
     InputCommand(EndPointInput),
     FileTransferBlock(EndPointFileTransferBlock),
-    FileTransferTerminate(EndPointFileTransferTerminate),
+    FileTransferError(EndPointFileTransferError),
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
@@ -177,14 +177,6 @@ pub struct EndPointSendFileRequest {
 pub struct EndPointSendFileReply {}
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
-pub struct EndPointFileTransferBlock {
-    pub id: String,
-    pub finish: bool,
-    #[serde(with = "serde_bytes")]
-    pub data: Vec<u8>,
-}
-
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub struct EndPointDownloadFileRequest {
     pub id: String,
     pub path: PathBuf,
@@ -196,6 +188,13 @@ pub struct EndPointDownloadFileReply {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
-pub struct EndPointFileTransferTerminate {
+pub struct EndPointFileTransferBlock {
+    pub id: String,
+    #[serde(with = "serde_bytes")]
+    pub data: Option<Vec<u8>>,
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
+pub struct EndPointFileTransferError {
     pub id: String,
 }

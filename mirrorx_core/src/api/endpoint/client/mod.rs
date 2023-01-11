@@ -15,7 +15,7 @@ use crate::{
     call,
     component::{
         desktop::monitor::Monitor,
-        fs::transfer::{delete_transfer_session, write_file_block},
+        fs::transfer::{append_file_block, delete_file_append_session},
     },
     core_error,
     error::{CoreError, CoreResult},
@@ -403,10 +403,10 @@ fn handle_message(
                     client.call_store.invalidate(&call_id)
                 }
                 EndPointMessage::FileTransferBlock(block) => {
-                    let _ = write_file_block(block).await;
+                    append_file_block(client.clone(), block).await
                 }
-                EndPointMessage::FileTransferTerminate(message) => {
-                    delete_transfer_session(&message.id).await
+                EndPointMessage::FileTransferError(message) => {
+                    delete_file_append_session(&message.id).await
                 }
             }
         }

@@ -1,6 +1,6 @@
 use crate::{
     api::endpoint::message::{EndPointSendFileReply, EndPointSendFileRequest},
-    component::fs::transfer::create_file_transfer_session,
+    component::fs::transfer::create_file_append_session,
     core_error,
     error::CoreResult,
 };
@@ -14,7 +14,7 @@ pub async fn handle_send_file_request(
         return Err(core_error!("file already exists"));
     }
 
-    create_file_transfer_session(req.id, &path).await?;
+    create_file_append_session(req.id, &path).await?;
 
     Ok(EndPointSendFileReply {})
 }

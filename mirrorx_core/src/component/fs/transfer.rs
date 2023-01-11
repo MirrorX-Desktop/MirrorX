@@ -1,28 +1,30 @@
 use crate::{
     api::endpoint::{
         client::EndPointClient,
-        message::{EndPointFileTransferBlock, EndPointFileTransferTerminate, EndPointMessage},
+        message::{EndPointFileTransferBlock, EndPointFileTransferError, EndPointMessage},
     },
-    core_error,
     error::CoreResult,
 };
 use moka::future::{Cache, CacheBuilder};
 use once_cell::sync::Lazy;
-use std::{path::Path, sync::Arc};
+use std::{path::Path, sync::Arc, time::Duration};
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt, BufReader, BufWriter},
-    sync::mpsc::{Sender, UnboundedReceiver, UnboundedSender},
+    sync::mpsc::{UnboundedReceiver, UnboundedSender},
 };
 
-pub static FILES: Lazy<Cache<String, UnboundedSender<Option<Vec<u8>>>>> =
-    Lazy::new(|| CacheBuilder::new(64).build());
+pub static FILES: Lazy<Cache<String, UnboundedSender<Option<Vec<u8>>>>> = Lazy::new(|| {
+    CacheBuilder::new(64)
+        .time_to_live(Duration::from_secs(3 * 60))
+        .build()
+});
 
-pub async fn create_file_transfer_session(id: String, path: &Path) -> CoreResult<()> {
+pub async fn create_file_append_session(id: String, path: &Path) -> CoreResult<()> {
     let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
 
     FILES.insert(id.clone(), tx).await;
 
-    if let Err(err) = write_local_file(id.clone(), path, rx).await {
+    if let Err(err) = save_file_from_remote(id.clone(), path, rx).await {
         FILES.invalidate(&id).await;
         return Err(err);
     }
@@ -30,101 +32,30 @@ pub async fn create_file_transfer_session(id: String, path: &Path) -> CoreResult
     Ok(())
 }
 
-pub async fn delete_transfer_session(id: &str) {
+pub async fn delete_file_append_session(id: &str) {
     FILES.invalidate(id).await
 }
 
-pub async fn read_file_block(
-    id: String,
-    client: Arc<EndPointClient>,
-    path: &Path,
-) -> CoreResult<()> {
-    let path = path.to_path_buf();
-    let (tx, mut rx) = tokio::sync::mpsc::channel(64);
-
-    tokio::spawn(async move {
-        match read_local_file(&path, tx).await {
-            Ok(rx) => rx,
-            Err(err) => {
-                tracing::error!(?err, "read file block failed");
-                let _ = client
-                    .send(&EndPointMessage::FileTransferTerminate(
-                        EndPointFileTransferTerminate { id: id.clone() },
-                    ))
-                    .await;
-                return;
-            }
-        };
-
-        loop {
-            let message = match rx.recv().await {
-                Some(buffer) => EndPointMessage::FileTransferBlock(EndPointFileTransferBlock {
-                    id: id.clone(),
-                    finish: buffer.is_none(),
-                    data: buffer.unwrap_or_default(),
-                }),
-                None => EndPointMessage::FileTransferTerminate(EndPointFileTransferTerminate {
-                    id: id.clone(),
-                }),
-            };
-
-            if let Err(err) = client.send(&message).await {
-                tracing::error!(?err, "send file message failed");
-                break;
-            }
-        }
-    });
-
-    Ok(())
-}
-
-async fn read_local_file(path: &Path, tx: Sender<Option<Vec<u8>>>) -> CoreResult<()> {
-    let file = tokio::fs::File::open(path).await?;
-    let mut reader = BufReader::new(file);
-    let path = path.to_path_buf();
-
-    tokio::spawn(async move {
-        let mut buffer = [0u8; 1024 * 8];
-
-        loop {
-            let size = match reader.read(&mut buffer).await {
-                Ok(n) => n,
-                Err(err) => {
-                    tracing::error!(?err, ?path, "read file failed");
-                    break;
-                }
-            };
-
-            let content = if size > 0 {
-                Some(buffer.as_slice()[0..size].to_vec())
-            } else {
-                None
-            };
-
-            if tx.send(content).await.is_err() {
-                tracing::error!("send file content failed");
-                break;
-            }
-        }
-    });
-
-    Ok(())
-}
-
-pub async fn write_file_block(block: EndPointFileTransferBlock) -> CoreResult<()> {
+pub async fn append_file_block(client: Arc<EndPointClient>, block: EndPointFileTransferBlock) {
     if let Some(tx) = FILES.get(&block.id) {
-        let content = if block.finish { None } else { Some(block.data) };
-
-        tx.send(content)
-            .map_err(|_| core_error!("file session not exists: {}", block.id))?;
-
-        Ok(())
+        match tx.send(block.data) {
+            Ok(_) => return,
+            Err(_) => {
+                tracing::error!(id = block.id, "append file block channel failed");
+            }
+        }
     } else {
-        Err(core_error!("file session not exists: {}", block.id))
+        tracing::error!(id = block.id, "file session not exists");
     }
+
+    let _ = client
+        .send(&EndPointMessage::FileTransferError(
+            EndPointFileTransferError { id: block.id },
+        ))
+        .await;
 }
 
-async fn write_local_file(
+async fn save_file_from_remote(
     id: String,
     path: &Path,
     mut rx: UnboundedReceiver<Option<Vec<u8>>>,
@@ -147,15 +78,61 @@ async fn write_local_file(
                     }
                 }
                 None => {
-                    if let Err(err) = writer.flush().await {
-                        tracing::error!(?err, "write flush file failed");
-                        break;
-                    }
+                    break;
                 }
             }
         }
 
+        let _ = writer.flush().await;
+
         FILES.invalidate(&id).await;
+    });
+
+    Ok(())
+}
+
+pub async fn send_file_to_remote(
+    id: String,
+    client: Arc<EndPointClient>,
+    path: &Path,
+) -> CoreResult<()> {
+    let file = tokio::fs::File::open(path).await?;
+    let mut reader = BufReader::new(file);
+
+    tokio::spawn(async move {
+        let mut buffer = [0u8; 1024 * 64];
+
+        loop {
+            let message = match reader.read(&mut buffer).await {
+                Ok(n) => {
+                    let content = if n > 0 {
+                        Some(buffer.as_slice()[0..n].to_vec())
+                    } else {
+                        None
+                    };
+
+                    EndPointMessage::FileTransferBlock(EndPointFileTransferBlock {
+                        id: id.clone(),
+                        data: content,
+                    })
+                }
+                Err(err) => {
+                    tracing::error!(?err, "read file failed");
+                    EndPointMessage::FileTransferError(EndPointFileTransferError { id: id.clone() })
+                }
+            };
+
+            if let Err(err) = client.send(&message).await {
+                tracing::error!(?err, "send file message failed");
+                break;
+            }
+
+            match message {
+                EndPointMessage::FileTransferBlock(message) if message.data.is_none() => break,
+                EndPointMessage::FileTransferError(_) => break,
+                _ => {}
+            }
+        }
     });
 
     Ok(())
