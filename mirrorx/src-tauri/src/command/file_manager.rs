@@ -5,7 +5,10 @@ use mirrorx_core::{
         EndPointFileTransferTerminate, EndPointMessage, EndPointSendFileReply,
         EndPointSendFileRequest, EndPointVisitDirectoryRequest, EndPointVisitDirectoryResponse,
     },
-    component::fs::transfer::{create_file_transfer_session, read_file_block},
+    component::fs::{
+        transfer::{create_file_transfer_session, read_file_block},
+        IconLoad,
+    },
     core_error,
     error::CoreResult,
 };
@@ -55,12 +58,21 @@ pub async fn file_manager_visit_remote(
             .dir
             .entries
             .into_par_iter()
-            .map(|entry| EntryResult {
-                is_dir: entry.is_dir,
-                path: entry.path,
-                modified_time: entry.modified_time,
-                size: entry.size,
-                icon: entry.icon.map(|v| base64::encode(&v)),
+            .map(|entry| {
+                let icon: Option<Vec<u8>> = match entry.icon {
+                    IconLoad::Hash(hashable) => match reply.dir.icon_cache.get(&hashable) {
+                        Some(v) => (*v).clone(),
+                        _ => None,
+                    },
+                    IconLoad::Bytes(v) => v,
+                };
+                EntryResult {
+                    is_dir: entry.is_dir,
+                    path: entry.path,
+                    modified_time: entry.modified_time,
+                    size: entry.size,
+                    icon: icon.map(|v| base64::encode(&v)),
+                }
             })
             .collect();
 
@@ -87,12 +99,21 @@ pub async fn file_manager_visit_local(path: Option<PathBuf>) -> CoreResult<Direc
         let entries: Vec<EntryResult> = directory
             .entries
             .into_par_iter()
-            .map(|entry| EntryResult {
-                is_dir: entry.is_dir,
-                path: entry.path,
-                modified_time: entry.modified_time,
-                size: entry.size,
-                icon: entry.icon.map(|v| base64::encode(&v)),
+            .map(|entry| {
+                let icon: Option<Vec<u8>> = match entry.icon {
+                    IconLoad::Hash(hashable) => match directory.icon_cache.get(&hashable) {
+                        Some(v) => (*v).clone(),
+                        _ => None,
+                    },
+                    IconLoad::Bytes(v) => v,
+                };
+                EntryResult {
+                    is_dir: entry.is_dir,
+                    path: entry.path,
+                    modified_time: entry.modified_time,
+                    size: entry.size,
+                    icon: icon.map(|v| base64::encode(&v)),
+                }
             })
             .collect();
 

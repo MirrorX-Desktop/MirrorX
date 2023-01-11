@@ -6,14 +6,14 @@ mod windows;
 
 pub mod transfer;
 
-use crate::error::CoreResult;
+use crate::{core_error, error::CoreResult};
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
-    ffi::OsStr,
     os::unix::prelude::PermissionsExt,
     path::{Path, PathBuf},
+    sync::{Arc, Mutex},
 };
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
@@ -29,11 +29,11 @@ pub struct Entry {
     pub path: PathBuf,
     pub modified_time: i64,
     pub size: u64,
-    pub icon: IconType,
+    pub icon: IconLoad,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
-pub enum IconType {
+#[derive(Hash, Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
+pub enum IconLoad {
     Hash(HashableIconType),
     #[serde(with = "serde_bytes")]
     Bytes(Option<Vec<u8>>),
@@ -83,17 +83,17 @@ where
         let file_type = entry.file_type()?;
         let meta = entry.metadata()?;
 
-        // check if it's unix executable file
-        if ((meta.permissions().mode() >> 8) & 1) == 1 {
-            executableFiles.push(entry.path());
-        }
-
         let is_dir = if file_type.is_symlink() {
             let link_path = std::fs::read_link(entry.path())?;
             link_path.is_dir()
         } else {
             file_type.is_dir()
         };
+
+        // check if it's unix executable file
+        if !is_dir && ((meta.permissions().mode() >> 6) & 1) == 1 {
+            executableFiles.push(entry.path());
+        }
 
         let modified_time = chrono::DateTime::<chrono::Local>::from(meta.modified()?)
             .naive_utc()
@@ -106,9 +106,6 @@ where
             size: meta.len(),
         });
     }
-
-    // icon cache (reduce repeated file operations)
-    let icon_cache = HashMap::new();
 
     let entries: Vec<Entry> = entries
         .into_par_iter()
@@ -136,13 +133,11 @@ where
                 }
             };
 
-            println!("path: {:?}, iconType: {:?}", entry.path, iconType);
-
             let icon = match iconType {
-                Some(i) => IconType::Hash(i),
+                Some(i) => IconLoad::Hash(i),
                 None => {
                     let icon = read_icon(&entry.path).ok();
-                    IconType::Bytes(icon)
+                    IconLoad::Bytes(icon)
                 }
             };
 
@@ -156,9 +151,45 @@ where
         })
         .collect();
 
-    Ok(Directory {
-        path: path.into(),
-        entries,
-        icon_cache,
-    })
+    // icon cache (reduce repeated file operations)
+    let icon_cache = Arc::new(Mutex::new(Some(HashMap::new())));
+    let mut nonrepetitive_hashable_icon = Vec::new();
+
+    entries
+        .iter()
+        .filter(|e| {
+            if let IconLoad::Hash(_) = e.icon {
+                if !nonrepetitive_hashable_icon.contains(&e.icon) {
+                    nonrepetitive_hashable_icon.push(e.icon.clone());
+                    true
+                } else {
+                    false
+                }
+            } else {
+                false
+            }
+        })
+        .par_bridge()
+        .into_par_iter()
+        .for_each(|entry| {
+            let icon = read_icon(&entry.path).ok();
+            if let IconLoad::Hash(ref hashable) = entry.icon {
+                let mut guard = icon_cache.lock().unwrap();
+                if let Some(ref mut guard) = &mut *guard {
+                    (guard).insert(hashable.clone(), icon);
+                }
+            }
+        });
+
+    println!("icon cache: {:?}", icon_cache);
+    let mut guard = icon_cache.lock().unwrap();
+    if let Some(icon_cache) = guard.take() {
+        Ok(Directory {
+            path: path.into(),
+            entries,
+            icon_cache,
+        })
+    } else {
+        Err(core_error!("icon cache is empty"))
+    }
 }
