@@ -99,9 +99,9 @@ cargo tauri dev
 ## 截图
 
 <p align="center">
-<img src="https://raw.githubusercontent.com/MirrorX-Desktop/MirrorX/master/screenshot1.png?" width="40%" height="40%">
-<img src="https://raw.githubusercontent.com/MirrorX-Desktop/MirrorX/master/screenshot2.png?" width="40%" height="40%">
-<img src="https://raw.githubusercontent.com/MirrorX-Desktop/MirrorX/master/screenshot3.png?" width="40%" height="40%">
+<img src="https://raw.githubusercontent.com/MirrorX-Desktop/MirrorX/master/screenshot1.png?" width="35%" height="35%">
+<img src="https://raw.githubusercontent.com/MirrorX-Desktop/MirrorX/master/screenshot2.png?" width="35%" height="35%">
+<img src="https://raw.githubusercontent.com/MirrorX-Desktop/MirrorX/master/screenshot3.png?" width="35%" height="35%">
 </p>
 
 ## 感谢
