@@ -2,11 +2,11 @@ use crate::{
     api::endpoint::{
         client::EndPointClient,
         message::{
-            EndPointDownloadFileReply, EndPointDownloadFileRequest, EndPointFileTransferTerminate,
+            EndPointDownloadFileReply, EndPointDownloadFileRequest, EndPointFileTransferError,
             EndPointMessage,
         },
     },
-    component::fs::transfer::read_file_block,
+    component::fs::transfer::send_file_to_remote,
     core_error,
     error::CoreResult,
 };
@@ -26,11 +26,11 @@ pub async fn handle_download_file_request(
 
     tokio::spawn(async move {
         tokio::time::sleep(Duration::from_secs(1)).await;
-        if let Err(err) = read_file_block(id.clone(), client.clone(), &req.path).await {
+        if let Err(err) = send_file_to_remote(id.clone(), client.clone(), &req.path).await {
             tracing::error!(?err, "read file block failed");
             let _ = client
-                .send(&EndPointMessage::FileTransferTerminate(
-                    EndPointFileTransferTerminate { id: id.clone() },
+                .send(&EndPointMessage::FileTransferError(
+                    EndPointFileTransferError { id: id.clone() },
                 ))
                 .await;
         }

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/stores';
-	import { invoke_file_manager_visit_local, invoke_file_manager_visit_remote } from '$lib/components/command';
+	import { invoke_file_manager_send_file, invoke_file_manager_visit_local, invoke_file_manager_visit_remote } from '$lib/components/command';
 	import type { Directory, Entry } from '$lib/components/types';
 	import { faSpinner } from '@fortawesome/free-solid-svg-icons';
 	import { onMount } from 'svelte';
@@ -17,7 +17,11 @@
 	onMount(async () => {
 		send_file_to_remote_unlisten_fn = await listen<{ entry: Entry; path: string }>(
 			'send_file_to_remote',
-			(event) => {}
+			async (event) => {
+				console.log("begin send "+event.payload.entry);
+				await invoke_file_manager_send_file(remote_device_id,event.payload.entry.path,event.payload.path);
+				console.log("finish send remote");
+			}
 		);
 
 		download_file_to_local_unlisten_fn = await listen<{ localPath: string; remotePath: string }>(

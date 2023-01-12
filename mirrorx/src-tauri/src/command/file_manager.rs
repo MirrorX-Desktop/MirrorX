@@ -2,11 +2,11 @@ use super::AppState;
 use mirrorx_core::{
     api::endpoint::message::{
         EndPointCallRequest, EndPointDownloadFileReply, EndPointDownloadFileRequest,
-        EndPointFileTransferTerminate, EndPointMessage, EndPointSendFileReply,
-        EndPointSendFileRequest, EndPointVisitDirectoryRequest, EndPointVisitDirectoryResponse,
+        EndPointFileTransferError, EndPointMessage, EndPointSendFileReply, EndPointSendFileRequest,
+        EndPointVisitDirectoryRequest, EndPointVisitDirectoryResponse,
     },
     component::fs::{
-        transfer::{create_file_transfer_session, read_file_block},
+        transfer::{create_file_append_session, send_file_to_remote},
         IconLoad,
     },
     core_error,
@@ -71,7 +71,7 @@ pub async fn file_manager_visit_remote(
                     path: entry.path,
                     modified_time: entry.modified_time,
                     size: entry.size,
-                    icon: icon.map(|v| base64::encode(&v)),
+                    icon: icon.map(base64::encode),
                 }
             })
             .collect();
@@ -112,7 +112,7 @@ pub async fn file_manager_visit_local(path: Option<PathBuf>) -> CoreResult<Direc
                     path: entry.path,
                     modified_time: entry.modified_time,
                     size: entry.size,
-                    icon: icon.map(|v| base64::encode(&v)),
+                    icon: icon.map(base64::encode),
                 }
             })
             .collect();
@@ -136,6 +136,15 @@ pub async fn file_manager_send_file(
         return Err(core_error!("local path is not a file"));
     }
 
+    let Some(filename) = local_path.file_name() else {
+         return Err(core_error!("local path get filename failed"));
+    };
+
+    let filename = filename
+        .to_str()
+        .ok_or_else(|| core_error!("convert filename failed"))?
+        .to_string();
+
     let meta = local_path.metadata()?;
     let size = meta.len();
 
@@ -152,13 +161,14 @@ pub async fn file_manager_send_file(
         .call(EndPointCallRequest::SendFileRequest(
             EndPointSendFileRequest {
                 id: id.clone(),
-                remote_path,
+                filename,
+                path: remote_path,
                 size,
             },
         ))
         .await?;
 
-    read_file_block(id.clone(), client, &local_path).await?;
+    send_file_to_remote(id.clone(), client, &local_path).await?;
 
     Ok(id)
 }
@@ -193,10 +203,10 @@ pub async fn file_manager_download_file(
         ))
         .await?;
 
-    if let Err(err) = create_file_transfer_session(id.clone(), &local_path).await {
+    if let Err(err) = create_file_append_session(id.clone(), &local_path).await {
         let _ = client
-            .send(&EndPointMessage::FileTransferTerminate(
-                EndPointFileTransferTerminate { id: id.clone() },
+            .send(&EndPointMessage::FileTransferError(
+                EndPointFileTransferError { id: id.clone() },
             ))
             .await;
 

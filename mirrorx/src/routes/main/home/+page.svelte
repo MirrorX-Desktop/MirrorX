@@ -39,6 +39,7 @@
 	let desktop_is_connecting_unlisten_fn: UnlistenFn | null;
 	let file_manager_is_connecting = false;
 	let file_manager_is_connecting_unlisten_fn: UnlistenFn | null;
+	let update_domains_unlisten_fn: UnlistenFn | null;
 	let domain_id_copied = false;
 	let remote_device_id_input: HTMLElement | null = null;
 	let remote_device_id_input_placeholder: HTMLElement | null = null;
@@ -70,6 +71,10 @@
 				input_remote_device_id = '';
 				input_remote_device_id_before = '';
 			}
+		});
+
+		update_domains_unlisten_fn = await listen('update_domains', async (event)=>{
+			await get_domain_id_and_names();
 		});
 	});
 
@@ -163,9 +168,7 @@
 			await emit('/dialog/visit_prepare', { remote_device_id: input_remote_device_id, visit_desktop: true });
 		} catch (error: any) {
 			await emitNotification({ level: 'error', title: 'Error', message: error.toString() });
-		} finally {
-			await emit('desktop_is_connecting', false);
-		}
+		} 
 	};
 
 	const connect_file_manager = async () => {
@@ -177,9 +180,7 @@
 			await emit('/dialog/visit_prepare', { remote_device_id: input_remote_device_id, visit_desktop: false });
 		} catch (error: any) {
 			await emitNotification({ level: 'error', title: 'Error', message: error.toString() });
-		} finally {
-			await emit('file_manager_is_connecting', false);
-		}
+		} 
 	};
 
 	const copy_domain_id = () => {
