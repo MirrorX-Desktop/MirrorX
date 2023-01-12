@@ -11,7 +11,6 @@ use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
-    os::unix::prelude::PermissionsExt,
     path::{Path, PathBuf},
     sync::{Arc, Mutex},
 };
@@ -92,7 +91,9 @@ where
 
         #[cfg(not(target_os = "windows"))]
         // check if it's unix executable file
-        if !is_dir && ((meta.permissions().mode() >> 6) & 1) == 1 {
+        if !is_dir
+            && ((std::os::unix::prelude::PermissionsExt::mode(&meta.permissions()) >> 6) & 1) == 1
+        {
             executableFiles.push(entry.path());
         }
 
