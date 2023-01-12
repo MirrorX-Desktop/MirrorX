@@ -119,7 +119,7 @@
 </script>
 
 <slot>
-	<div class="flex h-full w-full flex-col py-2 px-2">
+	<div class="flex h-full w-full flex-col py-2 px-2 gap-2">
 		<div class="flex flex-row gap-2">
 			<input
 				id="search_input"
@@ -129,7 +129,12 @@
 				on:input={(ev) => search_lan_nodes(ev.currentTarget.value)}
 			/>
 		</div>
-		<div class="w-full flex-1 overflow-hidden pt-2">
+		<div class="flex flex-row justify-center">
+			<div>
+				<div class="text-xs text-base-content text-opacity-50">{$LL.LAN.DiscoveredDevicesTip()}</div>
+			</div>
+		</div>
+		<div id="panel" class="w-full flex-1 overflow-y-auto">
 			<!-- at most 7 panel here -->
 			<div class="flex flex-col ">
 				{#each display_nodes as node}
@@ -157,3 +162,17 @@
 		</div>
 	</div>
 </slot>
+
+<style>
+	#panel::-webkit-scrollbar {
+		@apply w-1;
+	}
+
+	#panel::-webkit-scrollbar-thumb {
+		@apply bg-base-300 rounded-full;
+	}
+
+	#panel::-webkit-scrollbar-track {
+		@apply bg-transparent;
+	}
+</style>

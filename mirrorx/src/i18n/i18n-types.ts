@@ -66,7 +66,7 @@ type RootTranslation = {
 		 */
 		Desktop: string
 		/**
-		 * F​i​l​e​s
+		 * F​i​l​e​ ​T​r​a​n​s​f​e​r
 		 */
 		Files: string
 		/**
@@ -119,6 +119,10 @@ type RootTranslation = {
 		 * D​i​s​c​o​v​e​r​a​b​l​e
 		 */
 		Discoverable: string
+		/**
+		 * L​i​s​t​ ​o​f​ ​D​i​s​c​o​v​e​r​e​d​ ​D​e​v​i​c​e​s
+		 */
+		DiscoveredDevicesTip: string
 	}
 	History: {
 		/**
@@ -137,6 +141,10 @@ type RootTranslation = {
 		 * 3​0​ ​D​a​y​s
 		 */
 		Days30: string
+		/**
+		 * R​e​c​o​r​d​s​ ​a​r​e​ ​k​e​p​t​ ​f​o​r​ ​u​p​ ​t​o​ ​6​0​ ​d​a​y​s
+		 */
+		KeptTip: string
 	}
 	Settings: {
 		Appearance: {
@@ -355,7 +363,7 @@ export type TranslationFunctions = {
 		 */
 		Desktop: () => LocalizedString
 		/**
-		 * Files
+		 * File Transfer
 		 */
 		Files: () => LocalizedString
 		/**
@@ -408,6 +416,10 @@ export type TranslationFunctions = {
 		 * Discoverable
 		 */
 		Discoverable: () => LocalizedString
+		/**
+		 * List of Discovered Devices
+		 */
+		DiscoveredDevicesTip: () => LocalizedString
 	}
 	History: {
 		/**
@@ -426,6 +438,10 @@ export type TranslationFunctions = {
 		 * 30 Days
 		 */
 		Days30: () => LocalizedString
+		/**
+		 * Records are kept for up to 60 days
+		 */
+		KeptTip: () => LocalizedString
 	}
 	Settings: {
 		Appearance: {

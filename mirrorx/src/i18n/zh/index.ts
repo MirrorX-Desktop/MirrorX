@@ -16,7 +16,7 @@ const zh_Hans: Translation = {
 		Password: '密码',
 		Connect: '连接',
 		Desktop: '桌面',
-		Files: '文档',
+		Files: '文件传送',
 		EditPasswordTooltip: '修改密码',
 		PasswordVisibleTooltip: '点击以显示密码',
 		PasswordInvisibleTooltip: '移开鼠标以隐藏密码',
@@ -30,13 +30,15 @@ const zh_Hans: Translation = {
 	},
 	LAN: {
 		HostnameOrIP: '搜索主机名或IP（大小写敏感）',
-		Discoverable: '可被发现'
+		Discoverable: '可被发现',
+		DiscoveredDevicesTip: '已发现的局域网设备列表'
 	},
 	History: {
 		All: '所有',
 		Day1: '1天',
 		Days7: '7天',
-		Days30: '30天'
+		Days30: '30天',
+		KeptTip: '记录最多保存60天'
 	},
 	Dialogs: {
 		About: {
