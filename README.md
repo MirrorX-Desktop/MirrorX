@@ -7,18 +7,9 @@
 </h1>
 
 <p align="center">
-Remote control tool for enterprise, teams and individuals
-</p>
-
-<p align="center">
   <a href="https://github.com/MirrorX-Desktop/MirrorX"><img src="https://img.shields.io/github/stars/MirrorX-Desktop/MirrorX"></a>
   <a href="https://discord.gg/asT4deaEGh"><img src="https://img.shields.io/discord/1001077628238827620?label=Discord"></a>
   <a href="https://github.com/MirrorX-Desktop/MirrorX"><img src="https://img.shields.io/github/license/MirrorX-Desktop/MirrorX"></a>
-</p>
-  
-<p align="center">
-<img src="https://raw.githubusercontent.com/MirrorX-Desktop/MirrorX/master/screenshot1.png?" width="30%" height="30%">
-<img src="https://raw.githubusercontent.com/MirrorX-Desktop/MirrorX/master/screenshot2.png?" width="30%" height="30%">
 </p>
 
 <p align="center">
@@ -26,19 +17,31 @@ Remote control tool for enterprise, teams and individuals
     <a href="https://github.com/MirrorX-Desktop/MirrorX/blob/master/README_CN.md">简体中文</a>
 <p align="center">
 
-MirrorX is a remote control tool for enterprise, teams and individuals with fully open-source client and server, End-to-End Encryption, Domain support, etc. Whether you are a team manager or an individual user, you can build SECURITY and FAST remote control network in a short time, and all DATA is under control of users.
+### **OPEN**
 
-> **MirrorX is on the early stage with active developing now. Please forgive us that we cannot make any backward compatibility commitments at this time.**
+MirrorX is an open-source remote desktop solution, designed for enterprises, teams and individuals.
+
+### **SECURE**
+
+Everything is under your control, allows you to deploy on-prem and/or in the cloud, and also supports end-to-end encryption.
+
+### **HIGH-PERFORMANCE**
+
+GPU acceleration, 4K resolution, 60 FPS... make you feel like a "local desktop".
+
+Features like video and audio passthrough, file transfer, cross-platform, mobile devices support and so on, are really essential, and more features are coming to blow your mind.
+
+> **Note: MirrorX is in the early stage of development, please be aware of that backward compatibility is not guaranteed.**
 
 ## Component
 
 - [MirrorX Client](https://github.com/MirrorX-Desktop/MirrorX)
-- [MirrorX Signaling Server](https://github.com/MirrorX-Desktop/signaling)
-- [MirrorX Endpoints Server](https://github.com/MirrorX-Desktop/endpoints)
+- [MirrorX Portal Server](https://github.com/MirrorX-Desktop/portal)
+- [MirrorX Relay Server](https://github.com/MirrorX-Desktop/relay)
 
 ## Free Public Servers
 
-> This server is support at my own expense, so please do not abuse it.
+> The servers are contributed by the community, please do not abuse it.
 
 | Location | Specification  |
 | :------: | :------------: |
@@ -92,6 +95,14 @@ cargo tauri dev
 To speed up the build process, we made [MirrorX-Desktop/media_libraries_auto_build](https://github.com/MirrorX-Desktop/media_libraries_auto_build) to automatically and transparently build external libraries. Includes [FFmpeg](https://git.ffmpeg.org/ffmpeg.git), libx264([Windows](https://github.com/ShiftMediaProject/x264.git), [MacOS](https://code.videolan.org/videolan/x264.git)), libx265([Windows](https://github.com/ShiftMediaProject/x265.git), [MacOS](https://bitbucket.org/multicoreware/x265_git.git)), libopus([Windows](https://github.com/ShiftMediaProject/opus.git), [MacOS](https://github.com/xiph/opus.git)) and MFXDispatch([Windows](https://github.com/ShiftMediaProject/mfx_dispatch.git) only). For more details, you can look through [Workflows](https://github.com/MirrorX-Desktop/media_libraries_auto_build/tree/main/.github/workflows) on [MirrorX-Desktop/media_libraries_auto_build](https://github.com/MirrorX-Desktop/media_libraries_auto_build).
 
 Of course, you can completely built those libraries by yourself according to our [Workflows](https://github.com/MirrorX-Desktop/media_libraries_auto_build/tree/main/.github/workflows).
+
+## Screenshot
+
+<p align="center">
+<img src="https://raw.githubusercontent.com/MirrorX-Desktop/MirrorX/master/screenshot1.png?" width="30%" height="30%">
+<img src="https://raw.githubusercontent.com/MirrorX-Desktop/MirrorX/master/screenshot2.png?" width="30%" height="30%">
+<img src="https://raw.githubusercontent.com/MirrorX-Desktop/MirrorX/master/screenshot3.png?" width="30%" height="30%">
+</p>
 
 ## Thanks
 
