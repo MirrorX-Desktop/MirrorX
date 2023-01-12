@@ -16,7 +16,7 @@ const en: BaseTranslation = {
 		Password: 'Password',
 		Connect: 'Connect',
 		Desktop: 'Desktop',
-		Files: 'Files',
+		Files: 'File Transfer',
 		EditPasswordTooltip: 'Edit Password',
 		PasswordVisibleTooltip: 'Click to show plain password',
 		PasswordInvisibleTooltip: 'Hide password when mouse leave',
@@ -30,13 +30,15 @@ const en: BaseTranslation = {
 	},
 	LAN: {
 		HostnameOrIP: 'Search Hostname or IP (Case Sensitive)',
-		Discoverable: 'Discoverable'
+		Discoverable: 'Discoverable',
+		DiscoveredDevicesTip: 'List of LAN Discovered Devices'
 	},
 	History: {
 		All: 'All',
 		Day1: '1 Day',
 		Days7: '7 Days',
-		Days30: '30 Days'
+		Days30: '30 Days',
+		KeptTip: 'Records are kept for up to 60 days'
 	},
 	Settings: {
 		Appearance: {

@@ -81,17 +81,20 @@
 </script>
 
 <slot>
-	<div class="flex h-full w-full flex-col overflow-hidden p-2">
+	<div class="flex h-full w-full flex-col overflow-hidden p-2 gap-2">
 		{#if is_querying}
 			<div class="h-full w-full items-center justify-center">
 				<Fa icon={faSpinner} spin />
 			</div>
 		{:else}
-			<div class="btn-group mb-2 flex w-full max-w-full">
+			<div class="btn-group flex w-full max-w-full">
 				<button class="btn btn-sm flex-1" on:click={query_all}>{$LL.History.All()}</button>
 				<button class="btn btn-sm flex-1" on:click={query_1_day}>{$LL.History.Day1()}</button>
 				<button class="btn btn-sm flex-1" on:click={query_7_days}>{$LL.History.Days7()}</button>
 				<button class="btn btn-sm flex-1" on:click={query_30_days}>{$LL.History.Days30()}</button>
+			</div>
+			<div class="flex flex-row justify-center">
+				<div class="text-xs text-base-content text-opacity-50">{$LL.History.KeptTip()}</div>
 			</div>
 			<div id="panel" class="overflow-y-auto pr-2">
 				<ol class="border-primary ml-2" style="border-left-width: 1.5px;">
