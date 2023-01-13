@@ -6,7 +6,9 @@ use mirrorx_core::{
         EndPointVisitDirectoryRequest, EndPointVisitDirectoryResponse,
     },
     component::fs::{
-        transfer::{create_file_append_session, send_file_to_remote},
+        transfer::{
+            create_file_append_session, query_transferred_bytes_count, send_file_to_remote,
+        },
         IconLoad,
     },
     core_error,
@@ -131,7 +133,7 @@ pub async fn file_manager_send_file(
     remote_device_id: String,
     local_path: PathBuf,
     remote_path: PathBuf,
-) -> CoreResult<String> {
+) -> CoreResult<(String, u64)> {
     if !local_path.is_file() {
         return Err(core_error!("local path is not a file"));
     }
@@ -170,7 +172,7 @@ pub async fn file_manager_send_file(
 
     send_file_to_remote(id.clone(), client, &local_path).await?;
 
-    Ok(id)
+    Ok((id, size))
 }
 
 #[tauri::command]
@@ -214,4 +216,9 @@ pub async fn file_manager_download_file(
     }
 
     Ok((id, reply.size))
+}
+
+#[tauri::command]
+pub async fn file_manager_query_transferred_bytes_count(id: String) -> u64 {
+    query_transferred_bytes_count(&id)
 }

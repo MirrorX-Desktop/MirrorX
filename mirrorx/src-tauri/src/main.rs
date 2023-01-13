@@ -186,6 +186,7 @@ fn build_app() -> App {
             command::file_manager::file_manager_visit_local,
             command::file_manager::file_manager_send_file,
             command::file_manager::file_manager_download_file,
+            command::file_manager::file_manager_query_transferred_bytes_count,
             command::utility::utility_generate_random_password,
             command::utility::utility_detect_os_platform,
             command::utility::utility_enum_graphics_cards,

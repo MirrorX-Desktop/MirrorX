@@ -39,3 +39,16 @@ export interface Entry {
 	size: number;
 	icon: string | null;
 }
+
+export interface FileTransferItem {
+	id: string;
+	is_upload: boolean;
+	local_path: string;
+	remote_path: string;
+	transferred_size: number;
+	total_size: number;
+	last_transferred_delta_size: number;
+	launch_at: number;
+	succeed_at: number;
+	failed_at: number;
+}

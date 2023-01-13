@@ -40,6 +40,38 @@ const zh_Hans: Translation = {
 		Days30: '30天',
 		KeptTip: '记录最多保存60天'
 	},
+	FileTransfer: {
+		WindowTitle: '文件传输',
+		Local: '本地',
+		Remote: '远程',
+		GotoInput: {
+			RecentRecords: '最近10条记录',
+			Empty: '空'
+		},
+		View: {
+			TableName: '名称',
+			TableModifiedTime: '修改日期',
+			TableSize: '大小',
+
+			ContextMenu: {
+				SendToRemote: '发送到远端',
+				DownloadToLocal: '下载到本地'
+			}
+		},
+		Transfer: {
+			Transferring: '传输中',
+			TransferSucceed: '传输成功',
+			TransferFailed: '传输失败',
+			TableLocalPath: '本地路径',
+			TableRemotePath: '远端路径',
+			TableTransferredAndTotalSize: '已传输/总 大小',
+			TableProgress: '进度',
+			TableStatus: '状态',
+			TableTotalSize: '总大小',
+			TableFinishAt: '完成于',
+			TableTimeCost: '消耗时间'
+		}
+	},
 	Dialogs: {
 		About: {
 			Copy: '复制',
@@ -102,6 +134,11 @@ const zh_Hans: Translation = {
 			Dark: '深色',
 			Auto: '自动'
 		}
+	},
+	FileType: {
+		File: '文件',
+		Application: '可执行程序',
+		CompressArchive: '压缩文件'
 	}
 };
 

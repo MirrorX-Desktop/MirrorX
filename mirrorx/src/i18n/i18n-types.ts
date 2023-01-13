@@ -120,7 +120,7 @@ type RootTranslation = {
 		 */
 		Discoverable: string
 		/**
-		 * L​i​s​t​ ​o​f​ ​D​i​s​c​o​v​e​r​e​d​ ​D​e​v​i​c​e​s
+		 * L​i​s​t​ ​o​f​ ​L​A​N​ ​D​i​s​c​o​v​e​r​e​d​ ​D​e​v​i​c​e​s
 		 */
 		DiscoveredDevicesTip: string
 	}
@@ -168,6 +168,100 @@ type RootTranslation = {
 			 * A​u​t​o
 			 */
 			Auto: string
+		}
+	}
+	FileTransfer: {
+		/**
+		 * F​i​l​e​ ​T​r​a​n​s​f​e​r
+		 */
+		WindowTitle: string
+		/**
+		 * L​o​c​a​l
+		 */
+		Local: string
+		/**
+		 * R​e​m​o​t​e
+		 */
+		Remote: string
+		GotoInput: {
+			/**
+			 * R​e​c​e​n​t​ ​1​0​ ​r​e​c​o​r​d​s
+			 */
+			RecentRecords: string
+			/**
+			 * E​m​p​t​y
+			 */
+			Empty: string
+		}
+		View: {
+			/**
+			 * N​a​m​e
+			 */
+			TableName: string
+			/**
+			 * M​o​d​i​f​i​e​d​ ​D​a​t​e
+			 */
+			TableModifiedTime: string
+			/**
+			 * S​i​z​e
+			 */
+			TableSize: string
+			ContextMenu: {
+				/**
+				 * S​e​n​d​ ​t​o​ ​R​e​m​o​t​e
+				 */
+				SendToRemote: string
+				/**
+				 * D​o​w​n​l​o​a​d​ ​t​o​ ​L​o​c​a​l
+				 */
+				DownloadToLocal: string
+			}
+		}
+		Transfer: {
+			/**
+			 * T​r​a​n​s​f​e​r​r​i​n​g
+			 */
+			Transferring: string
+			/**
+			 * T​r​a​n​s​f​e​r​ ​S​u​c​c​e​e​d
+			 */
+			TransferSucceed: string
+			/**
+			 * T​r​a​n​s​f​e​r​ ​F​a​i​l​e​d
+			 */
+			TransferFailed: string
+			/**
+			 * L​o​c​a​l​ ​P​a​t​h
+			 */
+			TableLocalPath: string
+			/**
+			 * R​e​m​o​t​e​ ​P​a​t​h
+			 */
+			TableRemotePath: string
+			/**
+			 * T​r​a​n​s​f​e​r​r​e​d​/​T​o​t​a​l​ ​S​i​z​e
+			 */
+			TableTransferredAndTotalSize: string
+			/**
+			 * P​r​o​g​r​e​s​s
+			 */
+			TableProgress: string
+			/**
+			 * S​t​a​t​u​s
+			 */
+			TableStatus: string
+			/**
+			 * T​o​t​a​l​ ​S​i​z​e
+			 */
+			TableTotalSize: string
+			/**
+			 * F​i​n​i​s​h​ ​A​t
+			 */
+			TableFinishAt: string
+			/**
+			 * T​i​m​e​ ​C​o​s​t
+			 */
+			TableTimeCost: string
 		}
 	}
 	Dialogs: {
@@ -308,6 +402,20 @@ type RootTranslation = {
 			Tip: string
 		}
 	}
+	FileType: {
+		/**
+		 * F​i​l​e
+		 */
+		File: string
+		/**
+		 * A​p​p​l​i​c​a​t​i​o​n
+		 */
+		Application: string
+		/**
+		 * C​o​m​p​r​e​s​s​ ​A​r​c​h​i​v​e
+		 */
+		CompressArchive: string
+	}
 }
 
 export type TranslationFunctions = {
@@ -417,7 +525,7 @@ export type TranslationFunctions = {
 		 */
 		Discoverable: () => LocalizedString
 		/**
-		 * List of Discovered Devices
+		 * List of LAN Discovered Devices
 		 */
 		DiscoveredDevicesTip: () => LocalizedString
 	}
@@ -465,6 +573,100 @@ export type TranslationFunctions = {
 			 * Auto
 			 */
 			Auto: () => LocalizedString
+		}
+	}
+	FileTransfer: {
+		/**
+		 * File Transfer
+		 */
+		WindowTitle: () => LocalizedString
+		/**
+		 * Local
+		 */
+		Local: () => LocalizedString
+		/**
+		 * Remote
+		 */
+		Remote: () => LocalizedString
+		GotoInput: {
+			/**
+			 * Recent 10 records
+			 */
+			RecentRecords: () => LocalizedString
+			/**
+			 * Empty
+			 */
+			Empty: () => LocalizedString
+		}
+		View: {
+			/**
+			 * Name
+			 */
+			TableName: () => LocalizedString
+			/**
+			 * Modified Date
+			 */
+			TableModifiedTime: () => LocalizedString
+			/**
+			 * Size
+			 */
+			TableSize: () => LocalizedString
+			ContextMenu: {
+				/**
+				 * Send to Remote
+				 */
+				SendToRemote: () => LocalizedString
+				/**
+				 * Download to Local
+				 */
+				DownloadToLocal: () => LocalizedString
+			}
+		}
+		Transfer: {
+			/**
+			 * Transferring
+			 */
+			Transferring: () => LocalizedString
+			/**
+			 * Transfer Succeed
+			 */
+			TransferSucceed: () => LocalizedString
+			/**
+			 * Transfer Failed
+			 */
+			TransferFailed: () => LocalizedString
+			/**
+			 * Local Path
+			 */
+			TableLocalPath: () => LocalizedString
+			/**
+			 * Remote Path
+			 */
+			TableRemotePath: () => LocalizedString
+			/**
+			 * Transferred/Total Size
+			 */
+			TableTransferredAndTotalSize: () => LocalizedString
+			/**
+			 * Progress
+			 */
+			TableProgress: () => LocalizedString
+			/**
+			 * Status
+			 */
+			TableStatus: () => LocalizedString
+			/**
+			 * Total Size
+			 */
+			TableTotalSize: () => LocalizedString
+			/**
+			 * Finish At
+			 */
+			TableFinishAt: () => LocalizedString
+			/**
+			 * Time Cost
+			 */
+			TableTimeCost: () => LocalizedString
 		}
 	}
 	Dialogs: {
@@ -604,6 +806,20 @@ export type TranslationFunctions = {
 			 */
 			Tip: () => LocalizedString
 		}
+	}
+	FileType: {
+		/**
+		 * File
+		 */
+		File: () => LocalizedString
+		/**
+		 * Application
+		 */
+		Application: () => LocalizedString
+		/**
+		 * Compress Archive
+		 */
+		CompressArchive: () => LocalizedString
 	}
 }
 

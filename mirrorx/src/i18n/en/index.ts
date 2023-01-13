@@ -49,6 +49,38 @@ const en: BaseTranslation = {
 			Auto: 'Auto'
 		}
 	},
+	FileTransfer: {
+		WindowTitle: 'File Transfer',
+		Local: 'Local',
+		Remote: 'Remote',
+		GotoInput: {
+			RecentRecords: 'Recent 10 records',
+			Empty: 'Empty'
+		},
+		View: {
+			TableName: 'Name',
+			TableModifiedTime: 'Modified Date',
+			TableSize: 'Size',
+
+			ContextMenu: {
+				SendToRemote: 'Send to Remote',
+				DownloadToLocal: 'Download to Local'
+			}
+		},
+		Transfer: {
+			Transferring: 'Transferring',
+			TransferSucceed: 'Transfer Succeed',
+			TransferFailed: 'Transfer Failed',
+			TableLocalPath: 'Local Path',
+			TableRemotePath: 'Remote Path',
+			TableTransferredAndTotalSize: 'Transferred/Total Size',
+			TableProgress: 'Progress',
+			TableStatus: 'Status',
+			TableTotalSize: 'Total Size',
+			TableFinishAt: 'Finish At',
+			TableTimeCost: 'Time Cost'
+		}
+	},
 	Dialogs: {
 		About: {
 			Copy: 'Copy',
@@ -102,6 +134,11 @@ const en: BaseTranslation = {
 		HistoryConnect: {
 			Tip: 'Automatically Switch Domain'
 		}
+	},
+	FileType: {
+		File: 'File',
+		Application: 'Application',
+		CompressArchive: 'Compress Archive'
 	}
 };
 

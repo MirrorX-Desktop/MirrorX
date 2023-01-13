@@ -55,7 +55,9 @@ export function invoke_config_theme_set(theme: 'light' | 'dark' | 'auto'): Promi
 	return invoke('config_theme_set', { theme });
 }
 
-export function invoke_config_history_get(time_range: [number, number] | null): Promise<Array<HistoryRecord>> {
+export function invoke_config_history_get(
+	time_range: [number, number] | null
+): Promise<Array<HistoryRecord>> {
 	return invoke('config_history_get', { timeRange: time_range });
 }
 
@@ -87,11 +89,18 @@ export function invoke_signaling_connect(force: boolean): Promise<void> {
 	return invoke('signaling_connect', { force });
 }
 
-export function invoke_signaling_visit(remoteDeviceId: string, password: string, visitDesktop: boolean): Promise<void> {
+export function invoke_signaling_visit(
+	remoteDeviceId: string,
+	password: string,
+	visitDesktop: boolean
+): Promise<void> {
 	return invoke('signaling_visit', { remoteDeviceId, password, visitDesktop });
 }
 
-export function invoke_file_manager_visit_remote(remoteDeviceId: string, path: string | null): Promise<Directory> {
+export function invoke_file_manager_visit_remote(
+	remoteDeviceId: string,
+	path: string | null
+): Promise<Directory> {
 	return invoke('file_manager_visit_remote', { remoteDeviceId, path });
 }
 
@@ -103,7 +112,7 @@ export function invoke_file_manager_send_file(
 	remoteDeviceId: string,
 	localPath: string,
 	remotePath: string
-): Promise<string> {
+): Promise<[string, number]> {
 	return invoke('file_manager_send_file', { remoteDeviceId, localPath, remotePath });
 }
 
@@ -115,6 +124,10 @@ export function invoke_file_manager_download_file(
 	return invoke('file_manager_download_file', { remoteDeviceId, localPath, remotePath });
 }
 
+export function invoke_file_manager_query_transferred_bytes_count(id: string): Promise<number> {
+	return invoke('file_manager_query_transferred_bytes_count', { id });
+}
+
 export function invoke_utility_generate_random_password(): Promise<string> {
 	return invoke('utility_generate_random_password');
 }
@@ -123,7 +136,9 @@ export function invoke_utility_detect_os_platform(): Promise<string> {
 	return invoke('utility_detect_os_platform');
 }
 
-export function invoke_utility_enum_graphics_cards(): Promise<Array<{ name: string; is_default: boolean }>> {
+export function invoke_utility_enum_graphics_cards(): Promise<
+	Array<{ name: string; is_default: boolean }>
+> {
 	return invoke('utility_enum_graphics_cards');
 }
 

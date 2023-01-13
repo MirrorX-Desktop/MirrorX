@@ -18,8 +18,8 @@
 	let unlisten_fn: UnlistenFn | null = null;
 
 	onMount(async () => {
-		unlisten_fn = await listen<NotificationEvent>('/dialog/notification', (event) => {
-			console.log('/dialog/notification: ' + JSON.stringify(event));
+		unlisten_fn = await listen<NotificationEvent>('/dialog/notification/file', (event) => {
+			console.log('/dialog/notification/file: ' + JSON.stringify(event));
 
 			let level_color = '';
 			let text_color = '';
