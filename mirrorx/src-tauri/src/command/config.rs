@@ -31,7 +31,7 @@ pub async fn config_init(
     tracing::info!(path = ?config_dir, "config dir");
     std::fs::create_dir_all(config_dir.clone())?;
 
-    let storage = LocalStorage::new(&config_dir.join("mirrorx.db"))?;
+    let storage = LocalStorage::new(config_dir.join("mirrorx.db"))?;
     let domain_count = storage.domain().get_domain_count()?;
 
     let mut storage_guard = app_state.storage.lock().await;

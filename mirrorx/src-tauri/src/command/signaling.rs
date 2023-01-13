@@ -110,7 +110,7 @@ pub async fn signaling_visit(
     let window_title = if visit_desktop {
         format!("MirrorX {}", remote_device_id)
     } else {
-        format!("MirrorX File Manager {}", remote_device_id)
+        format!("MirrorX File Transfer {}", remote_device_id)
     };
 
     let Some(ref storage) = *app_state.storage.lock().await else {

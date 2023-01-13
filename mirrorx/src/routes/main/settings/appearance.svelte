@@ -2,6 +2,7 @@
 	import { invoke_config_theme_get, invoke_config_theme_set } from '$lib/components/command';
 	import LL from '$lib/i18n/i18n-svelte';
 	import { faSun, faMoon, faCircleHalfStroke } from '@fortawesome/free-solid-svg-icons';
+	import { emit } from '@tauri-apps/api/event';
 	import { appWindow } from '@tauri-apps/api/window';
 	import { onMount } from 'svelte';
 	import Fa from 'svelte-fa';
@@ -11,7 +12,9 @@
 	onMount(async () => {
 		currentTheme =
 			(await invoke_config_theme_get()) ??
-			(document.getElementsByTagName('html').item(0)?.getAttribute('data-theme') as 'light' | 'dark') ??
+			(document.getElementsByTagName('html').item(0)?.getAttribute('data-theme') as
+				| 'light'
+				| 'dark') ??
 			'light';
 		await invoke_config_theme_set(currentTheme);
 	});
@@ -28,6 +31,7 @@
 
 		currentTheme = theme;
 		await invoke_config_theme_set(currentTheme);
+		await emit('update_theme', theme);
 	};
 </script>
 
@@ -37,7 +41,8 @@
 		<div class="flex-1">{$LL.Settings.Appearance.Theme()}</div>
 		<div class="flex flex-row items-center justify-end gap-2">
 			<button
-				class="hover:bg-base-200 flex cursor-pointer flex-col items-center gap-1 rounded-lg p-2 {currentTheme == 'light'
+				class="flex cursor-pointer flex-col items-center gap-1 rounded-lg p-2 hover:bg-base-200 {currentTheme ==
+				'light'
 					? 'ring-info ring'
 					: ''}"
 				on:click={() => changeTheme('light')}
@@ -46,7 +51,8 @@
 				<div class="text-sm">{$LL.Settings.Appearance.Light()}</div>
 			</button>
 			<button
-				class="hover:bg-base-200 flex cursor-pointer flex-col items-center gap-1 rounded-lg p-2 {currentTheme == 'dark'
+				class="flex cursor-pointer flex-col items-center gap-1 rounded-lg p-2 hover:bg-base-200 {currentTheme ==
+				'dark'
 					? 'ring-info ring'
 					: ''}"
 				on:click={() => changeTheme('dark')}
@@ -55,7 +61,8 @@
 				<div class="text-sm">{$LL.Settings.Appearance.Dark()}</div>
 			</button>
 			<button
-				class="hover:bg-base-200 flex cursor-pointer flex-col items-center gap-1 rounded-lg p-2 {currentTheme == 'auto'
+				class="flex cursor-pointer flex-col items-center gap-1 rounded-lg p-2 hover:bg-base-200 {currentTheme ==
+				'auto'
 					? 'ring-info ring'
 					: ''}"
 				on:click={() => changeTheme('auto')}

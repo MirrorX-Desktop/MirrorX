@@ -9,3 +9,7 @@ export interface NotificationEvent {
 export function emitNotification(event: NotificationEvent): Promise<void> {
 	return emit('/dialog/notification', event);
 }
+
+export function emitFileNotification(event: NotificationEvent): Promise<void> {
+	return emit('/dialog/notification/file', event);
+}

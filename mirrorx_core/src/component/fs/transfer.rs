@@ -13,7 +13,13 @@ use tokio::{
     sync::mpsc::{UnboundedReceiver, UnboundedSender},
 };
 
-pub static FILES: Lazy<Cache<String, UnboundedSender<Option<Vec<u8>>>>> = Lazy::new(|| {
+pub static APPEND_FILES: Lazy<Cache<String, UnboundedSender<Option<Vec<u8>>>>> = Lazy::new(|| {
+    CacheBuilder::new(64)
+        .time_to_live(Duration::from_secs(3 * 60))
+        .build()
+});
+
+pub static BYTES_TRANSFERRED_CACHE: Lazy<Cache<String, u64>> = Lazy::new(|| {
     CacheBuilder::new(64)
         .time_to_live(Duration::from_secs(3 * 60))
         .build()
@@ -22,10 +28,10 @@ pub static FILES: Lazy<Cache<String, UnboundedSender<Option<Vec<u8>>>>> = Lazy::
 pub async fn create_file_append_session(id: String, path: &Path) -> CoreResult<()> {
     let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
 
-    FILES.insert(id.clone(), tx).await;
+    APPEND_FILES.insert(id.clone(), tx).await;
 
     if let Err(err) = save_file_from_remote(id.clone(), path, rx).await {
-        FILES.invalidate(&id).await;
+        APPEND_FILES.invalidate(&id).await;
         return Err(err);
     }
 
@@ -33,11 +39,11 @@ pub async fn create_file_append_session(id: String, path: &Path) -> CoreResult<(
 }
 
 pub async fn delete_file_append_session(id: &str) {
-    FILES.invalidate(id).await
+    APPEND_FILES.invalidate(id).await
 }
 
 pub async fn append_file_block(client: Arc<EndPointClient>, block: EndPointFileTransferBlock) {
-    if let Some(tx) = FILES.get(&block.id) {
+    if let Some(tx) = APPEND_FILES.get(&block.id) {
         match tx.send(block.data) {
             Ok(_) => return,
             Err(_) => {
@@ -76,6 +82,8 @@ async fn save_file_from_remote(
                         tracing::error!(?err, "write file has error occurred");
                         break;
                     }
+
+                    update_transferred_bytes_count(&id, buffer.len() as _).await;
                 }
                 None => {
                     break;
@@ -85,7 +93,7 @@ async fn save_file_from_remote(
 
         let _ = writer.flush().await;
 
-        FILES.invalidate(&id).await;
+        APPEND_FILES.invalidate(&id).await;
     });
 
     Ok(())
@@ -103,7 +111,7 @@ pub async fn send_file_to_remote(
         let mut buffer = [0u8; 1024 * 64];
 
         loop {
-            let message = match reader.read(&mut buffer).await {
+            let (message, n) = match reader.read(&mut buffer).await {
                 Ok(n) => {
                     let content = if n > 0 {
                         Some(buffer.as_slice()[0..n].to_vec())
@@ -111,14 +119,22 @@ pub async fn send_file_to_remote(
                         None
                     };
 
-                    EndPointMessage::FileTransferBlock(EndPointFileTransferBlock {
-                        id: id.clone(),
-                        data: content,
-                    })
+                    (
+                        EndPointMessage::FileTransferBlock(EndPointFileTransferBlock {
+                            id: id.clone(),
+                            data: content,
+                        }),
+                        n,
+                    )
                 }
                 Err(err) => {
                     tracing::error!(?err, "read file failed");
-                    EndPointMessage::FileTransferError(EndPointFileTransferError { id: id.clone() })
+                    (
+                        EndPointMessage::FileTransferError(EndPointFileTransferError {
+                            id: id.clone(),
+                        }),
+                        0,
+                    )
                 }
             };
 
@@ -126,6 +142,8 @@ pub async fn send_file_to_remote(
                 tracing::error!(?err, "send file message failed");
                 break;
             }
+
+            update_transferred_bytes_count(&id, n as _).await;
 
             match message {
                 EndPointMessage::FileTransferBlock(message) if message.data.is_none() => break,
@@ -136,4 +154,15 @@ pub async fn send_file_to_remote(
     });
 
     Ok(())
+}
+
+pub fn query_transferred_bytes_count(id: &str) -> u64 {
+    BYTES_TRANSFERRED_CACHE.get(id).unwrap_or_default()
+}
+
+async fn update_transferred_bytes_count(id: &str, delta: u64) {
+    let transferred = BYTES_TRANSFERRED_CACHE.get(id).unwrap_or_default() + delta;
+    BYTES_TRANSFERRED_CACHE
+        .insert(id.to_string(), transferred)
+        .await;
 }

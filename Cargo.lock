@@ -104,9 +104,9 @@ dependencies = [
 
 [[package]]
 name = "anyhow"
-version = "1.0.66"
+version = "1.0.68"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "216261ddc8289130e551ddcd5ce8a064710c0d064a4d2895c67151c92b5443f6"
+checksum = "2cb2f989d18dd141ab8ae82f64d1a8cdd37e0840f73a406896cf5e99502fab61"
 
 [[package]]
 name = "arboard"
@@ -264,6 +264,12 @@ name = "base64"
 version = "0.20.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0ea22880d78093b0cbe17c89f64a7d457941e65759157ec6cb31a31d652b05e5"
+
+[[package]]
+name = "base64"
+version = "0.21.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a4a4ddaa51a5bc52a6948f74c06d20aaaddb71924eab79b8c97a8c556e942d6a"
 
 [[package]]
 name = "base64ct"
@@ -1167,7 +1173,7 @@ dependencies = [
  "glutin_tao",
  "js-sys",
  "percent-encoding",
- "tao",
+ "tao 0.15.7",
  "tracing",
  "wasm-bindgen",
  "wasm-bindgen-futures",
@@ -1182,7 +1188,7 @@ dependencies = [
  "ahash 0.8.2",
  "epaint",
  "nohash-hasher",
- "tao",
+ "tao 0.15.7",
  "tracing",
 ]
 
@@ -1195,7 +1201,7 @@ dependencies = [
  "egui",
  "instant",
  "smithay-clipboard",
- "tao",
+ "tao 0.15.7",
  "tracing",
  "webbrowser",
 ]
@@ -1860,7 +1866,7 @@ dependencies = [
  "osmesa-sys",
  "parking_lot",
  "raw-window-handle",
- "tao",
+ "tao 0.15.7",
  "winapi",
 ]
 
@@ -2696,7 +2702,7 @@ name = "mirrorx"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "base64 0.20.0",
+ "base64 0.21.0",
  "cocoa",
  "dashmap",
  "egui_extras",
@@ -2711,7 +2717,7 @@ dependencies = [
  "serde",
  "serde_json",
  "strum_macros 0.24.3",
- "tao",
+ "tao 0.16.0",
  "tauri",
  "tauri-build",
  "tauri-egui",
@@ -2773,7 +2779,7 @@ dependencies = [
  "serde_json",
  "serde_with 2.1.0",
  "sha2",
- "tao",
+ "tao 0.15.7",
  "thiserror",
  "tokio",
  "tokio-util",
@@ -3189,9 +3195,9 @@ dependencies = [
 
 [[package]]
 name = "once_cell"
-version = "1.16.0"
+version = "1.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "86f0b0d4bf799edbc74508c1e8bf170ff5f41238e5f8225603ca7caaae2b7860"
+checksum = "6f61fba1741ea2b3d6a1e3178721804bb716a68a6aeba1149b5d52e3d464ea66"
 
 [[package]]
 name = "open"
@@ -4928,6 +4934,62 @@ dependencies = [
 ]
 
 [[package]]
+name = "tao"
+version = "0.16.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "704522803dda895767f69198af8351b0a3f4fe2e293c3ca54cce0ecba05a97f2"
+dependencies = [
+ "bitflags",
+ "cairo-rs",
+ "cc",
+ "cocoa",
+ "core-foundation",
+ "core-graphics",
+ "crossbeam-channel",
+ "dispatch",
+ "gdk",
+ "gdk-pixbuf",
+ "gdk-sys",
+ "gdkx11-sys",
+ "gio",
+ "glib",
+ "glib-sys",
+ "gtk",
+ "image",
+ "instant",
+ "jni 0.20.0",
+ "lazy_static",
+ "libc",
+ "log",
+ "ndk 0.6.0",
+ "ndk-context",
+ "ndk-sys 0.3.0",
+ "objc",
+ "once_cell",
+ "parking_lot",
+ "png",
+ "raw-window-handle",
+ "scopeguard",
+ "tao-macros",
+ "unicode-segmentation",
+ "uuid 1.2.2",
+ "windows 0.39.0",
+ "windows-implement",
+ "x11-dl",
+]
+
+[[package]]
+name = "tao-macros"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3b6fcd8245d45a39ffc8715183d92ae242750eb57b285eb3bcd63dfd512afd09"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "tar"
 version = "0.4.38"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5306,9 +5368,9 @@ checksum = "cda74da7e1a664f795bb1f8a87ec406fb89a02522cf6e50620d016add6dbbf5c"
 
 [[package]]
 name = "tokio"
-version = "1.23.1"
+version = "1.24.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "38a54aca0c15d014013256222ba0ebed095673f89345dd79119d912eb561b7a8"
+checksum = "1d9f76183f91ecfb55e1d7d5602bd1d979e38a3a522fe900241cf195624d67ae"
 dependencies = [
  "autocfg",
  "bytes",
@@ -6321,7 +6383,7 @@ dependencies = [
  "serde_json",
  "sha2",
  "soup2",
- "tao",
+ "tao 0.15.7",
  "thiserror",
  "url",
  "webkit2gtk",
