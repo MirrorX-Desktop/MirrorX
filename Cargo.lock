@@ -557,12 +557,9 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "16b0a3d9ed01224b22057780a37bb8c5dbfe1be8ba48678e7bf57ec4b385411f"
 dependencies = [
  "iana-time-zone",
- "js-sys",
  "num-integer",
  "num-traits",
  "serde",
- "time 0.1.45",
- "wasm-bindgen",
  "winapi",
 ]
 
@@ -2555,7 +2552,7 @@ dependencies = [
  "dirs-next",
  "objc-foundation",
  "objc_id",
- "time 0.3.17",
+ "time",
 ]
 
 [[package]]
@@ -3587,7 +3584,7 @@ dependencies = [
  "indexmap",
  "line-wrap",
  "serde",
- "time 0.3.17",
+ "time",
  "xml-rs",
 ]
 
@@ -4391,7 +4388,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_with_macros 2.2.0",
- "time 0.3.17",
+ "time",
 ]
 
 [[package]]
@@ -5086,7 +5083,7 @@ dependencies = [
  "sha2",
  "tauri-utils",
  "thiserror",
- "time 0.3.17",
+ "time",
  "uuid 1.2.2",
  "walkdir",
 ]
@@ -5295,17 +5292,6 @@ dependencies = [
 
 [[package]]
 name = "time"
-version = "0.1.45"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1b797afad3f312d1c66a56d11d0316f916356d11bd158fbc6ca6389ff6bf805a"
-dependencies = [
- "libc",
- "wasi 0.10.0+wasi-snapshot-preview1",
- "winapi",
-]
-
-[[package]]
-name = "time"
 version = "0.3.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a561bf4617eebd33bca6434b988f39ed798e527f51a1e797d0ee4f61c0a38376"
@@ -5453,7 +5439,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "09d48f71a791638519505cefafe162606f706c25592e4bde4d97600c0195312e"
 dependencies = [
  "crossbeam-channel",
- "time 0.3.17",
+ "time",
  "tracing-subscriber",
 ]
 
