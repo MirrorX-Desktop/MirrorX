@@ -1,8 +1,9 @@
-use super::{Directory, Entry};
+use super::{Directory, Entry, IconLoad};
 use crate::{core_error, error::CoreResult, HRESULT};
 use image::ColorType;
 use scopeguard::defer;
 use std::{
+    collections::HashMap,
     io::Cursor,
     os::raw::c_void,
     path::{Path, PathBuf},
@@ -51,7 +52,7 @@ pub fn read_root_directory() -> CoreResult<Directory> {
                 path,
                 modified_time: 0,
                 size: 0,
-                icon,
+                icon: IconLoad::Bytes(icon),
             });
         }
     }
