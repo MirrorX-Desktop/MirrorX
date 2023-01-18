@@ -30,7 +30,7 @@ export interface HistoryRecord {
 export interface Directory {
 	path: string;
 	entries: Array<Entry>;
-	icon_cache: Map<string, Entry>;
+	icon_cache: { [key: string]: string; };
 }
 
 export interface Entry {
