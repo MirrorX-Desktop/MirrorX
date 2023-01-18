@@ -30,6 +30,7 @@ export interface HistoryRecord {
 export interface Directory {
 	path: string;
 	entries: Array<Entry>;
+	icon_cache: Map<string, Entry>;
 }
 
 export interface Entry {
@@ -38,6 +39,7 @@ export interface Entry {
 	modified_time: number;
 	size: number;
 	icon: string | null;
+	hash: string | null;
 }
 
 export interface FileTransferItem {

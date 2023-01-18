@@ -576,6 +576,12 @@
 											src={'data:image/png;base64,' + entry.icon}
 											alt="File Icon"
 										/>
+									{:else if entry.hash}
+										<img
+											style="width: 32px; height:32px"
+											src={'data:image/png;base64,' + directory.icon_cache.get(entry.hash)}
+											alt="File Icon"
+										/>
 									{/if}
 								</div>
 							</td>

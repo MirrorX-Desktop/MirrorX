@@ -39,10 +39,21 @@ pub enum IconLoad {
 }
 
 #[derive(Hash, Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
+#[serde(untagged)]
 pub enum HashableIconType {
     Ext(String),    // extension suffix (exclusive .exe), like: png, jpg, mp4, etc.
     UnixExecutable, // Unix Executable File
     OrdinaryDir,    // Ordinary Directory
+}
+
+impl ToString for HashableIconType {
+    fn to_string(&self) -> String {
+        match self {
+            Self::Ext(v) => format!(".{}", v),
+            Self::UnixExecutable => String::from("UnixExecutable"),
+            Self::OrdinaryDir => String::from("OrdinaryDir"),
+        }
+    }
 }
 
 pub fn read_root_directory() -> CoreResult<Directory> {
