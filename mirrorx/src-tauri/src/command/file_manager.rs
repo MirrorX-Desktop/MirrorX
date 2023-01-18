@@ -22,7 +22,7 @@ use std::{collections::HashMap, path::PathBuf};
 pub struct DirectoryResult {
     pub path: PathBuf,
     pub entries: Vec<EntryResult>,
-    pub icon_cache: HashMap<String, Option<Vec<u8>>>,
+    pub icon_cache: HashMap<String, Option<String>>,
 }
 
 #[derive(Serialize)]
@@ -57,9 +57,9 @@ pub async fn file_manager_visit_remote(
 
     let path = reply.dir.path;
 
-    let mut icon_cache: HashMap<String, Option<Vec<u8>>> = HashMap::new();
+    let mut icon_cache = HashMap::new();
     for (k, v) in reply.dir.icon_cache.iter() {
-        icon_cache.insert(k.to_string(), v.clone());
+        icon_cache.insert(k.to_string(), v.clone().map(base64::encode));
     }
     let (tx, rx) = tokio::sync::oneshot::channel();
     tokio::task::spawn_blocking(move || {
@@ -138,9 +138,9 @@ pub async fn file_manager_visit_local(path: Option<PathBuf>) -> CoreResult<Direc
     });
     let entries = rx.await?;
 
-    let mut icon_cache: HashMap<String, Option<Vec<u8>>> = HashMap::new();
+    let mut icon_cache: HashMap<String, Option<String>> = HashMap::new();
     for (k, v) in directory.icon_cache.iter() {
-        icon_cache.insert(k.to_string(), v.clone());
+        icon_cache.insert(k.to_string(), v.clone().map(base64::encode));
     }
 
     Ok(DirectoryResult {
