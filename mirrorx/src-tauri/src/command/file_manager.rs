@@ -59,7 +59,8 @@ pub async fn file_manager_visit_remote(
 
     let mut icon_cache = HashMap::new();
     for (k, v) in reply.dir.icon_cache.iter() {
-        icon_cache.insert(k.to_string(), v.clone().map(base64::encode));
+        let key: String = (*k).clone().into();
+        icon_cache.insert(key, v.clone().map(base64::encode));
     }
     let (tx, rx) = tokio::sync::oneshot::channel();
     tokio::task::spawn_blocking(move || {
@@ -79,10 +80,7 @@ pub async fn file_manager_visit_remote(
                     modified_time: entry.modified_time,
                     size: entry.size,
                     icon: icon.map(base64::encode),
-                    hash: match hash {
-                        Some(v) => Some(v.to_string()),
-                        None => None,
-                    },
+                    hash: hash.map(|v| v.into()),
                 }
             })
             .collect();
@@ -126,10 +124,7 @@ pub async fn file_manager_visit_local(path: Option<PathBuf>) -> CoreResult<Direc
                     modified_time: entry.modified_time,
                     size: entry.size,
                     icon: icon.map(base64::encode),
-                    hash: match hash {
-                        Some(v) => Some(v.to_string()),
-                        None => None,
-                    },
+                    hash: hash.map(|v| v.into()),
                 }
             })
             .collect();
@@ -140,7 +135,8 @@ pub async fn file_manager_visit_local(path: Option<PathBuf>) -> CoreResult<Direc
 
     let mut icon_cache: HashMap<String, Option<String>> = HashMap::new();
     for (k, v) in directory.icon_cache.iter() {
-        icon_cache.insert(k.to_string(), v.clone().map(base64::encode));
+        let key: String = (*k).clone().into();
+        icon_cache.insert(key, v.clone().map(base64::encode));
     }
 
     Ok(DirectoryResult {

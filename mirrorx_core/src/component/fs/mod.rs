@@ -46,8 +46,8 @@ pub enum HashableIconType {
     OrdinaryDir,    // Ordinary Directory
 }
 
-impl ToString for HashableIconType {
-    fn to_string(&self) -> String {
+impl Into<String> for HashableIconType {
+    fn into(self) -> String {
         match self {
             Self::Ext(v) => format!(".{}", v),
             Self::UnixExecutable => String::from("UnixExecutable"),
