@@ -443,19 +443,19 @@
 
 			<!--ToolBar-->
 			<div class="flex-0 btn-group">
-				<button class="btn-sm btn" on:click={goto_root}>
+				<button class="btn btn-sm" on:click={goto_root}>
 					<Fa icon={faHome} />
 				</button>
 
-				<button class="btn-sm btn {has_back ? '' : 'btn-disabled'}" on:click={goto_back}>
+				<button class="btn btn-sm {has_back ? '' : 'btn-disabled'}" on:click={goto_back}>
 					<Fa icon={faArrowLeft} />
 				</button>
 
-				<button class="btn-sm btn {has_forward ? '' : 'btn-disabled'}" on:click={goto_forward}>
+				<button class="btn btn-sm {has_forward ? '' : 'btn-disabled'}" on:click={goto_forward}>
 					<Fa icon={faArrowRight} />
 				</button>
 
-				<button class="btn-sm btn {has_parent ? '' : 'btn-disabled'}" on:click={goto_parent}>
+				<button class="btn btn-sm {has_parent ? '' : 'btn-disabled'}" on:click={goto_parent}>
 					<Fa icon={faArrowUp} />
 				</button>
 			</div>
@@ -477,7 +477,7 @@
 				<div class="dropdown-bottom dropdown-end dropdown">
 					<!-- svelte-ignore a11y-no-noninteractive-tabindex -->
 					<!-- svelte-ignore a11y-label-has-associated-control -->
-					<label tabindex="0" class="btn-sm btn z-0 rounded-tl-none rounded-bl-none">
+					<label tabindex="0" class="btn btn-sm z-0 rounded-tl-none rounded-bl-none">
 						<Fa icon={faChevronDown} />
 					</label>
 					<!-- svelte-ignore a11y-no-noninteractive-tabindex -->
@@ -593,10 +593,10 @@
 							<!--Modified Date-->
 							<td class="text-right" style="width: 20%;">
 								{#if entry.modified_time != 0}
-									<p class="text-right text-sm">
+									<p class="text-right text-xs">
 										{moment.unix(entry.modified_time).format('YYYY-MM-DD')}
 									</p>
-									<p class="text-right text-sm">
+									<p class="text-right text-xs">
 										{moment.unix(entry.modified_time).format('hh:mm')}
 									</p>
 								{/if}

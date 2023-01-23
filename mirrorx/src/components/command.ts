@@ -65,8 +65,8 @@ export function invoke_lan_init(force: boolean): Promise<void> {
 	return invoke('lan_init', { force });
 }
 
-export function invoke_lan_connect(addr: string): Promise<void> {
-	return invoke('lan_connect', { addr });
+export function invoke_lan_connect(addr: string, visitDesktop: boolean): Promise<void> {
+	return invoke('lan_connect', { addr, visitDesktop });
 }
 
 export function invoke_lan_nodes_list(): Promise<Array<LanDiscoverNode>> {
