@@ -12,7 +12,8 @@
 		faXmark,
 		faCircle,
 		faCircleHalfStroke,
-		faLanguage
+		faLanguage,
+		faThumbTack
 	} from '@fortawesome/free-solid-svg-icons';
 	import { faGithub } from '@fortawesome/free-brands-svg-icons';
 	import logoLight from '$lib/../src-tauri/assets/icons/org.png';
@@ -45,22 +46,25 @@
 	import DialogDomainSwitch from '$lib/widgets/dialog_domain_switch.svelte';
 	import DialogHistoryConnect from '$lib/widgets/dialog_history_connect.svelte';
 
-	const observer = new MutationObserver((mutations: MutationRecord[], observer: MutationObserver) => {
-		for (const mutation of mutations) {
-			if (mutation.type === 'attributes') {
-				if (mutation.attributeName == 'data-theme') {
-					let node = mutation.target as HTMLElement;
-					let themeValue = node.getAttribute('data-theme');
-					if (themeValue) currentTheme = themeValue as 'light' | 'dark';
-					return;
+	const observer = new MutationObserver(
+		(mutations: MutationRecord[], observer: MutationObserver) => {
+			for (const mutation of mutations) {
+				if (mutation.type === 'attributes') {
+					if (mutation.attributeName == 'data-theme') {
+						let node = mutation.target as HTMLElement;
+						let themeValue = node.getAttribute('data-theme');
+						if (themeValue) currentTheme = themeValue as 'light' | 'dark';
+						return;
+					}
 				}
 			}
 		}
-	});
+	);
 
 	let isMacOS: boolean = navigator.platform.toLowerCase().includes('mac');
 	let theme_change_unlisten_fn: UnlistenFn | null = null;
 	let currentTheme: 'light' | 'dark';
+	let window_always_on_top: boolean = false;
 
 	onMount(async () => {
 		let htmlNode = document.getElementsByTagName('html').item(0);
@@ -136,10 +140,15 @@
 	const show_select_language_dialog = async () => {
 		await emit('/dialog/select_language');
 	};
+
+	const switch_always_on_top = async () => {
+		window_always_on_top = !window_always_on_top;
+		await appWindow.setAlwaysOnTop(window_always_on_top);
+	};
 </script>
 
 <div
-	class="bg-base-100 flex h-full transition-all {isMacOS
+	class="flex h-full bg-base-100 transition-all {isMacOS
 		? 'flex-row'
 		: 'flex-row-reverse rounded-lg border border-gray-600'}"
 >
@@ -147,10 +156,18 @@
 
 	{#if !isMacOS}
 		<div data-tauri-drag-region class="titlebar gap-1">
-			<button class="titlebar-button" id="titlebar-minimize" on:click={async () => await appWindow.minimize()}>
+			<button
+				class="titlebar-button"
+				id="titlebar-minimize"
+				on:click={async () => await appWindow.minimize()}
+			>
 				<Fa icon={faMinus} size="xs" />
 			</button>
-			<button class="titlebar-button" id="titlebar-close" on:click={async () => await appWindow.hide()}>
+			<button
+				class="titlebar-button"
+				id="titlebar-close"
+				on:click={async () => await appWindow.hide()}
+			>
 				<Fa icon={faXmark} size="xs" />
 			</button>
 		</div>
@@ -166,7 +183,10 @@
 							: 'navigation-item-selected-right'
 						: 'navigation-item-unselected'}"
 				>
-					<a href="/main/home" class="flex h-full w-full items-center justify-center hover:cursor-pointer">
+					<a
+						href="/main/home"
+						class="flex h-full w-full items-center justify-center hover:cursor-pointer"
+					>
 						{#if currentTheme == 'light'}
 							<img src={logoLight} width="32" alt="main navigation tab" />
 						{:else}
@@ -181,7 +201,10 @@
 							: 'navigation-item-selected-right'
 						: 'navigation-item-unselected'}"
 				>
-					<a href="/main/lan" class="flex h-full w-full items-center justify-center hover:cursor-pointer">
+					<a
+						href="/main/lan"
+						class="flex h-full w-full items-center justify-center hover:cursor-pointer"
+					>
 						<Fa icon={faNetworkWired} />
 					</a>
 				</li>
@@ -192,7 +215,10 @@
 							: 'navigation-item-selected-right'
 						: 'navigation-item-unselected'}"
 				>
-					<a href="/main/history" class="flex h-full w-full items-center justify-center hover:cursor-pointer">
+					<a
+						href="/main/history"
+						class="flex h-full w-full items-center justify-center hover:cursor-pointer"
+					>
 						<Fa icon={faClock} />
 					</a>
 				</li>
@@ -203,7 +229,10 @@
 							: 'navigation-item-selected-right'
 						: 'navigation-item-unselected'}"
 				>
-					<a href="/main/settings" class="flex h-full w-full items-center justify-center hover:cursor-pointer">
+					<a
+						href="/main/settings"
+						class="flex h-full w-full items-center justify-center hover:cursor-pointer"
+					>
 						<Fa icon={faSlidersH} />
 					</a>
 				</li>
@@ -211,6 +240,14 @@
 			</ul>
 		</div>
 		<div class="flex flex-col items-center pb-2">
+			<div class="h-12 w-12 p-2">
+				<button
+					class="navigation-extra-item flex h-full w-full items-center justify-center rounded-lg"
+					on:click={switch_always_on_top}
+				>
+					<Fa icon={faThumbTack} rotate={window_always_on_top ? 0 : 45} />
+				</button>
+			</div>
 			<div class="h-12 w-12 p-2">
 				<button
 					class="navigation-extra-item flex h-full w-full items-center justify-center rounded-lg"
@@ -321,7 +358,7 @@
 	}
 
 	.navigation-indicator {
-		@apply shadow-base-300 bg-base-100 duration-300;
+		@apply bg-base-100 shadow-base-300 duration-300;
 		position: absolute;
 		top: var(--navigation-top-offset);
 		left: 4px;
@@ -335,7 +372,7 @@
 	}
 
 	.navigation-indicator-right {
-		@apply shadow-base-300 bg-base-100 duration-300;
+		@apply bg-base-100 shadow-base-300 duration-300;
 		position: absolute;
 		top: var(--navigation-top-offset);
 		right: 4px;
@@ -432,7 +469,7 @@
 	}
 
 	.content {
-		@apply shadow-base-300 bg-base-100 duration-300;
+		@apply bg-base-100 shadow-base-300 duration-300;
 		width: 100%;
 		height: 100%;
 		border-radius: 8px;

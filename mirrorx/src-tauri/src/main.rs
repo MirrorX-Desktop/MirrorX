@@ -120,7 +120,6 @@ fn build_app() -> App {
                     tauri::WindowUrl::App("/main/home".into()),
                 )
                 .center()
-                .always_on_top(true)
                 .title(&app_name)
                 .fullscreen(false)
                 .resizable(false)

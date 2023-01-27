@@ -30,10 +30,10 @@
 		}
 	});
 
-	const ok = async () => {
+	const ok = async (visitDesktop: boolean) => {
 		try {
 			show = false;
-			await invoke_lan_connect(addr);
+			await invoke_lan_connect(addr, visitDesktop);
 		} catch (error: any) {
 			console.log(error);
 			await emitNotification({ level: 'error', title: 'Error', message: error.toString() });
@@ -54,9 +54,16 @@
 				<p class="py-1 text-center text-lg">{addr}</p>
 				<p class="pt-1 text-center text-lg">{$LL.Dialogs.LANConnect.Content()}</p>
 			</div>
-			<div class="modal-action flex flex-row">
-				<button class="btn flex-1" on:click={ok}>{$LL.DialogActions.Ok()}</button>
-				<button class="btn flex-1" on:click={cancel}>{$LL.DialogActions.Cancel()}</button>
+			<div class="flex flex-col gap-2">
+				<div class="flex flex-1 flex-row gap-2">
+					<button class="btn flex-1" on:click={() => ok(true)}>{$LL.Home.Desktop()}</button>
+					<button class="btn flex-1" on:click={() => ok(false)}>{$LL.Home.Files()}</button>
+				</div>
+				<div>
+					<button class="btn-outline btn-ghost btn w-full" on:click={cancel}>
+						{$LL.DialogActions.Cancel()}
+					</button>
+				</div>
 			</div>
 		</div>
 	</div>
