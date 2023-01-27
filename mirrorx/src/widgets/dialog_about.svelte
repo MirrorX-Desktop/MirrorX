@@ -4,7 +4,10 @@
 	import LL from '$lib/i18n/i18n-svelte';
 	import { getName, getTauriVersion, getVersion } from '@tauri-apps/api/app';
 	import icon from '../../src-tauri/assets/icons/icon.png';
-	import { invoke_utility_enum_graphics_cards, invoke_utility_detect_os_platform } from '$lib/components/command';
+	import {
+		invoke_utility_enum_graphics_cards,
+		invoke_utility_detect_os_platform
+	} from '$lib/components/command';
 	import UAParser from 'ua-parser-js';
 	import { isMacOS } from '$lib/components/types';
 	import { writeText } from '@tauri-apps/api/clipboard';
@@ -71,12 +74,14 @@
 			<div class="flex select-auto flex-col items-center justify-center pb-2 text-sm">
 				<div>{$LL.Dialogs.About.Version()}:&nbsp;{version}</div>
 				<div>Tauri&nbsp;{$LL.Dialogs.About.Version()}:&nbsp;{tauri_version}</div>
-				<div>OS:&nbsp;{platform_info}</div>
+				<div class="text-center">OS:&nbsp;{platform_info}</div>
 				<div>WebView:&nbsp;{webkit_version}</div>
 				<div>Graphics Cards:</div>
 				<div class="flex flex-col items-center">
 					{#each graphics_cards as graphics_card}
-						<div class="text-xs">{graphics_card.name}{graphics_card.is_default ? ' (Default)' : ''}</div>
+						<div class="text-xs">
+							{graphics_card.name}{graphics_card.is_default ? ' (Default)' : ''}
+						</div>
 					{/each}
 				</div>
 			</div>
