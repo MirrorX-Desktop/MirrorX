@@ -9,7 +9,7 @@ use mirrorx_core::{
         transfer::{
             create_file_append_session, query_transferred_bytes_count, send_file_to_remote,
         },
-        HashableIconType, IconLoad,
+        IconType,
     },
     core_error,
     error::CoreResult,
@@ -22,7 +22,7 @@ use std::{collections::HashMap, path::PathBuf};
 pub struct DirectoryResult {
     pub path: PathBuf,
     pub entries: Vec<EntryResult>,
-    pub icon_cache: HashMap<String, Option<String>>,
+    pub hashed_icons: HashMap<String, Option<String>>,
 }
 
 #[derive(Serialize)]
@@ -32,7 +32,7 @@ pub struct EntryResult {
     pub modified_time: i64,
     pub size: u64,
     pub icon: Option<String>,
-    pub hash: Option<String>,
+    pub icon_hash: Option<String>,
 }
 
 #[tauri::command]
@@ -57,11 +57,13 @@ pub async fn file_manager_visit_remote(
 
     let path = reply.dir.path;
 
-    let mut icon_cache = HashMap::new();
-    for (k, v) in reply.dir.icon_cache.iter() {
-        let key: String = (*k).clone().into();
-        icon_cache.insert(key, v.clone().map(base64::encode));
-    }
+    let hashed_icons = reply
+        .dir
+        .hashed_icons
+        .into_par_iter()
+        .map(|(k, v)| (k.into(), v.map(base64::encode)))
+        .collect();
+
     let (tx, rx) = tokio::sync::oneshot::channel();
     tokio::task::spawn_blocking(move || {
         let entries: Vec<EntryResult> = reply
@@ -69,9 +71,9 @@ pub async fn file_manager_visit_remote(
             .entries
             .into_par_iter()
             .map(|entry| {
-                let (hash, icon): (Option<HashableIconType>, Option<Vec<u8>>) = match entry.icon {
-                    IconLoad::Hash(hashable) => (Some(hashable), None),
-                    IconLoad::Bytes(v) => (None, v),
+                let (hash, icon) = match entry.icon {
+                    IconType::Hashed(hashable) => (Some(hashable), None),
+                    IconType::Bytes(v) => (None, v),
                 };
 
                 EntryResult {
@@ -80,7 +82,7 @@ pub async fn file_manager_visit_remote(
                     modified_time: entry.modified_time,
                     size: entry.size,
                     icon: icon.map(base64::encode),
-                    hash: hash.map(|v| v.into()),
+                    icon_hash: hash.map(String::from),
                 }
             })
             .collect();
@@ -92,7 +94,7 @@ pub async fn file_manager_visit_remote(
     Ok(DirectoryResult {
         path,
         entries,
-        icon_cache,
+        hashed_icons,
     })
 }
 
@@ -113,9 +115,9 @@ pub async fn file_manager_visit_local(path: Option<PathBuf>) -> CoreResult<Direc
             .entries
             .into_par_iter()
             .map(|entry| {
-                let (hash, icon): (Option<HashableIconType>, Option<Vec<u8>>) = match entry.icon {
-                    IconLoad::Hash(hashable) => (Some(hashable), None),
-                    IconLoad::Bytes(v) => (None, v),
+                let (hash, icon) = match entry.icon {
+                    IconType::Hashed(hashable) => (Some(hashable), None),
+                    IconType::Bytes(v) => (None, v),
                 };
 
                 EntryResult {
@@ -124,7 +126,7 @@ pub async fn file_manager_visit_local(path: Option<PathBuf>) -> CoreResult<Direc
                     modified_time: entry.modified_time,
                     size: entry.size,
                     icon: icon.map(base64::encode),
-                    hash: hash.map(|v| v.into()),
+                    icon_hash: hash.map(String::from),
                 }
             })
             .collect();
@@ -133,16 +135,16 @@ pub async fn file_manager_visit_local(path: Option<PathBuf>) -> CoreResult<Direc
     });
     let entries = rx.await?;
 
-    let mut icon_cache: HashMap<String, Option<String>> = HashMap::new();
-    for (k, v) in directory.icon_cache.iter() {
-        let key: String = (*k).clone().into();
-        icon_cache.insert(key, v.clone().map(base64::encode));
-    }
+    let hashed_icons = directory
+        .hashed_icons
+        .into_par_iter()
+        .map(|(k, v)| (k.into(), v.map(base64::encode)))
+        .collect();
 
     Ok(DirectoryResult {
         path,
         entries,
-        icon_cache,
+        hashed_icons,
     })
 }
 

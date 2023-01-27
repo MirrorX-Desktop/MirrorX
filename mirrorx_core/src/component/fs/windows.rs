@@ -1,4 +1,4 @@
-use super::{Directory, Entry, IconLoad};
+use super::{Directory, Entry, IconType};
 use crate::{core_error, error::CoreResult, HRESULT};
 use image::ColorType;
 use scopeguard::defer;
@@ -45,14 +45,14 @@ pub fn read_root_directory() -> CoreResult<Directory> {
             let disk_str = std::str::from_utf8_unchecked(&disk);
             let path = PathBuf::from_str(disk_str)?;
 
-            let icon = read_icon(&path).map_or(None, |v| Some(v));
+            let icon = read_icon(&path).ok();
 
             entries.push(Entry {
                 is_dir: true,
                 path,
                 modified_time: 0,
                 size: 0,
-                icon: IconLoad::Bytes(icon),
+                icon: IconType::Bytes(icon),
             });
         }
     }
@@ -60,7 +60,7 @@ pub fn read_root_directory() -> CoreResult<Directory> {
     Ok(Directory {
         path: PathBuf::from(r"\"),
         entries,
-        icon_cache: HashMap::new(),
+        hashed_icons: HashMap::new(),
     })
 }
 
@@ -133,10 +133,8 @@ pub fn read_icon(path: &Path) -> CoreResult<Vec<u8>> {
             std::slice::from_raw_parts_mut(color_bits.as_mut_ptr() as *mut u8, nbits * 4);
 
         // swap BGRA to RGBA
-        for chunk in bmp_bytes.chunks_mut(4).into_iter() {
-            chunk[0] = chunk[0] ^ chunk[2];
-            chunk[2] = chunk[0] ^ chunk[2];
-            chunk[0] = chunk[0] ^ chunk[2];
+        for chunk in bmp_bytes.chunks_mut(4) {
+            chunk.swap(0, 2)
         }
 
         let mut png_bytes: Vec<u8> = Vec::with_capacity(nbits * 4);

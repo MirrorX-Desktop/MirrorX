@@ -432,7 +432,7 @@
 {#if directory}
 	<div
 		bind:this={view}
-		class="flex h-full w-full flex-col gap-1 rounded-lg border border-base-300 p-2"
+		class="border-base-300 flex h-full w-full flex-col gap-1 rounded-lg border p-2"
 		on:click={checkShouldDismissFileMenu}
 	>
 		<div class="flex w-full flex-row items-center justify-between">
@@ -466,7 +466,7 @@
 				<input
 					bind:this={path_input}
 					type="text"
-					class="input-bordered input input-sm z-10 w-full text-center ring-info focus:border-info focus:outline-none focus:ring"
+					class="input-bordered input input-sm ring-info focus:border-info z-10 w-full text-center focus:outline-none focus:ring"
 					value={path_input_value}
 					on:change={(e) => {
 						path_input_value = e.currentTarget.value;
@@ -483,7 +483,7 @@
 					<!-- svelte-ignore a11y-no-noninteractive-tabindex -->
 					<ul
 						tabindex="0"
-						class="dropdown-content menu mt-1 overflow-hidden overflow-ellipsis rounded-lg bg-base-300 p-2 shadow"
+						class="dropdown-content menu bg-base-300 mt-1 overflow-hidden overflow-ellipsis rounded-lg p-2 shadow"
 						style="min-width: 160px; max-width: calc(100vw / 2 * 0.8)"
 					>
 						<li class="menu-title">
@@ -500,7 +500,7 @@
 								</li>
 							{/each}
 						{:else}
-							<li class="text-center text-sm text-base-content text-opacity-60">
+							<li class="text-base-content text-center text-sm text-opacity-60">
 								{$LL.FileTransfer.GotoInput.Empty()}
 							</li>
 						{/if}
@@ -510,7 +510,7 @@
 		</div>
 
 		<div bind:this={contextMenu} class="absolute z-50 {showMenu ? 'visible' : 'invisible'}">
-			<ul class="menu rounded-box w-56 bg-base-200 p-2 shadow">
+			<ul class="menu rounded-box bg-base-200 w-56 p-2 shadow">
 				{#if isLocal}
 					<li>
 						<button on:click={send_to}>
@@ -576,10 +576,10 @@
 											src={'data:image/png;base64,' + entry.icon}
 											alt="File Icon"
 										/>
-									{:else if entry.hash}
+									{:else if entry.icon_hash}
 										<img
 											style="width: 32px; height:32px"
-											src={'data:image/png;base64,' + directory.icon_cache[entry.hash]}
+											src={'data:image/png;base64,' + directory.hashed_icons[entry.icon_hash]}
 											alt="File Icon"
 										/>
 									{/if}
@@ -621,7 +621,7 @@
 	</div>
 {:else}
 	<div
-		class="flex h-full w-full flex-row items-center justify-center rounded-lg border border-base-300"
+		class="border-base-300 flex h-full w-full flex-row items-center justify-center rounded-lg border"
 	>
 		<Fa icon={faSpinner} spin />
 	</div>
@@ -629,11 +629,11 @@
 
 <style>
 	table > thead > tr :where(th) {
-		@apply sticky top-0 z-10 bg-base-300 text-sm text-base-content;
+		@apply bg-base-300 text-base-content sticky top-0 z-10 text-sm;
 	}
 
 	table > tbody :where(td) {
-		@apply border-b border-base-300 p-1;
+		@apply border-base-300 border-b p-1;
 	}
 
 	table > tbody :where(tr):hover {
@@ -655,7 +655,7 @@
 	}
 
 	.file-view::-webkit-scrollbar-thumb {
-		@apply rounded-full bg-base-300;
+		@apply bg-base-300 rounded-full;
 	}
 
 	.file-view::-webkit-scrollbar-track {

@@ -30,7 +30,7 @@ export interface HistoryRecord {
 export interface Directory {
 	path: string;
 	entries: Array<Entry>;
-	icon_cache: { [key: string]: string; };
+	hashed_icons: { [key: string]: string; };
 }
 
 export interface Entry {
@@ -39,7 +39,7 @@ export interface Entry {
 	modified_time: number;
 	size: number;
 	icon: string | null;
-	hash: string | null;
+	icon_hash: string | null;
 }
 
 export interface FileTransferItem {
