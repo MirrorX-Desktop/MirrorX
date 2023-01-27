@@ -5,20 +5,24 @@ use mirrorx_core::{
         EndPointFileTransferError, EndPointMessage, EndPointSendFileReply, EndPointSendFileRequest,
         EndPointVisitDirectoryRequest, EndPointVisitDirectoryResponse,
     },
-    component::fs::transfer::{
-        create_file_append_session, query_transferred_bytes_count, send_file_to_remote,
+    component::fs::{
+        transfer::{
+            create_file_append_session, query_transferred_bytes_count, send_file_to_remote,
+        },
+        HashableIconType, IconLoad,
     },
     core_error,
     error::CoreResult,
 };
 use rayon::prelude::*;
 use serde::Serialize;
-use std::path::PathBuf;
+use std::{collections::HashMap, path::PathBuf};
 
 #[derive(Serialize)]
 pub struct DirectoryResult {
     pub path: PathBuf,
     pub entries: Vec<EntryResult>,
+    pub icon_cache: HashMap<String, Option<String>>,
 }
 
 #[derive(Serialize)]
@@ -28,6 +32,7 @@ pub struct EntryResult {
     pub modified_time: i64,
     pub size: u64,
     pub icon: Option<String>,
+    pub hash: Option<String>,
 }
 
 #[tauri::command]
@@ -51,18 +56,32 @@ pub async fn file_manager_visit_remote(
         .await?;
 
     let path = reply.dir.path;
+
+    let mut icon_cache = HashMap::new();
+    for (k, v) in reply.dir.icon_cache.iter() {
+        let key: String = (*k).clone().into();
+        icon_cache.insert(key, v.clone().map(base64::encode));
+    }
     let (tx, rx) = tokio::sync::oneshot::channel();
     tokio::task::spawn_blocking(move || {
         let entries: Vec<EntryResult> = reply
             .dir
             .entries
             .into_par_iter()
-            .map(|entry| EntryResult {
-                is_dir: entry.is_dir,
-                path: entry.path,
-                modified_time: entry.modified_time,
-                size: entry.size,
-                icon: entry.icon.map(base64::encode),
+            .map(|entry| {
+                let (hash, icon): (Option<HashableIconType>, Option<Vec<u8>>) = match entry.icon {
+                    IconLoad::Hash(hashable) => (Some(hashable), None),
+                    IconLoad::Bytes(v) => (None, v),
+                };
+
+                EntryResult {
+                    is_dir: entry.is_dir,
+                    path: entry.path,
+                    modified_time: entry.modified_time,
+                    size: entry.size,
+                    icon: icon.map(base64::encode),
+                    hash: hash.map(|v| v.into()),
+                }
             })
             .collect();
 
@@ -70,7 +89,11 @@ pub async fn file_manager_visit_remote(
     });
     let entries = rx.await?;
 
-    Ok(DirectoryResult { path, entries })
+    Ok(DirectoryResult {
+        path,
+        entries,
+        icon_cache,
+    })
 }
 
 #[tauri::command]
@@ -89,12 +112,20 @@ pub async fn file_manager_visit_local(path: Option<PathBuf>) -> CoreResult<Direc
         let entries: Vec<EntryResult> = directory
             .entries
             .into_par_iter()
-            .map(|entry| EntryResult {
-                is_dir: entry.is_dir,
-                path: entry.path,
-                modified_time: entry.modified_time,
-                size: entry.size,
-                icon: entry.icon.map(base64::encode),
+            .map(|entry| {
+                let (hash, icon): (Option<HashableIconType>, Option<Vec<u8>>) = match entry.icon {
+                    IconLoad::Hash(hashable) => (Some(hashable), None),
+                    IconLoad::Bytes(v) => (None, v),
+                };
+
+                EntryResult {
+                    is_dir: entry.is_dir,
+                    path: entry.path,
+                    modified_time: entry.modified_time,
+                    size: entry.size,
+                    icon: icon.map(base64::encode),
+                    hash: hash.map(|v| v.into()),
+                }
             })
             .collect();
 
@@ -102,7 +133,17 @@ pub async fn file_manager_visit_local(path: Option<PathBuf>) -> CoreResult<Direc
     });
     let entries = rx.await?;
 
-    Ok(DirectoryResult { path, entries })
+    let mut icon_cache: HashMap<String, Option<String>> = HashMap::new();
+    for (k, v) in directory.icon_cache.iter() {
+        let key: String = (*k).clone().into();
+        icon_cache.insert(key, v.clone().map(base64::encode));
+    }
+
+    Ok(DirectoryResult {
+        path,
+        entries,
+        icon_cache,
+    })
 }
 
 #[tauri::command]

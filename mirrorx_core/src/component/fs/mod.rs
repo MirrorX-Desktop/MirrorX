@@ -6,15 +6,20 @@ mod windows;
 
 pub mod transfer;
 
-use crate::error::CoreResult;
+use crate::{core_error, error::CoreResult};
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
-use std::path::{Path, PathBuf};
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
+    sync::{Arc, Mutex},
+};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub struct Directory {
     pub path: PathBuf,
     pub entries: Vec<Entry>,
+    pub icon_cache: HashMap<HashableIconType, Option<Vec<u8>>>,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
@@ -23,8 +28,31 @@ pub struct Entry {
     pub path: PathBuf,
     pub modified_time: i64,
     pub size: u64,
+    pub icon: IconLoad,
+}
+
+#[derive(Hash, Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
+pub enum IconLoad {
+    Hash(HashableIconType),
     #[serde(with = "serde_bytes")]
-    pub icon: Option<Vec<u8>>,
+    Bytes(Option<Vec<u8>>),
+}
+
+#[derive(Hash, Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
+pub enum HashableIconType {
+    Ext(String),    // extension suffix (exclusive .exe), like: png, jpg, mp4, etc.
+    UnixExecutable, // Unix Executable File
+    OrdinaryDir,    // Ordinary Directory
+}
+
+impl Into<String> for HashableIconType {
+    fn into(self) -> String {
+        match self {
+            Self::Ext(v) => format!(".{}", v),
+            Self::UnixExecutable => String::from("UnixExecutable"),
+            Self::OrdinaryDir => String::from("OrdinaryDir"),
+        }
+    }
 }
 
 pub fn read_root_directory() -> CoreResult<Directory> {
@@ -47,12 +75,15 @@ pub fn read_directory<P>(path: P) -> CoreResult<Directory>
 where
     P: AsRef<Path> + Into<PathBuf>,
 {
+    #[derive(Debug)]
     struct EntryStat {
         path: PathBuf,
         is_dir: bool,
         modified_time: i64,
         size: u64,
     }
+
+    let mut executableFiles: Vec<PathBuf> = Vec::new();
 
     let dir = std::fs::read_dir(&path)?;
     let mut entries = Vec::new();
@@ -67,6 +98,14 @@ where
         } else {
             file_type.is_dir()
         };
+
+        #[cfg(not(target_os = "windows"))]
+        // check if it's unix executable file
+        if !is_dir
+            && ((std::os::unix::prelude::PermissionsExt::mode(&meta.permissions()) >> 6) & 1) == 1
+        {
+            executableFiles.push(entry.path());
+        }
 
         let modified_time = chrono::DateTime::<chrono::Local>::from(meta.modified()?)
             .naive_utc()
@@ -83,7 +122,38 @@ where
     let entries: Vec<Entry> = entries
         .into_par_iter()
         .map(|entry| {
-            let icon = read_icon(&entry.path).ok();
+            // HashableIconType
+            let iconType: Option<HashableIconType> = match entry.path.extension() {
+                Some(extension) => {
+                    // entry with Extensions
+                    let extension = extension.to_str();
+
+                    match extension {
+                        Some(e) if e != "exe" && e != "app" && e != "dmg" => {
+                            Some(HashableIconType::Ext(e.to_string()))
+                        }
+                        _ => None,
+                    }
+                }
+                None => {
+                    // entry without Extensions
+
+                    // Unix Executable File
+                    if !entry.is_dir && executableFiles.contains(&entry.path) {
+                        Some(HashableIconType::UnixExecutable)
+                    } else {
+                        None
+                    }
+                }
+            };
+
+            let icon = match iconType {
+                Some(i) => IconLoad::Hash(i),
+                None => {
+                    let icon = read_icon(&entry.path).ok();
+                    IconLoad::Bytes(icon)
+                }
+            };
 
             Entry {
                 is_dir: entry.is_dir,
@@ -95,8 +165,44 @@ where
         })
         .collect();
 
-    Ok(Directory {
-        path: path.into(),
-        entries,
-    })
+    // icon cache (reduce repeated file operations)
+    let icon_cache = Arc::new(Mutex::new(Some(HashMap::new())));
+    let mut nonrepetitive_hashable_icon = Vec::new();
+
+    entries
+        .iter()
+        .filter(|e| {
+            if let IconLoad::Hash(_) = e.icon {
+                if !nonrepetitive_hashable_icon.contains(&e.icon) {
+                    nonrepetitive_hashable_icon.push(e.icon.clone());
+                    true
+                } else {
+                    false
+                }
+            } else {
+                false
+            }
+        })
+        .par_bridge()
+        .into_par_iter()
+        .for_each(|entry| {
+            let icon = read_icon(&entry.path).ok();
+            if let IconLoad::Hash(ref hashable) = entry.icon {
+                let mut guard = icon_cache.lock().unwrap();
+                if let Some(ref mut guard) = &mut *guard {
+                    (guard).insert(hashable.clone(), icon);
+                }
+            }
+        });
+
+    let mut guard = icon_cache.lock().unwrap();
+    if let Some(icon_cache) = guard.take() {
+        Ok(Directory {
+            path: path.into(),
+            entries,
+            icon_cache,
+        })
+    } else {
+        Err(core_error!("icon cache is empty"))
+    }
 }
