@@ -39,7 +39,6 @@ pub enum IconLoad {
 }
 
 #[derive(Hash, Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
-#[serde(untagged)]
 pub enum HashableIconType {
     Ext(String),    // extension suffix (exclusive .exe), like: png, jpg, mp4, etc.
     UnixExecutable, // Unix Executable File
