@@ -599,10 +599,10 @@
 							<!--Modified Date-->
 							<td class="text-right" style="width: 20%;">
 								{#if entry.modified_time != 0}
-									<p class="text-right text-sm">
+									<p class="text-right text-xs">
 										{moment.unix(entry.modified_time).format('YYYY-MM-DD')}
 									</p>
-									<p class="text-right text-sm">
+									<p class="text-right text-xs">
 										{moment.unix(entry.modified_time).format('hh:mm')}
 									</p>
 								{/if}
