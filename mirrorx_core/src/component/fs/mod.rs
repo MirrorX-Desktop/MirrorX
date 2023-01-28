@@ -83,8 +83,10 @@ where
     }
 
     let dir = std::fs::read_dir(&path)?;
-    let executable_files = Vec::new();
     let mut entry_stats = Vec::new();
+
+    #[cfg(not(target_os = "windows"))]
+    let mut unix_executable_files = Vec::new();
 
     for entry in dir {
         let entry = entry?;
@@ -98,12 +100,13 @@ where
             file_type.is_dir()
         };
 
-        #[cfg(not(target_os = "windows"))]
         // check if it's unix executable file
-        if !is_dir
-            && ((std::os::unix::prelude::PermissionsExt::mode(&meta.permissions()) >> 6) & 1) == 1
-        {
-            executable_files.push(entry.path());
+        #[cfg(not(target_os = "windows"))]
+        if !is_dir {
+            use std::os::unix::prelude::PermissionsExt;
+            if ((&meta.permissions().mode() >> 6) & 1) == 1 {
+                unix_executable_files.push(entry.path());
+            }
         }
 
         let modified_time = chrono::DateTime::<chrono::Local>::from(meta.modified()?)
@@ -135,11 +138,15 @@ where
                 }
                 None => {
                     // Unix Executable File
-                    if !entry.is_dir && executable_files.contains(&entry.path) {
+                    #[cfg(not(target_os = "windows"))]
+                    if !entry.is_dir && unix_executable_files.contains(&entry.path) {
                         Some(HashedIcon::UnixExecutable)
                     } else {
                         None
                     }
+
+                    #[cfg(target_os = "windows")]
+                    None
                 }
             };
 
