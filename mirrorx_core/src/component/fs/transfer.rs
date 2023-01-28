@@ -15,13 +15,13 @@ use tokio::{
 
 pub static APPEND_FILES: Lazy<Cache<String, UnboundedSender<Option<Vec<u8>>>>> = Lazy::new(|| {
     CacheBuilder::new(64)
-        .time_to_live(Duration::from_secs(3 * 60))
+        .time_to_idle(Duration::from_secs(3 * 60))
         .build()
 });
 
 pub static BYTES_TRANSFERRED_CACHE: Lazy<Cache<String, u64>> = Lazy::new(|| {
     CacheBuilder::new(64)
-        .time_to_live(Duration::from_secs(3 * 60))
+        .time_to_idle(Duration::from_secs(3 * 60))
         .build()
 });
 
