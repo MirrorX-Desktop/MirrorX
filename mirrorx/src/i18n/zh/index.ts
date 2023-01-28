@@ -69,7 +69,7 @@ const zh_Hans: Translation = {
 			TableStatus: '状态',
 			TableTotalSize: '总大小',
 			TableFinishAt: '完成于',
-			TableTimeCost: '消耗时间'
+			TableTimeCost: '耗时'
 		}
 	},
 	Dialogs: {

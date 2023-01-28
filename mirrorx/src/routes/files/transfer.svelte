@@ -179,7 +179,9 @@
 										<div>{((item.transferred_size / item.total_size) * 100).toFixed(2)}%</div>
 									</div>
 								</td>
-								<td class="rounded-none text-xs font-normal">Transferring</td>
+								<td class="rounded-none text-xs font-normal">
+									{$LL.FileTransfer.Transfer.Transferring()}
+								</td>
 							</tr>
 						{/each}
 					</tbody>
