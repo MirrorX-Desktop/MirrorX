@@ -396,7 +396,8 @@
 						name,
 						extensions
 					}
-				]
+				],
+				defaultPath: basename
 			});
 
 			if (!filePath) {
@@ -432,7 +433,7 @@
 {#if directory}
 	<div
 		bind:this={view}
-		class="border-base-300 flex h-full w-full flex-col gap-1 rounded-lg border p-2"
+		class="flex h-full w-full flex-col gap-1 rounded-lg border border-base-300 p-2"
 		on:click={checkShouldDismissFileMenu}
 	>
 		<div class="flex w-full flex-row items-center justify-between">
@@ -443,19 +444,19 @@
 
 			<!--ToolBar-->
 			<div class="flex-0 btn-group">
-				<button class="btn btn-sm" on:click={goto_root}>
+				<button class="btn-sm btn" on:click={goto_root}>
 					<Fa icon={faHome} />
 				</button>
 
-				<button class="btn btn-sm {has_back ? '' : 'btn-disabled'}" on:click={goto_back}>
+				<button class="btn-sm btn {has_back ? '' : 'btn-disabled'}" on:click={goto_back}>
 					<Fa icon={faArrowLeft} />
 				</button>
 
-				<button class="btn btn-sm {has_forward ? '' : 'btn-disabled'}" on:click={goto_forward}>
+				<button class="btn-sm btn {has_forward ? '' : 'btn-disabled'}" on:click={goto_forward}>
 					<Fa icon={faArrowRight} />
 				</button>
 
-				<button class="btn btn-sm {has_parent ? '' : 'btn-disabled'}" on:click={goto_parent}>
+				<button class="btn-sm btn {has_parent ? '' : 'btn-disabled'}" on:click={goto_parent}>
 					<Fa icon={faArrowUp} />
 				</button>
 			</div>
@@ -466,7 +467,7 @@
 				<input
 					bind:this={path_input}
 					type="text"
-					class="input-bordered input input-sm ring-info focus:border-info z-10 w-full text-center focus:outline-none focus:ring"
+					class="input-bordered input input-sm z-10 w-full text-center ring-info focus:border-info focus:outline-none focus:ring"
 					value={path_input_value}
 					on:change={(e) => {
 						path_input_value = e.currentTarget.value;
@@ -477,13 +478,13 @@
 				<div class="dropdown-bottom dropdown-end dropdown">
 					<!-- svelte-ignore a11y-no-noninteractive-tabindex -->
 					<!-- svelte-ignore a11y-label-has-associated-control -->
-					<label tabindex="0" class="btn btn-sm z-0 rounded-tl-none rounded-bl-none">
+					<label tabindex="0" class="btn-sm btn z-0 rounded-tl-none rounded-bl-none">
 						<Fa icon={faChevronDown} />
 					</label>
 					<!-- svelte-ignore a11y-no-noninteractive-tabindex -->
 					<ul
 						tabindex="0"
-						class="dropdown-content menu bg-base-300 mt-1 overflow-hidden overflow-ellipsis rounded-lg p-2 shadow"
+						class="dropdown-content menu mt-1 overflow-hidden overflow-ellipsis rounded-lg bg-base-300 p-2 shadow"
 						style="min-width: 160px; max-width: calc(100vw / 2 * 0.8)"
 					>
 						<li class="menu-title">
@@ -500,7 +501,7 @@
 								</li>
 							{/each}
 						{:else}
-							<li class="text-base-content text-center text-sm text-opacity-60">
+							<li class="text-center text-sm text-base-content text-opacity-60">
 								{$LL.FileTransfer.GotoInput.Empty()}
 							</li>
 						{/if}
@@ -510,7 +511,7 @@
 		</div>
 
 		<div bind:this={contextMenu} class="absolute z-50 {showMenu ? 'visible' : 'invisible'}">
-			<ul class="menu rounded-box bg-base-200 w-56 p-2 shadow">
+			<ul class="menu rounded-box w-56 bg-base-200 p-2 shadow">
 				{#if isLocal}
 					<li>
 						<button on:click={send_to}>
@@ -621,7 +622,7 @@
 	</div>
 {:else}
 	<div
-		class="border-base-300 flex h-full w-full flex-row items-center justify-center rounded-lg border"
+		class="flex h-full w-full flex-row items-center justify-center rounded-lg border border-base-300"
 	>
 		<Fa icon={faSpinner} spin />
 	</div>
@@ -629,11 +630,11 @@
 
 <style>
 	table > thead > tr :where(th) {
-		@apply bg-base-300 text-base-content sticky top-0 z-10 text-sm;
+		@apply sticky top-0 z-10 bg-base-300 text-sm text-base-content;
 	}
 
 	table > tbody :where(td) {
-		@apply border-base-300 border-b p-1;
+		@apply border-b border-base-300 p-1;
 	}
 
 	table > tbody :where(tr):hover {
@@ -655,7 +656,7 @@
 	}
 
 	.file-view::-webkit-scrollbar-thumb {
-		@apply bg-base-300 rounded-full;
+		@apply rounded-full bg-base-300;
 	}
 
 	.file-view::-webkit-scrollbar-track {
