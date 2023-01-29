@@ -3,7 +3,7 @@ use crate::{
     component::{
         audio::{duplicator::new_record_stream_and_rx, encoder::AudioEncoder},
         desktop::{monitor::get_active_monitors, Duplicator},
-        video_encoder::{config::*, video_encoder::VideoEncoder},
+        video_encoder::{config::*, encoder::VideoEncoder},
     },
     error::CoreError,
 };
@@ -128,7 +128,7 @@ fn spawn_desktop_capture_and_encode_process(client: Arc<EndPointClient>) {
 
         let primary_monitor = monitors.iter().find(|monitor| monitor.is_primary);
 
-        let (mut duplicator, monitor_id) =
+        let (mut duplicator, _) =
             match Duplicator::new(primary_monitor.map(|monitor| monitor.id.to_owned())) {
                 Ok(duplicator) => duplicator,
                 Err(err) => {
@@ -137,23 +137,10 @@ fn spawn_desktop_capture_and_encode_process(client: Arc<EndPointClient>) {
                 }
             };
 
-        let select_monitor = match monitors
-            .into_iter()
-            .find(|monitor| monitor.id == monitor_id)
-        {
-            Some(monitor) => monitor,
-            None => {
-                tracing::error!("can't find selected monitor");
-                return;
-            }
-        };
-
-        // PASSIVE_ENDPOINTS_MONITORS.insert(client.id, select_monitor);
-
         loop {
             match duplicator.capture() {
                 Ok(capture_frame) => {
-                    if let Err(_) = capture_frame_tx.blocking_send(capture_frame) {
+                    if capture_frame_tx.blocking_send(capture_frame).is_err() {
                         return;
                     }
                 }
@@ -171,14 +158,14 @@ fn spawn_desktop_capture_and_encode_process(client: Arc<EndPointClient>) {
             //     tracing::info!(?active_device_id, ?passive_device_id, "video encode process exit");
             // }
 
-            let mut encoder = match VideoEncoder::new(libx264::Libx264Config::new(), client.clone())
-            {
-                Ok(encoder) => encoder,
-                Err(err) => {
-                    tracing::error!(?err, "video encoder initialize failed");
-                    return;
-                }
-            };
+            let mut encoder =
+                match VideoEncoder::new(libx264::Libx264Config::default(), client.clone()) {
+                    Ok(encoder) => encoder,
+                    Err(err) => {
+                        tracing::error!(?err, "video encoder initialize failed");
+                        return;
+                    }
+                };
 
             loop {
                 match capture_frame_rx.blocking_recv() {

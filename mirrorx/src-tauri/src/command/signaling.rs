@@ -102,15 +102,15 @@ pub async fn signaling_visit(
     visit_desktop: bool,
 ) -> CoreResult<()> {
     let window_label = if visit_desktop {
-        format!("Desktop:{}", remote_device_id)
+        format!("Desktop:{remote_device_id}")
     } else {
-        format!("FileManager:{}", remote_device_id)
+        format!("FileManager:{remote_device_id}")
     };
 
     let window_title = if visit_desktop {
-        format!("MirrorX {}", remote_device_id)
+        format!("MirrorX {remote_device_id}")
     } else {
-        format!("MirrorX File Transfer {}", remote_device_id)
+        format!("MirrorX File Transfer {remote_device_id}")
     };
 
     let Some(ref storage) = *app_state.storage.lock().await else {

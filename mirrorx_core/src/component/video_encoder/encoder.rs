@@ -8,7 +8,10 @@ use crate::{
     core_error,
     error::CoreResult,
 };
-use mirrorx_native::ffmpeg::{avcodec::*, avutil::*};
+use mirrorx_native::ffmpeg::{
+    codecs::{avcodec::*, codec::*, packet::*},
+    utils::{error::*, frame::*, imgutils::*, log::*, pixfmt::*, rational::AVRational},
+};
 use std::sync::Arc;
 
 pub struct VideoEncoder<T>

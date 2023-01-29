@@ -1,7 +1,6 @@
-use crate::ffmpeg::avutil::rational::AVRational;
+use super::{channel_layout::AVChannelLayout, samplefmt::AVSampleFormat};
+use crate::ffmpeg::utils::rational::AVRational;
 use std::os::raw::{c_char, c_void};
-
-use super::{AVChannelLayout, AVSampleFormat};
 
 pub type AVOptionType = u32;
 pub const AV_OPT_TYPE_FLAGS: AVOptionType = 0;

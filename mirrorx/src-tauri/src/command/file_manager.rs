@@ -1,4 +1,5 @@
 use super::AppState;
+use base64::{engine::general_purpose::STANDARD as base64_standard, Engine};
 use mirrorx_core::{
     api::endpoint::message::{
         EndPointCallRequest, EndPointDownloadFileReply, EndPointDownloadFileRequest,
@@ -61,7 +62,7 @@ pub async fn file_manager_visit_remote(
         .dir
         .hashed_icons
         .into_par_iter()
-        .map(|(k, v)| (k.into(), v.map(base64::encode)))
+        .map(|(k, v)| (k.into(), v.map(|v| base64_standard.encode(v))))
         .collect();
 
     let (tx, rx) = tokio::sync::oneshot::channel();
@@ -81,7 +82,7 @@ pub async fn file_manager_visit_remote(
                     path: entry.path,
                     modified_time: entry.modified_time,
                     size: entry.size,
-                    icon: icon.map(base64::encode),
+                    icon: icon.map(|v| base64_standard.encode(v)),
                     icon_hash: hash.map(String::from),
                 }
             })
@@ -125,7 +126,7 @@ pub async fn file_manager_visit_local(path: Option<PathBuf>) -> CoreResult<Direc
                     path: entry.path,
                     modified_time: entry.modified_time,
                     size: entry.size,
-                    icon: icon.map(base64::encode),
+                    icon: icon.map(|v| base64_standard.encode(v)),
                     icon_hash: hash.map(String::from),
                 }
             })
@@ -138,7 +139,7 @@ pub async fn file_manager_visit_local(path: Option<PathBuf>) -> CoreResult<Direc
     let hashed_icons = directory
         .hashed_icons
         .into_par_iter()
-        .map(|(k, v)| (k.into(), v.map(base64::encode)))
+        .map(|(k, v)| (k.into(), v.map(|v| base64_standard.encode(v))))
         .collect();
 
     Ok(DirectoryResult {

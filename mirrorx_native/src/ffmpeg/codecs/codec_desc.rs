@@ -1,5 +1,5 @@
-use super::super::avutil::*;
-use super::*;
+use super::{codec::AVProfile, codec_id::AVCodecID};
+use crate::ffmpeg::utils::avutil::AVMediaType;
 use std::os::raw::c_char;
 
 #[repr(C)]

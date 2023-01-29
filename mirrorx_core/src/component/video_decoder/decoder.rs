@@ -4,7 +4,10 @@ use crate::{
     core_error,
     error::CoreResult,
 };
-use mirrorx_native::ffmpeg::{avcodec::*, avutil::*};
+use mirrorx_native::ffmpeg::{
+    codecs::{avcodec::*, codec::*, codec_id::*, packet::*},
+    utils::{buffer::*, error::*, frame::*, hwcontext::*, pixfmt::*, rational::AVRational},
+};
 use tokio::sync::mpsc::Sender;
 
 pub struct VideoDecoder {

@@ -1,4 +1,5 @@
 use mirrorx_core::{error::CoreResult, utility::os::GraphicsCards};
+use tauri::{AppHandle, Manager};
 
 #[tauri::command]
 #[tracing::instrument]
@@ -29,8 +30,12 @@ pub fn utility_enum_graphics_cards() -> CoreResult<Vec<GraphicsCards>> {
 }
 
 #[tauri::command]
-#[tracing::instrument(skip(window))]
-pub fn utility_hide_macos_zoom_button(window: tauri::Window) {
+#[tracing::instrument(skip(app_handle))]
+pub fn utility_hide_macos_zoom_button(app_handle: AppHandle) {
+    let Some(window) = app_handle.get_window("main") else {
+        return;
+    };
+
     #[cfg(target_os = "macos")]
     {
         use cocoa::appkit::NSWindow;
@@ -45,4 +50,10 @@ pub fn utility_hide_macos_zoom_button(window: tauri::Window) {
             }
         }
     }
+
+    #[cfg(not(target_os = "macos"))]
+    tracing::error!(
+        label = window.label(),
+        "shouldn't invoke on non-macos platform"
+    );
 }

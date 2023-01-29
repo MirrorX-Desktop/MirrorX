@@ -3,12 +3,7 @@ use crate::{
     error::CoreResult,
 };
 use cpal::{SampleFormat, SampleRate};
-use mirrorx_native::{
-    ffmpeg::avutil::{AVSampleFormat, AV_SAMPLE_FMT_FLT, AV_SAMPLE_FMT_S16},
-    opus::decoder::{
-        opus_decode, opus_decode_float, opus_decoder_create, opus_decoder_destroy, OpusDecoder,
-    },
-};
+use mirrorx_native::{ffmpeg::utils::samplefmt::*, opus::decoder::*};
 
 pub struct AudioDecoder {
     opus_decoder: *mut OpusDecoder,

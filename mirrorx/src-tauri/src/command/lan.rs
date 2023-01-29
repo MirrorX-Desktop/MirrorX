@@ -54,9 +54,9 @@ pub async fn lan_connect(
     };
 
     let window_title = if visit_desktop {
-        format!("MirrorX {}", remote_ip)
+        format!("MirrorX {remote_ip}")
     } else {
-        format!("MirrorX File Transfer {}", remote_ip)
+        format!("MirrorX File Transfer {remote_ip}")
     };
 
     let remote_addr = SocketAddr::new(remote_ip, 48001);

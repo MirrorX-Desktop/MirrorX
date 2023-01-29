@@ -1,9 +1,5 @@
-use super::key::{KeyboardKey, MouseKey};
-use crate::{
-    component::desktop::monitor::Monitor,
-    core_error,
-    error::{CoreError, CoreResult},
-};
+use super::key::MouseKey;
+use crate::{component::desktop::monitor::Monitor, core_error, error::CoreResult};
 use windows::Win32::{
     Foundation::GetLastError,
     UI::{Input::KeyboardAndMouse::*, WindowsAndMessaging::*},
@@ -204,7 +200,7 @@ unsafe fn send_input(
 }
 
 unsafe fn post_keyboard_event(key: &tao::keyboard::KeyCode, press: bool) -> CoreResult<()> {
-    if let Some(vk_key) = map_key_code(&key) {
+    if let Some(vk_key) = map_key_code(key) {
         let mut flags: KEYBD_EVENT_FLAGS = KEYBD_EVENT_FLAGS(0);
         if is_extend_key(vk_key) {
             flags |= KEYEVENTF_EXTENDEDKEY;

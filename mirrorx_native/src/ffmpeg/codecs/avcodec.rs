@@ -1,5 +1,25 @@
-use super::super::avutil::*;
-use super::*;
+use super::{codec::AVCodec, codec_id::AVCodecID, codec_par::AVFieldOrder};
+use crate::ffmpeg::{
+    codecs::{
+        codec_desc::AVCodecDescriptor,
+        defs::{AVAudioServiceType, AVDiscard},
+        packet::{AVPacket, AVPacketSideData},
+    },
+    utils::{
+        avutil::AVMediaType,
+        buffer::AVBufferRef,
+        channel_layout::AVChannelLayout,
+        dict::AVDictionary,
+        frame::{AVFrame, AV_NUM_DATA_POINTERS},
+        log::AVClass,
+        pixfmt::{
+            AVChromaLocation, AVColorPrimaries, AVColorRange, AVColorSpace,
+            AVColorTransferCharacteristic, AVPixelFormat,
+        },
+        rational::AVRational,
+        samplefmt::AVSampleFormat,
+    },
+};
 use std::{ffi::c_void, os::raw::c_char};
 
 pub const AV_PARSER_PTS_NB: usize = 4;

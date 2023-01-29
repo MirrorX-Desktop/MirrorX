@@ -1,14 +1,14 @@
 use super::{set_codec_ctx_option, EncoderConfig};
 use crate::error::CoreResult;
-use mirrorx_native::ffmpeg::avcodec::*;
+use mirrorx_native::ffmpeg::codecs::{avcodec::AVCodecContext, codec_id::*};
 use std::ffi::CString;
 
 pub struct H264VideoToolboxConfig {
     ffmpeg_encoder_name: CString,
 }
 
-impl H264VideoToolboxConfig {
-    pub fn new() -> Self {
+impl Default for H264VideoToolboxConfig {
+    fn default() -> Self {
         H264VideoToolboxConfig {
             ffmpeg_encoder_name: CString::new("h264_videotoolbox").unwrap(),
         }

@@ -39,7 +39,7 @@ pub fn enum_graphics_cards() -> CoreResult<Vec<GraphicsCards>> {
         }
 
         let com_con = unsafe { wmi::COMLibrary::assume_initialized() };
-        let wmi_con = wmi::WMIConnection::new(com_con.into())
+        let wmi_con = wmi::WMIConnection::new(com_con)
             .map_err(|err| core_error!("initialize wmi connect error ({})", err))?;
         let result: Vec<VideoControllerInfo> = wmi_con
             .query()

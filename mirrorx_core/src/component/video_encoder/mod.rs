@@ -1,2 +1,2 @@
 pub mod config;
-pub mod video_encoder;
+pub mod encoder;

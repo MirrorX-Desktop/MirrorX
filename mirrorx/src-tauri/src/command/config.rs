@@ -14,7 +14,6 @@ use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
 use tauri::{
     http::Uri, AppHandle, CustomMenuItem, Manager, State, SystemTrayMenu, SystemTrayMenuItem,
-    Window,
 };
 
 #[tauri::command]
@@ -243,11 +242,10 @@ struct UpdateLanguageEvent {
 }
 
 #[tauri::command]
-#[tracing::instrument(skip(app_state, app_handle, window))]
+#[tracing::instrument(skip(app_state, app_handle))]
 pub async fn config_language_set(
     app_state: State<'_, AppState>,
     app_handle: AppHandle,
-    window: Window,
     language: String,
 ) -> CoreResult<()> {
     let Some(ref storage) = *app_state.storage.lock().await else {
@@ -303,6 +301,10 @@ pub async fn config_language_set(
 
     #[cfg(target_os = "macos")]
     {
+        let window = app_handle.get_window("main") else {
+            return Ok(());
+        };
+
         let about_text = match language.as_str() {
             "en" => "About",
             "zh" => "关于",

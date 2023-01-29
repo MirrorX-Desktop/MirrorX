@@ -23,15 +23,14 @@ impl Display for EndPointID {
             } => {
                 write!(
                     f,
-                    "DeviceID(local:{}, remote:{})",
-                    local_device_id, remote_device_id
+                    "DeviceID(local:{local_device_id}, remote:{remote_device_id})"
                 )
             }
             EndPointID::LANID {
                 local_ip,
                 remote_ip,
             } => {
-                write!(f, "LANID(local:{}, remote:{})", local_ip, remote_ip)
+                write!(f, "LANID(local:{local_ip}, remote:{remote_ip})")
             }
         }
     }

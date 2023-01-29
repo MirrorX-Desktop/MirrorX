@@ -1,1 +1,1 @@
-pub mod video_decoder;
+pub mod decoder;

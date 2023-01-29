@@ -1,4 +1,4 @@
-use super::AVRational;
+use super::rational::AVRational;
 
 pub type AVRounding = i32;
 

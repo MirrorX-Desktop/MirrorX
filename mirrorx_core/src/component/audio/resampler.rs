@@ -1,5 +1,8 @@
 use crate::{core_error, error::CoreResult};
-use mirrorx_native::ffmpeg::{avutil::*, swresample::*};
+use mirrorx_native::ffmpeg::{
+    swresample::*,
+    utils::{channel_layout::*, mathematics::*, mem::av_freep, opt::*, samplefmt::*},
+};
 use std::os::raw::c_void;
 
 const OPT_IN_CHANNEL_LAYOUT: &[u8] = b"in_chlayout\0";
@@ -161,7 +164,7 @@ impl Resampler {
                 &mut dst_data,
                 &mut dst_linesize,
                 dst_channel_layout.nb_channels,
-                dst_nb_samples as i32,
+                dst_nb_samples,
                 output_sample_format,
                 0,
             );

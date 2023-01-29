@@ -1,5 +1,14 @@
-use super::super::avutil::*;
-use super::*;
+use super::codec_id::AVCodecID;
+use crate::ffmpeg::{
+    codecs::{
+        avcodec::{AVCodecContext, AVSubtitle},
+        packet::AVPacket,
+    },
+    utils::{
+        avutil::AVMediaType, frame::AVFrame, hwcontext::AVHWDeviceType, log::AVClass,
+        pixfmt::AVPixelFormat, rational::AVRational, samplefmt::AVSampleFormat,
+    },
+};
 use std::os::raw::{c_char, c_void};
 
 pub const AV_CODEC_CAP_TRUNCATED: i32 = 1 << 3;

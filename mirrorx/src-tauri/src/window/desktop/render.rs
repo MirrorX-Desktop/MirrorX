@@ -48,7 +48,7 @@ impl Render {
 
             let program = gl
                 .create_program()
-                .map_err(|err| format!("create program failed: {}", err))?;
+                .map_err(|err| format!("create program failed: {err}"))?;
 
             let vertex_shader_source = r#"
             #version 330 core
@@ -110,7 +110,7 @@ impl Render {
 
             let vertex_shader = gl
                 .create_shader(VERTEX_SHADER)
-                .map_err(|err| format!("create vertex shader failed: {}", err))?;
+                .map_err(|err| format!("create vertex shader failed: {err}"))?;
 
             gl.shader_source(vertex_shader, vertex_shader_source);
             check_for_gl_error!(gl);
@@ -127,7 +127,7 @@ impl Render {
 
             let fragment_shader = gl
                 .create_shader(FRAGMENT_SHADER)
-                .map_err(|err| format!("create fragment shader failed: {}", err))?;
+                .map_err(|err| format!("create fragment shader failed: {err}"))?;
 
             gl.shader_source(fragment_shader, fragment_shader_source);
             check_for_gl_error!(gl);
@@ -176,15 +176,15 @@ impl Render {
 
             let ebo = gl
                 .create_buffer()
-                .map_err(|err| format!("create ebo failed: {}", err))?;
+                .map_err(|err| format!("create ebo failed: {err}"))?;
 
             let vao = gl
                 .create_vertex_array()
-                .map_err(|err| format!("create vao failed: {}", err))?;
+                .map_err(|err| format!("create vao failed: {err}"))?;
 
             let vbo = gl
                 .create_buffer()
-                .map_err(|err| format!("create vbo failed: {}", err))?;
+                .map_err(|err| format!("create vbo failed: {err}"))?;
 
             gl.bind_vertex_array(Some(vao));
             check_for_gl_error!(gl);
@@ -527,7 +527,7 @@ unsafe fn create_texture(
 ) -> Result<NativeTexture, String> {
     let texture = gl
         .create_texture()
-        .map_err(|err| format!("create texture failed: {}", err))?;
+        .map_err(|err| format!("create texture failed: {err}"))?;
 
     gl.bind_texture(TEXTURE_2D, Some(texture));
     check_for_gl_error!(gl);

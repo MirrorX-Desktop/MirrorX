@@ -13,9 +13,9 @@ pub enum Theme {
     Auto,
 }
 
-impl<'a> Into<&'a str> for Theme {
-    fn into(self) -> &'a str {
-        match self {
+impl<'a> From<Theme> for &'a str {
+    fn from(val: Theme) -> Self {
+        match val {
             Theme::Light => "light",
             Theme::Dark => "dark",
             Theme::Auto => "auto",

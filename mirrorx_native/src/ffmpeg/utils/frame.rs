@@ -1,13 +1,13 @@
 use super::{
     avutil::AVPictureType,
     buffer::AVBufferRef,
+    channel_layout::AVChannelLayout,
     dict::AVDictionary,
     pixfmt::{
         AVChromaLocation, AVColorPrimaries, AVColorRange, AVColorSpace,
         AVColorTransferCharacteristic, AVPixelFormat,
     },
     rational::AVRational,
-    AVChannelLayout,
 };
 use std::ffi::c_void;
 

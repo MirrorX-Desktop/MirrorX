@@ -3,7 +3,13 @@ pub mod hevc_videotoolbox;
 pub mod libx264;
 
 use crate::{core_error, error::CoreResult};
-use mirrorx_native::ffmpeg::{avcodec::*, avutil::*};
+use mirrorx_native::ffmpeg::{
+    codecs::{avcodec::AVCodecContext, codec_id::AVCodecID},
+    utils::{
+        error::{AVERROR, AVERROR_OPTION_NOT_FOUND},
+        opt::av_opt_set,
+    },
+};
 use std::ffi::CString;
 
 pub trait EncoderConfig {

@@ -1,4 +1,4 @@
-use super::super::avutil::*;
+use crate::ffmpeg::utils::{buffer::AVBufferRef, rational::AVRational};
 use std::ffi::c_void;
 
 pub type AVPacketSideDataType = u32;

@@ -1,3 +1,3 @@
-pub mod avcodec;
-pub mod avutil;
+pub mod codecs;
 pub mod swresample;
+pub mod utils;

@@ -23,6 +23,8 @@ use crate::{
         rand::generate_random_ping_value,
     },
 };
+use base64::engine::general_purpose::STANDARD as base64_standard;
+use base64::Engine;
 use bytes::Bytes;
 use futures::{
     stream::{SplitSink, SplitStream},
@@ -186,9 +188,9 @@ impl SignalingClient {
                 active_device_id: local_device_id,
                 passive_device_id: remote_device_id,
                 visit_desktop,
-                password_salt: base64::encode(active_device_secret_salt),
-                secret: base64::encode(active_device_secret_buffer),
-                secret_nonce: base64::encode(active_device_secret_sealing_nonce),
+                password_salt: base64_standard.encode(active_device_secret_salt),
+                secret: base64_standard.encode(active_device_secret_buffer),
+                secret_nonce: base64_standard.encode(active_device_secret_sealing_nonce),
             })
             .timeout(Duration::from_secs(60))
             .send()
@@ -199,11 +201,11 @@ impl SignalingClient {
         match resp {
             Response::Message(resp) => {
                 let secret = match resp.result {
-                    Ok(secret) => base64::decode(secret)?,
+                    Ok(secret) => base64_standard.decode(secret)?,
                     Err(reason) => return Ok(Response::Message(Err(reason))),
                 };
 
-                let visit_credentials = base64::decode(resp.visit_credentials)?;
+                let visit_credentials = base64_standard.decode(resp.visit_credentials)?;
 
                 let passive_device_secret_buffer =
                     reply_private_key.decrypt(rsa::PaddingScheme::PKCS1v15Encrypt, &secret)?;
