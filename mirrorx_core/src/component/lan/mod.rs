@@ -32,17 +32,35 @@ pub struct LANProvider {
 
 impl LANProvider {
     pub async fn new() -> CoreResult<Self> {
-        let broadcast_interfaces = enum_broadcast_network_interfaces()?;
-
         let uuid = uuid::Uuid::new_v4().to_string();
         let mut discovers = Vec::new();
         let discoverable = Arc::new(AtomicBool::new(true));
         let (packet_tx, packet_rx) = tokio::sync::mpsc::channel(64);
 
-        for (name, ip) in broadcast_interfaces {
-            discovers.push(
-                discover::Discover::new(&uuid, &name, ip, discoverable.clone(), packet_tx.clone())
+        if cfg!(target_os = "windows") {
+            let broadcast_interfaces = enum_broadcast_network_interfaces()?;
+            for (name, ip) in broadcast_interfaces {
+                discovers.push(
+                    discover::Discover::new(
+                        &uuid,
+                        &name,
+                        ip,
+                        discoverable.clone(),
+                        packet_tx.clone(),
+                    )
                     .await?,
+                );
+            }
+        } else {
+            discovers.push(
+                discover::Discover::new(
+                    &uuid,
+                    "default",
+                    IpAddr::V4(std::net::Ipv4Addr::UNSPECIFIED),
+                    discoverable.clone(),
+                    packet_tx.clone(),
+                )
+                .await?,
             );
         }
 
@@ -83,7 +101,7 @@ fn serve_discover_nodes(
     nodes_cache: Arc<RwLock<FxHashMap<String, (Node, i64)>>>,
     mut packet_rx: Receiver<(SocketAddr, discover::BroadcastPacket)>,
 ) {
-    let mut ticker = tokio::time::interval(Duration::from_secs(20));
+    let mut ticker = tokio::time::interval(Duration::from_secs(30));
     tokio::spawn(async move {
         loop {
             tokio::select! {
@@ -105,7 +123,7 @@ async fn clear_timeout_nodes(nodes_cache: Arc<RwLock<FxHashMap<String, (Node, i6
     let now_ts = chrono::Utc::now().timestamp();
 
     // remove live timeout node
-    (*nodes).retain(|_, (_, ts)| now_ts - *ts <= 17);
+    (*nodes).retain(|_, (_, ts)| now_ts - *ts <= 30);
 
     // update check timestamp
     (*nodes).iter_mut().for_each(|(_, (_, ts))| *ts = now_ts);

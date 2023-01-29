@@ -80,7 +80,5 @@ pub fn enum_broadcast_network_interfaces() -> CoreResult<Vec<(String, IpAddr)>> 
         valid_interfaces.push((interface.name, ip));
     }
 
-    tracing::info!("{:?}", valid_interfaces);
-
     Ok(valid_interfaces)
 }
