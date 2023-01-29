@@ -32,6 +32,7 @@ pub struct Discover {
 
 impl Discover {
     pub async fn new(
+        uuid: &str,
         name: &str,
         ip: IpAddr,
         discoverable: Arc<AtomicBool>,
@@ -42,7 +43,6 @@ impl Discover {
 
         tracing::info!(interface = name, ?ip, "lan discover listen");
 
-        let uuid = uuid::Uuid::new_v4();
         let dead_packet = bincode::serialize(&BroadcastPacket::TargetDead(uuid.to_string()))?;
         let live_packet = bincode::serialize(&BroadcastPacket::TargetLive(create_live_packet(
             uuid.to_string(),

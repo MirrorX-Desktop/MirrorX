@@ -27,10 +27,12 @@ pub async fn config_init(
         .app_config_dir()
         .ok_or(core_error!("read app dir from path resolver failed"))?;
 
-    tracing::info!(path = ?config_dir, "config dir");
     std::fs::create_dir_all(config_dir.clone())?;
+    let storage_path = config_dir.join("mirrorx.db");
 
-    let storage = LocalStorage::new(config_dir.join("mirrorx.db"))?;
+    tracing::info!(path = ?storage_path, "read config");
+
+    let storage = LocalStorage::new(storage_path)?;
     let domain_count = storage.domain().get_domain_count()?;
 
     let mut storage_guard = app_state.storage.lock().await;

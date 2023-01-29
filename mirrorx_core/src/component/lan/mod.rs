@@ -34,21 +34,22 @@ impl LANProvider {
     pub async fn new() -> CoreResult<Self> {
         let broadcast_interfaces = enum_broadcast_network_interfaces()?;
 
+        let uuid = uuid::Uuid::new_v4().to_string();
         let mut discovers = Vec::new();
         let discoverable = Arc::new(AtomicBool::new(true));
-
         let (packet_tx, packet_rx) = tokio::sync::mpsc::channel(64);
 
         for (name, ip) in broadcast_interfaces {
             discovers.push(
-                discover::Discover::new(&name, ip, discoverable.clone(), packet_tx.clone()).await?,
+                discover::Discover::new(&uuid, &name, ip, discoverable.clone(), packet_tx.clone())
+                    .await?,
             );
         }
 
         let server = server::Server::new().await?;
         let nodes_cache = Arc::new(RwLock::new(FxHashMap::default()));
 
-        serve_discover_nodes(nodes_cache.clone(), packet_rx);
+        serve_discover_nodes(uuid, nodes_cache.clone(), packet_rx);
 
         Ok(LANProvider {
             nodes_cache,
@@ -78,6 +79,7 @@ impl LANProvider {
 }
 
 fn serve_discover_nodes(
+    self_id: String,
     nodes_cache: Arc<RwLock<FxHashMap<String, (Node, i64)>>>,
     mut packet_rx: Receiver<(SocketAddr, discover::BroadcastPacket)>,
 ) {
@@ -87,7 +89,7 @@ fn serve_discover_nodes(
             tokio::select! {
                 _ = ticker.tick() => clear_timeout_nodes(nodes_cache.clone()).await,
                 packet = packet_rx.recv() => match packet {
-                    Some(packet) => update_nodes(nodes_cache.clone(), packet).await,
+                    Some(packet) => update_nodes(&self_id, nodes_cache.clone(), packet).await,
                     None => {
                         tracing::error!("lan discover packet channel closed");
                         return;
@@ -110,12 +112,17 @@ async fn clear_timeout_nodes(nodes_cache: Arc<RwLock<FxHashMap<String, (Node, i6
 }
 
 async fn update_nodes(
+    self_id: &str,
     nodes_cache: Arc<RwLock<FxHashMap<String, (Node, i64)>>>,
     packet: (SocketAddr, BroadcastPacket),
 ) {
     let (addr, packet) = packet;
     match packet {
         BroadcastPacket::TargetLive(live_packet) => {
+            if live_packet.uuid == self_id {
+                return;
+            }
+
             let mut nodes = nodes_cache.write().await;
             if let Some((node, _)) = (*nodes).get_mut(&live_packet.uuid) {
                 if !node.addrs.contains(&addr.ip()) {
@@ -136,9 +143,13 @@ async fn update_nodes(
                 );
             }
         }
-        BroadcastPacket::TargetDead(dead_packet) => {
+        BroadcastPacket::TargetDead(uuid) => {
+            if uuid == self_id {
+                return;
+            }
+
             let mut nodes = nodes_cache.write().await;
-            (*nodes).remove(&dead_packet);
+            (*nodes).remove(&uuid);
         }
     }
 }
