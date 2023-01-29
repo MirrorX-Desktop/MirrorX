@@ -199,38 +199,6 @@ impl Duplicator {
             if self.mouse_visible {
                 self.draw_mouse()?;
             }
-
-            let mut texture_desc: D3D11_TEXTURE2D_DESC = std::mem::zeroed();
-            texture_desc.Width = 3840;
-            texture_desc.Height = 2160;
-            texture_desc.MipLevels = 1;
-            texture_desc.ArraySize = 1;
-            texture_desc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
-            texture_desc.SampleDesc.Count = 1;
-            texture_desc.SampleDesc.Quality = 0;
-            texture_desc.Usage = D3D11_USAGE_STAGING;
-            texture_desc.BindFlags = D3D11_BIND_FLAG::default();
-            texture_desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
-
-            let staging_texture = HRESULT!(self.device.CreateTexture2D(&texture_desc, None));
-
-            self.device_context
-                .CopyResource(&staging_texture, &self.backend_texture);
-
-            let lumina_mapped_resource =
-                HRESULT!(self
-                    .device_context
-                    .Map(&staging_texture, 0, D3D11_MAP_READ, 0));
-
-            let luminance_bytes = std::slice::from_raw_parts(
-                lumina_mapped_resource.pData as *mut u8,
-                (2160 * lumina_mapped_resource.RowPitch) as usize,
-            )
-            .to_vec();
-
-            std::fs::write(r"F:\bgra", luminance_bytes).unwrap();
-
-            self.device_context.Unmap(&staging_texture, 0);
         }
 
         HRESULT!(self.duplication.ReleaseFrame());
@@ -552,18 +520,14 @@ impl Duplicator {
         let mut init_data: D3D11_SUBRESOURCE_DATA = std::mem::zeroed();
         init_data.pSysMem =
             if self.mouse_shape_info.Type & (DXGI_OUTDUPL_POINTER_SHAPE_TYPE_COLOR.0 as u32) != 0 {
-                tracing::info!("1");
                 self.mouse_shape_buffer.as_ptr() as *const _
             } else {
-                tracing::info!("2");
                 init_buffer as *const _
             };
         init_data.SysMemPitch =
             if self.mouse_shape_info.Type & (DXGI_OUTDUPL_POINTER_SHAPE_TYPE_COLOR.0 as u32) != 0 {
-                tracing::info!("3");
                 self.mouse_shape_info.Pitch
             } else {
-                tracing::info!("4");
                 (pointer_width * 4) as u32
             };
         init_data.SysMemSlicePitch = 0;
