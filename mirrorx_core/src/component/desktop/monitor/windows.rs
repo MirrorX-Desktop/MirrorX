@@ -1,9 +1,4 @@
-use crate::{
-    component::desktop::monitor::Monitor,
-    core_error,
-    error::{CoreError, CoreResult},
-    HRESULT,
-};
+use crate::{component::desktop::monitor::Monitor, core_error, error::CoreResult, HRESULT};
 use image::ColorType;
 use scopeguard::defer;
 use std::{collections::HashMap, io::Cursor, os::raw::c_void};
@@ -317,10 +312,8 @@ unsafe fn take_screen_shot(
     // every chunk size is 4 for BGRA or 3 for BGR
     let chunk_size = if is_32_bit { 4 } else { 3 };
 
-    for chunk in bmp_bytes.chunks_mut(chunk_size).into_iter() {
-        chunk[0] = chunk[0] ^ chunk[2];
-        chunk[2] = chunk[0] ^ chunk[2];
-        chunk[0] = chunk[0] ^ chunk[2];
+    for chunk in bmp_bytes.chunks_mut(chunk_size) {
+        chunk.swap(0, 2)
     }
 
     let mut png_bytes: Vec<u8> = Vec::with_capacity(bmp_bytes.len());
