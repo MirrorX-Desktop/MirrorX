@@ -37,6 +37,8 @@ pub struct DesktopWindow {
     icon_scale: RetainedImage,
     render: Arc<RwLock<Render>>,
     render_call_back: Arc<CallbackFn>,
+    last_show_cursor: bool,
+    current_show_cursor: bool,
 }
 
 impl DesktopWindow {
@@ -78,6 +80,8 @@ impl DesktopWindow {
             ),
             render: desktop_render,
             render_call_back: Arc::new(cb),
+            last_show_cursor: true,
+            current_show_cursor: true,
         }
     }
 
@@ -167,6 +171,9 @@ impl DesktopWindow {
                             let input = ui.ctx().input();
                             let events = input.events.as_slice();
                             let left_top = view_port.left_top();
+
+                            self.current_show_cursor = !input.pointer.has_pointer();
+
                             self.emit_input(events, move |pos| Some(pos + left_top.to_vec2()));
                         });
                 });
@@ -200,6 +207,16 @@ impl DesktopWindow {
 
                 let input = ui.ctx().input();
                 let events = input.events.as_slice();
+                if let Some(pos) = input.pointer.hover_pos() {
+                    if (space_around_image.x <= pos.x
+                        && pos.x <= space_around_image.x + desktop_size.0)
+                        && (space_around_image.y <= pos.y
+                            && pos.y <= space_around_image.y + desktop_size.1)
+                    {
+                        self.current_show_cursor = false;
+                    }
+                }
+
                 self.emit_input(events, move |pos| {
                     if (space_around_image.x <= pos.x
                         && pos.x <= space_around_image.x + desktop_size.0)
@@ -309,9 +326,6 @@ impl DesktopWindow {
                             mouse_pos.x,
                             mouse_pos.y,
                         )));
-
-                        // self.last_mouse_pos = mouse_pos;
-                        // }
                     }
                 }
                 tauri_egui::egui::Event::PointerButton {
@@ -379,11 +393,18 @@ impl tauri_egui::eframe::App for DesktopWindow {
     fn update(&mut self, ctx: &tauri_egui::egui::Context, _: &mut tauri_egui::eframe::Frame) {
         let update_instant = std::time::Instant::now();
 
+        self.current_show_cursor = true;
+
         CentralPanel::default()
             .frame(tauri_egui::egui::Frame::none())
             .show(ctx, |ui| {
                 self.build_panel(ui);
             });
+
+        if self.current_show_cursor != self.last_show_cursor {
+            mirrorx_core::api::system::set_show_cursor(self.current_show_cursor);
+            self.last_show_cursor = self.current_show_cursor;
+        }
 
         let cost = update_instant.elapsed();
 
