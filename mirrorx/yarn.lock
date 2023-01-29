@@ -201,7 +201,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@fortawesome/free-solid-svg-icons@npm:^6.2.0":
+"@fortawesome/free-solid-svg-icons@npm:^6.2.1":
   version: 6.2.1
   resolution: "@fortawesome/free-solid-svg-icons@npm:6.2.1"
   dependencies:
@@ -249,14 +249,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@jridgewell/sourcemap-codec@npm:1.4.14, @jridgewell/sourcemap-codec@npm:^1.4.13":
+"@jridgewell/sourcemap-codec@npm:1.4.14, @jridgewell/sourcemap-codec@npm:^1.4.13, @jridgewell/sourcemap-codec@npm:^1.4.14":
   version: 1.4.14
   resolution: "@jridgewell/sourcemap-codec@npm:1.4.14"
   checksum: 61100637b6d173d3ba786a5dff019e1a74b1f394f323c1fee337ff390239f053b87266c7a948777f4b1ee68c01a8ad0ab61e5ff4abb5a012a0b091bec391ab97
   languageName: node
   linkType: hard
 
-"@jridgewell/trace-mapping@npm:^0.3.9":
+"@jridgewell/trace-mapping@npm:^0.3.17":
   version: 0.3.17
   resolution: "@jridgewell/trace-mapping@npm:0.3.17"
   dependencies:
@@ -331,7 +331,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@sveltejs/adapter-static@npm:^1.0.0-next.46":
+"@sveltejs/adapter-static@npm:^1.0.5":
   version: 1.0.5
   resolution: "@sveltejs/adapter-static@npm:1.0.5"
   peerDependencies:
@@ -383,7 +383,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@tauri-apps/api@npm:^1.1.0":
+"@tauri-apps/api@npm:^1.2.0":
   version: 1.2.0
   resolution: "@tauri-apps/api@npm:1.2.0"
   checksum: 15b0b805d9a30dce4e722b48330566cb95d79f92d626741f49735dfb7e7a044836a7c45a0537e03fd0acb48965c723ff31a6931289f81c9bcafa4e13c3a2aa2b
@@ -425,14 +425,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/pug@npm:^2.0.4":
+"@types/pug@npm:^2.0.6":
   version: 2.0.6
   resolution: "@types/pug@npm:2.0.6"
   checksum: e8d09c3ddc7e6b87050a16d73694518f259a8ed74a0ab79b81b847baf89d92d44959ed68199966ac6f4a218c715c9bb3e4c86c8800d4868a4a674f4b21d2f01d
   languageName: node
   linkType: hard
 
-"@types/sass@npm:^1.16.0":
+"@types/sass@npm:^1.43.1":
   version: 1.43.1
   resolution: "@types/sass@npm:1.43.1"
   dependencies:
@@ -455,14 +455,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/uuid@npm:^8.3.4":
-  version: 8.3.4
-  resolution: "@types/uuid@npm:8.3.4"
-  checksum: 6f11f3ff70f30210edaa8071422d405e9c1d4e53abbe50fdce365150d3c698fe7bbff65c1e71ae080cbfb8fded860dbb5e174da96fdbbdfcaa3fb3daa474d20f
+"@types/uuid@npm:^9.0.0":
+  version: 9.0.0
+  resolution: "@types/uuid@npm:9.0.0"
+  checksum: 59ae56d9547c8758588659da2a2b4c97cce79c2aae1798c892bb29452ef08e87859dea2ec3a66bfa88d0d2153147520be2b1893be920f9f0bc9c53a3207ea6aa
   languageName: node
   linkType: hard
 
-"@typescript-eslint/eslint-plugin@npm:^5.27.0":
+"@typescript-eslint/eslint-plugin@npm:^5.49.0":
   version: 5.49.0
   resolution: "@typescript-eslint/eslint-plugin@npm:5.49.0"
   dependencies:
@@ -485,7 +485,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@typescript-eslint/parser@npm:^5.27.0":
+"@typescript-eslint/parser@npm:^5.49.0":
   version: 5.49.0
   resolution: "@typescript-eslint/parser@npm:5.49.0"
   dependencies:
@@ -1016,7 +1016,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"daisyui@npm:^2.38.1":
+"daisyui@npm:^2.49.0":
   version: 2.49.0
   resolution: "daisyui@npm:2.49.0"
   dependencies:
@@ -1085,7 +1085,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"detect-indent@npm:^6.0.0":
+"detect-indent@npm:^6.1.0":
   version: 6.1.0
   resolution: "detect-indent@npm:6.1.0"
   checksum: ab953a73c72dbd4e8fc68e4ed4bfd92c97eb6c43734af3900add963fd3a9316f3bc0578b018b24198d4c31a358571eff5f0656e81a1f3b9ad5c547d58b2d093d
@@ -1279,7 +1279,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"eslint-config-prettier@npm:^8.3.0":
+"eslint-config-prettier@npm:^8.6.0":
   version: 8.6.0
   resolution: "eslint-config-prettier@npm:8.6.0"
   peerDependencies:
@@ -1345,7 +1345,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"eslint@npm:^8.16.0":
+"eslint@npm:^8.33.0":
   version: 8.33.0
   resolution: "eslint@npm:8.33.0"
   dependencies:
@@ -1921,7 +1921,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"js-base64@npm:^3.7.3":
+"js-base64@npm:^3.7.4":
   version: 3.7.4
   resolution: "js-base64@npm:3.7.4"
   checksum: b8f6b10033b57bbb87fa34629f44bc665cb8b7bcba49610a29b296592616e633e9c186afaa02de5a54d60c08aaa36c8c8ad585db095a96fb331fe022f54792a2
@@ -2013,15 +2013,6 @@ __metadata:
   version: 7.14.1
   resolution: "lru-cache@npm:7.14.1"
   checksum: d72c6713c6a6d86836a7a6523b3f1ac6764768cca47ec99341c3e76db06aacd4764620e5e2cda719a36848785a52a70e531822dc2b33fb071fa709683746c104
-  languageName: node
-  linkType: hard
-
-"magic-string@npm:^0.25.7":
-  version: 0.25.9
-  resolution: "magic-string@npm:0.25.9"
-  dependencies:
-    sourcemap-codec: ^1.4.8
-  checksum: 9a0e55a15c7303fc360f9572a71cffba1f61451bc92c5602b1206c9d17f492403bf96f946dfce7483e66822d6b74607262e24392e87b0ac27b786e69a40e9b1a
   languageName: node
   linkType: hard
 
@@ -2201,39 +2192,39 @@ __metadata:
   dependencies:
     "@fortawesome/free-brands-svg-icons": ^6.2.1
     "@fortawesome/free-regular-svg-icons": ^6.2.1
-    "@fortawesome/free-solid-svg-icons": ^6.2.0
+    "@fortawesome/free-solid-svg-icons": ^6.2.1
     "@sveltejs/adapter-auto": next
-    "@sveltejs/adapter-static": ^1.0.0-next.46
+    "@sveltejs/adapter-static": ^1.0.5
     "@sveltejs/kit": next
-    "@tauri-apps/api": ^1.1.0
+    "@tauri-apps/api": ^1.2.0
     "@types/debounce": ^1.2.1
     "@types/ua-parser-js": ^0.7.36
-    "@types/uuid": ^8.3.4
-    "@typescript-eslint/eslint-plugin": ^5.27.0
-    "@typescript-eslint/parser": ^5.27.0
+    "@types/uuid": ^9.0.0
+    "@typescript-eslint/eslint-plugin": ^5.49.0
+    "@typescript-eslint/parser": ^5.49.0
     autoprefixer: ^10.4.13
-    daisyui: ^2.38.1
+    daisyui: ^2.49.0
     debounce: ^1.2.1
-    eslint: ^8.16.0
-    eslint-config-prettier: ^8.3.0
+    eslint: ^8.33.0
+    eslint-config-prettier: ^8.6.0
     eslint-plugin-svelte3: ^4.0.0
-    js-base64: ^3.7.3
+    js-base64: ^3.7.4
     moment: ^2.29.4
-    postcss: ^8.4.18
-    prettier: ^2.6.2
+    postcss: ^8.4.21
+    prettier: ^2.8.3
     prettier-plugin-svelte: ^2.9.0
-    prettier-plugin-tailwindcss: ^0.1.13
-    svelte: ^3.44.0
-    svelte-check: ^2.7.1
+    prettier-plugin-tailwindcss: ^0.2.2
+    svelte: ^3.55.1
+    svelte-check: ^3.0.3
     svelte-fa: ^3.0.3
-    svelte-preprocess: ^4.10.7
-    tailwindcss: ^3.2.2
-    tslib: ^2.3.1
-    typesafe-i18n: ^5.14.0
+    svelte-preprocess: ^5.0.1
+    tailwindcss: ^3.2.4
+    tslib: ^2.5.0
+    typesafe-i18n: ^5.20.0
     typescript: ^4.9.4
     ua-parser-js: ^1.0.33
     uuid: ^9.0.0
-    vite: ^4.0.1
+    vite: ^4.0.4
   languageName: unknown
   linkType: soft
 
@@ -2578,7 +2569,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"postcss@npm:^8.4.18, postcss@npm:^8.4.20":
+"postcss@npm:^8.4.18, postcss@npm:^8.4.20, postcss@npm:^8.4.21":
   version: 8.4.21
   resolution: "postcss@npm:8.4.21"
   dependencies:
@@ -2606,16 +2597,59 @@ __metadata:
   languageName: node
   linkType: hard
 
-"prettier-plugin-tailwindcss@npm:^0.1.13":
-  version: 0.1.13
-  resolution: "prettier-plugin-tailwindcss@npm:0.1.13"
+"prettier-plugin-tailwindcss@npm:^0.2.2":
+  version: 0.2.2
+  resolution: "prettier-plugin-tailwindcss@npm:0.2.2"
   peerDependencies:
+    "@prettier/plugin-php": "*"
+    "@prettier/plugin-pug": "*"
+    "@shopify/prettier-plugin-liquid": "*"
+    "@shufo/prettier-plugin-blade": "*"
+    "@trivago/prettier-plugin-sort-imports": "*"
     prettier: ">=2.2.0"
-  checksum: 1b9000686e661be81de7d36d514c5ee34a98b11639b538bce8dd3a482c073c0148feb9d54b526babaede681d1c5ecb318ad97f38e8d71dd5cc26c33dfcaf8344
+    prettier-plugin-astro: "*"
+    prettier-plugin-css-order: "*"
+    prettier-plugin-import-sort: "*"
+    prettier-plugin-jsdoc: "*"
+    prettier-plugin-organize-attributes: "*"
+    prettier-plugin-organize-imports: "*"
+    prettier-plugin-style-order: "*"
+    prettier-plugin-svelte: "*"
+    prettier-plugin-twig-melody: "*"
+  peerDependenciesMeta:
+    "@prettier/plugin-php":
+      optional: true
+    "@prettier/plugin-pug":
+      optional: true
+    "@shopify/prettier-plugin-liquid":
+      optional: true
+    "@shufo/prettier-plugin-blade":
+      optional: true
+    "@trivago/prettier-plugin-sort-imports":
+      optional: true
+    prettier-plugin-astro:
+      optional: true
+    prettier-plugin-css-order:
+      optional: true
+    prettier-plugin-import-sort:
+      optional: true
+    prettier-plugin-jsdoc:
+      optional: true
+    prettier-plugin-organize-attributes:
+      optional: true
+    prettier-plugin-organize-imports:
+      optional: true
+    prettier-plugin-style-order:
+      optional: true
+    prettier-plugin-svelte:
+      optional: true
+    prettier-plugin-twig-melody:
+      optional: true
+  checksum: dd4baa7b60d0cef36309a97bf884ec7beb61e29d7bf0c88036647985243535048968252f2f7159d88142695ae21fe305a6a1f96cceec36d41085cab63dbc4b25
   languageName: node
   linkType: hard
 
-"prettier@npm:^2.6.2":
+"prettier@npm:^2.8.3":
   version: 2.8.3
   resolution: "prettier@npm:2.8.3"
   bin:
@@ -2928,17 +2962,17 @@ __metadata:
   languageName: node
   linkType: hard
 
-"sorcery@npm:^0.10.0":
-  version: 0.10.0
-  resolution: "sorcery@npm:0.10.0"
+"sorcery@npm:^0.11.0":
+  version: 0.11.0
+  resolution: "sorcery@npm:0.11.0"
   dependencies:
+    "@jridgewell/sourcemap-codec": ^1.4.14
     buffer-crc32: ^0.2.5
     minimist: ^1.2.0
     sander: ^0.5.0
-    sourcemap-codec: ^1.3.0
   bin:
-    sorcery: bin/index.js
-  checksum: e23fc06336c6e47274bd5e23849f8a7a40071d06a6fe1105f2557eb8613563b4c867230fd5f7b143e86a9bf45f62279e39ce68545482821d7b51b185133f2bc9
+    sorcery: bin/sorcery
+  checksum: b79a4194f5ab7ee1d19d5cd2a683bd605762d5cbeeb238f46a71af357a179a6193d64a92ef2af1e05e4261cb3797be8694ad9b7ecfea9ca0d8f14d98f449dff5
   languageName: node
   linkType: hard
 
@@ -2946,13 +2980,6 @@ __metadata:
   version: 1.0.2
   resolution: "source-map-js@npm:1.0.2"
   checksum: c049a7fc4deb9a7e9b481ae3d424cc793cb4845daa690bc5a05d428bf41bf231ced49b4cf0c9e77f9d42fdb3d20d6187619fc586605f5eabe995a316da8d377c
-  languageName: node
-  linkType: hard
-
-"sourcemap-codec@npm:^1.3.0, sourcemap-codec@npm:^1.4.8":
-  version: 1.4.8
-  resolution: "sourcemap-codec@npm:1.4.8"
-  checksum: b57981c05611afef31605732b598ccf65124a9fcb03b833532659ac4d29ac0f7bfacbc0d6c5a28a03e84c7510e7e556d758d0bb57786e214660016fb94279316
   languageName: node
   linkType: hard
 
@@ -3033,23 +3060,23 @@ __metadata:
   languageName: node
   linkType: hard
 
-"svelte-check@npm:^2.7.1":
-  version: 2.10.3
-  resolution: "svelte-check@npm:2.10.3"
+"svelte-check@npm:^3.0.3":
+  version: 3.0.3
+  resolution: "svelte-check@npm:3.0.3"
   dependencies:
-    "@jridgewell/trace-mapping": ^0.3.9
+    "@jridgewell/trace-mapping": ^0.3.17
     chokidar: ^3.4.1
     fast-glob: ^3.2.7
     import-fresh: ^3.2.1
     picocolors: ^1.0.0
     sade: ^1.7.4
-    svelte-preprocess: ^4.0.0
-    typescript: "*"
+    svelte-preprocess: ^5.0.0
+    typescript: ^4.9.4
   peerDependencies:
-    svelte: ^3.24.0
+    svelte: ^3.55.0
   bin:
     svelte-check: bin/svelte-check
-  checksum: 995a99da45aece86b5095bf554f77904c4b03462cffd5245afe096d5cad5fe44daa348183f0738f8273e69bb60c9fb789d076bc27c1f3c26a54f907f7bcf7f9e
+  checksum: 5b215e8567852bb384ed309552638987fb9226e3452f2940ebe588ff9d1afc79e25e1bac0d1f95d24b6e91f3470797a52d630fd47c128ef2045270068f17d3d4
   languageName: node
   linkType: hard
 
@@ -3069,15 +3096,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"svelte-preprocess@npm:^4.0.0, svelte-preprocess@npm:^4.10.7":
-  version: 4.10.7
-  resolution: "svelte-preprocess@npm:4.10.7"
+"svelte-preprocess@npm:^5.0.0, svelte-preprocess@npm:^5.0.1":
+  version: 5.0.1
+  resolution: "svelte-preprocess@npm:5.0.1"
   dependencies:
-    "@types/pug": ^2.0.4
-    "@types/sass": ^1.16.0
-    detect-indent: ^6.0.0
-    magic-string: ^0.25.7
-    sorcery: ^0.10.0
+    "@types/pug": ^2.0.6
+    "@types/sass": ^1.43.1
+    detect-indent: ^6.1.0
+    magic-string: ^0.27.0
+    sorcery: ^0.11.0
     strip-indent: ^3.0.0
   peerDependencies:
     "@babel/core": ^7.10.2
@@ -3088,7 +3115,7 @@ __metadata:
     pug: ^3.0.0
     sass: ^1.26.8
     stylus: ^0.55.0
-    sugarss: ^2.0.0
+    sugarss: ^2.0.0 || ^3.0.0 || ^4.0.0
     svelte: ^3.23.0
     typescript: ^3.9.5 || ^4.0.0
   peerDependenciesMeta:
@@ -3097,8 +3124,6 @@ __metadata:
     coffeescript:
       optional: true
     less:
-      optional: true
-    node-sass:
       optional: true
     postcss:
       optional: true
@@ -3114,18 +3139,18 @@ __metadata:
       optional: true
     typescript:
       optional: true
-  checksum: 51a0820c14bcc411ddf3b1cf4c772e73873626ed0b6c54dfca9e06bd6a6b22c9502436df3f1a4dab9eb3a404bba95002fd70cadea29a84fc36da3071309a8b91
+  checksum: 80b317b25657a53d0343472560d13a3feb1b0e23cd15278cf491c802f027fca9313b17a652ce7a106263ce5e679bb0c3599daf4e7b9ab66fb794554ed6228d7d
   languageName: node
   linkType: hard
 
-"svelte@npm:^3.44.0":
+"svelte@npm:^3.55.1":
   version: 3.55.1
   resolution: "svelte@npm:3.55.1"
   checksum: ce66391bae68b2055a0a63ee0477e73f036247d4dd5abd5240372d5f4971a452ad29c4ef2c630ab089697429edd61756ef7b764e7597ad7e897ce9f8a9457fec
   languageName: node
   linkType: hard
 
-"tailwindcss@npm:^3, tailwindcss@npm:^3.2.2":
+"tailwindcss@npm:^3, tailwindcss@npm:^3.2.4":
   version: 3.2.4
   resolution: "tailwindcss@npm:3.2.4"
   dependencies:
@@ -3215,7 +3240,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"tslib@npm:^2.3.1":
+"tslib@npm:^2.5.0":
   version: 2.5.0
   resolution: "tslib@npm:2.5.0"
   checksum: ae3ed5f9ce29932d049908ebfdf21b3a003a85653a9a140d614da6b767a93ef94f460e52c3d787f0e4f383546981713f165037dc2274df212ea9f8a4541004e1
@@ -3249,7 +3274,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"typesafe-i18n@npm:^5.14.0":
+"typesafe-i18n@npm:^5.20.0":
   version: 5.20.0
   resolution: "typesafe-i18n@npm:5.20.0"
   peerDependencies:
@@ -3260,7 +3285,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"typescript@npm:*, typescript@npm:^4.9.4":
+"typescript@npm:^4.9.4":
   version: 4.9.4
   resolution: "typescript@npm:4.9.4"
   bin:
@@ -3270,7 +3295,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"typescript@patch:typescript@*#~builtin<compat/typescript>, typescript@patch:typescript@^4.9.4#~builtin<compat/typescript>":
+"typescript@patch:typescript@^4.9.4#~builtin<compat/typescript>":
   version: 4.9.4
   resolution: "typescript@patch:typescript@npm%3A4.9.4#~builtin<compat/typescript>::version=4.9.4&hash=ad5954"
   bin:
@@ -3353,7 +3378,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"vite@npm:^4.0.1":
+"vite@npm:^4.0.4":
   version: 4.0.4
   resolution: "vite@npm:4.0.4"
   dependencies:
