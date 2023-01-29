@@ -4,30 +4,20 @@ use mirrorx_core::{
         create_desktop_active_endpoint_client, create_file_manager_active_endpoint_client,
         id::EndPointID, EndPointStream,
     },
-    component::lan::{
-        discover::{Discover, Node},
-        server::Server,
-    },
+    component::lan::{LANProvider, Node},
     core_error,
     error::CoreResult,
-    utility::lan_ip::get_lan_ip,
 };
-use std::net::{IpAddr, SocketAddr};
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use tauri_egui::EguiPluginHandle;
 
 #[tauri::command]
 #[tracing::instrument(skip(app_state))]
 pub async fn lan_init(app_state: tauri::State<'_, AppState>, force: bool) -> CoreResult<()> {
-    let mut lan_components = app_state.lan_components.lock().await;
+    let mut lan_provider = app_state.lan_provider.lock().await;
 
-    if force || lan_components.is_none() {
-        let lan_ip = get_lan_ip().await?;
-        let discover = Discover::new(lan_ip).await?;
-
-        let old_components = lan_components.take();
-        drop(old_components);
-
-        *lan_components = Some((discover, Server::new(lan_ip).await?));
+    if force || lan_provider.is_none() {
+        *lan_provider = Some(LANProvider::new().await?);
     }
 
     Ok(())
@@ -42,7 +32,6 @@ pub async fn lan_connect(
     addr: String,
     visit_desktop: bool,
 ) -> CoreResult<()> {
-    let local_ip = get_lan_ip().await?;
     let remote_ip: IpAddr = addr
         .parse()
         .map_err(|_| core_error!("parse addr to IpAddr failed"))?;
@@ -62,7 +51,7 @@ pub async fn lan_connect(
     let remote_addr = SocketAddr::new(remote_ip, 48001);
 
     let endpoint_id = EndPointID::LANID {
-        local_ip,
+        local_ip: IpAddr::V4(Ipv4Addr::UNSPECIFIED),
         remote_ip,
     };
 
@@ -155,14 +144,11 @@ pub async fn lan_connect(
 #[tauri::command]
 #[tracing::instrument(skip(app_state))]
 pub async fn lan_nodes_list(app_state: tauri::State<'_, AppState>) -> CoreResult<Vec<Node>> {
-    let Some((ref discover, _)) = *app_state
-        .lan_components
-        .lock()
-        .await else {
-            return Err(core_error!("lan discover is empty"))
-        };
-
-    Ok(discover.nodes_snapshot())
+    if let Some(ref discover) = *app_state.lan_provider.lock().await {
+        Ok(discover.nodes().await)
+    } else {
+        Err(core_error!("lan discover is empty"))
+    }
 }
 
 #[tauri::command]
@@ -171,25 +157,28 @@ pub async fn lan_nodes_search(
     app_state: tauri::State<'_, AppState>,
     keyword: String,
 ) -> CoreResult<Vec<Node>> {
-    let Some((ref discover, _)) = *app_state
-        .lan_components
-        .lock()
-        .await else {
-            return Err(core_error!("lan discover is empty"))
-        };
+    if let Some(ref discover) = *app_state.lan_provider.lock().await {
+        let mut nodes = discover.nodes().await;
+        let nodes_count = nodes.len();
 
-    let mut nodes = discover.nodes_snapshot();
-    let nodes_count = nodes.len();
+        for i in 0..nodes_count {
+            let hostname = &nodes[i].host_name;
+            if !hostname.contains(&keyword) {
+                nodes.remove(i);
+            }
 
-    for i in 0..nodes_count {
-        let hostname = &nodes[i].host_name;
-        let ip = nodes[i].addr.to_string();
-        if !(hostname.contains(&keyword) || ip.contains(&keyword)) {
-            nodes.remove(i);
+            for ip in &nodes[i].addrs {
+                if !ip.to_string().contains(&keyword) {
+                    nodes.remove(i);
+                    break;
+                }
+            }
         }
-    }
 
-    Ok(nodes)
+        Ok(nodes)
+    } else {
+        Err(core_error!("lan discover is empty"))
+    }
 }
 
 #[tauri::command]
@@ -198,26 +187,20 @@ pub async fn lan_discoverable_set(
     app_state: tauri::State<'_, AppState>,
     discoverable: bool,
 ) -> CoreResult<()> {
-    let Some((ref discover, _)) = *app_state
-        .lan_components
-        .lock()
-        .await else {
-            return Err(core_error!("lan discover is empty"))
-        };
-
-    discover.set_discoverable(discoverable);
-    Ok(())
+    if let Some(ref discover) = *app_state.lan_provider.lock().await {
+        discover.set_discoverable(discoverable);
+        Ok(())
+    } else {
+        Err(core_error!("lan discover is empty"))
+    }
 }
 
 #[tauri::command]
 #[tracing::instrument(skip(app_state))]
 pub async fn lan_discoverable_get(app_state: tauri::State<'_, AppState>) -> CoreResult<bool> {
-    let Some((ref discover, _)) = *app_state
-        .lan_components
-        .lock()
-        .await else {
-            return Err(core_error!("lan discover is empty"))
-        };
-
-    Ok(discover.discoverable())
+    if let Some(ref discover) = *app_state.lan_provider.lock().await {
+        Ok(discover.discoverable())
+    } else {
+        Err(core_error!("lan discover is empty"))
+    }
 }

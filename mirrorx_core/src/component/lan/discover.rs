@@ -1,75 +1,61 @@
 use crate::error::CoreResult;
 use hostname;
-use moka::future::Cache;
 use serde::{Deserialize, Serialize};
 use std::{
     ffi::OsStr,
-    net::{IpAddr, Ipv4Addr},
-    sync::{atomic::AtomicBool, Arc},
+    net::{IpAddr, Ipv4Addr, SocketAddr},
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
     time::Duration,
 };
-
-#[derive(Debug, Clone, Serialize)]
-pub struct Node {
-    pub host_name: String,
-    pub addr: IpAddr,
-    pub os: String,
-    pub os_version: String,
-}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum BroadcastPacket {
     TargetLive(TargetLivePacket),
-    TargetDead,
+    TargetDead(String),
 }
 
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct TargetLivePacket {
-    host_name: String,
-    os: String,
-    os_version: String,
+    pub uuid: String,
+    pub host_name: String,
+    pub os: String,
+    pub os_version: String,
 }
 
 pub struct Discover {
-    cache: Cache<IpAddr, Node>,
-    discoverable: Arc<AtomicBool>,
     write_exit_tx: Option<tokio::sync::oneshot::Sender<()>>,
     read_exit_tx: Option<tokio::sync::oneshot::Sender<()>>,
 }
 
 impl Discover {
-    pub async fn new(local_lan_ip: IpAddr) -> CoreResult<Self> {
-        // why udp not polled when udp listen on specified ip on macOS?
-        let listen_ip = if cfg!(target_os = "macos") {
-            IpAddr::V4(Ipv4Addr::UNSPECIFIED)
-        } else {
-            local_lan_ip
-        };
-
-        let stream = tokio::net::UdpSocket::bind((listen_ip, 48000)).await?;
+    pub async fn new(
+        name: &str,
+        ip: IpAddr,
+        discoverable: Arc<AtomicBool>,
+        packet_tx: tokio::sync::mpsc::Sender<(SocketAddr, BroadcastPacket)>,
+    ) -> CoreResult<Self> {
+        let stream = tokio::net::UdpSocket::bind((ip, 48000)).await?;
         stream.set_broadcast(true)?;
 
-        tracing::info!("lan discover listen on {}", stream.local_addr()?);
+        tracing::info!(interface = name, ?ip, "lan discover listen");
 
-        let live_packet = gen_target_live_packet()?;
-        let local_host_name = live_packet.host_name.clone();
-        let dead_packet = bincode::serialize(&BroadcastPacket::TargetDead)?;
-        let live_packet = bincode::serialize(&BroadcastPacket::TargetLive(live_packet))?;
-
-        let cache = Cache::builder()
-            .time_to_live(Duration::from_secs(17))
-            .build();
+        let uuid = uuid::Uuid::new_v4();
+        let dead_packet = bincode::serialize(&BroadcastPacket::TargetDead(uuid.to_string()))?;
+        let live_packet = bincode::serialize(&BroadcastPacket::TargetLive(create_live_packet(
+            uuid.to_string(),
+        )?))?;
 
         let writer = Arc::new(stream);
         let reader = writer.clone();
 
         let (write_exit_tx, mut write_exit_rx) = tokio::sync::oneshot::channel();
         let (read_exit_tx, mut read_exit_rx) = tokio::sync::oneshot::channel();
-        let discoverable = Arc::new(AtomicBool::new(true));
-        let cache_copy = cache.clone();
 
         tokio::spawn(async move {
-            let mut buffer = [0u8; 256];
+            let mut buffer = [0u8; 512];
 
             loop {
                 let Err(tokio::sync::oneshot::error::TryRecvError::Empty) = read_exit_rx.try_recv() else {
@@ -97,35 +83,10 @@ impl Discover {
                     }
                 };
 
-                match packet {
-                    BroadcastPacket::TargetLive(live_packet) => {
-                        if local_host_name == live_packet.host_name {
-                            continue;
-                        }
-
-                        tracing::info!(?target_addr, "lan discover target live");
-
-                        cache_copy
-                            .insert(
-                                target_addr.ip(),
-                                Node {
-                                    host_name: live_packet.host_name.to_string(),
-                                    addr: target_addr.ip(),
-                                    os: live_packet.os.to_string(),
-                                    os_version: live_packet.os_version.to_string(),
-                                },
-                            )
-                            .await;
-                    }
-                    BroadcastPacket::TargetDead => {
-                        tracing::info!(?target_addr, "lan discover target dead");
-                        cache_copy.invalidate(&target_addr.ip()).await;
-                    }
-                }
+                let _ = packet_tx.send((target_addr, packet)).await;
             }
         });
 
-        let discoverable_copy = discoverable.clone();
         tokio::spawn(async move {
             let mut ticker = tokio::time::interval(Duration::from_secs(11));
 
@@ -139,7 +100,7 @@ impl Discover {
                     }
                 };
 
-                if !discoverable_copy.load(std::sync::atomic::Ordering::SeqCst) {
+                if !discoverable.load(Ordering::SeqCst) {
                     continue;
                 }
 
@@ -153,24 +114,9 @@ impl Discover {
         });
 
         Ok(Self {
-            cache,
-            discoverable,
             write_exit_tx: Some(write_exit_tx),
             read_exit_tx: Some(read_exit_tx),
         })
-    }
-
-    pub fn nodes_snapshot(&self) -> Vec<Node> {
-        self.cache.iter().map(|(_, node)| node).collect()
-    }
-
-    pub fn discoverable(&self) -> bool {
-        self.discoverable.load(std::sync::atomic::Ordering::SeqCst)
-    }
-
-    pub fn set_discoverable(&self, discoverable: bool) {
-        self.discoverable
-            .store(discoverable, std::sync::atomic::Ordering::SeqCst)
     }
 }
 
@@ -186,7 +132,7 @@ impl Drop for Discover {
     }
 }
 
-fn gen_target_live_packet() -> CoreResult<TargetLivePacket> {
+fn create_live_packet(uuid: String) -> CoreResult<TargetLivePacket> {
     let host_name = convert_host_name_to_string(&hostname::get()?)?;
     let os_info = os_info::get();
     let os_version = os_info.version().to_string();
@@ -236,6 +182,7 @@ fn gen_target_live_packet() -> CoreResult<TargetLivePacket> {
     .to_string();
 
     Ok(TargetLivePacket {
+        uuid,
         host_name,
         os,
         os_version,

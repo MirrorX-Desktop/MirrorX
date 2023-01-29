@@ -17,15 +17,13 @@
 	import { emit } from '@tauri-apps/api/event';
 
 	export let hostname: string;
-	export let addr: string;
+	export let addrs: Array<string>;
 	export let os: string;
 	export let os_version: string;
 
-	let show_connect_button: boolean = false;
-
 	const lan_connect = async () => {
 		try {
-			await emit('/dialog/lan_connect', { addr, hostname });
+			await emit('/dialog/lan_connect', { addr: addrs[0], hostname });
 		} catch (error: any) {
 			await emitNotification({ level: 'error', title: 'Error', message: error.toString() });
 		}
@@ -34,8 +32,6 @@
 
 <slot>
 	<button
-		on:mouseenter={() => (show_connect_button = true)}
-		on:mouseleave={() => (show_connect_button = false)}
 		on:click={lan_connect}
 		class="hover:bg-primary hover:text-primary-content flex flex-row items-center rounded-lg p-2 transition-all hover:rounded-lg"
 		style="height: 76px"
@@ -48,7 +44,7 @@
 				{os}&nbsp;{os_version}
 			</div>
 			<div class="w-48 text-left text-xs">
-				{addr}
+				{addrs[0]}
 			</div>
 		</div>
 

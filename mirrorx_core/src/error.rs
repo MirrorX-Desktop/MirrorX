@@ -94,6 +94,9 @@ pub enum CoreError {
 
     #[error("image process error ({0:?})")]
     ImageError(#[from] image::ImageError),
+
+    #[error("get network interfaces error ({0:?})")]
+    NetworkInterfacesError(#[from] network_interface::Error),
 }
 
 impl serde::Serialize for CoreError {

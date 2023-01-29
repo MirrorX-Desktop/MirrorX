@@ -1,5 +1,7 @@
 use crate::error::CoreResult;
+use network_interface::NetworkInterfaceConfig;
 use serde::Serialize;
+use std::net::IpAddr;
 
 #[derive(Debug, Serialize)]
 pub struct GraphicsCards {
@@ -54,4 +56,27 @@ pub fn enum_graphics_cards() -> CoreResult<Vec<GraphicsCards>> {
     }
 
     Ok(graphics_cards)
+}
+
+pub fn enum_broadcast_network_interfaces() -> CoreResult<Vec<(String, IpAddr)>> {
+    let interfaces = network_interface::NetworkInterface::show()?;
+    let mut valid_interfaces = Vec::new();
+
+    for interface in interfaces {
+        let Some(addr) = interface.addr else {
+           continue;
+        };
+
+        if addr.ip().is_loopback() {
+            continue;
+        }
+
+        if addr.broadcast().is_none() {
+            continue;
+        }
+
+        valid_interfaces.push((interface.name, addr.ip()));
+    }
+
+    Ok(valid_interfaces)
 }

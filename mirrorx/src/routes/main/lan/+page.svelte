@@ -21,7 +21,8 @@
 	let discoverable: boolean = true;
 
 	$: has_prev_page = display_page != 1;
-	$: has_next_page = display_page < Math.ceil((use_search_result ? search_nodes.length : nodes.length) / PAGE_COUNT);
+	$: has_next_page =
+		display_page < Math.ceil((use_search_result ? search_nodes.length : nodes.length) / PAGE_COUNT);
 
 	onMount(async () => {
 		discoverable = await commands.invoke_lan_discoverable_get();
@@ -119,7 +120,7 @@
 </script>
 
 <slot>
-	<div class="flex h-full w-full flex-col py-2 px-2 gap-2">
+	<div class="flex h-full w-full flex-col gap-2 py-2 px-2">
 		<div class="flex flex-row gap-2">
 			<input
 				id="search_input"
@@ -131,14 +132,21 @@
 		</div>
 		<div class="flex flex-row justify-center">
 			<div>
-				<div class="text-xs text-base-content text-opacity-50">{$LL.LAN.DiscoveredDevicesTip()}</div>
+				<div class="text-base-content text-xs text-opacity-50">
+					{$LL.LAN.DiscoveredDevicesTip()}
+				</div>
 			</div>
 		</div>
 		<div id="panel" class="w-full flex-1 overflow-y-auto">
 			<!-- at most 7 panel here -->
 			<div class="flex flex-col ">
 				{#each display_nodes as node}
-					<Panel hostname={node.host_name} addr={node.addr} os={node.os} os_version={node.os_version} />
+					<Panel
+						hostname={node.host_name}
+						addrs={node.addrs}
+						os={node.os}
+						os_version={node.os_version}
+					/>
 				{/each}
 			</div>
 		</div>

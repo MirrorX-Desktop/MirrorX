@@ -2,15 +2,15 @@ use crate::{
     api::endpoint::{create_passive_endpoint_client, EndPointStream},
     error::CoreResult,
 };
-use std::net::IpAddr;
+use std::net::{IpAddr, Ipv4Addr};
 
 pub struct Server {
     exit_tx: Option<tokio::sync::oneshot::Sender<()>>,
 }
 
 impl Server {
-    pub async fn new(local_lan_ip: IpAddr) -> CoreResult<Self> {
-        let listener = tokio::net::TcpListener::bind((local_lan_ip, 48001)).await?;
+    pub async fn new() -> CoreResult<Self> {
+        let listener = tokio::net::TcpListener::bind((Ipv4Addr::UNSPECIFIED, 48001)).await?;
         let local_addr = listener.local_addr()?;
         let (exit_tx, mut exit_rx) = tokio::sync::oneshot::channel();
         tracing::info!(?local_addr, "local lan server listen");
@@ -33,7 +33,7 @@ impl Server {
 
                 if let Err(err) = create_passive_endpoint_client(
                     crate::api::endpoint::id::EndPointID::LANID {
-                        local_ip: local_lan_ip,
+                        local_ip: IpAddr::V4(Ipv4Addr::UNSPECIFIED),
                         remote_ip: addr.ip(),
                     },
                     None,
