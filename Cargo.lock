@@ -1164,7 +1164,7 @@ dependencies = [
  "glutin_tao",
  "js-sys",
  "percent-encoding",
- "tao 0.15.8",
+ "tao",
  "tracing",
  "wasm-bindgen",
  "wasm-bindgen-futures",
@@ -1179,7 +1179,7 @@ dependencies = [
  "ahash 0.8.2",
  "epaint",
  "nohash-hasher",
- "tao 0.15.8",
+ "tao",
  "tracing",
 ]
 
@@ -1192,7 +1192,7 @@ dependencies = [
  "egui",
  "instant",
  "smithay-clipboard",
- "tao 0.15.8",
+ "tao",
  "tracing",
  "webbrowser",
 ]
@@ -1857,7 +1857,7 @@ dependencies = [
  "osmesa-sys",
  "parking_lot",
  "raw-window-handle",
- "tao 0.15.8",
+ "tao",
  "winapi",
 ]
 
@@ -2704,11 +2704,9 @@ dependencies = [
  "once_cell",
  "os_info",
  "rayon",
- "ring",
  "serde",
  "serde_json",
  "strum_macros 0.24.3",
- "tao 0.16.0",
  "tauri",
  "tauri-build",
  "tauri-egui",
@@ -2771,7 +2769,7 @@ dependencies = [
  "serde_json",
  "serde_with 2.2.0",
  "sha2",
- "tao 0.15.8",
+ "tao",
  "thiserror",
  "tokio",
  "tokio-util",
@@ -4939,62 +4937,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tao"
-version = "0.16.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "704522803dda895767f69198af8351b0a3f4fe2e293c3ca54cce0ecba05a97f2"
-dependencies = [
- "bitflags",
- "cairo-rs",
- "cc",
- "cocoa",
- "core-foundation",
- "core-graphics",
- "crossbeam-channel",
- "dispatch",
- "gdk",
- "gdk-pixbuf",
- "gdk-sys",
- "gdkx11-sys",
- "gio",
- "glib",
- "glib-sys",
- "gtk",
- "image",
- "instant",
- "jni 0.20.0",
- "lazy_static",
- "libc",
- "log",
- "ndk 0.6.0",
- "ndk-context",
- "ndk-sys 0.3.0",
- "objc",
- "once_cell",
- "parking_lot",
- "png",
- "raw-window-handle",
- "scopeguard",
- "tao-macros",
- "unicode-segmentation",
- "uuid 1.2.2",
- "windows 0.39.0",
- "windows-implement",
- "x11-dl",
-]
-
-[[package]]
-name = "tao-macros"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3b6fcd8245d45a39ffc8715183d92ae242750eb57b285eb3bcd63dfd512afd09"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
 name = "tar"
 version = "0.4.38"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6377,7 +6319,7 @@ dependencies = [
  "serde_json",
  "sha2",
  "soup2",
- "tao 0.15.8",
+ "tao",
  "thiserror",
  "url",
  "webkit2gtk",
