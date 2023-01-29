@@ -42,7 +42,7 @@ fn spawn_desktop_capture_and_encode_process(client: Arc<EndPointClient>) {
             }
         };
 
-        let mut encoder = match VideoEncoder::new(libx264::Libx264Config::new(), client.clone()) {
+        let mut encoder = match VideoEncoder::new(libx264::Libx264Config::default(), client.clone()) {
             Ok(encoder) => encoder,
             Err(err) => {
                 tracing::error!(?err, "initialize encoder failed");

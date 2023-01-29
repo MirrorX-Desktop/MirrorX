@@ -301,7 +301,7 @@ pub async fn config_language_set(
 
     #[cfg(target_os = "macos")]
     {
-        let window = app_handle.get_window("main") else {
+        let Some(window) = app_handle.get_window("main") else {
             return Ok(());
         };
 
