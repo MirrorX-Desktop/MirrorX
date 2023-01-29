@@ -51,5 +51,6 @@
 		"typesafe-i18n": "^5.14.0",
 		"ua-parser-js": "^1.0.33",
 		"uuid": "^9.0.0"
-	}
+	},
+	"packageManager": "yarn@3.3.1"
 }
