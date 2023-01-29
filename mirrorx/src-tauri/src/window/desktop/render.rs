@@ -271,7 +271,7 @@ impl Render {
     pub fn paint(
         &mut self,
         gl: &Context,
-        frame: DesktopDecodeFrame,
+        frame: &DesktopDecodeFrame,
         fbo: Option<tauri_egui::eframe::glow::Framebuffer>,
     ) -> Result<(), String> {
         if self.destroyed {
@@ -327,11 +327,11 @@ impl Render {
 
             let use_nv12_value = match frame.format {
                 DesktopDecodeFrameFormat::NV12 => {
-                    self.upload_nv12(gl, &frame);
+                    self.upload_nv12(gl, frame);
                     1
                 }
                 DesktopDecodeFrameFormat::YUV420P => {
-                    self.upload_yuv420p(gl, &frame);
+                    self.upload_yuv420p(gl, frame);
                     0
                 }
             };

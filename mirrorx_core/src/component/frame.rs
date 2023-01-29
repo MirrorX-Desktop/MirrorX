@@ -29,6 +29,18 @@ pub struct DesktopDecodeFrame {
     pub format: DesktopDecodeFrameFormat,
 }
 
+impl Default for DesktopDecodeFrame {
+    fn default() -> Self {
+        Self {
+            width: 0,
+            height: 0,
+            plane_data: Vec::new(),
+            line_sizes: Vec::new(),
+            format: DesktopDecodeFrameFormat::NV12,
+        }
+    }
+}
+
 pub struct AudioEncodeFrame {
     pub channels: u16,
     pub sample_format: SampleFormat,

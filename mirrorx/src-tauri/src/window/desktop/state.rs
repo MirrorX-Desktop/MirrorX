@@ -3,7 +3,7 @@ use mirrorx_core::{
     api::endpoint::{client::EndPointClient, id::EndPointID},
     DesktopDecodeFrame,
 };
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use tokio::sync::mpsc::Receiver;
 
 pub struct State {
@@ -11,9 +11,9 @@ pub struct State {
     endpoint_client: Arc<EndPointClient>,
     desktop_frame_scaled: bool,
     desktop_frame_scalable: bool,
-    // last_error: Option<CoreError>,
     render_rx: Receiver<DesktopDecodeFrame>,
-    current_frame: Option<DesktopDecodeFrame>,
+    frame_slot: Arc<Mutex<DesktopDecodeFrame>>,
+    frame_size: (i32, i32),
 }
 
 impl State {
@@ -21,6 +21,7 @@ impl State {
         endpoint_id: EndPointID,
         client: Arc<EndPointClient>,
         render_frame_rx: tokio::sync::mpsc::Receiver<DesktopDecodeFrame>,
+        frame_slot: Arc<Mutex<DesktopDecodeFrame>>,
     ) -> Self {
         let format_remote_device_id = match endpoint_id {
             EndPointID::DeviceID {
@@ -37,9 +38,9 @@ impl State {
             endpoint_client: client,
             desktop_frame_scaled: true,
             desktop_frame_scalable: true,
-            // last_error: None,
             render_rx: render_frame_rx,
-            current_frame: None,
+            frame_slot,
+            frame_size: (0, 0),
         }
     }
 
@@ -55,16 +56,18 @@ impl State {
         self.desktop_frame_scaled
     }
 
-    // pub fn last_error(&self) -> Option<&CoreError> {
-    //     self.last_error.as_ref()
-    // }
-
-    pub fn current_frame(&mut self) -> Option<DesktopDecodeFrame> {
+    pub fn update_desktop_frame(&mut self) -> (i32, i32) {
+        let mut new_frame = None;
         while let Ok(frame) = self.render_rx.try_recv() {
-            self.current_frame = Some(frame);
+            new_frame = Some(frame);
         }
 
-        self.current_frame.clone()
+        if let Some(new_frame) = new_frame {
+            self.frame_size = (new_frame.width, new_frame.height);
+            (*self.frame_slot.lock().unwrap()) = new_frame;
+        }
+
+        self.frame_size
     }
 
     pub fn desktop_frame_scalable(&self) -> bool {

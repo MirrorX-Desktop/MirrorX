@@ -13,12 +13,18 @@ use mirrorx_core::{
     DesktopDecodeFrame,
 };
 use state::State;
-use std::{sync::Arc, time::Duration};
+use std::{
+    sync::{Arc, Mutex, RwLock},
+    time::Duration,
+};
 use tauri_egui::{
-    eframe::glow::{self, Context},
+    eframe::{
+        egui_glow::CallbackFn,
+        glow::{self, Context},
+    },
     egui::{
-        epaint::Shadow, mutex::Mutex, style::Margin, Align, CentralPanel, Color32, FontId, Frame,
-        Layout, Pos2, Rect, RichText, Rounding, Sense, Stroke, Ui, Vec2,
+        epaint::Shadow, style::Margin, Align, CentralPanel, Color32, FontId, Frame, Layout, Pos2,
+        Rect, RichText, Rounding, Sense, Stroke, Ui, Vec2,
     },
 };
 
@@ -27,9 +33,10 @@ static ICON_SCALE_BYTES:&[u8]=br#"<svg xmlns="http://www.w3.org/2000/svg" viewBo
 
 pub struct DesktopWindow {
     state: State,
-    desktop_render: Arc<Mutex<Render>>,
     icon_maximize: RetainedImage,
     icon_scale: RetainedImage,
+    render: Arc<RwLock<Render>>,
+    render_call_back: Arc<CallbackFn>,
 }
 
 impl DesktopWindow {
@@ -40,17 +47,27 @@ impl DesktopWindow {
         client: Arc<EndPointClient>,
         render_frame_rx: tokio::sync::mpsc::Receiver<DesktopDecodeFrame>,
     ) -> Self {
-        let state = State::new(endpoint_id, client, render_frame_rx);
+        let frame_slot = Arc::new(Mutex::new(DesktopDecodeFrame::default()));
 
-        let desktop_render =
-            Render::new(gl_context.as_ref()).expect("create desktop render failed");
+        let state = State::new(endpoint_id, client, render_frame_rx, frame_slot.clone());
+
+        let desktop_render = Arc::new(RwLock::new(
+            Render::new(gl_context.as_ref()).expect("create desktop render failed"),
+        ));
+
+        let desktop_render_clone = desktop_render.clone();
+
+        let cb = CallbackFn::new(move |_info, painter| {
+            let mut render = desktop_render_clone.write().unwrap();
+            let frame = frame_slot.lock().unwrap();
+
+            if let Err(err) = render.paint(painter.gl(), &frame, painter.intermediate_fbo()) {
+                tracing::error!(?err, "desktop render failed");
+            }
+        });
 
         Self {
             state,
-            desktop_render: Arc::new(Mutex::new(desktop_render)),
-            // input_commands: Vec::new(),
-            // last_mouse_pos: Pos2::ZERO,
-            // last_send_input_commands: Instant::now(),
             icon_maximize: RetainedImage::from_color_image(
                 "fa_maximize",
                 egui_extras::image::load_svg_bytes(ICON_MAXIMIZE_BYTES).unwrap(),
@@ -59,6 +76,8 @@ impl DesktopWindow {
                 "fa_arrows-left-right-to-line",
                 egui_extras::image::load_svg_bytes(ICON_SCALE_BYTES).unwrap(),
             ),
+            render: desktop_render,
+            render_call_back: Arc::new(cb),
         }
     }
 
@@ -112,19 +131,21 @@ impl DesktopWindow {
     }
 
     fn build_desktop_texture(&mut self, ui: &mut Ui) {
-        if let Some(frame) = self.state.current_frame() {
+        let (frame_width, frame_height) = self.state.update_desktop_frame();
+
+        if frame_width > 0 && frame_height > 0 {
             // when client area bigger than original desktop frame, disable scale button
             self.state.set_desktop_frame_scalable(
-                ui.available_width() < frame.width as _
-                    || ui.available_height() < frame.height as _,
+                ui.available_width() < frame_width as _
+                    || ui.available_height() < frame_height as _,
             );
 
             if self.state.desktop_frame_scaled()
-                && (ui.available_width() < frame.width as _
-                    || ui.available_height() < frame.height as _)
+                && (ui.available_width() < frame_width as _
+                    || ui.available_height() < frame_height as _)
             {
-                let left = ((ui.available_width() - frame.width as f32) / 2.0).max(0.0);
-                let top = ((ui.available_height() - frame.height as f32) / 2.0).max(0.0);
+                let left = ((ui.available_width() - frame_width as f32) / 2.0).max(0.0);
+                let top = ((ui.available_height() - frame_height as f32) / 2.0).max(0.0);
 
                 let mut available_rect = ui.available_rect_before_wrap();
                 available_rect.min = Pos2::new(left, top);
@@ -133,26 +154,12 @@ impl DesktopWindow {
                     tauri_egui::egui::ScrollArea::both()
                         .auto_shrink([false; 2])
                         .show_viewport(ui, |ui, view_port| {
-                            ui.set_width(frame.width as f32);
-                            ui.set_height(frame.height as f32);
-
-                            let desktop_render = self.desktop_render.clone();
-
-                            let cb = tauri_egui::eframe::egui_glow::CallbackFn::new(
-                                move |_info, painter| {
-                                    if let Err(err) = desktop_render.lock().paint(
-                                        painter.gl(),
-                                        frame.clone(),
-                                        painter.intermediate_fbo(),
-                                    ) {
-                                        tracing::error!(?err, "desktop render failed");
-                                    }
-                                },
-                            );
+                            ui.set_width(frame_width as f32);
+                            ui.set_height(frame_height as f32);
 
                             let callback = tauri_egui::egui::PaintCallback {
                                 rect: ui.available_rect_before_wrap(),
-                                callback: Arc::new(cb),
+                                callback: self.render_call_back.clone(),
                             };
 
                             ui.painter().add(callback);
@@ -166,7 +173,7 @@ impl DesktopWindow {
             } else {
                 let available_width = ui.available_width();
                 let available_height = ui.available_height();
-                let aspect_ratio = (frame.width as f32) / (frame.height as f32);
+                let aspect_ratio = (frame_width as f32) / (frame_height as f32);
 
                 let desktop_size = if (available_width / aspect_ratio) < available_height {
                     (available_width, available_width / aspect_ratio)
@@ -174,31 +181,19 @@ impl DesktopWindow {
                     (available_height * aspect_ratio, available_height)
                 };
 
-                let scale_ratio = desktop_size.0 / (frame.width as f32);
+                let scale_ratio = desktop_size.0 / (frame_width as f32);
 
                 let space_around_image = Vec2::new(
                     (available_width - desktop_size.0) / 2.0,
                     (available_height - desktop_size.1) / 2.0,
                 );
 
-                let desktop_render = self.desktop_render.clone();
-
-                let cb = tauri_egui::eframe::egui_glow::CallbackFn::new(move |_info, painter| {
-                    if let Err(err) = desktop_render.lock().paint(
-                        painter.gl(),
-                        frame.clone(),
-                        painter.intermediate_fbo(),
-                    ) {
-                        tracing::error!(?err, "desktop render failed");
-                    }
-                });
-
                 let callback = tauri_egui::egui::PaintCallback {
                     rect: Rect {
                         min: space_around_image.to_pos2(),
                         max: space_around_image.to_pos2() + desktop_size.into(),
                     },
-                    callback: Arc::new(cb),
+                    callback: self.render_call_back.clone(),
                 };
 
                 ui.painter().add(callback);
@@ -264,7 +259,7 @@ impl DesktopWindow {
                         // FPS
 
                         ui.label(
-                            RichText::new(self.desktop_render.lock().frame_rate().to_string())
+                            RichText::new(self.render.read().unwrap().frame_rate().to_string())
                                 .font(FontId::monospace(24.0)), // FontFamily::Name("LiquidCrystal".into()))),
                         );
                     })
@@ -401,7 +396,7 @@ impl tauri_egui::eframe::App for DesktopWindow {
 
     fn on_exit(&mut self, gl: Option<&glow::Context>) {
         if let Some(gl) = gl {
-            self.desktop_render.lock().destroy(gl);
+            self.render.write().unwrap().destroy(gl);
         }
     }
 }
