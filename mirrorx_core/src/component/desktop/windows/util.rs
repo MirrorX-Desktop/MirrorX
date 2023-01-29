@@ -1,8 +1,4 @@
-use crate::{
-    core_error,
-    error::{CoreError, CoreResult},
-    HRESULT,
-};
+use crate::{core_error, error::CoreResult, HRESULT};
 use scopeguard::defer;
 use windows::Win32::{
     Graphics::{Direct3D::*, Direct3D11::*},
@@ -37,6 +33,7 @@ pub unsafe fn init_directx() -> CoreResult<(ID3D11Device, ID3D11DeviceContext)> 
         D3D_DRIVER_TYPE_HARDWARE,
         D3D_DRIVER_TYPE_WARP,
         D3D_DRIVER_TYPE_REFERENCE,
+        D3D_DRIVER_TYPE_SOFTWARE,
     ];
 
     let mut device = None;

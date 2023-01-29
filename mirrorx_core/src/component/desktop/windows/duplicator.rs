@@ -4,10 +4,7 @@ use super::{
     util::{init_directx, prepare_desktop},
 };
 use crate::{
-    component::{
-        desktop::windows::dx_math::{BPP, VERTEX},
-        frame::DesktopEncodeFrame,
-    },
+    component::{desktop::windows::dx_math::Vertex, frame::DesktopEncodeFrame},
     core_error,
     error::{CoreError, CoreResult},
     HRESULT,
@@ -59,6 +56,7 @@ pub struct Duplicator {
 
     sampler_state: [Option<ID3D11SamplerState>; 1],
     blend_state: ID3D11BlendState,
+
     mouse_position_x: i32,
     mouse_position_y: i32,
     mouse_last_timestamp: i64,
@@ -198,9 +196,41 @@ impl Duplicator {
             self.device_context
                 .CopyResource(&self.backend_texture, &desktop_texture);
 
-            // if self.mouse_visible {
-            //     self.draw_mouse()?;
-            // }
+            if self.mouse_visible {
+                self.draw_mouse()?;
+            }
+
+            let mut texture_desc: D3D11_TEXTURE2D_DESC = std::mem::zeroed();
+            texture_desc.Width = 3840;
+            texture_desc.Height = 2160;
+            texture_desc.MipLevels = 1;
+            texture_desc.ArraySize = 1;
+            texture_desc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+            texture_desc.SampleDesc.Count = 1;
+            texture_desc.SampleDesc.Quality = 0;
+            texture_desc.Usage = D3D11_USAGE_STAGING;
+            texture_desc.BindFlags = D3D11_BIND_FLAG::default();
+            texture_desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+
+            let staging_texture = HRESULT!(self.device.CreateTexture2D(&texture_desc, None));
+
+            self.device_context
+                .CopyResource(&staging_texture, &self.backend_texture);
+
+            let lumina_mapped_resource =
+                HRESULT!(self
+                    .device_context
+                    .Map(&staging_texture, 0, D3D11_MAP_READ, 0));
+
+            let luminance_bytes = std::slice::from_raw_parts(
+                lumina_mapped_resource.pData as *mut u8,
+                (2160 * lumina_mapped_resource.RowPitch) as usize,
+            )
+            .to_vec();
+
+            std::fs::write(r"F:\bgra", luminance_bytes).unwrap();
+
+            self.device_context.Unmap(&staging_texture, 0);
         }
 
         HRESULT!(self.duplication.ReleaseFrame());
@@ -222,9 +252,11 @@ impl Duplicator {
             },
         };
 
-        let shader_resouce_view = HRESULT!(self
+        let shader_resource_view = HRESULT!(self
             .device
             .CreateShaderResourceView(&self.backend_texture, Some(&shader_resouce_view_desc)));
+
+        let shader_resource_view = [Some(shader_resource_view)];
 
         self.device_context.IASetVertexBuffers(
             0,
@@ -234,22 +266,15 @@ impl Duplicator {
             Some(&0),
         );
 
-        self.device_context
-            .IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-        // self.device_context.IASetInputLayout(&self.input_layout);
-
-        self.device_context
-            .PSSetShaderResources(0, Some(&[Some(shader_resouce_view)]));
-
         self.device_context.VSSetShader(&self.vertex_shader, None);
-
-        // self.device_context.PSSetSamplers(0, &self.sampler_state);
 
         // draw lumina plane
 
         self.device_context
             .OMSetRenderTargets(Some(&self.luminance_rtv), None);
+
+        self.device_context
+            .PSSetShaderResources(0, Some(&shader_resource_view));
 
         self.device_context
             .PSSetShader(&self.pixel_shader_luminance, None);
@@ -265,14 +290,15 @@ impl Duplicator {
             .OMSetRenderTargets(Some(&self.chrominance_rtv), None);
 
         self.device_context
+            .PSSetShaderResources(0, Some(&shader_resource_view));
+
+        self.device_context
             .PSSetShader(&self.pixel_shader_chrominance, None);
 
         self.device_context
             .RSSetViewports(Some(&self.chrominance_viewport));
 
         self.device_context.Draw(VERTICES.len() as u32, 0);
-
-        // self.device_context.Flush();
 
         Ok(())
     }
@@ -411,11 +437,13 @@ impl Duplicator {
         let mut pointer_texture_desc: D3D11_TEXTURE2D_DESC = std::mem::zeroed();
         pointer_texture_desc.MipLevels = 1;
         pointer_texture_desc.ArraySize = 1;
-        pointer_texture_desc.Format = full_desc.Format;
+        pointer_texture_desc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
         pointer_texture_desc.SampleDesc.Count = 1;
         pointer_texture_desc.SampleDesc.Quality = 0;
         pointer_texture_desc.Usage = D3D11_USAGE_DEFAULT;
         pointer_texture_desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+        pointer_texture_desc.CPUAccessFlags = D3D11_CPU_ACCESS_FLAG(0);
+        pointer_texture_desc.MiscFlags = D3D11_RESOURCE_MISC_FLAG(0);
 
         let mut shader_resource_view_desc: D3D11_SHADER_RESOURCE_VIEW_DESC = std::mem::zeroed();
         shader_resource_view_desc.Format = pointer_texture_desc.Format;
@@ -433,6 +461,16 @@ impl Duplicator {
                 tracing::trace!(
                     "DXGI_OUTDUPL_POINTER_SHAPE_INFO: DXGI_OUTDUPL_POINTER_SHAPE_TYPE_COLOR"
                 );
+
+                tracing::trace!(
+                    "visible,{},{},{},{:?}",
+                    self.mouse_position_x,
+                    self.mouse_position_y,
+                    self.mouse_visible,
+                    self.mouse_shape_buffer
+                );
+
+                std::fs::write(r"F:\ddd_image", &self.mouse_shape_buffer).unwrap();
 
                 pointer_left = self.mouse_position_x;
                 pointer_top = self.mouse_position_y;
@@ -513,16 +551,20 @@ impl Duplicator {
 
         let mut init_data: D3D11_SUBRESOURCE_DATA = std::mem::zeroed();
         init_data.pSysMem =
-            if self.mouse_shape_info.Type == DXGI_OUTDUPL_POINTER_SHAPE_TYPE_COLOR.0 as u32 {
+            if self.mouse_shape_info.Type & (DXGI_OUTDUPL_POINTER_SHAPE_TYPE_COLOR.0 as u32) != 0 {
+                tracing::info!("1");
                 self.mouse_shape_buffer.as_ptr() as *const _
             } else {
+                tracing::info!("2");
                 init_buffer as *const _
             };
         init_data.SysMemPitch =
-            if self.mouse_shape_info.Type == DXGI_OUTDUPL_POINTER_SHAPE_TYPE_COLOR.0 as u32 {
+            if self.mouse_shape_info.Type & (DXGI_OUTDUPL_POINTER_SHAPE_TYPE_COLOR.0 as u32) != 0 {
+                tracing::info!("3");
                 self.mouse_shape_info.Pitch
             } else {
-                pointer_width as u32 * BPP
+                tracing::info!("4");
+                (pointer_width * 4) as u32
             };
         init_data.SysMemSlicePitch = 0;
 
@@ -536,32 +578,31 @@ impl Duplicator {
 
         let mut buffer_desc: D3D11_BUFFER_DESC = std::mem::zeroed();
         buffer_desc.Usage = D3D11_USAGE_DEFAULT;
-        buffer_desc.ByteWidth = (std::mem::size_of::<VERTEX>() * VERTICES.len()) as u32;
+        buffer_desc.ByteWidth = (std::mem::size_of::<Vertex>() * VERTICES.len()) as u32;
         buffer_desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+        buffer_desc.CPUAccessFlags = D3D11_CPU_ACCESS_FLAG(0);
 
         init_data = std::mem::zeroed();
         init_data.pSysMem = vertices.as_ptr() as *const _;
 
-        let vertex_buffer = Some(HRESULT!(self
+        let mouse_vertex_buffer = Some(HRESULT!(self
             .device
             .CreateBuffer(&buffer_desc, Some(&init_data))));
 
         let blend_factor = [0f32; 4];
-        let stride = std::mem::size_of::<VERTEX>() as u32;
+        let stride = std::mem::size_of::<Vertex>() as u32;
         let offset = 0;
-
-        self.device_context.IASetVertexBuffers(
-            0,
-            1,
-            Some(&vertex_buffer),
-            Some(&stride),
-            Some(&offset),
-        );
 
         self.device_context
             .IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-        // self.device_context.IASetInputLayout(&self.input_layout);
+        self.device_context.IASetVertexBuffers(
+            0,
+            1,
+            Some(&mouse_vertex_buffer),
+            Some(&stride),
+            Some(&offset),
+        );
 
         self.device_context.OMSetBlendState(
             &self.blend_state,
@@ -589,11 +630,13 @@ impl Duplicator {
 
         self.device_context.Draw(VERTICES.len() as u32, 0);
 
-        // self.device_context.Flush();
+        // reset blend state
+        self.device_context.OMSetBlendState(None, None, 0xFFFFFFFF);
 
         Ok(())
     }
 
+    #[allow(clippy::too_many_arguments)]
     unsafe fn process_mono_mask(
         &mut self,
         is_mono: bool,
@@ -652,10 +695,10 @@ impl Duplicator {
 
         let copy_buffer = HRESULT!(self.device.CreateTexture2D(&copy_buffer_desc, None));
 
-        (*pointer_box).left = *pointer_left as u32;
-        (*pointer_box).top = *pointer_top as u32;
-        (*pointer_box).right = (*pointer_left + *pointer_width) as u32;
-        (*pointer_box).bottom = (*pointer_top + *pointer_height) as u32;
+        pointer_box.left = *pointer_left as u32;
+        pointer_box.top = *pointer_top as u32;
+        pointer_box.right = (*pointer_left + *pointer_width) as u32;
+        pointer_box.bottom = (*pointer_top + *pointer_height) as u32;
 
         self.device_context.CopySubresourceRegion(
             &copy_buffer,
@@ -678,79 +721,66 @@ impl Duplicator {
         }
 
         let mut init_buffer = Vec::new();
-        init_buffer.resize(
-            ((*pointer_width as u32) * (*pointer_height as u32) * BPP) as usize,
-            0,
+        init_buffer.resize((*pointer_width * *pointer_height * 4) as usize, 0u8);
+
+        let init_buffer_32: &mut [u32] =
+            std::slice::from_raw_parts_mut(init_buffer.as_mut_ptr() as _, init_buffer.len() / 4);
+        let desktop_32: &[u32] = std::slice::from_raw_parts(
+            mapped_surface.pBits as _,
+            (desktop_width * desktop_height / 4) as usize,
         );
+        let desktop_pitch_in_pixels = mapped_surface.Pitch as usize / std::mem::size_of::<u32>();
 
-        let init_buffer_32: *mut u32 = std::mem::transmute(init_buffer.as_mut_ptr());
-        let desktop_32: *mut u32 = std::mem::transmute(mapped_surface.pBits);
-        let desktop_pitch_in_pixels = mapped_surface.Pitch / 4;
-
-        let skip_x = if given_left < 0 { -1 * given_left } else { 0 };
-        let skip_y = if given_top < 0 { -1 * given_top } else { 0 };
+        let skip_x = if given_left < 0 { -given_left } else { 0 } as usize;
+        let skip_y = if given_top < 0 { -given_top } else { 0 } as usize;
 
         if is_mono {
-            for row in 0..*pointer_height {
-                let mut mask = 0x80u8;
-                mask = mask.wrapping_shr((skip_x % 8) as u32);
+            for row in 0..*pointer_height as usize {
+                let mut mask: u8 = 0x80;
+                mask >>= (skip_x % 8) as u32;
 
-                for col in 0..*pointer_width {
-                    let and_mask: u8 = self.mouse_shape_buffer[((col + skip_x) / 8
-                        + (row + skip_y) * (self.mouse_shape_info.Pitch as i32))
-                        as usize]
+                for col in 0..*pointer_width as usize {
+                    let and_mask: u8 = self.mouse_shape_buffer[(col + skip_x) / 8
+                        + (row + skip_y) * (self.mouse_shape_info.Pitch as usize)]
                         & mask;
 
-                    let xor_mask: u8 = self.mouse_shape_buffer[((col + skip_x) / 8
-                        + (row + skip_y + ((self.mouse_shape_info.Height / 2) as i32))
-                            * (self.mouse_shape_info.Pitch as i32))
-                        as usize]
+                    let xor_mask: u8 = self.mouse_shape_buffer[(col + skip_x) / 8
+                        + ((row + skip_y + ((self.mouse_shape_info.Height / 2) as usize))
+                            * (self.mouse_shape_info.Pitch as usize))]
                         & mask;
 
                     let and_mask_32: u32 = if and_mask > 0 { 0xFFFFFFFF } else { 0xFF000000 };
                     let xor_mask_32: u32 = if xor_mask > 0 { 0x00FFFFFF } else { 0x00000000 };
 
-                    (*init_buffer_32.add(((row * *pointer_width) + col) as usize)) = (*desktop_32
-                        .add(((row * desktop_pitch_in_pixels) + col) as usize)
-                        & and_mask_32)
-                        ^ xor_mask_32;
+                    init_buffer_32[row * (*pointer_width as usize) + col] =
+                        desktop_32[row * desktop_pitch_in_pixels + col] & and_mask_32 ^ xor_mask_32;
 
                     if mask == 0x01 {
                         mask = 0x80;
                     } else {
-                        mask = mask.wrapping_shr(1);
+                        mask >>= 1;
                     }
                 }
             }
         } else {
-            let buffer_32: *mut u32 = std::mem::transmute(self.mouse_shape_buffer.as_mut_ptr());
-            for row in 0..*pointer_height {
-                for col in 0..*pointer_width {
-                    let mask_val: u32 = 0xFF000000
-                        & *buffer_32.add(
-                            ((col + skip_x)
-                                + ((row + skip_y) * (self.mouse_shape_info.Pitch as i32 / 4)))
-                                as usize,
-                        );
+            let buffer_32: &mut [u32] = std::slice::from_raw_parts_mut(
+                self.mouse_shape_buffer.as_mut_ptr() as _,
+                self.mouse_shape_buffer.len() / 4,
+            );
 
-                    if mask_val > 0 {
-                        // Mask was 0xFF
-                        *buffer_32.add(((row * *pointer_width) + col) as usize) = (*desktop_32
-                            .add(((row * desktop_pitch_in_pixels) + col) as usize)
-                            ^ *buffer_32.add(
-                                ((col + skip_x)
-                                    + ((row + skip_y) * (self.mouse_shape_info.Pitch as i32 / 4)))
-                                    as usize,
-                            ))
-                            | 0xFF000000;
+            for row in 0..*pointer_height as usize {
+                for col in 0..*pointer_width as usize {
+                    let v = buffer_32[(col + skip_x)
+                        + ((row + skip_y) * (self.mouse_shape_info.Pitch as usize)
+                            / std::mem::size_of::<u32>())];
+
+                    let mask_val: u32 = 0xFF000000 & v;
+
+                    init_buffer_32[(row * (*pointer_width) as usize) + col] = if mask_val > 0 {
+                        desktop_32[(row * desktop_pitch_in_pixels) + col] ^ v | 0xFF000000
                     } else {
-                        // Mask was 0x00
-                        *buffer_32.add(((row * *pointer_width) + col) as usize) = *buffer_32.add(
-                            ((col + skip_x)
-                                + ((row + skip_y) * (self.mouse_shape_info.Pitch as i32 / 4)))
-                                as usize,
-                        ) | 0xFF000000;
-                    }
+                        v | 0xFF000000
+                    };
                 }
             }
         }
@@ -1016,9 +1046,9 @@ unsafe fn init_blend_state(device: &ID3D11Device) -> CoreResult<ID3D11BlendState
     blend_desc.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
     blend_desc.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
     blend_desc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
-    blend_desc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
-    blend_desc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
-    blend_desc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+    blend_desc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_INV_DEST_ALPHA; //D3D11_BLEND_ONE ;
+    blend_desc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ONE; //D3D11_BLEND_ZERO;
+    blend_desc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD; //D3D11_BLEND_OP_ADD;
     blend_desc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL.0 as u8;
 
     let blend_state = HRESULT!(device.CreateBlendState(&blend_desc));

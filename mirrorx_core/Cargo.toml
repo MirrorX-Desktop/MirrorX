@@ -55,6 +55,7 @@ url = "2.3.1"
 base64 = "0.21.0"
 image = "0.24.5"
 rayon = "1.6.1"
+tracing-subscriber = "0.3.16"
 
 [target.x86_64-apple-darwin.dependencies]
 objc = { version = "0.2.7" }

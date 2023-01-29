@@ -35,30 +35,36 @@
 //     }
 // }
 
-// #[test]
-// #[cfg(target_os = "windows")]
-// fn test_duplicator() -> anyhow::Result<()> {
-//     use bytes::Buf;
+#[test]
+#[cfg(target_os = "windows")]
+fn test_duplicator() -> anyhow::Result<()> {
+    std::env::set_var("RUST_LOG", "trace");
+    tracing_subscriber::fmt::init();
 
-//     tracing_subscriber::fmt::init();
+    let monitor = crate::component::desktop::monitor::get_primary_monitor_params()?;
 
-//     let (monitor_id, _, _) = crate::component::desktop::monitor::get_primary_monitor_params()?;
+    let (mut duplicator, _) = crate::component::desktop::Duplicator::new(Some(monitor.id))?;
 
-//     let (mut duplicator, _) = crate::component::desktop::Duplicator::new(Some(monitor_id))?;
+    for i in 0..10 {
+        let capture_frame = duplicator.capture()?;
 
-//     let capture_frame = duplicator.capture()?;
+        let dump_path = std::env::temp_dir().join(format!("desktop_image_{i}"));
 
-//     let dump_path = std::env::temp_dir().join("first_image");
-//     tracing::info!(?dump_path, "dump path");
-//     std::fs::write(
-//         dump_path,
-//         bytes::Bytes::copy_from_slice(&capture_frame.luminance_bytes)
-//             .chain(bytes::Bytes::copy_from_slice(
-//                 &capture_frame.chrominance_bytes,
-//             ))
-//             .chunk(),
-//     )
-//     .unwrap();
+        tracing::info!(
+            "width:{}, height:{}",
+            capture_frame.width,
+            capture_frame.height
+        );
 
-//     Ok(())
-// }
+        tracing::info!("dump path:{dump_path:?}");
+
+        let mut image_bytes = Vec::new();
+        image_bytes.extend_from_slice(&capture_frame.luminance_bytes);
+        image_bytes.extend_from_slice(&capture_frame.chrominance_bytes);
+
+        std::fs::write(dump_path, image_bytes).unwrap();
+        std::thread::sleep(std::time::Duration::from_secs(1));
+    }
+
+    Ok(())
+}
