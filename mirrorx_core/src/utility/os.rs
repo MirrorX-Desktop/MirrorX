@@ -67,16 +67,20 @@ pub fn enum_broadcast_network_interfaces() -> CoreResult<Vec<(String, IpAddr)>> 
            continue;
         };
 
-        if addr.ip().is_loopback() {
-            continue;
-        }
-
         if addr.broadcast().is_none() {
             continue;
         }
 
-        valid_interfaces.push((interface.name, addr.ip()));
+        let ip = addr.ip();
+
+        if ip.is_loopback() || ip.is_ipv6() {
+            continue;
+        }
+
+        valid_interfaces.push((interface.name, ip));
     }
+
+    tracing::info!("{:?}", valid_interfaces);
 
     Ok(valid_interfaces)
 }
