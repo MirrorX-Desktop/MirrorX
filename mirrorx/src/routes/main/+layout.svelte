@@ -86,8 +86,9 @@
 		});
 
 		try {
-			// only has effect with macOS, other platform is no-op
-			await commands.invoke_utility_hide_macos_zoom_button();
+			if (isMacOS) {
+				await commands.invoke_utility_hide_macos_zoom_button();
+			}
 
 			await commands.invoke_config_init();
 			console.log('finish init config');
@@ -148,7 +149,7 @@
 </script>
 
 <div
-	class="flex h-full bg-base-100 transition-all {isMacOS
+	class="bg-base-100 flex h-full transition-all {isMacOS
 		? 'flex-row'
 		: 'flex-row-reverse rounded-lg border border-gray-600'}"
 >
