@@ -67,9 +67,9 @@ impl AudioDecoder {
                     || self.sample_format != self.out_sample_format
                 {
                     let input_av_sample_format =
-                        cpal_sample_format_to_av_sample_format(self.sample_format);
+                        cpal_sample_format_to_av_sample_format(self.sample_format)?;
                     let output_av_sample_format =
-                        cpal_sample_format_to_av_sample_format(self.out_sample_format);
+                        cpal_sample_format_to_av_sample_format(self.out_sample_format)?;
 
                     self.resampler = Some(Resampler::new(
                         480,
@@ -82,19 +82,13 @@ impl AudioDecoder {
                     )?);
 
                     tracing::info!(
-                        "use audio resampler with 
-                    input_channels:{}, 
-                    input_sample_rate:{}, 
-                    input_sample_format:{:?}, 
-                    output_channels:{}, 
-                    output_sample_rate:{}, 
-                    output_sample_format:{:?}",
-                        self.channels,
-                        self.sample_rate,
-                        self.sample_format,
-                        self.out_channels,
-                        self.out_sample_rate.0,
-                        self.out_sample_format
+                        input_channels = self.channels,
+                        input_sample_rate = self.sample_rate,
+                        input_sample_format = ?self.sample_format,
+                        output_channels = self.out_channels,
+                        output_sample_rate = self.out_sample_rate.0,
+                        output_sample_format = ?self.out_sample_format,
+                        "use audio re-sampler"
                     );
                 }
             }
@@ -121,6 +115,7 @@ impl AudioDecoder {
                     frame_size as _,
                     0,
                 ),
+                _ => return Err(core_error!("unsupported sample format")),
             };
 
             buffer.set_len(
@@ -144,10 +139,16 @@ impl Drop for AudioDecoder {
     }
 }
 
-const fn cpal_sample_format_to_av_sample_format(sample_format: SampleFormat) -> AVSampleFormat {
+fn cpal_sample_format_to_av_sample_format(
+    sample_format: SampleFormat,
+) -> CoreResult<AVSampleFormat> {
     match sample_format {
-        SampleFormat::I16 => AV_SAMPLE_FMT_S16,
-        SampleFormat::U16 => AV_SAMPLE_FMT_S16,
-        SampleFormat::F32 => AV_SAMPLE_FMT_FLT,
+        SampleFormat::I8 | SampleFormat::U8 => Ok(AV_SAMPLE_FMT_U8),
+        SampleFormat::I16 | SampleFormat::U16 => Ok(AV_SAMPLE_FMT_S16),
+        SampleFormat::I32 | SampleFormat::U32 => Ok(AV_SAMPLE_FMT_S32),
+        SampleFormat::I64 | SampleFormat::U64 => Ok(AV_SAMPLE_FMT_S64),
+        SampleFormat::F32 => Ok(AV_SAMPLE_FMT_FLT),
+        SampleFormat::F64 => Ok(AV_SAMPLE_FMT_DBL),
+        _ => Err(core_error!("unsupported sample format")),
     }
 }

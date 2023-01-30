@@ -1,5 +1,7 @@
 use crate::{
-    api::endpoint::message::EndPointAudioFrame, component::frame::AudioEncodeFrame, core_error,
+    api::endpoint::message::{AudioSampleFormat, EndPointAudioFrame},
+    component::frame::AudioEncodeFrame,
+    core_error,
     error::CoreResult,
 };
 use cpal::SampleFormat;
@@ -74,12 +76,13 @@ impl AudioEncoder {
                     self.encode_buffer.as_mut_ptr(),
                     self.encode_buffer.len() as _,
                 ),
+                _ => return Err(core_error!("unsupported sample format")),
             };
 
             if ret > 0 {
                 Ok(EndPointAudioFrame {
                     channels: self.channels as _,
-                    sample_format: self.sample_format.into(),
+                    sample_format: AudioSampleFormat::from(self.sample_format),
                     sample_rate: self.sample_rate as _,
                     buffer: self.encode_buffer[..ret as usize].to_vec(),
                 })

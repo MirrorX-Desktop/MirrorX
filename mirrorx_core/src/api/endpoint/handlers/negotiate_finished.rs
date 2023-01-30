@@ -42,7 +42,8 @@ fn spawn_desktop_capture_and_encode_process(client: Arc<EndPointClient>) {
             }
         };
 
-        let mut encoder = match VideoEncoder::new(libx264::Libx264Config::default(), client.clone()) {
+        let mut encoder = match VideoEncoder::new(libx264::Libx264Config::default(), client.clone())
+        {
             Ok(encoder) => encoder,
             Err(err) => {
                 tracing::error!(?err, "initialize encoder failed");
@@ -211,38 +212,41 @@ fn spawn_audio_capture_and_encode_process(client: Arc<EndPointClient>) {
             continue;
         }
 
-        let mut audio_encoder = AudioEncoder::default();
-
         loop {
-            // let Err(async_broadcast::TryRecvError::Empty) = exit_rx.try_recv() else {
-            //     tracing::info!("receive exit signal, exit");
-            //     return;
-            // };
+            let mut audio_encoder = AudioEncoder::default();
 
-            match rx.blocking_recv() {
-                Some(audio_frame) => match audio_encoder.encode(audio_frame) {
-                    Ok(frame) => {
-                        if let Err(err) = client.blocking_send(&EndPointMessage::AudioFrame(frame))
-                        {
-                            match err {
-                                CoreError::OutgoingMessageChannelDisconnect => {
-                                    tracing::info!("audio encode process exit");
-                                    return;
-                                }
-                                _ => {
-                                    tracing::error!(?err, "audio encode failed");
+            loop {
+                // let Err(async_broadcast::TryRecvError::Empty) = exit_rx.try_recv() else {
+                //     tracing::info!("receive exit signal, exit");
+                //     return;
+                // };
+
+                match rx.blocking_recv() {
+                    Some(audio_frame) => match audio_encoder.encode(audio_frame) {
+                        Ok(frame) => {
+                            if let Err(err) =
+                                client.blocking_send(&EndPointMessage::AudioFrame(frame))
+                            {
+                                match err {
+                                    CoreError::OutgoingMessageChannelDisconnect => {
+                                        tracing::info!("audio encode process exit");
+                                        return;
+                                    }
+                                    _ => {
+                                        tracing::error!(?err, "audio encode failed");
+                                    }
                                 }
                             }
                         }
-                    }
-                    Err(err) => {
-                        tracing::error!(?err, "audio encode failed");
+                        Err(err) => {
+                            tracing::error!(?err, "audio encode failed");
+                            break;
+                        }
+                    },
+                    None => {
+                        tracing::error!("audio duplicator tx closed");
                         break;
                     }
-                },
-                None => {
-                    tracing::error!("audio duplicator tx closed");
-                    break;
                 }
             }
         }

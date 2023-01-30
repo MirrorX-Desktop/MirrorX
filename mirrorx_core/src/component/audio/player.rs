@@ -1,7 +1,7 @@
 use crate::{core_error, error::CoreResult};
 use cpal::{
     traits::{DeviceTrait, HostTrait},
-    Sample, SampleFormat, SampleRate, Stream, StreamConfig, SupportedStreamConfig,
+    SampleFormat, SampleRate, SizedSample, Stream, StreamConfig, SupportedStreamConfig,
 };
 use tokio::sync::mpsc::{Receiver, Sender};
 
@@ -56,17 +56,26 @@ pub fn new_play_stream_and_tx(
             &output_config,
             move |data, _| play_samples::<i16>(data, &mut rx),
             err_fn,
+            None,
         ),
         SampleFormat::U16 => device.build_output_stream(
             &output_config,
             move |data, _| play_samples::<u16>(data, &mut rx),
             err_fn,
+            None,
         ),
         SampleFormat::F32 => device.build_output_stream(
             &output_config,
             move |data, _| play_samples::<f32>(data, &mut rx),
             err_fn,
+            None,
         ),
+        _ => {
+            return Err(core_error!(
+                "unsupported sample format: {:?}",
+                sample_format
+            ))
+        }
     }?;
 
     Ok((stream, tx))
@@ -74,7 +83,7 @@ pub fn new_play_stream_and_tx(
 
 fn play_samples<T>(data: &mut [T], rx: &mut Receiver<Vec<u8>>)
 where
-    T: Sample,
+    T: SizedSample,
 {
     if let Some(samples) = rx.blocking_recv() {
         unsafe {

@@ -73,28 +73,49 @@ impl Default for VideoCodec {
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub enum AudioSampleFormat {
+    I8,
+    U8,
     I16,
     U16,
+    I32,
+    U32,
+    I64,
+    U64,
     F32,
+    F64,
 }
 
-#[allow(clippy::from_over_into)]
-impl Into<SampleFormat> for AudioSampleFormat {
-    fn into(self) -> SampleFormat {
-        match self {
+impl From<AudioSampleFormat> for SampleFormat {
+    fn from(value: AudioSampleFormat) -> Self {
+        match value {
+            AudioSampleFormat::I8 => SampleFormat::I8,
+            AudioSampleFormat::U8 => SampleFormat::U8,
             AudioSampleFormat::I16 => SampleFormat::I16,
             AudioSampleFormat::U16 => SampleFormat::U16,
+            AudioSampleFormat::I32 => SampleFormat::I32,
+            AudioSampleFormat::U32 => SampleFormat::U32,
+            AudioSampleFormat::I64 => SampleFormat::I64,
+            AudioSampleFormat::U64 => SampleFormat::U64,
             AudioSampleFormat::F32 => SampleFormat::F32,
+            AudioSampleFormat::F64 => SampleFormat::F64,
         }
     }
 }
 
 impl From<SampleFormat> for AudioSampleFormat {
-    fn from(v: SampleFormat) -> Self {
-        match v {
+    fn from(value: SampleFormat) -> Self {
+        match value {
+            SampleFormat::I8 => AudioSampleFormat::I8,
+            SampleFormat::U8 => AudioSampleFormat::U8,
             SampleFormat::I16 => AudioSampleFormat::I16,
             SampleFormat::U16 => AudioSampleFormat::U16,
+            SampleFormat::I32 => AudioSampleFormat::I32,
+            SampleFormat::U32 => AudioSampleFormat::U32,
+            SampleFormat::I64 => AudioSampleFormat::I64,
+            SampleFormat::U64 => AudioSampleFormat::U64,
             SampleFormat::F32 => AudioSampleFormat::F32,
+            SampleFormat::F64 => AudioSampleFormat::F64,
+            _ => panic!("unsupported sample format, this should not be called"),
         }
     }
 }

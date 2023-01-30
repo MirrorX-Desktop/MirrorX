@@ -208,7 +208,7 @@ impl SignalingClient {
                 let visit_credentials = base64_standard.decode(resp.visit_credentials)?;
 
                 let passive_device_secret_buffer =
-                    reply_private_key.decrypt(rsa::PaddingScheme::PKCS1v15Encrypt, &secret)?;
+                    reply_private_key.decrypt(rsa::Pkcs1v15Encrypt::default(), &secret)?;
 
                 let passive_device_secret: PassiveEndpointKeyExchangeSecret =
                     bincode_deserialize(&passive_device_secret_buffer)?;
@@ -687,7 +687,7 @@ async fn key_agreement(
 
     let secret_buffer = match active_exchange_reply_public_key.encrypt(
         &mut OsRng,
-        rsa::PaddingScheme::PKCS1v15Encrypt,
+        rsa::Pkcs1v15Encrypt::default(),
         &passive_device_secret_buffer,
     ) {
         Ok(buffer) => buffer,
