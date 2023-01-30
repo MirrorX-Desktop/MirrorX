@@ -17,6 +17,8 @@ pub fn serve_audio_decode(id: EndPointID, mut decode_rx: Receiver<EndPointAudioF
             return;
         };
 
+        tracing::info!(?config, "default output config");
+
         let mut audio_decoder = AudioDecoder::new(
             config.channels() as _,
             config.sample_format(),

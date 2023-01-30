@@ -238,6 +238,7 @@ fn spawn_audio_capture_and_encode_process(client: Arc<EndPointClient>) {
                                 }
                             }
                         }
+
                         Err(err) => {
                             tracing::error!(?err, "audio encode failed");
                             break;

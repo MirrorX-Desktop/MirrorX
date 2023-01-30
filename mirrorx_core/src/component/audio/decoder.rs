@@ -1,5 +1,7 @@
 use crate::{
-    api::endpoint::message::EndPointAudioFrame, component::audio::resampler::Resampler, core_error,
+    api::endpoint::message::EndPointAudioFrame,
+    component::audio::resampler::{cpal_sample_format_to_av_sample_format, Resampler},
+    core_error,
     error::CoreResult,
 };
 use cpal::{SampleFormat, SampleRate};
@@ -67,9 +69,9 @@ impl AudioDecoder {
                     || self.sample_format != self.out_sample_format
                 {
                     let input_av_sample_format =
-                        cpal_sample_format_to_av_sample_format(self.sample_format)?;
+                        cpal_sample_format_to_av_sample_format(self.sample_format);
                     let output_av_sample_format =
-                        cpal_sample_format_to_av_sample_format(self.out_sample_format)?;
+                        cpal_sample_format_to_av_sample_format(self.out_sample_format);
 
                     self.resampler = Some(Resampler::new(
                         480,
@@ -136,19 +138,5 @@ impl Drop for AudioDecoder {
         if !self.opus_decoder.is_null() {
             unsafe { opus_decoder_destroy(self.opus_decoder) }
         }
-    }
-}
-
-fn cpal_sample_format_to_av_sample_format(
-    sample_format: SampleFormat,
-) -> CoreResult<AVSampleFormat> {
-    match sample_format {
-        SampleFormat::I8 | SampleFormat::U8 => Ok(AV_SAMPLE_FMT_U8),
-        SampleFormat::I16 | SampleFormat::U16 => Ok(AV_SAMPLE_FMT_S16),
-        SampleFormat::I32 | SampleFormat::U32 => Ok(AV_SAMPLE_FMT_S32),
-        SampleFormat::I64 | SampleFormat::U64 => Ok(AV_SAMPLE_FMT_S64),
-        SampleFormat::F32 => Ok(AV_SAMPLE_FMT_FLT),
-        SampleFormat::F64 => Ok(AV_SAMPLE_FMT_DBL),
-        _ => Err(core_error!("unsupported sample format")),
     }
 }

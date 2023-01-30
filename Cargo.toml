@@ -2,6 +2,7 @@
 members = ["mirrorx/src-tauri", "mirrorx_core", "mirrorx_native"]
 resolver = "2"
 
+
 [profile.dev.package.num-bigint-dig]
 opt-level = 3
 

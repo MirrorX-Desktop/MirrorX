@@ -1,9 +1,20 @@
-use crate::{component::frame::AudioEncodeFrame, core_error, error::CoreResult};
+use std::sync::{Arc, Mutex};
+
+use crate::{
+    component::{
+        audio::resampler::{cpal_sample_format_to_av_sample_format, Resampler},
+        frame::AudioEncodeFrame,
+    },
+    core_error,
+    error::CoreResult,
+};
 use cpal::{
     traits::{DeviceTrait, HostTrait},
-    SizedSample, Stream, StreamConfig,
+    Device, InputCallbackInfo, SizedSample, Stream, StreamConfig, StreamError,
 };
-use tokio::sync::mpsc::{Receiver, Sender};
+use dasp::{interpolate::linear::Linear, Signal};
+use mirrorx_native::ffmpeg::utils::samplefmt::AV_SAMPLE_FMT_FLT;
+use tokio::sync::{mpsc::Receiver, mpsc::Sender};
 
 pub fn new_record_stream_and_rx() -> CoreResult<(Stream, Receiver<AudioEncodeFrame>)> {
     let host = cpal::default_host();
@@ -17,132 +28,39 @@ pub fn new_record_stream_and_rx() -> CoreResult<(Stream, Receiver<AudioEncodeFra
 
     tracing::info!(name = ?device.name(), "select default audio output device");
 
-    let supported_output_config = device.default_output_config()?;
-    tracing::info!(?supported_output_config, "select audio config");
+    let config = device.default_output_config()?;
+    tracing::info!(?config, "audio default output config");
 
-    let channels = supported_output_config.channels();
-    let sample_rate = supported_output_config.sample_rate().0;
+    let channels = config.channels();
+    let sample_format = config.sample_format();
+    let sample_rate = config.sample_rate().0;
 
-    let output_config = StreamConfig {
-        channels: supported_output_config.channels(),
-        sample_rate: supported_output_config.sample_rate(),
+    let config = StreamConfig {
+        channels: config.channels(),
+        sample_rate: config.sample_rate(),
         buffer_size: cpal::BufferSize::Fixed(960),
     };
 
-    let (audio_encode_frame_tx, audio_encode_frame_rx) = tokio::sync::mpsc::channel(180);
-    let err_fn = |err| tracing::error!(?err, "error occurred on the output input stream");
+    let (tx, rx) = tokio::sync::mpsc::channel(180);
+    let error_handler = |err| tracing::error!(?err, "error occurred on the output input stream");
+    let stream = device.build_input_stream_raw(
+        &config,
+        sample_format,
+        move |data, _| {
+            let audio_encode_frame = AudioEncodeFrame {
+                channels,
+                sample_format: data.sample_format(),
+                sample_rate,
+                buffer: data.bytes().to_vec(),
+            };
 
-    let stream = match supported_output_config.sample_format() {
-        cpal::SampleFormat::I8 => device.build_input_stream(
-            &output_config,
-            move |data, _| {
-                send_audio_frame::<i8>(data, channels, sample_rate, &audio_encode_frame_tx)
-            },
-            err_fn,
-            None,
-        ),
-        cpal::SampleFormat::U8 => device.build_input_stream(
-            &output_config,
-            move |data, _| {
-                send_audio_frame::<u8>(data, channels, sample_rate, &audio_encode_frame_tx)
-            },
-            err_fn,
-            None,
-        ),
-        cpal::SampleFormat::I16 => device.build_input_stream(
-            &output_config,
-            move |data, _| {
-                send_audio_frame::<i16>(data, channels, sample_rate, &audio_encode_frame_tx)
-            },
-            err_fn,
-            None,
-        ),
-        cpal::SampleFormat::U16 => device.build_input_stream(
-            &output_config,
-            move |data, _| {
-                send_audio_frame::<u16>(data, channels, sample_rate, &audio_encode_frame_tx)
-            },
-            err_fn,
-            None,
-        ),
-        cpal::SampleFormat::I32 => device.build_input_stream(
-            &output_config,
-            move |data, _| {
-                send_audio_frame::<i32>(data, channels, sample_rate, &audio_encode_frame_tx)
-            },
-            err_fn,
-            None,
-        ),
-        cpal::SampleFormat::U32 => device.build_input_stream(
-            &output_config,
-            move |data, _| {
-                send_audio_frame::<u32>(data, channels, sample_rate, &audio_encode_frame_tx)
-            },
-            err_fn,
-            None,
-        ),
-        cpal::SampleFormat::I64 => device.build_input_stream(
-            &output_config,
-            move |data, _| {
-                send_audio_frame::<i64>(data, channels, sample_rate, &audio_encode_frame_tx)
-            },
-            err_fn,
-            None,
-        ),
-        cpal::SampleFormat::U64 => device.build_input_stream(
-            &output_config,
-            move |data, _| {
-                send_audio_frame::<u64>(data, channels, sample_rate, &audio_encode_frame_tx)
-            },
-            err_fn,
-            None,
-        ),
-        cpal::SampleFormat::F32 => device.build_input_stream(
-            &output_config,
-            move |data, _| {
-                send_audio_frame::<f32>(data, channels, sample_rate, &audio_encode_frame_tx)
-            },
-            err_fn,
-            None,
-        ),
-        cpal::SampleFormat::F64 => device.build_input_stream(
-            &output_config,
-            move |data, _| {
-                send_audio_frame::<f64>(data, channels, sample_rate, &audio_encode_frame_tx)
-            },
-            err_fn,
-            None,
-        ),
-        _ => {
-            return Err(core_error!(
-                "unsupported sample format: {}",
-                supported_output_config.sample_format()
-            ))
-        }
-    }?;
+            if tx.blocking_send(audio_encode_frame).is_err() {
+                tracing::warn!("audio encode frame tx try send failed!");
+            }
+        },
+        error_handler,
+        None,
+    )?;
 
-    Ok((stream, audio_encode_frame_rx))
-}
-
-fn send_audio_frame<T>(data: &[T], channels: u16, sample_rate: u32, tx: &Sender<AudioEncodeFrame>)
-where
-    T: SizedSample,
-{
-    let buffer = unsafe {
-        std::slice::from_raw_parts(
-            data.as_ptr() as *const u8,
-            data.len() * T::FORMAT.sample_size(),
-        )
-    };
-
-    let audio_encode_frame = AudioEncodeFrame {
-        channels,
-        sample_format: T::FORMAT,
-        sample_rate,
-        buffer: buffer.to_vec(),
-    };
-
-    if tx.blocking_send(audio_encode_frame).is_err() {
-        tracing::warn!("audio encode frame tx try send failed!");
-    }
+    Ok((stream, rx))
 }

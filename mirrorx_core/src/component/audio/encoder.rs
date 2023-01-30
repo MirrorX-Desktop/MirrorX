@@ -1,3 +1,4 @@
+use super::resampler::{cpal_sample_format_to_av_sample_format, Resampler};
 use crate::{
     api::endpoint::message::{AudioSampleFormat, EndPointAudioFrame},
     component::frame::AudioEncodeFrame,
@@ -5,7 +6,7 @@ use crate::{
     error::CoreResult,
 };
 use cpal::SampleFormat;
-use mirrorx_native::opus::encoder::*;
+use mirrorx_native::{ffmpeg::utils::samplefmt::AV_SAMPLE_FMT_FLT, opus::encoder::*};
 
 pub struct AudioEncoder {
     opus_encoder: *mut OpusEncoder,
@@ -13,6 +14,7 @@ pub struct AudioEncoder {
     sample_rate: u32,
     sample_format: SampleFormat,
     encode_buffer: [u8; 64000],
+    resampler: Option<Resampler>,
 }
 
 impl AudioEncoder {
@@ -27,21 +29,9 @@ impl AudioEncoder {
                     opus_encoder_destroy(self.opus_encoder);
                 }
 
-                let fs = if capture_frame.sample_rate <= 8000 {
-                    8000
-                } else if capture_frame.sample_rate <= 12000 {
-                    12000
-                } else if capture_frame.sample_rate <= 16000 {
-                    16000
-                } else if capture_frame.sample_rate <= 24000 {
-                    24000
-                } else {
-                    48000
-                };
-
                 let mut ret = 0;
                 let opus_encoder = opus_encoder_create(
-                    fs,
+                    48000,
                     capture_frame.channels as _,
                     OPUS_APPLICATION_RESTRICTED_LOWDELAY,
                     &mut ret,
@@ -54,36 +44,58 @@ impl AudioEncoder {
                 self.opus_encoder = opus_encoder;
                 self.channels = capture_frame.channels;
                 self.sample_format = capture_frame.sample_format;
-                self.sample_rate = fs as _;
+                self.sample_rate = capture_frame.sample_rate;
+
+                self.resampler = if self.sample_rate != 48000 {
+                    let resampler = Resampler::new(
+                        (capture_frame.buffer.len()
+                            / self.sample_format.sample_size()
+                            / (self.channels as usize)) as _,
+                        self.channels,
+                        self.sample_rate as _,
+                        cpal_sample_format_to_av_sample_format(self.sample_format),
+                        self.channels,
+                        48000,
+                        AV_SAMPLE_FMT_FLT,
+                    )?;
+
+                    Some(resampler)
+                } else {
+                    None
+                };
             }
 
-            let frame_size = capture_frame.buffer.len()
-                / capture_frame.sample_format.sample_size()
-                / (capture_frame.channels as usize);
+            let mut data = if let Some(ref mut resampler) = self.resampler {
+                resampler.convert(&capture_frame.buffer)?
+            } else {
+                capture_frame.buffer
+            };
 
-            let ret = match capture_frame.sample_format {
-                SampleFormat::I16 | SampleFormat::U16 => opus_encode(
+            data.resize(960 * self.sample_format.sample_size(), 0);
+
+            let ret = if capture_frame.sample_format.is_float() {
+                opus_encode_float(
                     self.opus_encoder,
-                    std::mem::transmute(capture_frame.buffer.as_ptr()),
-                    frame_size as _,
+                    std::mem::transmute(data.as_ptr()),
+                    480,
                     self.encode_buffer.as_mut_ptr(),
                     self.encode_buffer.len() as _,
-                ),
-                SampleFormat::F32 => opus_encode_float(
+                )
+            } else {
+                opus_encode(
                     self.opus_encoder,
-                    std::mem::transmute(capture_frame.buffer.as_ptr()),
-                    frame_size as _,
+                    std::mem::transmute(data.as_ptr()),
+                    480,
                     self.encode_buffer.as_mut_ptr(),
                     self.encode_buffer.len() as _,
-                ),
-                _ => return Err(core_error!("unsupported sample format")),
+                )
             };
 
             if ret > 0 {
                 Ok(EndPointAudioFrame {
                     channels: self.channels as _,
                     sample_format: AudioSampleFormat::from(self.sample_format),
-                    sample_rate: self.sample_rate as _,
+                    sample_rate: 48000,
                     buffer: self.encode_buffer[..ret as usize].to_vec(),
                 })
             } else {
@@ -101,6 +113,7 @@ impl Default for AudioEncoder {
             sample_rate: 0,
             sample_format: SampleFormat::I16,
             encode_buffer: [0u8; 64000],
+            resampler: None,
         }
     }
 }

@@ -1,4 +1,5 @@
 use crate::{core_error, error::CoreResult};
+use cpal::SampleFormat;
 use mirrorx_native::ffmpeg::{
     swresample::*,
     utils::{channel_layout::*, mathematics::*, mem::av_freep, opt::*, samplefmt::*},
@@ -263,5 +264,17 @@ impl Drop for Resampler {
                 swr_free(&mut self.swr_context);
             }
         }
+    }
+}
+
+pub fn cpal_sample_format_to_av_sample_format(sample_format: SampleFormat) -> AVSampleFormat {
+    match sample_format {
+        SampleFormat::I8 | SampleFormat::U8 => AV_SAMPLE_FMT_U8,
+        SampleFormat::I16 | SampleFormat::U16 => AV_SAMPLE_FMT_S16,
+        SampleFormat::I32 | SampleFormat::U32 => AV_SAMPLE_FMT_S32,
+        SampleFormat::I64 | SampleFormat::U64 => AV_SAMPLE_FMT_S64,
+        SampleFormat::F32 => AV_SAMPLE_FMT_FLT,
+        SampleFormat::F64 => AV_SAMPLE_FMT_DBL,
+        _ => panic!("unsupported sample format"),
     }
 }
