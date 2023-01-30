@@ -123,7 +123,7 @@ async fn clear_timeout_nodes(nodes_cache: Arc<RwLock<FxHashMap<String, (Node, i6
     let now_ts = chrono::Utc::now().timestamp();
 
     // remove live timeout node
-    (*nodes).retain(|_, (_, ts)| now_ts - *ts <= 30);
+    (*nodes).retain(|_, (_, ts)| (now_ts - *ts) <= 30);
 
     // update check timestamp
     (*nodes).iter_mut().for_each(|(_, (_, ts))| *ts = now_ts);
@@ -142,10 +142,11 @@ async fn update_nodes(
             }
 
             let mut nodes = nodes_cache.write().await;
-            if let Some((node, _)) = (*nodes).get_mut(&live_packet.uuid) {
+            if let Some((node, ts)) = (*nodes).get_mut(&live_packet.uuid) {
                 if !node.addrs.contains(&addr.ip()) {
                     node.addrs.push(addr.ip())
                 }
+                *ts = chrono::Utc::now().timestamp();
             } else {
                 (*nodes).insert(
                     live_packet.uuid,
