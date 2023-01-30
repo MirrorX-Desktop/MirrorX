@@ -1,7 +1,7 @@
 use crate::{
     api::endpoint::{client::EndPointClient, message::EndPointMessage},
     component::{
-        audio::{duplicator::new_record_stream_and_rx, encoder::AudioEncoder},
+        audio::{encoder::AudioEncoder, recorder::new_record_stream_and_rx},
         desktop::{monitor::get_active_monitors, Duplicator},
         video_encoder::{config::*, encoder::VideoEncoder},
     },

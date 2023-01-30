@@ -1,20 +1,9 @@
-use std::sync::{Arc, Mutex};
-
-use crate::{
-    component::{
-        audio::resampler::{cpal_sample_format_to_av_sample_format, Resampler},
-        frame::AudioEncodeFrame,
-    },
-    core_error,
-    error::CoreResult,
-};
+use crate::{component::frame::AudioEncodeFrame, core_error, error::CoreResult};
 use cpal::{
     traits::{DeviceTrait, HostTrait},
-    Device, InputCallbackInfo, SizedSample, Stream, StreamConfig, StreamError,
+    Stream, StreamConfig,
 };
-use dasp::{interpolate::linear::Linear, Signal};
-use mirrorx_native::ffmpeg::utils::samplefmt::AV_SAMPLE_FMT_FLT;
-use tokio::sync::{mpsc::Receiver, mpsc::Sender};
+use tokio::sync::mpsc::Receiver;
 
 pub fn new_record_stream_and_rx() -> CoreResult<(Stream, Receiver<AudioEncodeFrame>)> {
     let host = cpal::default_host();

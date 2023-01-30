@@ -5,7 +5,7 @@ use crate::{
     error::CoreResult,
 };
 use cpal::{SampleFormat, SampleRate};
-use mirrorx_native::{ffmpeg::utils::samplefmt::*, opus::decoder::*};
+use mirrorx_native::opus::decoder::*;
 
 pub struct AudioDecoder {
     opus_decoder: *mut OpusDecoder,
@@ -74,7 +74,7 @@ impl AudioDecoder {
                         cpal_sample_format_to_av_sample_format(self.out_sample_format);
 
                     self.resampler = Some(Resampler::new(
-                        480,
+                        960 / self.channels as i32,
                         self.channels as _,
                         self.sample_rate as _,
                         input_av_sample_format as _,
@@ -96,6 +96,7 @@ impl AudioDecoder {
             }
 
             let mut buffer = Vec::<u8>::with_capacity(960 * self.sample_format.sample_size());
+
             let frame_size = buffer.capacity()
                 / self.sample_format.sample_size()
                 / (audio_frame.channels as usize);

@@ -77,7 +77,7 @@ impl AudioEncoder {
                 opus_encode_float(
                     self.opus_encoder,
                     std::mem::transmute(data.as_ptr()),
-                    480,
+                    (960 / self.channels) as _,
                     self.encode_buffer.as_mut_ptr(),
                     self.encode_buffer.len() as _,
                 )
@@ -85,7 +85,7 @@ impl AudioEncoder {
                 opus_encode(
                     self.opus_encoder,
                     std::mem::transmute(data.as_ptr()),
-                    480,
+                    (960 / self.channels) as _,
                     self.encode_buffer.as_mut_ptr(),
                     self.encode_buffer.len() as _,
                 )
