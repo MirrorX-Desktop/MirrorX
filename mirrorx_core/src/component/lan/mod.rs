@@ -101,7 +101,7 @@ fn serve_discover_nodes(
     nodes_cache: Arc<RwLock<FxHashMap<String, (Node, i64)>>>,
     mut packet_rx: Receiver<(SocketAddr, discover::BroadcastPacket)>,
 ) {
-    let mut ticker = tokio::time::interval(Duration::from_secs(30));
+    let mut ticker = tokio::time::interval(Duration::from_secs(10));
     tokio::spawn(async move {
         loop {
             tokio::select! {
@@ -123,10 +123,7 @@ async fn clear_timeout_nodes(nodes_cache: Arc<RwLock<FxHashMap<String, (Node, i6
     let now_ts = chrono::Utc::now().timestamp();
 
     // remove live timeout node
-    (*nodes).retain(|_, (_, ts)| (now_ts - *ts) <= 30);
-
-    // update check timestamp
-    (*nodes).iter_mut().for_each(|(_, (_, ts))| *ts = now_ts);
+    (*nodes).retain(|_, (_, ts)| now_ts - *ts <= 30);
 }
 
 async fn update_nodes(
