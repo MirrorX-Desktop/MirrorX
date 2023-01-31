@@ -21,17 +21,19 @@
 
 MirrorX is an open-source remote desktop solution, designed for enterprises, teams and individuals.
 
-### **SECURE**
+### **TRANSPARENCY**
 
-Everything is under your control, allows you to deploy on-prem and/or in the cloud, and also supports end-to-end encryption.
+Everything is under your control, allows you to deploy on-prem and/or in the Cloud, and also supports end-to-end encryption.
 
 ### **HIGH-PERFORMANCE**
 
 GPU acceleration, 4K resolution, 60 FPS... make you feel like a "local desktop".
 
-Features like video and audio passthrough, file transfer, cross-platform, mobile devices support and so on, are really essential, and more features are coming to blow your mind.
+----
 
-> **Note: MirrorX is in the early stage of development, please be aware of that backward compatibility is not guaranteed.**
+Features like video and audio pass-through, file transfer, cross-platform, mobile device support and so on are really essential, and more features are coming soon.
+
+> **Note: MirrorX is in the early stage of development, please be aware that backward compatibility is not guaranteed.**
 
 ## Component
 
@@ -41,13 +43,13 @@ Features like video and audio passthrough, file transfer, cross-platform, mobile
 
 ## Free Public Servers
 
-> The servers are contributed by the community, please do not abuse it.
+> The servers are provided by the community, please do not abuse them.
 
 | Location | Specification  |
 | :------: | :------------: |
 |  Seoul   | 1vCPU & 1G RAM |
 
-## Available Platform
+## Available Platforms
 
 - [x] macOS
 - [x] Windows
@@ -58,7 +60,7 @@ Features like video and audio passthrough, file transfer, cross-platform, mobile
 
 ## How to build
 
-### Prerequisite
+### Prerequisites
 
 1. Install `nodejs && yarn(v3)`.
 2. Install `tauri-cli`.
@@ -69,7 +71,7 @@ cargo install tauri-cli
 
 ### Steps
 
-1. Download pre built media libraries artifacts from [MirrorX-Desktop/media_libraries_auto_build](https://github.com/MirrorX-Desktop/media_libraries_auto_build) Release.
+1. Download pre-built media libraries artifacts from [MirrorX-Desktop/media_libraries_auto_build](https://github.com/MirrorX-Desktop/media_libraries_auto_build) Release.
 2. Unzip artifacts to anywhere you'd like to put in.
 3. **Add unzipped artifacts path to your Environment Variables**
 
@@ -90,13 +92,13 @@ cargo install tauri-cli
 cargo tauri dev
 ```
 
-## About Pre Built Media Libraries
+## About Pre-built Media Libraries
 
 To speed up the build process, we made [MirrorX-Desktop/media_libraries_auto_build](https://github.com/MirrorX-Desktop/media_libraries_auto_build) to automatically and transparently build external libraries. Includes [FFmpeg](https://git.ffmpeg.org/ffmpeg.git), libx264([Windows](https://github.com/ShiftMediaProject/x264.git), [MacOS](https://code.videolan.org/videolan/x264.git)), libx265([Windows](https://github.com/ShiftMediaProject/x265.git), [MacOS](https://bitbucket.org/multicoreware/x265_git.git)), libopus([Windows](https://github.com/ShiftMediaProject/opus.git), [MacOS](https://github.com/xiph/opus.git)) and MFXDispatch([Windows](https://github.com/ShiftMediaProject/mfx_dispatch.git) only). For more details, you can look through [Workflows](https://github.com/MirrorX-Desktop/media_libraries_auto_build/tree/main/.github/workflows) on [MirrorX-Desktop/media_libraries_auto_build](https://github.com/MirrorX-Desktop/media_libraries_auto_build).
 
 Of course, you can completely built those libraries by yourself according to our [Workflows](https://github.com/MirrorX-Desktop/media_libraries_auto_build/tree/main/.github/workflows).
 
-## Screenshot
+## Screenshots
 
 <p align="center">
 <img src="https://raw.githubusercontent.com/MirrorX-Desktop/MirrorX/master/screenshot1.png?" width="30%" height="30%">
@@ -106,7 +108,7 @@ Of course, you can completely built those libraries by yourself according to our
 
 ## Thanks
 
-### Thanks these awesome open source projects that make MirrorX becomes true.
+### Thanks to these awesome open source projects that make MirrorX becomes true.
 
 (listed partial with in no particular order, thanks all the authors of dependencies in Cargo.toml and package.json)
 
