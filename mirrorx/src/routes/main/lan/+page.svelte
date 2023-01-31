@@ -143,7 +143,7 @@
 				{#each display_nodes as node}
 					<Panel
 						display_name={node.display_name}
-						addrs={Array.from(node.addrs.keys())}
+						addrs={node.addrs}
 						os={node.os}
 						os_version={node.os_version}
 					/>

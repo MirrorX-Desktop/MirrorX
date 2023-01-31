@@ -17,13 +17,15 @@
 	import { emit } from '@tauri-apps/api/event';
 
 	export let display_name: string;
-	export let addrs: Array<string>;
+	export let addrs: Map<string, number>;
 	export let os: string;
 	export let os_version: string;
 
+	$: ips = Object.keys(addrs);
+
 	const lan_connect = async () => {
 		try {
-			await emit('/dialog/lan_connect', { addr: addrs[0], hostname: display_name });
+			await emit('/dialog/lan_connect', { addr: ips[0], hostname: display_name });
 		} catch (error: any) {
 			await emitNotification({ level: 'error', title: 'Error', message: error.toString() });
 		}
@@ -44,7 +46,7 @@
 				{os}&nbsp;{os_version}
 			</div>
 			<div class="w-48 text-left text-xs">
-				{addrs[0]}
+				{ips[0]}
 			</div>
 		</div>
 
