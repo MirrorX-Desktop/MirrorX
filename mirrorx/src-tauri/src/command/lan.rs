@@ -162,12 +162,11 @@ pub async fn lan_nodes_search(
         let nodes_count = nodes.len();
 
         for i in 0..nodes_count {
-            let hostname = &nodes[i].host_name;
-            if !hostname.contains(&keyword) {
+            if !nodes[i].display_name.contains(&keyword) {
                 nodes.remove(i);
             }
 
-            for ip in &nodes[i].addrs {
+            for ip in nodes[i].addrs.keys() {
                 if !ip.to_string().contains(&keyword) {
                     nodes.remove(i);
                     break;

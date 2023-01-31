@@ -1,8 +1,6 @@
 use crate::error::CoreResult;
-use hostname;
 use serde::{Deserialize, Serialize};
 use std::{
-    ffi::OsStr,
     net::{IpAddr, Ipv4Addr, SocketAddr},
     sync::{
         atomic::{AtomicBool, Ordering},
@@ -19,8 +17,7 @@ pub enum BroadcastPacket {
 
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct TargetLivePacket {
-    pub uuid: String,
-    pub host_name: String,
+    pub hostname: String,
     pub os: String,
     pub os_version: String,
 }
@@ -32,8 +29,8 @@ pub struct Discover {
 
 impl Discover {
     pub async fn new(
-        uuid: &str,
-        name: &str,
+        hostname: &str,
+        interface_name: &str,
         ip: IpAddr,
         discoverable: Arc<AtomicBool>,
         packet_tx: tokio::sync::mpsc::Sender<(SocketAddr, BroadcastPacket)>,
@@ -41,12 +38,11 @@ impl Discover {
         let stream = tokio::net::UdpSocket::bind((ip, 48000)).await?;
         stream.set_broadcast(true)?;
 
-        tracing::info!(interface = name, ?ip, "lan discover listen");
+        tracing::info!(interface = interface_name, ?ip, "lan discover listen");
 
-        let dead_packet = bincode::serialize(&BroadcastPacket::TargetDead(uuid.to_string()))?;
-        let live_packet = bincode::serialize(&BroadcastPacket::TargetLive(create_live_packet(
-            uuid.to_string(),
-        )?))?;
+        let dead_packet = bincode::serialize(&BroadcastPacket::TargetDead(hostname.to_string()))?;
+        let live_packet =
+            bincode::serialize(&BroadcastPacket::TargetLive(create_live_packet(hostname)?))?;
 
         let writer = Arc::new(stream);
         let reader = writer.clone();
@@ -132,8 +128,7 @@ impl Drop for Discover {
     }
 }
 
-fn create_live_packet(uuid: String) -> CoreResult<TargetLivePacket> {
-    let host_name = convert_host_name_to_string(&hostname::get()?)?;
+fn create_live_packet(hostname: &str) -> CoreResult<TargetLivePacket> {
     let os_info = os_info::get();
     let os_version = os_info.version().to_string();
     let os = match os_info.os_type() {
@@ -182,24 +177,8 @@ fn create_live_packet(uuid: String) -> CoreResult<TargetLivePacket> {
     .to_string();
 
     Ok(TargetLivePacket {
-        uuid,
-        host_name,
+        hostname: hostname.to_string(),
         os,
         os_version,
     })
-}
-
-fn convert_host_name_to_string(v: &OsStr) -> CoreResult<String> {
-    #[cfg(target_os = "windows")]
-    {
-        use crate::core_error;
-        use std::os::windows::ffi::OsStrExt;
-
-        let result: Vec<u16> = v.encode_wide().collect();
-        String::from_utf16(&result)
-            .map_err(|err| core_error!("convert host name to string failed ({:?})", err))
-    }
-
-    #[cfg(not(target_os = "windows"))]
-    Ok(v.to_string_lossy().to_string())
 }

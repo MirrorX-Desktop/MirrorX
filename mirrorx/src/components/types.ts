@@ -14,8 +14,8 @@ export interface Domain {
 }
 
 export interface LanDiscoverNode {
-	host_name: string;
-	addrs: Array<string>;
+	display_name: string;
+	addrs: Map<string, number>;
 	os: string;
 	os_version: string;
 }

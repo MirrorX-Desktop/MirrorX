@@ -126,13 +126,13 @@
 				id="search_input"
 				type="text"
 				placeholder={$LL.LAN.HostnameOrIP()}
-				class="input input-bordered input-sm focus:border-info focus:ring-info flex-1 text-center focus:outline-none focus:ring"
+				class="input-bordered input input-sm flex-1 text-center focus:border-info focus:outline-none focus:ring focus:ring-info"
 				on:input={(ev) => search_lan_nodes(ev.currentTarget.value)}
 			/>
 		</div>
 		<div class="flex flex-row justify-center">
 			<div>
-				<div class="text-base-content text-xs text-opacity-50">
+				<div class="text-xs text-base-content text-opacity-50">
 					{$LL.LAN.DiscoveredDevicesTip()}
 				</div>
 			</div>
@@ -142,8 +142,8 @@
 			<div class="flex flex-col ">
 				{#each display_nodes as node}
 					<Panel
-						hostname={node.host_name}
-						addrs={node.addrs}
+						display_name={node.display_name}
+						addrs={Array.from(node.addrs.keys())}
 						os={node.os}
 						os_version={node.os_version}
 					/>
@@ -157,15 +157,15 @@
 						type="checkbox"
 						checked={discoverable}
 						on:change={(ev) => changeDiscoverable(ev.currentTarget.checked)}
-						class="checkbox checkbox-primary checkbox-xs"
+						class="checkbox-primary checkbox checkbox-xs"
 					/>
 					<span class="label-text">{$LL.LAN.Discoverable()}</span>
 				</label>
 			</div>
 			<div class="btn-group">
-				<button class="btn btn-xs" on:click={prev_page}>«</button>
-				<button class="btn btn-xs">{display_page}&nbsp;/&nbsp;{display_total_pages}</button>
-				<button class="btn btn-xs" on:click={next_page}>»</button>
+				<button class="btn-xs btn" on:click={prev_page}>«</button>
+				<button class="btn-xs btn">{display_page}&nbsp;/&nbsp;{display_total_pages}</button>
+				<button class="btn-xs btn" on:click={next_page}>»</button>
 			</div>
 		</div>
 	</div>
@@ -177,7 +177,7 @@
 	}
 
 	#panel::-webkit-scrollbar-thumb {
-		@apply bg-base-300 rounded-full;
+		@apply rounded-full bg-base-300;
 	}
 
 	#panel::-webkit-scrollbar-track {

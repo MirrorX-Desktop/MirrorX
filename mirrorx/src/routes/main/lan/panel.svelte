@@ -16,14 +16,14 @@
 	import { emitNotification } from '$lib/components/notification';
 	import { emit } from '@tauri-apps/api/event';
 
-	export let hostname: string;
+	export let display_name: string;
 	export let addrs: Array<string>;
 	export let os: string;
 	export let os_version: string;
 
 	const lan_connect = async () => {
 		try {
-			await emit('/dialog/lan_connect', { addr: addrs[0], hostname });
+			await emit('/dialog/lan_connect', { addr: addrs[0], hostname: display_name });
 		} catch (error: any) {
 			await emitNotification({ level: 'error', title: 'Error', message: error.toString() });
 		}
@@ -33,12 +33,12 @@
 <slot>
 	<button
 		on:click={lan_connect}
-		class="hover:bg-primary hover:text-primary-content flex flex-row items-center rounded-lg p-2 transition-all hover:rounded-lg"
+		class="flex flex-row items-center rounded-lg p-2 transition-all hover:rounded-lg hover:bg-primary hover:text-primary-content"
 		style="height: 76px"
 	>
 		<div class="w-full flex-1">
 			<div class=" w-48 overflow-hidden text-ellipsis whitespace-nowrap text-left text-lg">
-				{hostname}
+				{display_name}
 			</div>
 			<div class="w-48 overflow-hidden text-ellipsis whitespace-nowrap text-left text-xs">
 				{os}&nbsp;{os_version}
