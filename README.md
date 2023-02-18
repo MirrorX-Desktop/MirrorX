@@ -8,7 +8,7 @@
 
 <p align="center">
   <a href="https://github.com/MirrorX-Desktop/MirrorX"><img src="https://img.shields.io/github/stars/MirrorX-Desktop/MirrorX"></a>
-  <a href="https://discord.gg/asT4deaEGh"><img src="https://img.shields.io/discord/1001077628238827620?label=Discord"></a>
+  <a href="https://discord.gg/dmtQhHWhyg"><img src="https://img.shields.io/discord/1001077628238827620?label=Discord"></a>
   <a href="https://github.com/MirrorX-Desktop/MirrorX"><img src="https://img.shields.io/github/license/MirrorX-Desktop/MirrorX"></a>
 </p>
 
