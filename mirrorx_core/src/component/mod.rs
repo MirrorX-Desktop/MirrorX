@@ -2,6 +2,7 @@
 
 pub mod audio;
 pub mod desktop;
+pub mod display;
 pub mod frame;
 pub mod fs;
 pub mod input;

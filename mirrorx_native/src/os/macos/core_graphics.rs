@@ -26,6 +26,8 @@ pub type CGDisplayStreamFrameAvailableHandler<'a> = &'a block::Block<
 
 extern "C" {
     pub static kUTTypePNG: CFStringRef;
+    pub static kUTTypeJPEG: CFStringRef;
+    pub static kCGImageDestinationLossyCompressionQuality: CFStringRef;
 }
 
 extern "C" {
