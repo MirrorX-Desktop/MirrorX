@@ -1,28 +1,32 @@
-use super::{
-    dx_math::{VERTEX_STRIDES, VERTICES},
-    shader,
-    util::{init_directx, prepare_desktop},
-};
+mod math;
+mod shader;
+
 use crate::{
-    component::{desktop::windows::dx_math::Vertex, frame::DesktopEncodeFrame},
+    component::frame::DesktopEncodeFrame,
     core_error,
-    error::{CoreError, CoreResult},
+    error::{system_api_error, CoreError, CoreResult},
     HRESULT,
 };
+use math::{VERTEX_STRIDES, VERTICES};
 use scopeguard::defer;
 use std::os::raw::c_void;
-use tracing::info;
 use windows::{
-    core::{Interface, PCSTR, PCWSTR},
+    core::Interface,
+    s,
     Win32::{
         Graphics::{
             Direct3D::*,
             Direct3D11::*,
             Dxgi::{Common::*, *},
-            Gdi::*,
         },
-        System::WindowsProgramming::INFINITE,
-        UI::WindowsAndMessaging::*,
+        System::{
+            StationsAndDesktops::{
+                CloseDesktop, OpenInputDesktop, SetThreadDesktop, DESKTOP_ACCESS_FLAGS,
+                DESKTOP_CONTROL_FLAGS,
+            },
+            SystemServices::GENERIC_ALL,
+            WindowsProgramming::INFINITE,
+        },
     },
 };
 
@@ -42,19 +46,19 @@ pub struct Duplicator {
 
     backend_texture: ID3D11Texture2D,
     backend_viewport: [D3D11_VIEWPORT; 1],
-    backend_rtv: [Option<ID3D11RenderTargetView>; 1],
+    backend_rtv: [ID3D11RenderTargetView; 1],
 
     luminance_render_texture: ID3D11Texture2D,
     luminance_staging_texture: ID3D11Texture2D,
     luminance_viewport: [D3D11_VIEWPORT; 1],
-    luminance_rtv: [Option<ID3D11RenderTargetView>; 1],
+    luminance_rtv: [ID3D11RenderTargetView; 1],
 
     chrominance_render_texture: ID3D11Texture2D,
     chrominance_staging_texture: ID3D11Texture2D,
     chrominance_viewport: [D3D11_VIEWPORT; 1],
-    chrominance_rtv: [Option<ID3D11RenderTargetView>; 1],
+    chrominance_rtv: [ID3D11RenderTargetView; 1],
 
-    sampler_state: [Option<ID3D11SamplerState>; 1],
+    sampler_state: [ID3D11SamplerState; 1],
     blend_state: ID3D11BlendState,
 
     mouse_position_x: i32,
@@ -70,11 +74,14 @@ pub struct Duplicator {
 unsafe impl Send for Duplicator {}
 
 impl Duplicator {
-    pub fn new(monitor_id: Option<String>) -> CoreResult<(Duplicator, String)> {
+    pub fn new(adapter: IDXGIAdapter1, output: IDXGIOutput) -> CoreResult<Duplicator> {
         unsafe {
             prepare_desktop()?;
 
-            let (device, device_context) = init_directx()?;
+            let adapter = HRESULT!(adapter.cast());
+            let output: IDXGIOutput1 = HRESULT!(output.cast());
+
+            let (device, device_context) = init_d3d(&adapter)?;
 
             let (
                 vertex_shader,
@@ -84,7 +91,7 @@ impl Duplicator {
                 pixel_shader_chrominance,
             ) = init_shaders(&device)?;
 
-            let (duplication, monitor_id) = init_output_duplication(&device, monitor_id)?;
+            let duplication = HRESULT!(output.DuplicateOutput(&device));
 
             let mut dxgi_outdupl_desc = std::mem::zeroed();
             duplication.GetDesc(&mut dxgi_outdupl_desc);
@@ -110,40 +117,37 @@ impl Duplicator {
 
             device_context.IASetInputLayout(&input_layout);
 
-            Ok((
-                Duplicator {
-                    device,
-                    device_context,
-                    vertex_shader,
-                    vertex_buffer: Some(vertex_buffer),
-                    pixel_shader,
-                    pixel_shader_luminance: pixel_shader_lumina,
-                    pixel_shader_chrominance,
-                    duplication,
-                    dxgi_outdupl_desc,
-                    backend_texture,
-                    backend_viewport: [backend_viewport],
-                    backend_rtv: [Some(backend_rtv)],
-                    luminance_render_texture: lumina_render_texture,
-                    luminance_staging_texture: lumina_staging_texture,
-                    luminance_viewport: [lumina_viewport],
-                    luminance_rtv: [Some(lumina_rtv)],
-                    chrominance_render_texture,
-                    chrominance_staging_texture,
-                    chrominance_viewport: [chrominance_viewport],
-                    chrominance_rtv: [Some(chrominance_rtv)],
-                    sampler_state: [Some(sampler_state)],
-                    blend_state,
-                    mouse_position_x: 0,
-                    mouse_position_y: 0,
-                    mouse_last_timestamp: 0,
-                    mouse_visible: false,
-                    mouse_shape_buffer: Vec::new(),
-                    mouse_shape_info: std::mem::zeroed(),
-                    epoch: once_cell::unsync::OnceCell::new(),
-                },
-                monitor_id,
-            ))
+            Ok(Duplicator {
+                device,
+                device_context,
+                vertex_shader,
+                vertex_buffer: Some(vertex_buffer),
+                pixel_shader,
+                pixel_shader_luminance: pixel_shader_lumina,
+                pixel_shader_chrominance,
+                duplication,
+                dxgi_outdupl_desc,
+                backend_texture,
+                backend_viewport: [backend_viewport],
+                backend_rtv: [backend_rtv],
+                luminance_render_texture: lumina_render_texture,
+                luminance_staging_texture: lumina_staging_texture,
+                luminance_viewport: [lumina_viewport],
+                luminance_rtv: [lumina_rtv],
+                chrominance_render_texture,
+                chrominance_staging_texture,
+                chrominance_viewport: [chrominance_viewport],
+                chrominance_rtv: [chrominance_rtv],
+                sampler_state: [sampler_state],
+                blend_state,
+                mouse_position_x: 0,
+                mouse_position_y: 0,
+                mouse_last_timestamp: 0,
+                mouse_visible: false,
+                mouse_shape_buffer: Vec::new(),
+                mouse_shape_info: std::mem::zeroed(),
+                epoch: once_cell::unsync::OnceCell::new(),
+            })
         }
     }
 
@@ -209,7 +213,7 @@ impl Duplicator {
         let mut backend_texture_desc = std::mem::zeroed();
         self.backend_texture.GetDesc(&mut backend_texture_desc);
 
-        let shader_resouce_view_desc = D3D11_SHADER_RESOURCE_VIEW_DESC {
+        let shader_resource_view_desc = D3D11_SHADER_RESOURCE_VIEW_DESC {
             Format: backend_texture_desc.Format,
             ViewDimension: D3D11_SRV_DIMENSION_TEXTURE2D,
             Anonymous: D3D11_SHADER_RESOURCE_VIEW_DESC_0 {
@@ -220,11 +224,19 @@ impl Duplicator {
             },
         };
 
-        let shader_resource_view = HRESULT!(self
-            .device
-            .CreateShaderResourceView(&self.backend_texture, Some(&shader_resouce_view_desc)));
+        let mut shader_resource_view = None;
+        if let Err(err) = self.device.CreateShaderResourceView(
+            &self.backend_texture,
+            Some(&shader_resource_view_desc),
+            Some(&mut shader_resource_view),
+        ) {
+            return system_api_error(err, "ID3D11Device::CreateShaderResourceView");
+        }
+        let Some(shader_resource_view) = shader_resource_view else{
+            return Err(core_error!("create shader resource view failed"))
+        };
 
-        let shader_resource_view = [Some(shader_resource_view)];
+        let shader_resource_view = [shader_resource_view];
 
         self.device_context.IASetVertexBuffers(
             0,
@@ -282,12 +294,17 @@ impl Duplicator {
             &self.chrominance_render_texture,
         );
 
-        let lumina_mapped_resource = HRESULT!(self.device_context.Map(
+        let mut lumina_mapped_resource = std::mem::zeroed();
+
+        if let Err(err) = self.device_context.Map(
             &self.luminance_staging_texture,
             0,
             D3D11_MAP_READ,
-            0
-        ));
+            0,
+            Some(&mut lumina_mapped_resource),
+        ) {
+            return system_api_error(err, "ID3D11DeviceContext::Map");
+        }
 
         let luminance_stride = lumina_mapped_resource.RowPitch;
 
@@ -300,12 +317,17 @@ impl Duplicator {
         self.device_context
             .Unmap(&self.luminance_staging_texture, 0);
 
-        let chrominance_mapped_resource = HRESULT!(self.device_context.Map(
+        let mut chrominance_mapped_resource = std::mem::zeroed();
+
+        if let Err(err) = self.device_context.Map(
             &self.chrominance_staging_texture,
             0,
             D3D11_MAP_READ,
-            0
-        ));
+            0,
+            Some(&mut chrominance_mapped_resource),
+        ) {
+            return system_api_error(err, "ID3D11DeviceContext::Map");
+        }
 
         let chrominance_stride = chrominance_mapped_resource.RowPitch;
 
@@ -532,29 +554,52 @@ impl Duplicator {
             };
         init_data.SysMemSlicePitch = 0;
 
-        let pointer_texture = HRESULT!(self
-            .device
-            .CreateTexture2D(&pointer_texture_desc, Some(&init_data)));
+        let mut pointer_texture = None;
+        if let Err(err) = self.device.CreateTexture2D(
+            &pointer_texture_desc,
+            Some(&init_data),
+            Some(&mut pointer_texture),
+        ) {
+            return system_api_error(err, "ID3D11Device::CreateTexture2D");
+        }
 
-        let shader_res = HRESULT!(self
-            .device
-            .CreateShaderResourceView(&pointer_texture, Some(&shader_resource_view_desc)));
+        let Some(pointer_texture) = pointer_texture else{
+            return Err(core_error!("create pointer texture failed"))
+        };
+
+        let mut shader_res = None;
+        if let Err(err) = self.device.CreateShaderResourceView(
+            &pointer_texture,
+            Some(&shader_resource_view_desc),
+            Some(&mut shader_res),
+        ) {
+            return system_api_error(err, "ID3D11Device::CreateShaderResourceView");
+        }
+
+        let Some(shader_res) = shader_res else{
+            return Err(core_error!("create pointer shader resource view failed"))
+        };
 
         let mut buffer_desc: D3D11_BUFFER_DESC = std::mem::zeroed();
         buffer_desc.Usage = D3D11_USAGE_DEFAULT;
-        buffer_desc.ByteWidth = (std::mem::size_of::<Vertex>() * VERTICES.len()) as u32;
+        buffer_desc.ByteWidth = (std::mem::size_of::<math::Vertex>() * VERTICES.len()) as u32;
         buffer_desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
         buffer_desc.CPUAccessFlags = D3D11_CPU_ACCESS_FLAG(0);
 
         init_data = std::mem::zeroed();
         init_data.pSysMem = vertices.as_ptr() as *const _;
 
-        let mouse_vertex_buffer = Some(HRESULT!(self
-            .device
-            .CreateBuffer(&buffer_desc, Some(&init_data))));
+        let mut mouse_vertex_buffer = None;
+        if let Err(err) = self.device.CreateBuffer(
+            &buffer_desc,
+            Some(&init_data),
+            Some(&mut mouse_vertex_buffer),
+        ) {
+            return system_api_error(err, "ID3D11Device::CreateBuffer");
+        }
 
         let blend_factor = [0f32; 4];
-        let stride = std::mem::size_of::<Vertex>() as u32;
+        let stride = std::mem::size_of::<math::Vertex>() as u32;
         let offset = 0;
 
         self.device_context
@@ -584,7 +629,7 @@ impl Duplicator {
             .PSSetShader(Some(&self.pixel_shader), None);
 
         self.device_context
-            .PSSetShaderResources(0, Some(&[Some(shader_res)]));
+            .PSSetShaderResources(0, Some(&[shader_res]));
 
         self.device_context
             .PSSetSamplers(0, Some(&self.sampler_state));
@@ -657,7 +702,17 @@ impl Duplicator {
         copy_buffer_desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
         copy_buffer_desc.MiscFlags = D3D11_RESOURCE_MISC_FLAG::default();
 
-        let copy_buffer = HRESULT!(self.device.CreateTexture2D(&copy_buffer_desc, None));
+        let mut copy_buffer = None;
+        if let Err(err) =
+            self.device
+                .CreateTexture2D(&copy_buffer_desc, None, Some(&mut copy_buffer))
+        {
+            return system_api_error(err, "ID3D11Device::CreateTexture2D");
+        }
+
+        let Some(copy_buffer) = copy_buffer else {
+            return Err(core_error!("create pointer copy buffer failed"))
+        };
 
         pointer_box.left = *pointer_left as u32;
         pointer_box.top = *pointer_top as u32;
@@ -753,74 +808,72 @@ impl Duplicator {
     }
 }
 
-unsafe fn init_output_duplication(
-    device: &ID3D11Device,
-    monitor_id: Option<String>,
-) -> CoreResult<(IDXGIOutputDuplication, String)> {
-    let dxgi_device: IDXGIDevice = HRESULT!(device.cast());
+unsafe fn prepare_desktop() -> CoreResult<()> {
+    let current_desktop = HRESULT!(OpenInputDesktop(
+        DESKTOP_CONTROL_FLAGS::default(),
+        false,
+        DESKTOP_ACCESS_FLAGS(GENERIC_ALL)
+    ));
 
-    let dxgi_adapter = HRESULT!(dxgi_device.GetParent::<IDXGIAdapter>());
-
-    let adapter_desc = HRESULT!(dxgi_adapter.GetDesc());
-
-    info!(
-        name = ?PCWSTR::from_raw(adapter_desc.Description.as_ptr()).to_string()?,
-        "DXGI Adapter",
-    );
-
-    let mut output_index = 0;
-
-    while let Ok(dxgi_output) = dxgi_adapter.EnumOutputs(output_index) {
-        output_index += 1;
-
-        let dxgi_output_desc = HRESULT!(dxgi_output.GetDesc());
-
-        if !dxgi_output_desc.AttachedToDesktop.as_bool() {
-            continue;
-        }
-
-        let mut dev_index = 0u32;
-        loop {
-            let origin_device_name = PCWSTR::from_raw(dxgi_output_desc.DeviceName.as_ptr());
-
-            let mut display_device: DISPLAY_DEVICEW = std::mem::zeroed();
-            display_device.cb = std::mem::size_of::<DISPLAY_DEVICEW>() as u32;
-
-            let success = EnumDisplayDevicesW(
-                origin_device_name,
-                dev_index,
-                &mut display_device as *mut _,
-                EDD_GET_DEVICE_INTERFACE_NAME,
-            )
-            .as_bool();
-
-            dev_index += 1;
-
-            if !success {
-                break;
-            }
-
-            if (display_device.StateFlags & DISPLAY_DEVICE_ATTACHED_TO_DESKTOP) != 0 {
-                let device_id = PCWSTR::from_raw(display_device.DeviceID.as_ptr()).to_string()?;
-
-                if let Some(ref id) = monitor_id {
-                    if *id != device_id {
-                        continue;
-                    }
-                }
-
-                let dxgi_output1: IDXGIOutput1 = HRESULT!(dxgi_output.cast());
-
-                let dxgi_output_duplication = HRESULT!(dxgi_output1.DuplicateOutput(device));
-
-                return Ok((dxgi_output_duplication, device_id));
-            }
-        }
+    defer! {
+        let _ = CloseDesktop(current_desktop);
     }
 
-    Err(core_error!(
-        "create IDXGIOutputDuplication failed, all Outputs had tried"
-    ))
+    if !SetThreadDesktop(current_desktop).as_bool() {
+        return Err(core_error!("SetThreadDesktop set current desktop failed"));
+    }
+
+    Ok(())
+}
+
+unsafe fn init_d3d(adapter: &IDXGIAdapter) -> CoreResult<(ID3D11Device, ID3D11DeviceContext)> {
+    let mut device = None;
+    let mut device_context = None;
+    let mut feature_level = std::mem::zeroed();
+
+    let mut flags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;
+    if cfg!(debug_assertions) {
+        flags |= D3D11_CREATE_DEVICE_DEBUG;
+    }
+
+    if let Err(err) = D3D11CreateDevice(
+        adapter,
+        D3D_DRIVER_TYPE_UNKNOWN,
+        None,
+        flags,
+        None,
+        D3D11_SDK_VERSION,
+        Some(&mut device),
+        Some(&mut feature_level),
+        Some(&mut device_context),
+    ) {
+        return Err(core_error!("create DirectX device failed ({:?})", err));
+    }
+
+    if let (Some(device), Some(device_context)) = (device, device_context) {
+        let feature_level = match feature_level {
+            D3D_FEATURE_LEVEL_12_2 => "D3D_FEATURE_LEVEL_12_2",
+            D3D_FEATURE_LEVEL_12_1 => "D3D_FEATURE_LEVEL_12_1",
+            D3D_FEATURE_LEVEL_12_0 => "D3D_FEATURE_LEVEL_12_0",
+            D3D_FEATURE_LEVEL_11_1 => "D3D_FEATURE_LEVEL_11_1",
+            D3D_FEATURE_LEVEL_11_0 => "D3D_FEATURE_LEVEL_11_0",
+            D3D_FEATURE_LEVEL_10_1 => "D3D_FEATURE_LEVEL_10_1",
+            D3D_FEATURE_LEVEL_10_0 => "D3D_FEATURE_LEVEL_10_0",
+            D3D_FEATURE_LEVEL_9_3 => "D3D_FEATURE_LEVEL_9_3",
+            D3D_FEATURE_LEVEL_9_2 => "D3D_FEATURE_LEVEL_9_2",
+            D3D_FEATURE_LEVEL_9_1 => "D3D_FEATURE_LEVEL_9_1",
+            D3D_FEATURE_LEVEL_1_0_CORE => "D3D_FEATURE_LEVEL_1_0_CORE",
+            _ => "Unknown",
+        };
+
+        tracing::info!(feature_level, "create DirectX device successful");
+
+        Ok((device, device_context))
+    } else {
+        Err(core_error!(
+            "create DirectX device success but device or device_context is null"
+        ))
+    }
 }
 
 unsafe fn init_shaders(
@@ -832,7 +885,16 @@ unsafe fn init_shaders(
     ID3D11PixelShader,
     ID3D11PixelShader,
 )> {
-    let vertex_shader = HRESULT!(device.CreateVertexShader(shader::VERTEX_SHADER_BYTES, None));
+    let mut vertex_shader = None;
+    if let Err(err) =
+        device.CreateVertexShader(shader::VERTEX_SHADER_BYTES, None, Some(&mut vertex_shader))
+    {
+        return system_api_error(err, "ID3D11Device::CreateVertexShader");
+    }
+
+    let Some(vertex_shader) = vertex_shader else {
+        return Err(core_error!("create vertex shader failed"))
+    };
 
     let vertex_buffer_desc = D3D11_BUFFER_DESC {
         ByteWidth: VERTEX_STRIDES * VERTICES.len() as u32,
@@ -849,15 +911,55 @@ unsafe fn init_shaders(
         SysMemSlicePitch: 0,
     };
 
-    let vertex_buffer = HRESULT!(device.CreateBuffer(&vertex_buffer_desc, Some(&subresource_data)));
+    let mut vertex_buffer = None;
+    if let Err(err) = device.CreateBuffer(
+        &vertex_buffer_desc,
+        Some(&subresource_data),
+        Some(&mut vertex_buffer),
+    ) {
+        return system_api_error(err, "ID3D11Device::CreateBuffer");
+    }
 
-    let pixel_shader = HRESULT!(device.CreatePixelShader(shader::PIXEL_SHADER_BYTES, None));
+    let Some(vertex_buffer) = vertex_buffer else {
+        return Err(core_error!("create vertex buffer failed"))
+    };
 
-    let pixel_shader_lumina =
-        HRESULT!(device.CreatePixelShader(shader::PIXEL_SHADER_LUMINA_BYTES, None));
+    let mut pixel_shader = None;
+    if let Err(err) =
+        device.CreatePixelShader(shader::PIXEL_SHADER_BYTES, None, Some(&mut pixel_shader))
+    {
+        return system_api_error(err, "ID3D11Device::CreatePixelShader");
+    }
 
-    let pixel_shader_chrominance =
-        HRESULT!(device.CreatePixelShader(shader::PIXEL_SHADER_CHROMINANCE_BYTES, None));
+    let Some(pixel_shader) = pixel_shader else {
+        return Err(core_error!("create vertex buffer failed"))
+    };
+
+    let mut pixel_shader_lumina = std::mem::zeroed();
+    if let Err(err) = device.CreatePixelShader(
+        shader::PIXEL_SHADER_LUMINA_BYTES,
+        None,
+        Some(&mut pixel_shader_lumina),
+    ) {
+        return system_api_error(err, "ID3D11Device::CreatePixelShader");
+    }
+
+    let Some(pixel_shader_lumina) = pixel_shader_lumina else {
+        return Err(core_error!("create lumina pixel shader failed"))
+    };
+
+    let mut pixel_shader_chrominance = std::mem::zeroed();
+    if let Err(err) = device.CreatePixelShader(
+        shader::PIXEL_SHADER_CHROMINANCE_BYTES,
+        None,
+        Some(&mut pixel_shader_chrominance),
+    ) {
+        return system_api_error(err, "ID3D11Device::CreatePixelShader");
+    }
+
+    let Some(pixel_shader_chrominance) = pixel_shader_chrominance else {
+        return Err(core_error!("create chrominance pixel shader failed"))
+    };
 
     Ok((
         vertex_shader,
@@ -883,13 +985,27 @@ unsafe fn init_backend_resources(
     texture_desc.Usage = D3D11_USAGE_DEFAULT;
     texture_desc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
 
-    let texture = HRESULT!(device.CreateTexture2D(&texture_desc, None));
+    let mut texture = None;
+    if let Err(err) = device.CreateTexture2D(&texture_desc, None, Some(&mut texture)) {
+        return system_api_error(err, "ID3D11Device::CreateTexture2D");
+    }
+
+    let Some(texture) = texture else {
+        return Err(core_error!("create backend texture failed"))
+    };
 
     texture_desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
     texture_desc.Usage = D3D11_USAGE_STAGING;
     texture_desc.BindFlags = D3D11_BIND_FLAG::default();
 
-    let rtv = HRESULT!(device.CreateRenderTargetView(&texture, None));
+    let mut rtv = None;
+    if let Err(err) = device.CreateRenderTargetView(&texture, None, Some(&mut rtv)) {
+        return system_api_error(err, "ID3D11Device::CreateRenderTargetView");
+    }
+
+    let Some(rtv) = rtv else {
+        return Err(core_error!("create backend render target view failed"))
+    };
 
     let viewport = D3D11_VIEWPORT {
         TopLeftX: 0.0,
@@ -923,13 +1039,27 @@ unsafe fn init_lumina_resources(
     texture_desc.Usage = D3D11_USAGE_DEFAULT;
     texture_desc.BindFlags = D3D11_BIND_RENDER_TARGET;
 
-    let render_texture = HRESULT!(device.CreateTexture2D(&texture_desc, None));
+    let mut render_texture = None;
+    if let Err(err) = device.CreateTexture2D(&texture_desc, None, Some(&mut render_texture)) {
+        return system_api_error(err, "ID3D11Device::CreateTexture2D");
+    }
+
+    let Some(render_texture) = render_texture else {
+        return Err(core_error!("create lumina render texture failed"))
+    };
 
     texture_desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
     texture_desc.Usage = D3D11_USAGE_STAGING;
     texture_desc.BindFlags = D3D11_BIND_FLAG::default();
 
-    let staging_texture = HRESULT!(device.CreateTexture2D(&texture_desc, None));
+    let mut staging_texture = None;
+    if let Err(err) = device.CreateTexture2D(&texture_desc, None, Some(&mut staging_texture)) {
+        return system_api_error(err, "ID3D11Device::CreateTexture2D");
+    }
+
+    let Some(staging_texture) = staging_texture else {
+        return Err(core_error!("create lumina staging texture failed"))
+    };
 
     let viewport = D3D11_VIEWPORT {
         TopLeftX: 0.0,
@@ -940,7 +1070,14 @@ unsafe fn init_lumina_resources(
         MaxDepth: 1.0,
     };
 
-    let rtv = HRESULT!(device.CreateRenderTargetView(&render_texture, None));
+    let mut rtv = None;
+    if let Err(err) = device.CreateRenderTargetView(&render_texture, None, Some(&mut rtv)) {
+        return system_api_error(err, "ID3D11Device::CreateRenderTargetView");
+    }
+
+    let Some(rtv) = rtv else {
+        return Err(core_error!("create lumina render target view failed"))
+    };
 
     Ok((render_texture, staging_texture, viewport, rtv))
 }
@@ -965,13 +1102,27 @@ unsafe fn init_chrominance_resources(
     texture_desc.Usage = D3D11_USAGE_DEFAULT;
     texture_desc.BindFlags = D3D11_BIND_RENDER_TARGET;
 
-    let render_texture = HRESULT!(device.CreateTexture2D(&texture_desc, None));
+    let mut render_texture = None;
+    if let Err(err) = device.CreateTexture2D(&texture_desc, None, Some(&mut render_texture)) {
+        return system_api_error(err, "ID3D11Device::CreateTexture2D");
+    }
+
+    let Some(render_texture) = render_texture else {
+        return Err(core_error!("create chrominance render texture failed"))
+    };
 
     texture_desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
     texture_desc.Usage = D3D11_USAGE_STAGING;
     texture_desc.BindFlags = D3D11_BIND_FLAG::default();
 
-    let staging_texture = HRESULT!(device.CreateTexture2D(&texture_desc, None));
+    let mut staging_texture = None;
+    if let Err(err) = device.CreateTexture2D(&texture_desc, None, Some(&mut staging_texture)) {
+        return system_api_error(err, "ID3D11Device::CreateTexture2D");
+    }
+
+    let Some(staging_texture) = staging_texture else {
+        return Err(core_error!("create chrominance staging texture failed"))
+    };
 
     let viewport = D3D11_VIEWPORT {
         TopLeftX: 0.0,
@@ -982,7 +1133,14 @@ unsafe fn init_chrominance_resources(
         MaxDepth: 1.0,
     };
 
-    let rtv = HRESULT!(device.CreateRenderTargetView(&render_texture, None));
+    let mut rtv = None;
+    if let Err(err) = device.CreateRenderTargetView(&render_texture, None, Some(&mut rtv)) {
+        return system_api_error(err, "ID3D11Device::CreateRenderTargetView");
+    }
+
+    let Some(rtv) = rtv else {
+        return Err(core_error!("create chrominance render target view failed"))
+    };
 
     Ok((render_texture, staging_texture, viewport, rtv))
 }
@@ -997,7 +1155,14 @@ unsafe fn init_sampler_state(device: &ID3D11Device) -> CoreResult<ID3D11SamplerS
     sampler_desc.MinLOD = 0f32;
     sampler_desc.MaxLOD = D3D11_FLOAT32_MAX;
 
-    let sampler_state = HRESULT!(device.CreateSamplerState(&sampler_desc));
+    let mut sampler_state = None;
+    if let Err(err) = device.CreateSamplerState(&sampler_desc, Some(&mut sampler_state)) {
+        return system_api_error(err, "ID3D11Device::CreateSamplerState");
+    }
+
+    let Some(sampler_state) = sampler_state else {
+        return Err(core_error!("create sampler state failed"))
+    };
 
     Ok(sampler_state)
 }
@@ -1015,7 +1180,14 @@ unsafe fn init_blend_state(device: &ID3D11Device) -> CoreResult<ID3D11BlendState
     blend_desc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD; //D3D11_BLEND_OP_ADD;
     blend_desc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL.0 as u8;
 
-    let blend_state = HRESULT!(device.CreateBlendState(&blend_desc));
+    let mut blend_state = std::mem::zeroed();
+    if let Err(err) = device.CreateBlendState(&blend_desc, Some(&mut blend_state)) {
+        return system_api_error(err, "ID3D11Device::CreateBlendState");
+    }
+
+    let Some(blend_state) = blend_state else {
+        return Err(core_error!("create blend state failed"))
+    };
 
     Ok(blend_state)
 }
@@ -1023,7 +1195,7 @@ unsafe fn init_blend_state(device: &ID3D11Device) -> CoreResult<ID3D11BlendState
 unsafe fn init_input_layout(device: &ID3D11Device) -> CoreResult<ID3D11InputLayout> {
     let input_element_desc_array = [
         D3D11_INPUT_ELEMENT_DESC {
-            SemanticName: PCSTR(b"POSITION\0".as_ptr()),
+            SemanticName: s!("POSITION"),
             SemanticIndex: 0,
             Format: DXGI_FORMAT_R32G32B32_FLOAT,
             InputSlot: 0,
@@ -1032,7 +1204,7 @@ unsafe fn init_input_layout(device: &ID3D11Device) -> CoreResult<ID3D11InputLayo
             InstanceDataStepRate: 0,
         },
         D3D11_INPUT_ELEMENT_DESC {
-            SemanticName: PCSTR(b"TEXCOORD\0".as_ptr()),
+            SemanticName: s!("TEXCOORD"),
             SemanticIndex: 0,
             Format: DXGI_FORMAT_R32G32_FLOAT,
             InputSlot: 0,
@@ -1042,8 +1214,18 @@ unsafe fn init_input_layout(device: &ID3D11Device) -> CoreResult<ID3D11InputLayo
         },
     ];
 
-    let input_layout =
-        HRESULT!(device.CreateInputLayout(&input_element_desc_array, shader::VERTEX_SHADER_BYTES));
+    let mut input_layout = None;
+    if let Err(err) = device.CreateInputLayout(
+        &input_element_desc_array,
+        shader::VERTEX_SHADER_BYTES,
+        Some(&mut input_layout),
+    ) {
+        return system_api_error(err, "ID3D11Device::CreateInputLayout");
+    }
+
+    let Some(input_layout) = input_layout else {
+        return Err(core_error!("create input layout failed"))
+    };
 
     Ok(input_layout)
 }

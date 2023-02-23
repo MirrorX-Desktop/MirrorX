@@ -1,8 +1,8 @@
 use crate::{command::AppState, window::create_desktop_window};
 use mirrorx_core::{
     api::endpoint::{
-        create_desktop_active_endpoint_client, create_file_manager_active_endpoint_client,
-        id::EndPointID, EndPointStream,
+        create_endpoint_client, create_video_and_audio_endpoint_client, id::EndPointID,
+        EndPointStream,
     },
     component::lan::{LANProvider, Node},
     core_error,
@@ -56,7 +56,7 @@ pub async fn lan_connect(
     };
 
     if visit_desktop {
-        let (client, render_frame_rx) = create_desktop_active_endpoint_client(
+        let (client, render_frame_rx) = create_video_and_audio_endpoint_client(
             endpoint_id,
             None,
             EndPointStream::ActiveTCP(remote_addr),
@@ -89,7 +89,7 @@ pub async fn lan_connect(
             return Err(core_error!("create remote desktop window failed"));
         }
     } else {
-        let client = create_file_manager_active_endpoint_client(
+        let client = create_endpoint_client(
             endpoint_id,
             None,
             EndPointStream::ActiveTCP(remote_addr),

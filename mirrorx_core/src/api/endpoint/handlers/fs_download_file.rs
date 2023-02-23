@@ -1,6 +1,6 @@
 use crate::{
     api::endpoint::{
-        client::EndPointClient,
+        client::ClientSendStream,
         message::{
             EndPointDownloadFileReply, EndPointDownloadFileRequest, EndPointFileTransferError,
             EndPointMessage,
@@ -10,10 +10,10 @@ use crate::{
     core_error,
     error::CoreResult,
 };
-use std::{sync::Arc, time::Duration};
+use std::time::Duration;
 
 pub async fn handle_download_file_request(
-    client: Arc<EndPointClient>,
+    client_send_stream: ClientSendStream,
     req: EndPointDownloadFileRequest,
 ) -> CoreResult<EndPointDownloadFileReply> {
     if !req.path.is_file() {
@@ -26,9 +26,11 @@ pub async fn handle_download_file_request(
 
     tokio::spawn(async move {
         tokio::time::sleep(Duration::from_secs(1)).await;
-        if let Err(err) = send_file_to_remote(id.clone(), client.clone(), &req.path).await {
+        if let Err(err) =
+            send_file_to_remote(id.clone(), client_send_stream.clone(), &req.path).await
+        {
             tracing::error!(?err, "read file block failed");
-            let _ = client
+            let _ = client_send_stream
                 .send(&EndPointMessage::FileTransferError(
                     EndPointFileTransferError { id: id.clone() },
                 ))

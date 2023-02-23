@@ -1,7 +1,7 @@
 use super::config::EncoderConfig;
 use crate::{
     api::endpoint::{
-        client::EndPointClient,
+        client::ClientSendStream,
         message::{EndPointMessage, EndPointVideoFrame},
     },
     component::frame::DesktopEncodeFrame,
@@ -14,29 +14,28 @@ use mirrorx_native::ffmpeg::{
 };
 use std::sync::Arc;
 
-pub struct VideoEncoder<T>
-where
-    T: EncoderConfig,
-{
-    encoder_config: T,
+pub struct VideoEncoder {
+    encoder_config: Arc<dyn EncoderConfig>,
     encode_context: Option<EncodeContext>,
-    client: Arc<EndPointClient>,
+    client_send_stream: ClientSendStream,
 }
 
-impl<T> VideoEncoder<T>
-where
-    T: EncoderConfig,
-{
-    pub fn new(encoder_config: T, client: Arc<EndPointClient>) -> CoreResult<VideoEncoder<T>> {
+unsafe impl Send for VideoEncoder {}
+
+impl VideoEncoder {
+    pub fn new(
+        encoder_config: impl EncoderConfig + 'static,
+        client_send_stream: ClientSendStream,
+    ) -> CoreResult<VideoEncoder> {
         unsafe {
             av_log_set_level(AV_LOG_INFO);
             av_log_set_flags(AV_LOG_SKIP_REPEATED);
         }
 
         Ok(VideoEncoder {
-            encoder_config,
+            encoder_config: Arc::new(encoder_config),
             encode_context: None,
-            client,
+            client_send_stream,
         })
     }
 
@@ -56,7 +55,7 @@ where
                 self.encode_context = Some(EncodeContext::new(
                     capture_frame.width,
                     capture_frame.height,
-                    &self.encoder_config,
+                    self.encoder_config.as_ref(),
                 )?);
             }
 
@@ -80,7 +79,7 @@ where
                 * ((*(encode_context).codec_ctx).time_base.den as f64))
                 as i64;
 
-            ret = avcodec_send_frame((encode_context).codec_ctx, (encode_context).frame);
+            ret = avcodec_send_frame(encode_context.codec_ctx, encode_context.frame);
 
             if ret != 0 {
                 if ret == AVERROR(libc::EAGAIN) {
@@ -95,7 +94,7 @@ where
             }
 
             loop {
-                ret = avcodec_receive_packet((encode_context).codec_ctx, (encode_context).packet);
+                ret = avcodec_receive_packet(encode_context.codec_ctx, encode_context.packet);
 
                 if ret == AVERROR(libc::EAGAIN) || ret == AVERROR_EOF {
                     return Ok(());
@@ -117,10 +116,10 @@ where
                     .to_vec(),
                 };
 
-                self.client
+                self.client_send_stream
                     .blocking_send(&EndPointMessage::VideoFrame(frame))?;
 
-                av_packet_unref((encode_context).packet);
+                av_packet_unref(encode_context.packet);
             }
         }
     }
@@ -144,18 +143,29 @@ impl EncodeContext {
                 return Err(core_error!("avcodec_find_encoder returns null pointer"));
             }
 
-            let encoder_context = EncodeContext {
-                codec_ctx: avcodec_alloc_context3(codec),
-                frame: av_frame_alloc(),
-                packet: av_packet_alloc(),
-            };
-
-            if encoder_context.codec_ctx.is_null()
-                || encoder_context.frame.is_null()
-                || encoder_context.packet.is_null()
-            {
+            let mut codec_ctx = avcodec_alloc_context3(codec);
+            if codec_ctx.is_null() {
                 return Err(core_error!("avcodec_alloc_context3 returns null pointer"));
             }
+
+            let mut frame = av_frame_alloc();
+            if frame.is_null() {
+                avcodec_free_context(&mut codec_ctx);
+                return Err(core_error!("avcodec_alloc_context3 returns null pointer"));
+            }
+
+            let packet = av_packet_alloc();
+            if packet.is_null() {
+                avcodec_free_context(&mut codec_ctx);
+                av_frame_free(&mut frame);
+                return Err(core_error!("avcodec_alloc_context3 returns null pointer"));
+            };
+
+            let encoder_context = EncodeContext {
+                codec_ctx,
+                frame,
+                packet,
+            };
 
             (*encoder_context.codec_ctx).width = width;
             (*encoder_context.codec_ctx).height = height;
@@ -181,7 +191,7 @@ impl EncodeContext {
 
             encoder_config.apply_option(encoder_context.codec_ctx)?;
 
-            let mut ret = av_frame_get_buffer(encoder_context.frame, 0);
+            let mut ret = av_frame_get_buffer(&mut *encoder_context.frame, 0);
             if ret < 0 {
                 return Err(core_error!(
                     "av_frame_get_buffer returns error code: {}",
@@ -192,12 +202,12 @@ impl EncodeContext {
             let packet_size =
                 av_image_get_buffer_size((*encoder_context.codec_ctx).pix_fmt, width, height, 1);
 
-            ret = av_new_packet(encoder_context.packet, packet_size);
+            ret = av_new_packet(&mut *encoder_context.packet, packet_size);
             if ret < 0 {
                 return Err(core_error!("av_new_packet returns error code: {}", ret));
             }
 
-            let ret = avcodec_open2(encoder_context.codec_ctx, codec, std::ptr::null_mut());
+            let ret = avcodec_open2(&mut *encoder_context.codec_ctx, codec, std::ptr::null_mut());
             if ret != 0 {
                 return Err(core_error!("avcodec_open2 returns null pointer"));
             }

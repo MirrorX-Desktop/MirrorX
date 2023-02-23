@@ -1,13 +1,13 @@
 use crate::{
     api::endpoint::{
-        client::EndPointClient,
+        client::ClientSendStream,
         message::{EndPointFileTransferBlock, EndPointFileTransferError, EndPointMessage},
     },
     error::CoreResult,
 };
 use moka::future::{Cache, CacheBuilder};
 use once_cell::sync::Lazy;
-use std::{path::Path, sync::Arc, time::Duration};
+use std::{path::Path, time::Duration};
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt, BufReader, BufWriter},
     sync::mpsc::{UnboundedReceiver, UnboundedSender},
@@ -42,23 +42,26 @@ pub async fn delete_file_append_session(id: &str) {
     APPEND_FILES.invalidate(id).await
 }
 
-pub async fn append_file_block(client: Arc<EndPointClient>, block: EndPointFileTransferBlock) {
+pub async fn append_file_block(
+    client_send_stream: ClientSendStream,
+    block: EndPointFileTransferBlock,
+) {
     if let Some(tx) = APPEND_FILES.get(&block.id) {
-        match tx.send(block.data) {
-            Ok(_) => return,
-            Err(_) => {
-                tracing::error!(id = block.id, "append file block channel failed");
-            }
+        if tx.send(block.data).is_err() {
+            tracing::error!(id = block.id, "append file block channel failed");
         }
     } else {
-        tracing::error!(id = block.id, "file session not exists");
+        let id = block.id;
+        tracing::error!(?id, "file session not exists");
+        if let Err(err) = client_send_stream
+            .send(&EndPointMessage::FileTransferError(
+                EndPointFileTransferError { id: id.clone() },
+            ))
+            .await
+        {
+            tracing::error!(?err, ?id, "reply file session error failed");
+        }
     }
-
-    let _ = client
-        .send(&EndPointMessage::FileTransferError(
-            EndPointFileTransferError { id: block.id },
-        ))
-        .await;
 }
 
 async fn save_file_from_remote(
@@ -101,7 +104,7 @@ async fn save_file_from_remote(
 
 pub async fn send_file_to_remote(
     id: String,
-    client: Arc<EndPointClient>,
+    client_send_stream: ClientSendStream,
     path: &Path,
 ) -> CoreResult<()> {
     let file = tokio::fs::File::open(path).await?;
@@ -138,7 +141,7 @@ pub async fn send_file_to_remote(
                 }
             };
 
-            if let Err(err) = client.send(&message).await {
+            if let Err(err) = client_send_stream.send(&message).await {
                 tracing::error!(?err, "send file message failed");
                 break;
             }

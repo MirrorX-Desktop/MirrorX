@@ -2,20 +2,17 @@ mod tcp;
 mod udp;
 
 use self::{tcp::serve_tcp, udp::serve_udp};
-use super::{
-    handlers::negotiate_desktop_params::handle_negotiate_desktop_params_request, id::EndPointID,
-    message::*, EndPointStream,
-};
+use super::{id::EndPointID, message::*, EndPointStream};
 use crate::{
     api::endpoint::handlers::{
         fs_download_file::handle_download_file_request, fs_send_file::handle_send_file_request,
-        fs_visit_directory::handle_visit_directory_request, input::handle_input,
-        negotiate_finished::handle_negotiate_finished_request,
+        fs_visit_directory::handle_visit_directory_request, negotiate::handle_negotiate_request,
+        switch_display::handle_switch_screen_request,
     },
     call,
     component::{
-        desktop::monitor::Monitor,
         fs::transfer::{append_file_block, delete_file_append_session},
+        screen::Screen,
     },
     core_error,
     error::{CoreError, CoreResult},
@@ -25,39 +22,36 @@ use crate::{
     },
 };
 use bytes::Bytes;
+use moka::sync::{Cache, CacheBuilder};
 use ring::aead::{OpeningKey, SealingKey};
 use scopeguard::defer;
 use serde::de::DeserializeOwned;
 use std::{
-    fmt::Display,
-    ops::Deref,
     sync::{atomic::AtomicU16, Arc},
     time::Duration,
 };
-use tokio::sync::{mpsc::Sender, RwLock};
+use tokio::sync::mpsc::{Receiver, Sender};
 
 const RECV_MESSAGE_TIMEOUT: Duration = Duration::from_secs(30);
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct EndPointClient {
     endpoint_id: EndPointID,
-    monitor: Arc<RwLock<Option<Arc<Monitor>>>>,
     tx: Sender<Vec<u8>>,
     call_id: Arc<AtomicU16>,
-    call_store: Arc<moka::sync::Cache<u16, Sender<Vec<u8>>>>,
+    call_store: moka::sync::Cache<u16, Sender<Vec<u8>>>,
 }
 
 impl EndPointClient {
-    pub async fn new_desktop_active(
+    pub async fn new_active_endpoint(
         endpoint_id: EndPointID,
         stream_key: Option<(OpeningKey<NonceValue>, SealingKey<NonceValue>)>,
         stream: EndPointStream,
         video_frame_tx: Sender<EndPointVideoFrame>,
         audio_frame_tx: Sender<EndPointAudioFrame>,
         visit_credentials: Option<Vec<u8>>,
-    ) -> CoreResult<Arc<EndPointClient>> {
+    ) -> CoreResult<EndPointClient> {
         EndPointClient::create(
-            true,
             endpoint_id,
             stream_key,
             stream,
@@ -68,14 +62,13 @@ impl EndPointClient {
         .await
     }
 
-    pub async fn new_file_manager_active(
+    pub async fn new_passive_endpoint(
         endpoint_id: EndPointID,
         stream_key: Option<(OpeningKey<NonceValue>, SealingKey<NonceValue>)>,
         stream: EndPointStream,
         visit_credentials: Option<Vec<u8>>,
-    ) -> CoreResult<Arc<EndPointClient>> {
+    ) -> CoreResult<EndPointClient> {
         EndPointClient::create(
-            true,
             endpoint_id,
             stream_key,
             stream,
@@ -86,41 +79,21 @@ impl EndPointClient {
         .await
     }
 
-    pub async fn new_passive(
-        endpoint_id: EndPointID,
-        key_pair: Option<(OpeningKey<NonceValue>, SealingKey<NonceValue>)>,
-        stream: EndPointStream,
-        visit_credentials: Option<Vec<u8>>,
-    ) -> CoreResult<()> {
-        let _ = EndPointClient::create(
-            false,
-            endpoint_id,
-            key_pair,
-            stream,
-            None,
-            None,
-            visit_credentials,
-        )
-        .await?;
-        Ok(())
-    }
-
     #[allow(clippy::too_many_arguments)]
     async fn create(
-        active: bool,
         endpoint_id: EndPointID,
         key_pair: Option<(OpeningKey<NonceValue>, SealingKey<NonceValue>)>,
         stream: EndPointStream,
         video_frame_tx: Option<Sender<EndPointVideoFrame>>,
         audio_frame_tx: Option<Sender<EndPointAudioFrame>>,
         visit_credentials: Option<Vec<u8>>,
-    ) -> CoreResult<Arc<EndPointClient>> {
+    ) -> CoreResult<EndPointClient> {
         let (opening_key, sealing_key) = match key_pair {
             Some((opening_key, sealing_key)) => (Some(opening_key), Some(sealing_key)),
             None => (None, None),
         };
 
-        let (tx, mut rx) = match stream {
+        let (tx, rx) = match stream {
             EndPointStream::ActiveTCP(addr) => {
                 let stream = tokio::time::timeout(
                     Duration::from_secs(10),
@@ -161,39 +134,26 @@ impl EndPointClient {
             }
         };
 
-        // active endpoint should start negotiate with passive endpoint
-        let primary_monitor = if active && video_frame_tx.is_some() && audio_frame_tx.is_some() {
-            let params = serve_active_negotiate(&tx, &mut rx).await?;
-            Some(Arc::new(params.primary_monitor))
-        } else {
-            None
-        };
-
-        let call_store = moka::sync::CacheBuilder::new(32)
+        let call_store = CacheBuilder::new(32)
             .time_to_live(Duration::from_secs(60))
             .build();
 
-        let client = Arc::new(EndPointClient {
+        let client = EndPointClient {
             endpoint_id,
-            monitor: Arc::new(RwLock::new(primary_monitor)),
-            tx,
+            tx: tx.clone(),
             call_id: Arc::new(AtomicU16::new(0)),
-            call_store: Arc::new(call_store),
-        });
+            call_store: call_store.clone(),
+        };
 
-        handle_message(client.clone(), rx, video_frame_tx, audio_frame_tx);
+        handle_message(
+            call_store,
+            ClientSendStream(tx),
+            rx,
+            video_frame_tx,
+            audio_frame_tx,
+        );
 
         Ok(client)
-    }
-}
-
-impl EndPointClient {
-    pub async fn monitor(&self) -> Option<Arc<Monitor>> {
-        (*self.monitor.read().await).clone()
-    }
-
-    pub async fn set_monitor(&self, monitor: Monitor) {
-        (*self.monitor.write().await) = Some(Arc::new(monitor))
     }
 }
 
@@ -245,71 +205,42 @@ impl EndPointClient {
     }
 }
 
-impl Display for EndPointClient {
+impl std::fmt::Display for EndPointClient {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "EndPointClient({})", self.endpoint_id)
     }
 }
 
-async fn serve_active_negotiate(
-    tx: &Sender<Vec<u8>>,
-    rx: &mut tokio::sync::mpsc::Receiver<Bytes>,
-) -> CoreResult<EndPointNegotiateVisitDesktopParams> {
-    let negotiate_request_buffer = bincode_serialize(
-        &EndPointMessage::NegotiateDesktopParamsRequest(EndPointNegotiateDesktopParamsRequest {
-            video_codecs: vec![VideoCodec::H264],
-        }),
-    )?;
+#[derive(Clone)]
+pub struct ClientSendStream(Sender<Vec<u8>>);
 
-    tx.send(negotiate_request_buffer)
-        .await
-        .map_err(|_| CoreError::OutgoingMessageChannelDisconnect)?;
+impl ClientSendStream {
+    pub async fn send(&self, message: &EndPointMessage) -> CoreResult<()> {
+        let buffer = bincode_serialize(message)?;
+        self.0
+            .send(buffer)
+            .await
+            .map_err(|_| CoreError::OutgoingMessageChannelDisconnect)
+    }
 
-    let negotiate_response_buffer = tokio::time::timeout(RECV_MESSAGE_TIMEOUT, rx.recv())
-        .await
-        .map_err(|_| CoreError::Timeout)?
-        .ok_or(CoreError::OutgoingMessageChannelDisconnect)?;
-
-    let EndPointMessage::NegotiateDesktopParamsResponse(negotiate_response) =
-        bincode_deserialize(negotiate_response_buffer.deref())? else {
-            return Err(core_error!("unexpected negotiate reply"));
-        };
-
-    let params = match negotiate_response {
-        EndPointNegotiateDesktopParamsResponse::VideoError(err) => {
-            tracing::error!(?err, "negotiate failed with video error");
-            return Err(core_error!("negotiate failed ({})", err));
-        }
-        EndPointNegotiateDesktopParamsResponse::MonitorError(err) => {
-            tracing::error!(?err, "negotiate failed with display error");
-            return Err(core_error!("negotiate failed ({})", err));
-        }
-        EndPointNegotiateDesktopParamsResponse::Params(params) => {
-            tracing::info!(?params, "negotiate success");
-            params
-        }
-    };
-
-    let negotiate_request_buffer = bincode_serialize(&EndPointMessage::NegotiateFinishedRequest(
-        EndPointNegotiateFinishedRequest {
-            expected_frame_rate: 60,
-        },
-    ))?;
-
-    tx.send(negotiate_request_buffer)
-        .await
-        .map_err(|_| CoreError::OutgoingMessageChannelDisconnect)?;
-
-    Ok(params)
+    pub fn blocking_send(&self, message: &EndPointMessage) -> CoreResult<()> {
+        let buffer = bincode_serialize(message)?;
+        self.0
+            .blocking_send(buffer)
+            .map_err(|_| CoreError::OutgoingMessageChannelDisconnect)
+    }
 }
 
 fn handle_message(
-    client: Arc<EndPointClient>,
-    mut rx: tokio::sync::mpsc::Receiver<Bytes>,
+    call_store: Cache<u16, Sender<Vec<u8>>>,
+    client_send_stream: ClientSendStream,
+    mut rx: Receiver<Bytes>,
     video_frame_tx: Option<Sender<EndPointVideoFrame>>,
     audio_frame_tx: Option<Sender<EndPointAudioFrame>>,
 ) {
     tokio::spawn(async move {
+        let mut current_screen: Option<Screen> = None;
+
         loop {
             let buffer = match rx.recv().await {
                 Some(buffer) => buffer,
@@ -330,16 +261,6 @@ fn handle_message(
             match message {
                 EndPointMessage::Error => {
                     // handle_error(active_device_id, passive_device_id);
-                }
-                EndPointMessage::NegotiateDesktopParamsRequest(req) => {
-                    handle_negotiate_desktop_params_request(client.clone(), req).await
-                }
-                EndPointMessage::NegotiateDesktopParamsResponse(_) => {
-                    // this message should not received at handle_message loop because it already handled
-                    // at negotiate stage from active endpoint
-                }
-                EndPointMessage::NegotiateFinishedRequest(_) => {
-                    handle_negotiate_finished_request(client.clone());
                 }
                 EndPointMessage::VideoFrame(video_frame) => {
                     if let Some(ref tx) = video_frame_tx {
@@ -362,48 +283,69 @@ fn handle_message(
                     }
                 }
                 EndPointMessage::InputCommand(input_event) => {
-                    handle_input(client.clone(), input_event).await
-                }
-                EndPointMessage::CallRequest(call_id, message) => {
-                    let client = client.clone();
-                    tokio::spawn(async move {
-                        let reply = match message {
-                            EndPointCallRequest::VisitDirectoryRequest(req) => {
-                                call!(handle_visit_directory_request(req).await)
-                            }
-                            EndPointCallRequest::SendFileRequest(req) => {
-                                call!(handle_send_file_request(req).await)
-                            }
-                            EndPointCallRequest::DownloadFileRequest(req) => {
-                                call!(handle_download_file_request(client.clone(), req).await)
-                            }
-                        };
-
-                        match reply {
-                            Ok(reply_bytes) => {
-                                if let Err(err) = client
-                                    .send(&EndPointMessage::CallReply(call_id, reply_bytes))
-                                    .await
-                                {
-                                    tracing::error!(?err, "reply Call send message failed");
+                    if let Some(ref screen) = current_screen {
+                        for event in input_event.events {
+                            match event {
+                                InputEvent::Mouse(mouse_event) => {
+                                    screen.input_mouse_event(mouse_event)
+                                }
+                                InputEvent::Keyboard(keyboard_event) => {
+                                    screen.input_keyboard_event(keyboard_event)
                                 }
                             }
-                            Err(err) => {
-                                tracing::error!(?err, "reply Call failed");
+                        }
+                    }
+                }
+                EndPointMessage::CallRequest(call_id, message) => {
+                    let client_send_stream = client_send_stream.clone();
+
+                    let reply = match message {
+                        EndPointCallRequest::NegotiateRequest(req) => {
+                            call!(handle_negotiate_request(req).await)
+                        }
+                        EndPointCallRequest::SwitchScreenRequest(req) => {
+                            call!(handle_switch_screen_request(
+                                &mut current_screen,
+                                req,
+                                client_send_stream.clone()
+                            ))
+                        }
+                        EndPointCallRequest::VisitDirectoryRequest(req) => {
+                            call!(handle_visit_directory_request(req).await)
+                        }
+                        EndPointCallRequest::SendFileRequest(req) => {
+                            call!(handle_send_file_request(req).await)
+                        }
+                        EndPointCallRequest::DownloadFileRequest(req) => {
+                            call!(
+                                handle_download_file_request(client_send_stream.clone(), req).await
+                            )
+                        }
+                    };
+
+                    match reply {
+                        Ok(reply_bytes) => {
+                            if let Err(err) = client_send_stream
+                                .send(&EndPointMessage::CallReply(call_id, reply_bytes))
+                                .await
+                            {
+                                tracing::error!(?err, "reply Call send message failed");
                             }
                         }
-                    });
+                        Err(err) => {
+                            tracing::error!(?err, "reply Call failed");
+                        }
+                    }
                 }
                 EndPointMessage::CallReply(call_id, reply) => {
                     tracing::info!(?call_id, "receive call reply");
-                    if let Some(tx) = client.call_store.get(&call_id) {
+                    if let Some(tx) = call_store.get(&call_id) {
                         let _ = tx.send(reply).await;
                     }
-
-                    client.call_store.invalidate(&call_id)
+                    call_store.invalidate(&call_id)
                 }
                 EndPointMessage::FileTransferBlock(block) => {
-                    append_file_block(client.clone(), block).await
+                    append_file_block(client_send_stream.clone(), block).await
                 }
                 EndPointMessage::FileTransferError(message) => {
                     delete_file_append_session(&message.id).await

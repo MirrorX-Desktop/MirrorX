@@ -12,7 +12,7 @@ use self::{
 };
 use super::{
     config::LocalStorage,
-    endpoint::{create_passive_endpoint_client, id::EndPointID},
+    endpoint::{create_endpoint_client, id::EndPointID},
 };
 use crate::{
     core_error,
@@ -482,7 +482,7 @@ async fn serve_visit_request(
     };
 
     tokio::spawn(async move {
-        if let Err(err) = create_passive_endpoint_client(
+        if let Err(err) = create_endpoint_client(
             EndPointID::DeviceID {
                 local_device_id: passive_device_id,
                 remote_device_id: active_device_id,

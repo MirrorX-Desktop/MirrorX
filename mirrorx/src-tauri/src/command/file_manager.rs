@@ -4,7 +4,7 @@ use mirrorx_core::{
     api::endpoint::message::{
         EndPointCallRequest, EndPointDownloadFileReply, EndPointDownloadFileRequest,
         EndPointFileTransferError, EndPointMessage, EndPointSendFileReply, EndPointSendFileRequest,
-        EndPointVisitDirectoryRequest, EndPointVisitDirectoryResponse,
+        EndPointVisitDirectoryReply, EndPointVisitDirectoryRequest,
     },
     component::fs::{
         transfer::{
@@ -50,7 +50,7 @@ pub async fn file_manager_visit_remote(
         .get(&remote_device_id)
         .ok_or_else(|| core_error!("remote file manager not exist"))?;
 
-    let reply: EndPointVisitDirectoryResponse = client
+    let reply: EndPointVisitDirectoryReply = client
         .call(EndPointCallRequest::VisitDirectoryRequest(
             EndPointVisitDirectoryRequest { path },
         ))

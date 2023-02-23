@@ -1,15 +1,15 @@
 use crate::{
-    api::endpoint::{client::EndPointClient, message::EndPointMessage},
+    api::endpoint::{
+        client::ClientSendStream,
+        message::{EndPointMessage, EndPointSwitchScreenReply, EndPointSwitchScreenRequest},
+    },
     component::{
         audio::{encoder::AudioEncoder, recorder::new_record_stream_and_rx},
-        desktop::{monitor::get_active_monitors, Duplicator},
-        video_encoder::{config::*, encoder::VideoEncoder},
+        screen::Screen,
     },
-    error::CoreError,
+    error::{CoreError, CoreResult},
 };
 use cpal::traits::StreamTrait;
-use scopeguard::defer;
-use std::sync::Arc;
 
 pub struct NegotiateFinishedRequest {
     pub active_device_id: i64,
@@ -18,9 +18,27 @@ pub struct NegotiateFinishedRequest {
     pub texture_id: i64,
 }
 
-pub fn handle_negotiate_finished_request(client: Arc<EndPointClient>) {
-    spawn_desktop_capture_and_encode_process(client.clone());
-    spawn_audio_capture_and_encode_process(client);
+pub fn handle_switch_screen_request(
+    current_screen: &mut Option<Screen>,
+    req: EndPointSwitchScreenRequest,
+    client_send_stream: ClientSendStream,
+) -> CoreResult<EndPointSwitchScreenReply> {
+    // spawn_desktop_capture_and_encode_process(client.clone());
+    // spawn_audio_capture_and_encode_process(client);
+    // todo!()
+
+    if let Some(old_screen) = current_screen {
+        old_screen.stop();
+    }
+
+    let new_screen = Screen::new(&req.display_id, client_send_stream.clone())?;
+    *current_screen = Some(new_screen);
+
+    spawn_audio_capture_and_encode_process(client_send_stream);
+
+    Ok(EndPointSwitchScreenReply {
+        display_id: req.display_id,
+    })
 }
 
 #[cfg(target_os = "macos")]
@@ -110,87 +128,79 @@ fn spawn_desktop_capture_and_encode_process(client: Arc<EndPointClient>) {
     });
 }
 
-#[cfg(target_os = "windows")]
-fn spawn_desktop_capture_and_encode_process(client: Arc<EndPointClient>) {
-    let monitors = match get_active_monitors(false) {
-        Ok(params) => params,
-        Err(err) => {
-            tracing::error!(?err, "get_active_monitors failed");
-            return;
-        }
-    };
+// #[cfg(target_os = "windows")]
+// fn spawn_desktop_capture_and_encode_process(client: Arc<EndPointClient>) {
+//     let (capture_frame_tx, mut capture_frame_rx) = tokio::sync::mpsc::channel(180);
 
-    let (capture_frame_tx, mut capture_frame_rx) = tokio::sync::mpsc::channel(180);
+//     tokio::task::spawn_blocking(move || {
+//         defer! {
+//             tracing::info!( "desktop capture process exit");
+//         }
 
-    tokio::task::spawn_blocking(move || {
-        defer! {
-            tracing::info!( "desktop capture process exit");
-        }
+//         let primary_monitor = monitors.iter().find(|monitor| monitor.is_primary);
 
-        let primary_monitor = monitors.iter().find(|monitor| monitor.is_primary);
+//         let (mut duplicator, _) =
+//             match Duplicator::new(primary_monitor.map(|monitor| monitor.id.to_owned())) {
+//                 Ok(duplicator) => duplicator,
+//                 Err(err) => {
+//                     tracing::error!(?err, "initialize encoder failed");
+//                     return;
+//                 }
+//             };
 
-        let (mut duplicator, _) =
-            match Duplicator::new(primary_monitor.map(|monitor| monitor.id.to_owned())) {
-                Ok(duplicator) => duplicator,
-                Err(err) => {
-                    tracing::error!(?err, "initialize encoder failed");
-                    return;
-                }
-            };
+//         loop {
+//             match duplicator.capture() {
+//                 Ok(capture_frame) => {
+//                     if capture_frame_tx.blocking_send(capture_frame).is_err() {
+//                         return;
+//                     }
+//                 }
+//                 Err(err) => {
+//                     tracing::error!(?err, "desktop duplicator capture failed");
+//                     break;
+//                 }
+//             };
+//         }
+//     });
 
-        loop {
-            match duplicator.capture() {
-                Ok(capture_frame) => {
-                    if capture_frame_tx.blocking_send(capture_frame).is_err() {
-                        return;
-                    }
-                }
-                Err(err) => {
-                    tracing::error!(?err, "desktop duplicator capture failed");
-                    break;
-                }
-            };
-        }
-    });
+//     tokio::task::spawn_blocking(move || {
+//         loop {
+//             // defer! {
+//             //     tracing::info!(?active_device_id, ?passive_device_id, "video encode process exit");
+//             // }
 
-    tokio::task::spawn_blocking(move || {
-        loop {
-            // defer! {
-            //     tracing::info!(?active_device_id, ?passive_device_id, "video encode process exit");
-            // }
+//             let mut encoder =
+//                 match VideoEncoder::new(libx264::Libx264Config::default(), client.clone()) {
+//                     Ok(encoder) => encoder,
+//                     Err(err) => {
+//                         tracing::error!(?err, "video encoder initialize failed");
+//                         return;
+//                     }
+//                 };
 
-            let mut encoder =
-                match VideoEncoder::new(libx264::Libx264Config::default(), client.clone()) {
-                    Ok(encoder) => encoder,
-                    Err(err) => {
-                        tracing::error!(?err, "video encoder initialize failed");
-                        return;
-                    }
-                };
+//             loop {
+//                 match capture_frame_rx.blocking_recv() {
+//                     Some(capture_frame) => {
+//                         if let Err(err) = encoder.encode(capture_frame) {
+//                             if let CoreError::OutgoingMessageChannelDisconnect = err {
+//                                 tracing::info!("desktop capture and encode process exit");
+//                                 return;
+//                             } else {
+//                                 tracing::error!(?err, "video encode failed");
+//                             }
+//                         }
+//                     }
+//                     None => {
+//                         tracing::error!("capture frame channel closed");
+//                         return;
+//                     }
+//                 }
+//             }
+//         }
+//     });
+// }
 
-            loop {
-                match capture_frame_rx.blocking_recv() {
-                    Some(capture_frame) => {
-                        if let Err(err) = encoder.encode(capture_frame) {
-                            if let CoreError::OutgoingMessageChannelDisconnect = err {
-                                tracing::info!("desktop capture and encode process exit");
-                                return;
-                            } else {
-                                tracing::error!(?err, "video encode failed");
-                            }
-                        }
-                    }
-                    None => {
-                        tracing::error!("capture frame channel closed");
-                        return;
-                    }
-                }
-            }
-        }
-    });
-}
-
-fn spawn_audio_capture_and_encode_process(client: Arc<EndPointClient>) {
+fn spawn_audio_capture_and_encode_process(client_send_stream: ClientSendStream) {
     // let mut exit_rx = client.close_receiver();
 
     tokio::task::spawn_blocking(move || loop {
@@ -224,8 +234,8 @@ fn spawn_audio_capture_and_encode_process(client: Arc<EndPointClient>) {
                 match rx.blocking_recv() {
                     Some(audio_frame) => match audio_encoder.encode(audio_frame) {
                         Ok(frame) => {
-                            if let Err(err) =
-                                client.blocking_send(&EndPointMessage::AudioFrame(frame))
+                            if let Err(err) = client_send_stream
+                                .blocking_send(&EndPointMessage::AudioFrame(frame))
                             {
                                 match err {
                                     CoreError::OutgoingMessageChannelDisconnect => {

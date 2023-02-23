@@ -12,7 +12,7 @@ use mirrorx_native::ffmpeg::{
 };
 use std::ffi::CString;
 
-pub trait EncoderConfig {
+pub trait EncoderConfig: Send {
     fn apply_option(&self, codec_ctx: *mut AVCodecContext) -> CoreResult<()>;
     fn ffmpeg_encoder_name(&self) -> *const i8;
     fn av_codec_id(&self) -> AVCodecID;

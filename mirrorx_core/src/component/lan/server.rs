@@ -1,5 +1,5 @@
 use crate::{
-    api::endpoint::{create_passive_endpoint_client, EndPointStream},
+    api::endpoint::{create_endpoint_client, EndPointStream},
     error::CoreResult,
 };
 use std::net::{IpAddr, Ipv4Addr};
@@ -31,7 +31,7 @@ impl Server {
                     }
                 };
 
-                if let Err(err) = create_passive_endpoint_client(
+                if let Err(err) = create_endpoint_client(
                     crate::api::endpoint::id::EndPointID::LANID {
                         local_ip: IpAddr::V4(Ipv4Addr::UNSPECIFIED),
                         remote_ip: addr.ip(),

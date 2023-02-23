@@ -31,74 +31,20 @@ pub fn enum_all_available_displays() -> CoreResult<Vec<Display>> {
             .map(|ns_screen| {
                 let id = ns_screen.screen_number();
                 let rect = CGDisplayBounds(id);
-                let screenshot =
-                    take_screenshot(id, CGDisplayPixelsWide(id), CGDisplayPixelsHigh(id));
 
                 Display {
                     id: id.to_string(),
                     name: ns_screen.localized_name(),
-                    refresh_rate: (ns_screen.maximum_frames_per_second().min(u8::MAX as isize))
-                        as u8,
-                    rect: Rect {
-                        left: rect.origin.x as _,
-                        top: rect.origin.y as _,
-                        width: rect.size.width as _,
-                        height: rect.size.height as _,
-                    },
-                    screenshot,
+                    left: rect.origin.x as _,
+                    top: rect.origin.y as _,
+                    width: rect.size.width as _,
+                    height: rect.size.height as _,
                 }
             })
             .collect();
 
         Ok(displays)
     }
-}
-
-unsafe fn take_screenshot(
-    display_id: CGDirectDisplayID,
-    width: usize,
-    height: usize,
-) -> Option<Vec<u8>> {
-    let image_ref = CGDisplayCreateImage(display_id);
-    if image_ref.is_null() {
-        tracing::error!("CGDisplayCreateImage returns null");
-        return None;
-    }
-
-    defer! {
-        CGImageRelease(image_ref);
-    }
-
-    let mut data = NSMutableData::new();
-    let data_ptr = data.deref_mut() as *mut _ as *mut c_void;
-
-    let dest = CGImageDestinationCreateWithData(data_ptr, kUTTypePNG, 1, std::ptr::null());
-    if dest.is_null() {
-        tracing::error!("CGImageDestinationCreateWithData returns null");
-        return None;
-    }
-
-    CGImageDestinationAddImage(dest, image_ref, std::ptr::null());
-
-    if !CGImageDestinationFinalize(dest) {
-        tracing::error!("CGImageDestinationFinalize returns false");
-        return None;
-    }
-
-    let image = image::load_from_memory_with_format(data.bytes(), image::ImageFormat::Png).unwrap();
-    let image = image.resize(
-        (width as f32 * RESIZE_FACTOR) as _,
-        (height as f32 * RESIZE_FACTOR) as _,
-        FilterType::Nearest,
-    );
-
-    let mut buffer = Vec::new();
-
-    image
-        .write_to(&mut Cursor::new(&mut buffer), image::ImageOutputFormat::Png)
-        .unwrap();
-
-    Some(buffer)
 }
 
 struct NSScreenClass {}
@@ -152,10 +98,10 @@ impl NSScreen {
         }
     }
 
-    pub fn localized_name(&self) -> String {
-        unsafe {
-            let name: Id<NSString> = msg_send![self.class, localizedName];
-            name.as_str().to_string()
-        }
-    }
+    // pub fn localized_name(&self) -> String {
+    //     unsafe {
+    //         let name: Id<NSString> = msg_send![self.class, localizedName];
+    //         name.as_str().to_string()
+    //     }
+    // }
 }

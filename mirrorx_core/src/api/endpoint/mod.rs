@@ -10,7 +10,7 @@ use self::{
 };
 use crate::{error::CoreResult, utility::nonce_value::NonceValue, DesktopDecodeFrame};
 use ring::aead::{OpeningKey, SealingKey};
-use std::{net::SocketAddr, sync::Arc};
+use std::net::SocketAddr;
 use tokio::net::{TcpStream, UdpSocket};
 
 pub enum EndPointStream {
@@ -23,13 +23,13 @@ pub enum EndPointStream {
     },
 }
 
-pub async fn create_desktop_active_endpoint_client(
+pub async fn create_video_and_audio_endpoint_client(
     endpoint_id: EndPointID,
     key_pair: Option<(OpeningKey<NonceValue>, SealingKey<NonceValue>)>,
     stream: EndPointStream,
     visit_credentials: Option<Vec<u8>>,
 ) -> CoreResult<(
-    Arc<EndPointClient>,
+    EndPointClient,
     tokio::sync::mpsc::Receiver<DesktopDecodeFrame>,
 )> {
     let (render_frame_tx, render_frame_rx) = tokio::sync::mpsc::channel(180);
@@ -38,7 +38,7 @@ pub async fn create_desktop_active_endpoint_client(
     let video_frame_tx = serve_video_decode(endpoint_id, render_frame_tx);
     serve_audio_decode(endpoint_id, audio_frame_rx);
 
-    let client = EndPointClient::new_desktop_active(
+    let client = EndPointClient::new_active_endpoint(
         endpoint_id,
         key_pair,
         stream,
@@ -51,25 +51,15 @@ pub async fn create_desktop_active_endpoint_client(
     Ok((client, render_frame_rx))
 }
 
-pub async fn create_file_manager_active_endpoint_client(
+pub async fn create_endpoint_client(
     endpoint_id: EndPointID,
     key_pair: Option<(OpeningKey<NonceValue>, SealingKey<NonceValue>)>,
     stream: EndPointStream,
     visit_credentials: Option<Vec<u8>>,
-) -> CoreResult<Arc<EndPointClient>> {
+) -> CoreResult<EndPointClient> {
     let client =
-        EndPointClient::new_file_manager_active(endpoint_id, key_pair, stream, visit_credentials)
+        EndPointClient::new_passive_endpoint(endpoint_id, key_pair, stream, visit_credentials)
             .await?;
 
     Ok(client)
-}
-
-pub async fn create_passive_endpoint_client(
-    endpoint_id: EndPointID,
-    key_pair: Option<(OpeningKey<NonceValue>, SealingKey<NonceValue>)>,
-    stream: EndPointStream,
-    visit_credentials: Option<Vec<u8>>,
-) -> CoreResult<()> {
-    EndPointClient::new_passive(endpoint_id, key_pair, stream, visit_credentials).await?;
-    Ok(())
 }

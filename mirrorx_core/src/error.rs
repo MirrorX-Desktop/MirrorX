@@ -1,3 +1,4 @@
+use crate::client::portal::message::PortalError;
 use std::{
     io,
     string::{FromUtf16Error, FromUtf8Error},
@@ -23,6 +24,17 @@ pub enum CoreError {
 
     #[error("io error ({0:?})")]
     IO(#[from] io::Error),
+
+    #[error(
+        "system api error (name: {name}, code: {code}, file: {file}, line: {line}, details: {details})"
+    )]
+    SystemAPIError {
+        code: String,
+        file: String,
+        line: String,
+        name: String,
+        details: String,
+    },
 
     #[error("convert string to cstring failed")]
     CStringNullError(#[from] std::ffi::NulError),
@@ -97,6 +109,39 @@ pub enum CoreError {
 
     #[error("get network interfaces error ({0:?})")]
     NetworkInterfacesError(#[from] network_interface::Error),
+
+    #[error("portal server reply invalid message (expect: {0:?})")]
+    PortalInvalidReplyMessageError(String),
+
+    #[error("portal client read error ({0:?})")]
+    PortalQuicReadError(#[from] quinn::ReadError),
+
+    #[error("portal client write error ({0:?})")]
+    PortalQuicWriteError(#[from] quinn::WriteError),
+
+    #[error("portal client config error ({0:?})")]
+    PortalQuicConfigError(#[from] quinn::ConfigError),
+
+    #[error("portal client connect error ({0:?})")]
+    PortalQuicConnectError(#[from] quinn::ConnectError),
+
+    #[error("portal client stopped error ({0:?})")]
+    PortalQuicStoppedError(#[from] quinn::StoppedError),
+
+    #[error("portal client read exact error ({0:?})")]
+    PortalQuicReadExactError(#[from] quinn::ReadExactError),
+
+    #[error("portal client read to end error ({0:?})")]
+    PortalQuicReadToEndError(#[from] quinn::ReadToEndError),
+
+    #[error("portal client connection error ({0:?})")]
+    PortalQuicConnectionError(#[from] quinn::ConnectionError),
+
+    #[error("portal client send datagram error ({0:?})")]
+    PortalQuicSendDatagramError(#[from] quinn::SendDatagramError),
+
+    #[error("portal call error ({0:?})")]
+    PortalCallError(#[from] PortalError),
 }
 
 impl serde::Serialize for CoreError {
@@ -106,4 +151,16 @@ impl serde::Serialize for CoreError {
     {
         serializer.serialize_str(self.to_string().as_str())
     }
+}
+
+#[cfg(target_os = "windows")]
+#[inline(always)]
+pub fn system_api_error<T>(err: windows::core::Error, name: &str) -> CoreResult<T> {
+    Err(CoreError::SystemAPIError {
+        code: err.code().to_string(),
+        file: file!().to_string(),
+        line: line!().to_string(),
+        name: name.to_string(),
+        details: err.message().to_string(),
+    })
 }
