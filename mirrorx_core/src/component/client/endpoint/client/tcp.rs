@@ -1,6 +1,6 @@
 use super::RECV_MESSAGE_TIMEOUT;
 use crate::{
-    api::endpoint::{
+    component::client::endpoint::{
         id::EndPointID,
         message::{EndPointHandshakeRequest, EndPointHandshakeResponse},
     },

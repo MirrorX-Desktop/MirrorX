@@ -1,5 +1,5 @@
 use crate::{
-    api::endpoint::{message::EndPointVideoFrame, EndPointID},
+    component::client::endpoint::{message::EndPointVideoFrame, EndPointID},
     component::{frame::DesktopDecodeFrame, video_decoder::decoder::VideoDecoder},
 };
 use tokio::sync::mpsc::Sender;

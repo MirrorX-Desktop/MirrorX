@@ -1,7 +1,9 @@
 use super::resampler::{cpal_sample_format_to_av_sample_format, Resampler};
 use crate::{
-    api::endpoint::message::{AudioSampleFormat, EndPointAudioFrame},
-    component::frame::AudioEncodeFrame,
+    component::{
+        client::endpoint::message::{AudioSampleFormat, EndPointAudioFrame},
+        frame::AudioEncodeFrame,
+    },
     core_error,
     error::CoreResult,
 };

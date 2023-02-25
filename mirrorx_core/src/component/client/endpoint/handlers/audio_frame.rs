@@ -1,9 +1,9 @@
 use crate::{
-    api::endpoint::{message::EndPointAudioFrame, EndPointID},
     component::audio::{
         decoder::AudioDecoder,
         player::{default_output_config, new_play_stream_and_tx},
     },
+    component::client::endpoint::{message::EndPointAudioFrame, EndPointID},
 };
 use cpal::traits::StreamTrait;
 use tokio::sync::mpsc::Receiver;

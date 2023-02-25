@@ -1,38 +1,45 @@
-use quinn::VarInt;
-
 use super::{handler::handle_passive_visit_request, message::*};
 use crate::{
-    api::config::LocalStorage,
+    component::config::ConfigStorage,
+    core_error,
     error::{CoreError, CoreResult},
     utility::bincode::{bincode_deserialize, bincode_serialize},
 };
+use quinn::VarInt;
 use std::net::{Ipv4Addr, SocketAddr};
 
+#[derive(Default)]
 pub struct Client {
-    endpoint: quinn::Endpoint,
-    conn: quinn::Connection,
+    endpoint: Option<quinn::Endpoint>,
+    conn: Option<quinn::Connection>,
 }
 
 impl Client {
-    pub async fn new<F>(
+    pub async fn switch_domain<F>(
+        &mut self,
         addr: SocketAddr,
         server_name: &str,
-        storage: LocalStorage,
+        storage: ConfigStorage,
         visit_callback: F,
-    ) -> CoreResult<Self>
+    ) -> CoreResult<()>
     where
         F: Send + Sync + Clone + 'static + Fn(i64, i64, bool) -> bool,
     {
+        if let (Some(ref old_endpoint), Some(old_conn)) = (self.endpoint.take(), self.conn.take()) {
+            old_conn.close(VarInt::from_u32(0), b"done");
+            old_endpoint.close(VarInt::from_u32(0), b"done");
+            old_endpoint.wait_idle().await;
+        }
+
         let endpoint = quinn::Endpoint::client((Ipv4Addr::UNSPECIFIED, 0).into())?;
         let conn = endpoint.connect(addr, server_name)?.await?;
-        let client = Client {
-            endpoint,
-            conn: conn.clone(),
-        };
+
+        self.endpoint = Some(endpoint);
+        self.conn = Some(conn.clone());
 
         Self::accept_server_call(conn, storage, visit_callback);
 
-        Ok(client)
+        Ok(())
     }
 
     pub async fn get_server_config(&self) -> CoreResult<ServerConfigReply> {
@@ -108,7 +115,11 @@ impl Client {
     }
 
     async fn call(&self, request_bytes: &[u8]) -> CoreResult<Vec<u8>> {
-        let (mut tx, rx) = self.conn.open_bi().await?;
+        let Some(ref conn) = self.conn else {
+            return Err(core_error!("portal client haven't bind to domain"));
+        };
+
+        let (mut tx, rx) = conn.open_bi().await?;
         tx.write_all(request_bytes).await?;
         tx.finish().await?;
 
@@ -116,7 +127,7 @@ impl Client {
         Ok(reply_bytes)
     }
 
-    fn accept_server_call<F>(conn: quinn::Connection, storage: LocalStorage, visit_callback: F)
+    fn accept_server_call<F>(conn: quinn::Connection, storage: ConfigStorage, visit_callback: F)
     where
         F: Send + Sync + Clone + 'static + Fn(i64, i64, bool) -> bool,
     {
@@ -148,7 +159,7 @@ impl Client {
     async fn handle_server_call<F>(
         mut tx: quinn::SendStream,
         rx: quinn::RecvStream,
-        storage: LocalStorage,
+        storage: ConfigStorage,
         visit_callback: F,
     ) where
         F: Send + Sync + 'static + Fn(i64, i64, bool) -> bool,
@@ -207,6 +218,9 @@ impl Client {
 
 impl Drop for Client {
     fn drop(&mut self) {
-        self.endpoint.close(VarInt::from_u32(0), b"done");
+        if let (Some(ref endpoint), Some(conn)) = (self.endpoint.take(), self.conn.take()) {
+            conn.close(VarInt::from_u32(0), b"done");
+            endpoint.close(VarInt::from_u32(0), b"done");
+        }
     }
 }

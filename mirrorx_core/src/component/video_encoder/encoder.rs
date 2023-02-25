@@ -1,6 +1,6 @@
 use super::config::EncoderConfig;
 use crate::{
-    api::endpoint::{
+    component::client::endpoint::{
         client::ClientSendStream,
         message::{EndPointMessage, EndPointVideoFrame},
     },

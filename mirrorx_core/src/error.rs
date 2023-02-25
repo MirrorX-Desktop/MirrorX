@@ -1,4 +1,4 @@
-use crate::client::portal::message::PortalError;
+use crate::component::client::portal::message::PortalError;
 use std::{
     io,
     string::{FromUtf16Error, FromUtf8Error},

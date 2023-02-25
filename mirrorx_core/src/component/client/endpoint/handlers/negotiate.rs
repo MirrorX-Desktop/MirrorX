@@ -1,5 +1,7 @@
 use crate::{
-    api::endpoint::message::{EndPointNegotiateReply, EndPointNegotiateRequest, VideoCodec},
+    component::client::endpoint::message::{
+        EndPointNegotiateReply, EndPointNegotiateRequest, VideoCodec,
+    },
     component::screen::display::Display,
     error::CoreResult,
 };

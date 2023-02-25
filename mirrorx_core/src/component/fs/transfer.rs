@@ -1,5 +1,5 @@
 use crate::{
-    api::endpoint::{
+    component::client::endpoint::{
         client::ClientSendStream,
         message::{EndPointFileTransferBlock, EndPointFileTransferError, EndPointMessage},
     },

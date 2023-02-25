@@ -1,5 +1,7 @@
 use crate::{
-    api::endpoint::message::{EndPointVisitDirectoryReply, EndPointVisitDirectoryRequest},
+    component::client::endpoint::message::{
+        EndPointVisitDirectoryReply, EndPointVisitDirectoryRequest,
+    },
     component::fs::{read_directory, read_root_directory},
     error::CoreResult,
 };

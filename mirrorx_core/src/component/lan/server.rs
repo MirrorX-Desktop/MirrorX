@@ -1,5 +1,5 @@
 use crate::{
-    api::endpoint::{create_endpoint_client, EndPointStream},
+    component::client::endpoint::{create_endpoint_client, EndPointStream},
     error::CoreResult,
 };
 use std::net::{IpAddr, Ipv4Addr};
@@ -32,7 +32,7 @@ impl Server {
                 };
 
                 if let Err(err) = create_endpoint_client(
-                    crate::api::endpoint::id::EndPointID::LANID {
+                    crate::component::client::endpoint::id::EndPointID::LANID {
                         local_ip: IpAddr::V4(Ipv4Addr::UNSPECIFIED),
                         remote_ip: addr.ip(),
                     },

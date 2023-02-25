@@ -28,7 +28,7 @@
         "assets/icons/icon.icns",
         "assets/icons/icon.ico"
       ],
-      "identifier": "cloud.mirrorx",
+      "identifier": "app.mirrorx",
       "longDescription": "",
       "macOS": {
         "entitlements": null,

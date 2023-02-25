@@ -6,14 +6,14 @@ use r2d2_sqlite::SqliteConnectionManager;
 use std::{path::Path, sync::Arc};
 
 #[derive(Clone)]
-pub struct LocalStorage {
+pub struct ConfigStorage {
     domain: Arc<DomainRepository>,
     kv: Arc<KVRepository>,
     history: Arc<HistoryRepository>,
 }
 
-impl LocalStorage {
-    pub fn new<P>(db_path: P) -> CoreResult<LocalStorage>
+impl ConfigStorage {
+    pub fn new<P>(db_path: P) -> CoreResult<ConfigStorage>
     where
         P: AsRef<Path>,
     {

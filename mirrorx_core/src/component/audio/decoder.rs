@@ -1,6 +1,8 @@
 use crate::{
-    api::endpoint::message::EndPointAudioFrame,
-    component::audio::resampler::{cpal_sample_format_to_av_sample_format, Resampler},
+    component::{
+        audio::resampler::{cpal_sample_format_to_av_sample_format, Resampler},
+        client::endpoint::message::EndPointAudioFrame,
+    },
     core_error,
     error::CoreResult,
 };

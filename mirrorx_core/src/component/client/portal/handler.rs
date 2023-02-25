@@ -1,12 +1,10 @@
-use super::message::{PortalClientMessage, PortalError, VisitPassiveReply, VisitPassiveRequest};
+use super::message::{
+    ActiveEndpointKeyExchangeSecret, PassiveEndpointKeyExchangeSecret, PortalClientMessage,
+    PortalError, VisitPassiveReply, VisitPassiveRequest,
+};
 use crate::{
-    api::{
-        config::LocalStorage,
-        endpoint::{create_endpoint_client, id::EndPointID},
-        signaling::subscribe_message::{
-            ActiveEndpointKeyExchangeSecret, PassiveEndpointKeyExchangeSecret,
-        },
-    },
+    component::client::endpoint::{create_endpoint_client, id::EndPointID},
+    component::config::ConfigStorage,
     utility::{
         bincode::{bincode_deserialize, bincode_serialize},
         nonce_value::NonceValue,
@@ -20,7 +18,7 @@ use sha2::Sha256;
 
 #[allow(clippy::too_many_arguments)]
 pub async fn handle_passive_visit_request(
-    storage: LocalStorage,
+    storage: ConfigStorage,
     req: VisitPassiveRequest,
     visit_credentials: String,
 ) -> PortalClientMessage {
@@ -51,7 +49,7 @@ pub async fn handle_passive_visit_request(
                 remote_device_id: req.active_visit_req.active_device_id,
             },
             Some((opening_key, sealing_key)),
-            crate::api::endpoint::EndPointStream::ActiveTCP(req.relay_addr),
+            crate::component::client::endpoint::EndPointStream::ActiveTCP(req.relay_addr),
             Some(visit_credentials_clone.as_bytes().to_vec()),
         )
         .await

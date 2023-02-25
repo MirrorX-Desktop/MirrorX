@@ -4,12 +4,12 @@ mod udp;
 use self::{tcp::serve_tcp, udp::serve_udp};
 use super::{id::EndPointID, message::*, EndPointStream};
 use crate::{
-    api::endpoint::handlers::{
+    call,
+    component::client::endpoint::handlers::{
         fs_download_file::handle_download_file_request, fs_send_file::handle_send_file_request,
         fs_visit_directory::handle_visit_directory_request, negotiate::handle_negotiate_request,
         switch_display::handle_switch_screen_request,
     },
-    call,
     component::{
         fs::transfer::{append_file_block, delete_file_append_session},
         screen::Screen,

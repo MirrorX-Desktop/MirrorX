@@ -5,7 +5,7 @@ pub mod input;
 
 use super::video_encoder::{config::libx264::Libx264Config, encoder::VideoEncoder};
 use crate::{
-    api::endpoint::{
+    component::client::endpoint::{
         client::ClientSendStream,
         message::{KeyboardEvent, MouseEvent},
     },

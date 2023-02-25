@@ -33,15 +33,12 @@ once_cell = "1.17.0"
 http = "0.2.8"
 base64 = "0.21.0"
 rayon = "1.6.1"
-moka = { version = "0.9.6", features = ["future"] }
-uuid = { version = "1.2.2", features = ["v4", "fast-rng"] }
-
-[target.'cfg(target_os = "macos")'.dependencies]
-cocoa = "0.24.1"
-objc = "0.2.7"
-
-
-[target.'cfg(target_os = "windows")'.dependencies]
+moka = { version = "0.10.0", features = ["future"] }
+uuid = { version = "1.3.0", features = ["v4", "fast-rng"] }
+native-dialog = { version = "0.6.3", features = [
+    "windows_dpi_awareness",
+    "windows_visual_styles",
+] }
 
 
 [features]

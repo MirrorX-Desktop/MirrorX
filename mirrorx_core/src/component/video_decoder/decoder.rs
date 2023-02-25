@@ -1,5 +1,5 @@
 use crate::{
-    api::endpoint::message::EndPointVideoFrame,
+    component::client::endpoint::message::EndPointVideoFrame,
     component::frame::{DesktopDecodeFrame, DesktopDecodeFrameFormat},
     core_error,
     error::CoreResult,

@@ -7,6 +7,13 @@ mod command;
 mod utility;
 mod window;
 
+use std::sync::Arc;
+
+use mirrorx_core::{
+    api::{config::LocalStorage, endpoint::client::EndPointClient, signaling::SignalingClient},
+    error::CoreResult,
+};
+use moka::sync::{Cache, CacheBuilder};
 #[cfg(target_os = "macos")]
 use tauri::Icon;
 
@@ -19,33 +26,20 @@ static TRAY_ICON_MACOS: &[u8] = include_bytes!("../assets/icons/tray-macOS.png")
 #[tokio::main]
 #[tracing::instrument]
 async fn main() {
-    tauri::async_runtime::set(tokio::runtime::Handle::current());
+    let app = match init_app() {
+        Ok(app) => app,
+        Err(err) => {
+            let message = format!("Init app failed, please relaunch app!\nError: {}", err);
 
-    let app = build_app();
+            let _ = native_dialog::MessageDialog::new()
+                .set_title("MirrorX Runtime Error")
+                .set_text(&message)
+                .set_type(native_dialog::MessageType::Error)
+                .show_alert();
 
-    let log_dir = app
-        .path_resolver()
-        .app_log_dir()
-        .expect("get app log dir failed")
-        .join("logs");
-
-    let file_appender = tracing_appender::rolling::daily(&log_dir, "mirrorx.log");
-    let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
-    let file_layer = tracing_subscriber::fmt::layer()
-        .with_ansi(false)
-        .with_writer(non_blocking);
-
-    let console_layer = tracing_subscriber::fmt::layer()
-        .pretty()
-        .with_writer(std::io::stderr);
-
-    tracing_subscriber::Registry::default()
-        .with(EnvFilter::from("info,tao=info"))
-        .with(console_layer)
-        .with(file_layer)
-        .init();
-
-    tracing::info!(path = ?log_dir, "log dir");
+            return;
+        }
+    };
 
     app.run(|app_handle, event| match event {
         tauri::RunEvent::WindowEvent { label, event, .. } => {
@@ -65,15 +59,28 @@ async fn main() {
     });
 }
 
-fn build_app() -> App {
+fn init_app() -> anyhow::Result<App> {
+    tauri::async_runtime::set(tokio::runtime::Handle::current());
+
+    let app = init_tauri()?;
+    init_component(&app)?;
+
+    Ok(app)
+}
+
+fn init_tauri() -> anyhow::Result<App> {
     let tray = SystemTray::new();
     #[cfg(target_os = "macos")]
     let tray = tray
         .with_icon(Icon::Raw(TRAY_ICON_MACOS.to_vec()))
         .with_icon_as_template(true);
 
-    tauri::Builder::default()
-        .manage(command::AppState::new())
+    let app = tauri::Builder::default()
+        .manage(mirrorx_core::component::client::portal::Client::default())
+        .manage(mirrorx_core::component::lan::LANProvider::new())
+        .manage(Arc::new(
+            CacheBuilder::<String, Arc<EndPointClient>, _>::new(64).build(),
+        ))
         .system_tray(tray)
         .enable_macos_default_menu(false)
         .on_system_tray_event(|app, event| {
@@ -144,16 +151,11 @@ fn build_app() -> App {
                         .hidden_title(true)
                         .title_bar_style(tauri::TitleBarStyle::Overlay)
                         .build()
-                        .unwrap();
                 }
 
                 #[cfg(target_os = "windows")]
                 {
-                    builder
-                        .decorations(false)
-                        .transparent(true)
-                        .build()
-                        .unwrap();
+                    builder.decorations(false).transparent(true).build()
                 }
             });
 
@@ -191,6 +193,48 @@ fn build_app() -> App {
             command::utility::utility_enum_graphics_cards,
             command::utility::utility_hide_macos_zoom_button,
         ])
-        .build(tauri::generate_context!())
-        .expect("error while running tauri application")
+        .build(tauri::generate_context!())?;
+
+    Ok(app)
+}
+
+fn init_component(app: &App) -> anyhow::Result<()> {
+    // init logger
+    let log_dir = app
+        .path_resolver()
+        .app_log_dir()
+        .ok_or(anyhow::anyhow!("resolve app log dir failed"))?;
+
+    let appender = tracing_appender::rolling::daily(&log_dir, "mirrorx.log");
+    let (non_blocking, _guard) = tracing_appender::non_blocking(appender);
+
+    let file_layer = tracing_subscriber::fmt::layer()
+        .with_ansi(false)
+        .with_writer(non_blocking);
+
+    let console_layer = tracing_subscriber::fmt::layer()
+        .pretty()
+        .with_writer(std::io::stderr);
+
+    tracing_subscriber::Registry::default()
+        .with(EnvFilter::from("info,tao=info"))
+        .with(console_layer)
+        .with(file_layer)
+        .init();
+
+    tracing::info!(path = ?log_dir, "initialize logger");
+
+    // init config db
+    let config_dir = app
+        .path_resolver()
+        .app_config_dir()
+        .ok_or(anyhow::anyhow!("resolve app config dir failed"))?;
+
+    std::fs::create_dir_all(&config_dir)?;
+    let path = config_dir.join("mirrorx.db");
+    let storage = LocalStorage::new(&path)?;
+    app.manage(storage);
+    tracing::info!(?path, "initialize config db");
+
+    Ok(())
 }

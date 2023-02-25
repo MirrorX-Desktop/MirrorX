@@ -1,5 +1,4 @@
 pub mod api;
-pub mod client;
 pub mod component;
 pub mod error;
 pub mod utility;

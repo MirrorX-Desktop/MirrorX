@@ -1,5 +1,5 @@
 use crate::{
-    api::endpoint::message::{EndPointSendFileReply, EndPointSendFileRequest},
+    component::client::endpoint::message::{EndPointSendFileReply, EndPointSendFileRequest},
     component::fs::transfer::create_file_append_session,
     core_error,
     error::CoreResult,
