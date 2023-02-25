@@ -8,7 +8,10 @@ use mirrorx_core::{
     core_error,
     error::CoreResult,
 };
-use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use std::{
+    net::{IpAddr, Ipv4Addr, SocketAddr},
+    sync::Arc,
+};
 use tauri_egui::EguiPluginHandle;
 
 #[tauri::command]
@@ -72,7 +75,7 @@ pub async fn lan_connect(
                         cc,
                         gl_context.clone(),
                         endpoint_id,
-                        client,
+                        Arc::new(client),
                         render_frame_rx,
                     ))
                 } else {
@@ -101,7 +104,7 @@ pub async fn lan_connect(
             .files_endpoints
             .lock()
             .await
-            .insert(remote_ip.to_string(), client)
+            .insert(remote_ip.to_string(), Arc::new(client))
             .await;
 
         let (tx, rx) = tokio::sync::oneshot::channel();

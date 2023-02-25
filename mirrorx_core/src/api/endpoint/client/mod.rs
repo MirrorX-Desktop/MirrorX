@@ -158,6 +158,10 @@ impl EndPointClient {
 }
 
 impl EndPointClient {
+    pub fn new_send_stream(&self) -> ClientSendStream {
+        ClientSendStream(self.tx.clone())
+    }
+
     pub fn try_send(&self, message: &EndPointMessage) -> CoreResult<()> {
         let buffer = bincode_serialize(message)?;
         self.tx

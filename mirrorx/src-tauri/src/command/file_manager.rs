@@ -17,7 +17,7 @@ use mirrorx_core::{
 };
 use rayon::prelude::*;
 use serde::Serialize;
-use std::{collections::HashMap, path::PathBuf};
+use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
 #[derive(Serialize)]
 pub struct DirectoryResult {
@@ -193,7 +193,9 @@ pub async fn file_manager_send_file(
         ))
         .await?;
 
-    send_file_to_remote(id.clone(), client, &local_path).await?;
+    let tx = client.new_send_stream();
+
+    send_file_to_remote(id.clone(), tx, &local_path).await?;
 
     Ok((id, size))
 }

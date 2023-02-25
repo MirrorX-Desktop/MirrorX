@@ -11,7 +11,10 @@ use mirrorx_core::{
     core_error,
     error::CoreResult,
 };
-use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr, ToSocketAddrs};
+use std::{
+    net::{Ipv4Addr, Ipv6Addr, SocketAddr, ToSocketAddrs},
+    sync::Arc,
+};
 use tauri::http::Uri;
 use tauri_egui::EguiPluginHandle;
 
@@ -169,7 +172,7 @@ pub async fn signaling_visit(
                         cc,
                         gl_context.clone(),
                         endpoint_id,
-                        client,
+                        Arc::new(client),
                         render_frame_rx,
                     ))
                 } else {
@@ -198,7 +201,7 @@ pub async fn signaling_visit(
             .files_endpoints
             .lock()
             .await
-            .insert(remote_device_id.clone(), client)
+            .insert(remote_device_id.clone(), Arc::new(client))
             .await;
 
         let (tx, rx) = tokio::sync::oneshot::channel();

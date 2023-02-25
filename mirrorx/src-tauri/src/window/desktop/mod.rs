@@ -9,7 +9,7 @@ use mirrorx_core::{
         id::EndPointID,
         message::{EndPointInput, EndPointMessage, InputEvent, KeyboardEvent, MouseEvent},
     },
-    component::input::key::MouseKey,
+    component::screen::input::key::MouseKey,
     DesktopDecodeFrame,
 };
 use state::State;
