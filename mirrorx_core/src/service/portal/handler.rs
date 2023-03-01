@@ -25,50 +25,51 @@ pub async fn handle_passive_visit_request(
     storage: config::service::Service,
     req: VisitPassiveRequest,
 ) -> PortalClientMessage {
-    let Ok(domain) = storage.domain().get_domain_by_id(domain_id.load(std::sync::atomic::Ordering::SeqCst)) else {
-        return PortalClientMessage::Error(PortalError::Internal);
-    };
-
-    let (secret, sealing_key, opening_key) = match key_agreement(
-        &domain.password,
-        req.active_visit_req.active_device_id,
-        req.active_visit_req.password_salt,
-        req.active_visit_req.secret,
-        req.active_visit_req.secret_nonce,
-    )
-    .await
-    {
-        Ok(v) => v,
-        Err(err) => {
-            return PortalClientMessage::Error(err);
-        }
-    };
-
     let visit_credentials = uuid::Uuid::new_v4();
-    let reply = PortalClientMessage::VisitPassiveReply(VisitPassiveReply {
+    let mut reply = VisitPassiveReply {
         active_device_id: req.active_visit_req.active_device_id,
         passive_device_id: req.active_visit_req.passive_device_id,
         visit_credentials: visit_credentials.to_string(),
-        secret,
-    });
+        access_result: Err(PortalError::Internal),
+    };
 
-    tokio::spawn(async move {
-        if let Err(err) = create_endpoint_client(
-            EndPointID::DeviceID {
-                local_device_id: req.active_visit_req.passive_device_id,
-                remote_device_id: req.active_visit_req.active_device_id,
-            },
-            Some((opening_key, sealing_key)),
-            crate::service::endpoint::EndPointStream::ActiveTCP(req.relay_addr),
-            Some(visit_credentials.as_bytes().to_vec()),
+    if let Ok(domain) = storage
+        .domain()
+        .get_domain_by_id(domain_id.load(std::sync::atomic::Ordering::SeqCst))
+    {
+        match key_agreement(
+            &domain.password,
+            req.active_visit_req.active_device_id,
+            req.active_visit_req.password_salt,
+            req.active_visit_req.secret,
+            req.active_visit_req.secret_nonce,
         )
         .await
         {
-            tracing::error!(?err, "create passive endpoint client failed");
-        }
-    });
+            Ok((secret, sealing_key, opening_key)) => {
+                tokio::spawn(async move {
+                    if let Err(err) = create_endpoint_client(
+                        EndPointID::DeviceID {
+                            local_device_id: req.active_visit_req.passive_device_id,
+                            remote_device_id: req.active_visit_req.active_device_id,
+                        },
+                        Some((opening_key, sealing_key)),
+                        crate::service::endpoint::EndPointStream::ActiveTCP(req.relay_addr),
+                        Some(visit_credentials.as_bytes().to_vec()),
+                    )
+                    .await
+                    {
+                        tracing::error!(?err, "create passive endpoint client failed");
+                    }
+                });
 
-    reply
+                reply.access_result = Ok(secret)
+            }
+            Err(err) => reply.access_result = Err(err),
+        };
+    };
+
+    PortalClientMessage::VisitPassiveReply(reply)
 }
 
 async fn key_agreement(

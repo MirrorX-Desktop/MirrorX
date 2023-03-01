@@ -86,6 +86,8 @@ impl Service {
             .await
             .map_err(|_| CoreError::Timeout)??;
 
+        stream.set_nodelay(true)?;
+
         let stream = LengthDelimitedCodec::builder()
             .little_endian()
             .length_field_length(2)
@@ -250,9 +252,16 @@ impl Service {
             _ => return Err(CoreError::PortalCallError(PortalError::RemoteInternal)),
         };
 
+        let relay_addr = reply.relay_addr;
+        let visit_credentials = reply.passive_reply.visit_credentials;
+        let secret = match reply.passive_reply.access_result {
+            Ok(secret) => secret,
+            Err(err) => return Err(CoreError::PortalCallError(err)),
+        };
+
         // compute open and seal key
-        let passive_device_secret_buffer = reply_private_key
-            .decrypt(rsa::Pkcs1v15Encrypt::default(), &reply.passive_reply.secret)?;
+        let passive_device_secret_buffer =
+            reply_private_key.decrypt(rsa::Pkcs1v15Encrypt::default(), &secret)?;
 
         let passive_device_secret: PassiveEndpointKeyExchangeSecret =
             bincode_deserialize(&passive_device_secret_buffer)?;
@@ -309,12 +318,7 @@ impl Service {
         nonce.copy_from_slice(&active_exchange_nonce);
         let opening_key = ring::aead::OpeningKey::new(unbound_opening_key, NonceValue::new(nonce));
 
-        Ok((
-            reply.relay_addr,
-            reply.passive_reply.visit_credentials,
-            opening_key,
-            sealing_key,
-        ))
+        Ok((relay_addr, visit_credentials, opening_key, sealing_key))
     }
 
     async fn call(
