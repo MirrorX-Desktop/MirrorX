@@ -4,8 +4,6 @@ export interface Domain {
 	id: number;
 	name: string;
 	addr: string;
-	signaling_port: string;
-	subscribe_port: string;
 	is_primary: boolean;
 	device_id: number;
 	password: string;

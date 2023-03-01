@@ -1,8 +1,8 @@
 use crate::{
-    component::client::endpoint::message::EndPointVideoFrame,
     component::frame::{DesktopDecodeFrame, DesktopDecodeFrameFormat},
     core_error,
     error::CoreResult,
+    service::endpoint::message::EndPointVideoFrame,
 };
 use mirrorx_native::ffmpeg::{
     codecs::{avcodec::*, codec::*, codec_id::*, packet::*},

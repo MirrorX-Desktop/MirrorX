@@ -1,10 +1,8 @@
 use crate::{
-    component::{
-        audio::resampler::{cpal_sample_format_to_av_sample_format, Resampler},
-        client::endpoint::message::EndPointAudioFrame,
-    },
+    component::audio::resampler::{cpal_sample_format_to_av_sample_format, Resampler},
     core_error,
     error::CoreResult,
+    service::endpoint::message::EndPointAudioFrame,
 };
 use cpal::{SampleFormat, SampleRate};
 use mirrorx_native::opus::decoder::*;

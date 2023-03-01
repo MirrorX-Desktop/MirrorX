@@ -1,12 +1,12 @@
 use super::config::EncoderConfig;
 use crate::{
-    component::client::endpoint::{
-        client::ClientSendStream,
-        message::{EndPointMessage, EndPointVideoFrame},
-    },
     component::frame::DesktopEncodeFrame,
     core_error,
     error::CoreResult,
+    service::endpoint::{
+        message::{EndPointMessage, EndPointVideoFrame},
+        ClientSendStream,
+    },
 };
 use mirrorx_native::ffmpeg::{
     codecs::{avcodec::*, codec::*, packet::*},

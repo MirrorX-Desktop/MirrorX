@@ -5,11 +5,11 @@ pub mod input;
 
 use super::video_encoder::{config::libx264::Libx264Config, encoder::VideoEncoder};
 use crate::{
-    component::client::endpoint::{
-        client::ClientSendStream,
-        message::{KeyboardEvent, MouseEvent},
-    },
     error::{CoreError, CoreResult},
+    service::endpoint::{
+        message::{KeyboardEvent, MouseEvent},
+        ClientSendStream,
+    },
 };
 
 pub struct Screen {

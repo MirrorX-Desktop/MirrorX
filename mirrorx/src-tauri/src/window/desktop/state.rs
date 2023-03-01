@@ -1,6 +1,6 @@
 use crate::utility::format_device_id;
 use mirrorx_core::{
-    api::endpoint::{client::EndPointClient, id::EndPointID},
+    service::endpoint::{EndPointClient, EndPointID},
     DesktopDecodeFrame,
 };
 use std::sync::{Arc, Mutex};

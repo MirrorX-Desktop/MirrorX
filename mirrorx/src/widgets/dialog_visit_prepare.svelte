@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
 	import { emit, listen, type UnlistenFn } from '@tauri-apps/api/event';
-	import { invoke_signaling_visit } from '$lib/components/command';
 	import { onDestroy, onMount } from 'svelte';
 	import Fa from 'svelte-fa';
 	import { emitNotification } from '$lib/components/notification';
 	import LL from '$lib/i18n/i18n-svelte';
 	import { isMacOS } from '$lib/components/types';
+	import { invoke_portal_visit } from '$lib/components/command';
 
 	let remote_device_id: string = '';
 	let show = false;
@@ -35,7 +35,7 @@
 	const ok = async () => {
 		try {
 			show = false;
-			await invoke_signaling_visit(remote_device_id, input_password, visit_desktop);
+			await invoke_portal_visit(remote_device_id, input_password, visit_desktop);
 		} catch (error: any) {
 			let err: string = error.toString();
 			if (err.includes('Internal')) {

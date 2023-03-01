@@ -1,9 +1,9 @@
 use crate::{
-    component::client::endpoint::{
-        client::ClientSendStream,
-        message::{EndPointFileTransferBlock, EndPointFileTransferError, EndPointMessage},
-    },
     error::CoreResult,
+    service::endpoint::{
+        message::{EndPointFileTransferBlock, EndPointFileTransferError, EndPointMessage},
+        ClientSendStream,
+    },
 };
 use moka::future::{Cache, CacheBuilder};
 use once_cell::sync::Lazy;

@@ -39,7 +39,7 @@ native-dialog = { version = "0.6.3", features = [
     "windows_dpi_awareness",
     "windows_visual_styles",
 ] }
-
+semver = "1.0.16"
 
 [features]
 # by default Tauri runs in production mode

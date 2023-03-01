@@ -1,37 +1,28 @@
-use crate::{command::AppState, window::create_desktop_window};
+use crate::{window::create_desktop_window, FileTransferCache, LANService};
 use mirrorx_core::{
-    api::endpoint::{
-        create_endpoint_client, create_video_and_audio_endpoint_client, id::EndPointID,
-        EndPointStream,
-    },
-    component::lan::{LANProvider, Node},
     core_error,
     error::CoreResult,
+    service::{
+        endpoint::{
+            create_endpoint_client, create_video_and_audio_endpoint_client, EndPointID,
+            EndPointStream,
+        },
+        lan::service::Node,
+    },
 };
 use std::{
     net::{IpAddr, Ipv4Addr, SocketAddr},
     sync::Arc,
 };
+use tauri::{AppHandle, State};
 use tauri_egui::EguiPluginHandle;
 
 #[tauri::command]
-#[tracing::instrument(skip(app_state))]
-pub async fn lan_init(app_state: tauri::State<'_, AppState>, force: bool) -> CoreResult<()> {
-    let mut lan_provider = app_state.lan_provider.lock().await;
-
-    if force || lan_provider.is_none() {
-        *lan_provider = Some(LANProvider::new().await?);
-    }
-
-    Ok(())
-}
-
-#[tauri::command]
-#[tracing::instrument(skip(app_handle, app_state, egui_plugin))]
+#[tracing::instrument(skip(app_handle, egui_plugin, file_transfer_cache))]
 pub async fn lan_connect(
-    app_handle: tauri::AppHandle,
-    app_state: tauri::State<'_, AppState>,
-    egui_plugin: tauri::State<'_, EguiPluginHandle>,
+    app_handle: AppHandle,
+    egui_plugin: State<'_, EguiPluginHandle>,
+    file_transfer_cache: State<'_, FileTransferCache>,
     addr: String,
     visit_desktop: bool,
 ) -> CoreResult<()> {
@@ -100,10 +91,8 @@ pub async fn lan_connect(
         )
         .await?;
 
-        app_state
-            .files_endpoints
-            .lock()
-            .await
+        file_transfer_cache
+            .0
             .insert(remote_ip.to_string(), Arc::new(client))
             .await;
 
@@ -130,10 +119,8 @@ pub async fn lan_connect(
         let create_result = rx.await.map_err(|_| core_error!("create window failed"))?;
 
         if let Some(err) = create_result {
-            app_state
-                .files_endpoints
-                .lock()
-                .await
+            file_transfer_cache
+                .0
                 .invalidate(&remote_ip.to_string())
                 .await;
             tracing::error!(?err, "create file manager window failed");
@@ -145,64 +132,48 @@ pub async fn lan_connect(
 }
 
 #[tauri::command]
-#[tracing::instrument(skip(app_state))]
-pub async fn lan_nodes_list(app_state: tauri::State<'_, AppState>) -> CoreResult<Vec<Node>> {
-    if let Some(ref discover) = *app_state.lan_provider.lock().await {
-        Ok(discover.nodes().await)
-    } else {
-        Err(core_error!("lan discover is empty"))
-    }
+#[tracing::instrument(skip(lan_service))]
+pub async fn lan_nodes_list(lan_service: State<'_, LANService>) -> CoreResult<Vec<Node>> {
+    Ok(lan_service.nodes().await)
 }
 
 #[tauri::command]
-#[tracing::instrument(skip(app_state))]
+#[tracing::instrument(skip(lan_service))]
 pub async fn lan_nodes_search(
-    app_state: tauri::State<'_, AppState>,
+    lan_service: State<'_, LANService>,
     keyword: String,
 ) -> CoreResult<Vec<Node>> {
-    if let Some(ref discover) = *app_state.lan_provider.lock().await {
-        let mut nodes = discover.nodes().await;
-        let nodes_count = nodes.len();
+    let mut nodes = lan_service.nodes().await;
+    let nodes_count = nodes.len();
 
-        for i in 0..nodes_count {
-            if !nodes[i].display_name.contains(&keyword) {
-                nodes.remove(i);
-            }
-
-            for ip in nodes[i].addrs.keys() {
-                if !ip.to_string().contains(&keyword) {
-                    nodes.remove(i);
-                    break;
-                }
-            }
+    for i in 0..nodes_count {
+        if !nodes[i].display_name.contains(&keyword) {
+            nodes.remove(i);
         }
 
-        Ok(nodes)
-    } else {
-        Err(core_error!("lan discover is empty"))
+        for ip in nodes[i].addrs.keys() {
+            if !ip.to_string().contains(&keyword) {
+                nodes.remove(i);
+                break;
+            }
+        }
     }
+
+    Ok(nodes)
 }
 
 #[tauri::command]
-#[tracing::instrument(skip(app_state))]
+#[tracing::instrument(skip(lan_service))]
 pub async fn lan_discoverable_set(
-    app_state: tauri::State<'_, AppState>,
+    lan_service: tauri::State<'_, LANService>,
     discoverable: bool,
 ) -> CoreResult<()> {
-    if let Some(ref discover) = *app_state.lan_provider.lock().await {
-        discover.set_discoverable(discoverable);
-        Ok(())
-    } else {
-        Err(core_error!("lan discover is empty"))
-    }
+    lan_service.set_discoverable(discoverable);
+    Ok(())
 }
 
 #[tauri::command]
-#[tracing::instrument(skip(app_state))]
-pub async fn lan_discoverable_get(app_state: tauri::State<'_, AppState>) -> CoreResult<bool> {
-    if let Some(ref discover) = *app_state.lan_provider.lock().await {
-        Ok(discover.discoverable())
-    } else {
-        Err(core_error!("lan discover is empty"))
-    }
+#[tracing::instrument(skip(lan_service))]
+pub async fn lan_discoverable_get(lan_service: tauri::State<'_, LANService>) -> CoreResult<bool> {
+    Ok(lan_service.discoverable())
 }

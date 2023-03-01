@@ -1,4 +1,4 @@
-use crate::component::client::portal::message::PortalError;
+use crate::service::portal::message::PortalError;
 use std::{
     io,
     string::{FromUtf16Error, FromUtf8Error},
@@ -60,12 +60,6 @@ pub enum CoreError {
     #[error("ring unspecified error")]
     RingUnspecifiedError(#[from] ring::error::Unspecified),
 
-    #[error("reqwest error ({0:?})")]
-    ReqwestError(#[from] reqwest::Error),
-
-    #[error("url parse error ({0:?})")]
-    UrlError(#[from] url::ParseError),
-
     #[error("serde json serialize/deserialize error ({0:?})")]
     SerdeJsonError(#[from] serde_json::Error),
 
@@ -109,36 +103,6 @@ pub enum CoreError {
 
     #[error("get network interfaces error ({0:?})")]
     NetworkInterfacesError(#[from] network_interface::Error),
-
-    #[error("portal server reply invalid message (expect: {0:?})")]
-    PortalInvalidReplyMessageError(String),
-
-    #[error("portal client read error ({0:?})")]
-    PortalQuicReadError(#[from] quinn::ReadError),
-
-    #[error("portal client write error ({0:?})")]
-    PortalQuicWriteError(#[from] quinn::WriteError),
-
-    #[error("portal client config error ({0:?})")]
-    PortalQuicConfigError(#[from] quinn::ConfigError),
-
-    #[error("portal client connect error ({0:?})")]
-    PortalQuicConnectError(#[from] quinn::ConnectError),
-
-    #[error("portal client stopped error ({0:?})")]
-    PortalQuicStoppedError(#[from] quinn::StoppedError),
-
-    #[error("portal client read exact error ({0:?})")]
-    PortalQuicReadExactError(#[from] quinn::ReadExactError),
-
-    #[error("portal client read to end error ({0:?})")]
-    PortalQuicReadToEndError(#[from] quinn::ReadToEndError),
-
-    #[error("portal client connection error ({0:?})")]
-    PortalQuicConnectionError(#[from] quinn::ConnectionError),
-
-    #[error("portal client send datagram error ({0:?})")]
-    PortalQuicSendDatagramError(#[from] quinn::SendDatagramError),
 
     #[error("portal call error ({0:?})")]
     PortalCallError(#[from] PortalError),

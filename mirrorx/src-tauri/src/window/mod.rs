@@ -2,7 +2,7 @@ mod desktop;
 
 use self::desktop::DesktopWindow;
 use mirrorx_core::{
-    api::endpoint::{client::EndPointClient, id::EndPointID},
+    service::endpoint::{EndPointClient, EndPointID},
     DesktopDecodeFrame,
 };
 use once_cell::sync::Lazy;

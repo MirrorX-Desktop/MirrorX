@@ -4,12 +4,11 @@ mod state;
 use self::render::Render;
 use egui_extras::RetainedImage;
 use mirrorx_core::{
-    api::endpoint::{
-        client::EndPointClient,
-        id::EndPointID,
-        message::{EndPointInput, EndPointMessage, InputEvent, KeyboardEvent, MouseEvent},
-    },
     component::screen::input::key::MouseKey,
+    service::endpoint::{
+        message::{EndPointInput, EndPointMessage, InputEvent, KeyboardEvent, MouseEvent},
+        EndPointClient, EndPointID,
+    },
     DesktopDecodeFrame,
 };
 use state::State;

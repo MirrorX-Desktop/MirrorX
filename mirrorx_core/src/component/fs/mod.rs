@@ -4,6 +4,7 @@ mod macos;
 #[cfg(target_os = "windows")]
 mod windows;
 
+pub mod provider;
 pub mod transfer;
 
 use crate::error::CoreResult;

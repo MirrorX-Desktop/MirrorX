@@ -1,11 +1,9 @@
 use super::resampler::{cpal_sample_format_to_av_sample_format, Resampler};
 use crate::{
-    component::{
-        client::endpoint::message::{AudioSampleFormat, EndPointAudioFrame},
-        frame::AudioEncodeFrame,
-    },
+    component::frame::AudioEncodeFrame,
     core_error,
     error::CoreResult,
+    service::endpoint::message::{AudioSampleFormat, EndPointAudioFrame},
 };
 use cpal::SampleFormat;
 use mirrorx_native::{ffmpeg::utils::samplefmt::AV_SAMPLE_FMT_FLT, opus::encoder::*};

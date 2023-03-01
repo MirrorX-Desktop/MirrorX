@@ -1,10 +1,6 @@
 import { invoke } from '@tauri-apps/api';
 import type { Directory, Domain, HistoryRecord, LanDiscoverNode } from '$lib/components/types';
 
-export function invoke_config_init(): Promise<void> {
-	return invoke('config_init');
-}
-
 export function invoke_config_domain_get(): Promise<Domain> {
 	return invoke('config_domain_get');
 }
@@ -61,10 +57,6 @@ export function invoke_config_history_get(
 	return invoke('config_history_get', { timeRange: time_range });
 }
 
-export function invoke_lan_init(force: boolean): Promise<void> {
-	return invoke('lan_init', { force });
-}
-
 export function invoke_lan_connect(addr: string, visitDesktop: boolean): Promise<void> {
 	return invoke('lan_connect', { addr, visitDesktop });
 }
@@ -85,16 +77,16 @@ export function invoke_lan_discoverable_set(discoverable: boolean): Promise<void
 	return invoke('lan_discoverable_set', { discoverable });
 }
 
-export function invoke_signaling_connect(force: boolean): Promise<void> {
-	return invoke('signaling_connect', { force });
+export function invoke_portal_switch(force: boolean): Promise<void> {
+	return invoke('portal_switch', { force });
 }
 
-export function invoke_signaling_visit(
+export function invoke_portal_visit(
 	remoteDeviceId: string,
 	password: string,
 	visitDesktop: boolean
 ): Promise<void> {
-	return invoke('signaling_visit', { remoteDeviceId, password, visitDesktop });
+	return invoke('portal_visit', { remoteDeviceId, password, visitDesktop });
 }
 
 export function invoke_file_manager_visit_remote(

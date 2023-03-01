@@ -3,20 +3,10 @@
     windows_subsystem = "windows"
 )]
 
-mod command;
-mod utility;
-mod window;
-
-use std::sync::Arc;
-
-use mirrorx_core::{
-    api::{config::LocalStorage, endpoint::client::EndPointClient, signaling::SignalingClient},
-    error::CoreResult,
-};
-use moka::sync::{Cache, CacheBuilder};
 #[cfg(target_os = "macos")]
 use tauri::Icon;
 
+use mirrorx::{command, ConfigService, FileTransferCache, LANService, PortalService};
 use tauri::{App, Manager, SystemTray, SystemTrayEvent, WindowEvent};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
@@ -26,7 +16,7 @@ static TRAY_ICON_MACOS: &[u8] = include_bytes!("../assets/icons/tray-macOS.png")
 #[tokio::main]
 #[tracing::instrument]
 async fn main() {
-    let app = match init_app() {
+    let app = match init_app().await {
         Ok(app) => app,
         Err(err) => {
             let message = format!("Init app failed, please relaunch app!\nError: {}", err);
@@ -59,16 +49,16 @@ async fn main() {
     });
 }
 
-fn init_app() -> anyhow::Result<App> {
+async fn init_app() -> anyhow::Result<App> {
     tauri::async_runtime::set(tokio::runtime::Handle::current());
 
-    let app = init_tauri()?;
-    init_component(&app)?;
+    let app = init_tauri().await?;
+    init_component(&app).await?;
 
     Ok(app)
 }
 
-fn init_tauri() -> anyhow::Result<App> {
+async fn init_tauri() -> anyhow::Result<App> {
     let tray = SystemTray::new();
     #[cfg(target_os = "macos")]
     let tray = tray
@@ -76,11 +66,6 @@ fn init_tauri() -> anyhow::Result<App> {
         .with_icon_as_template(true);
 
     let app = tauri::Builder::default()
-        .manage(mirrorx_core::component::client::portal::Client::default())
-        .manage(mirrorx_core::component::lan::LANProvider::new())
-        .manage(Arc::new(
-            CacheBuilder::<String, Arc<EndPointClient>, _>::new(64).build(),
-        ))
         .system_tray(tray)
         .enable_macos_default_menu(false)
         .on_system_tray_event(|app, event| {
@@ -162,7 +147,6 @@ fn init_tauri() -> anyhow::Result<App> {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
-            command::config::config_init,
             command::config::config_domain_get,
             command::config::config_domain_get_by_name,
             command::config::config_domain_get_id_and_names,
@@ -175,19 +159,18 @@ fn init_tauri() -> anyhow::Result<App> {
             command::config::config_theme_get,
             command::config::config_theme_set,
             command::config::config_history_get,
-            command::lan::lan_init,
             command::lan::lan_connect,
             command::lan::lan_nodes_list,
             command::lan::lan_nodes_search,
             command::lan::lan_discoverable_get,
             command::lan::lan_discoverable_set,
-            command::signaling::signaling_connect,
-            command::signaling::signaling_visit,
-            command::file_manager::file_manager_visit_remote,
-            command::file_manager::file_manager_visit_local,
-            command::file_manager::file_manager_send_file,
-            command::file_manager::file_manager_download_file,
-            command::file_manager::file_manager_query_transferred_bytes_count,
+            command::portal::portal_switch,
+            command::portal::portal_visit,
+            command::fs::file_manager_visit_remote,
+            command::fs::file_manager_visit_local,
+            command::fs::file_manager_send_file,
+            command::fs::file_manager_download_file,
+            command::fs::file_manager_query_transferred_bytes_count,
             command::utility::utility_generate_random_password,
             command::utility::utility_detect_os_platform,
             command::utility::utility_enum_graphics_cards,
@@ -198,8 +181,7 @@ fn init_tauri() -> anyhow::Result<App> {
     Ok(app)
 }
 
-fn init_component(app: &App) -> anyhow::Result<()> {
-    // init logger
+async fn init_component(app: &App) -> anyhow::Result<()> {
     let log_dir = app
         .path_resolver()
         .app_log_dir()
@@ -224,7 +206,6 @@ fn init_component(app: &App) -> anyhow::Result<()> {
 
     tracing::info!(path = ?log_dir, "initialize logger");
 
-    // init config db
     let config_dir = app
         .path_resolver()
         .app_config_dir()
@@ -232,9 +213,22 @@ fn init_component(app: &App) -> anyhow::Result<()> {
 
     std::fs::create_dir_all(&config_dir)?;
     let path = config_dir.join("mirrorx.db");
-    let storage = LocalStorage::new(&path)?;
-    app.manage(storage);
-    tracing::info!(?path, "initialize config db");
+
+    let config_service = ConfigService::new(&path)?;
+    app.manage(config_service.clone());
+    tracing::info!(?path, "initialize config service");
+
+    let portal_service = PortalService::new(config_service);
+    app.manage(portal_service);
+    tracing::info!("initialize portal service");
+
+    let lan_service = LANService::new().await?;
+    app.manage(lan_service);
+    tracing::info!("initialize lan service");
+
+    let file_transfer_cache = FileTransferCache::default();
+    app.manage(file_transfer_cache);
+    tracing::info!("initialize file transfer cache");
 
     Ok(())
 }

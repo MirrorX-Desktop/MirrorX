@@ -1,143 +1,88 @@
-use crate::command::AppState;
+use crate::{ConfigService, PortalService};
 use mirrorx_core::{
-    api::{
-        config::{
-            entity::{domain::Domain, history::Record, kv::Theme},
-            LocalStorage,
-        },
-        signaling::http_message::Response,
-    },
     core_error,
     error::CoreResult,
+    service::{
+        config::entity::{domain::Domain, history::Record, kv::Theme},
+        portal,
+    },
 };
 use serde::{Deserialize, Serialize};
-use std::net::SocketAddr;
-use tauri::{
-    http::Uri, AppHandle, CustomMenuItem, Manager, State, SystemTrayMenu, SystemTrayMenuItem,
-};
+use tauri::{AppHandle, CustomMenuItem, Manager, State, SystemTrayMenu, SystemTrayMenuItem};
 
 #[tauri::command]
-#[tracing::instrument(skip(app_handle, app_state))]
-pub async fn config_init(
-    app_handle: tauri::AppHandle,
-    app_state: tauri::State<'_, AppState>,
-) -> CoreResult<()> {
-    let config_dir = app_handle
-        .path_resolver()
-        .app_config_dir()
-        .ok_or(core_error!("read app dir from path resolver failed"))?;
-
-    std::fs::create_dir_all(config_dir.clone())?;
-    let storage_path = config_dir.join("mirrorx.db");
-
-    tracing::info!(path = ?storage_path, "read config");
-
-    let storage = LocalStorage::new(storage_path)?;
-    let domain_count = storage.domain().get_domain_count()?;
-
-    let mut storage_guard = app_state.storage.lock().await;
-    *storage_guard = Some(storage);
-    drop(storage_guard);
-
-    if domain_count == 0 {
-        config_domain_create(
-            app_state,
-            String::from("http://mirrorx.cloud:28000"),
-            true,
-            String::default(),
-        )
-        .await?;
-    }
-
-    Ok(())
+#[tracing::instrument(skip(config))]
+pub async fn config_domain_get(config: State<'_, ConfigService>) -> CoreResult<Domain> {
+    config.domain().get_primary_domain()
 }
 
 #[tauri::command]
-#[tracing::instrument(skip(app_state))]
-pub async fn config_domain_get(app_state: State<'_, AppState>) -> CoreResult<Domain> {
-    let Some(ref storage) = *app_state.storage.lock().await else {
-        return Err(core_error!("storage not initialize"));
-    };
-
-    storage.domain().get_primary_domain()
-}
-
-#[tauri::command]
-#[tracing::instrument(skip(app_state))]
+#[tracing::instrument(skip(config))]
 pub async fn config_domain_get_by_name(
-    app_state: State<'_, AppState>,
+    config: State<'_, ConfigService>,
     name: String,
 ) -> CoreResult<Domain> {
-    let Some(ref storage) = *app_state.storage.lock().await else {
-        return Err(core_error!("storage not initialize"));
-    };
-
-    storage.domain().get_domain_by_name(name)
+    config.domain().get_domain_by_name(name)
 }
 
 #[tauri::command]
-#[tracing::instrument(skip(app_state))]
+#[tracing::instrument(skip(config))]
 pub async fn config_domain_get_id_and_names(
-    app_state: State<'_, AppState>,
+    config: State<'_, ConfigService>,
 ) -> CoreResult<Vec<(i64, String)>> {
-    let Some(ref storage) = *app_state.storage.lock().await else {
-        return Err(core_error!("storage not initialize"));
-    };
-
-    storage.domain().get_domain_id_and_names()
+    config.domain().get_domain_id_and_names()
 }
 
 #[tauri::command]
-#[tracing::instrument(skip(app_state))]
+#[tracing::instrument(skip(app_handle, config))]
 pub async fn config_domain_create(
-    app_state: State<'_, AppState>,
+    app_handle: AppHandle,
+    config: State<'_, ConfigService>,
     addr: String,
+    port: u16,
     is_primary: bool,
     remarks: String,
 ) -> CoreResult<()> {
-    let uri = addr
-        .parse::<SocketAddr>()
-        .map(|addr| {
-            Uri::builder()
-                .scheme("http")
-                .authority(addr.to_string())
-                .path_and_query("")
-                .build()
-                .map_err(|_| core_error!("invalid addr format"))
-        })
-        .unwrap_or_else(|_| Uri::try_from(addr).map_err(|_| core_error!("invalid uri format")))?;
+    let addr = format!("{addr}:{port}");
+    let mut portal = portal::service::Service::new(config.inner().clone());
+    portal
+        .connect(0, addr.clone(), |_, _, _| -> bool { false })
+        .await?;
+    let reply = portal.get_server_config().await?;
 
-    let client = mirrorx_core::api::signaling::SignalingClient::new(uri.to_string())?;
-    let response = match client.identity().await? {
-        Response::Message(resp) => resp,
-        Response::Error(err) => return Err(core_error!("http error: {:?}", err)),
-    };
-
-    let Some(ref storage) = *app_state.storage.lock().await else {
-        return Err(core_error!("storage not initialize"));
-    };
-
-    let domain = response.domain;
-    let signaling_port = response.signaling_port;
-    let subscribe_port = response.subscribe_port;
-    if storage.domain().domain_exist(&domain)? {
+    let name = reply.name;
+    if config.domain().domain_exist(&name)? {
         return Err(core_error!("domain is exists"));
     }
 
-    let finger_print = mirrorx_core::utility::rand::generate_device_finger_print();
-    let response = match client.domain_register(0, &finger_print).await? {
-        Response::Message(resp) => resp,
-        Response::Error(err) => return Err(core_error!("http error: {:?}", err)),
-    };
+    let server_require_version = semver::Version::parse(&reply.min_client_version)
+        .map_err(|_| core_error!("parse portal server version requirement failed"))?;
 
-    storage.domain().add_domain(Domain {
+    let client_version = app_handle
+        .config()
+        .package
+        .version
+        .clone()
+        .unwrap_or(String::from("0.0.1"));
+
+    let client_version = semver::Version::parse(&client_version)
+        .map_err(|_| core_error!("parse client version failed"))?;
+
+    if client_version < server_require_version {
+        return Err(core_error!(
+            "your clint version is lower than portal server requirement"
+        ));
+    }
+
+    let finger_print = mirrorx_core::utility::rand::generate_device_finger_print();
+    let reply = portal.client_register(0, &finger_print).await?;
+
+    config.domain().add_domain(Domain {
         id: 0,
-        name: domain,
-        addr: uri.to_string(),
-        signaling_port,
-        subscribe_port,
+        name,
+        addr,
         is_primary,
-        device_id: response.device_id,
+        device_id: reply.device_id,
         password: mirrorx_core::utility::rand::generate_random_password(),
         finger_print,
         remarks,
@@ -147,15 +92,11 @@ pub async fn config_domain_create(
 }
 
 #[tauri::command]
-#[tracing::instrument(skip(app_state))]
-pub async fn config_domain_delete(id: i64, app_state: State<'_, AppState>) -> CoreResult<()> {
-    let Some(ref storage) = *app_state.storage.lock().await else {
-        return Err(core_error!("storage not initialize"));
-    };
-
-    let domain = storage.domain().get_domain_by_id(id)?;
-    storage.domain().delete_domain(id)?;
-    storage.history().delete_domain_related(&domain.name)?;
+#[tracing::instrument(skip(config))]
+pub async fn config_domain_delete(config: State<'_, ConfigService>, id: i64) -> CoreResult<()> {
+    let domain = config.domain().get_domain_by_id(id)?;
+    config.domain().delete_domain(id)?;
+    config.history().delete_domain_related(&domain.name)?;
 
     Ok(())
 }
@@ -167,17 +108,13 @@ pub struct ConfigDomainListResponse {
 }
 
 #[tauri::command]
-#[tracing::instrument(skip(app_state))]
+#[tracing::instrument(skip(config))]
 pub async fn config_domain_list(
+    config: State<'_, ConfigService>,
     page: u32,
     limit: u32,
-    app_state: tauri::State<'_, AppState>,
 ) -> CoreResult<ConfigDomainListResponse> {
-    let Some(ref storage) = *app_state.storage.lock().await else {
-        return Err(core_error!("storage not initialize"));
-    };
-
-    let (total, domains) = storage.domain().get_domains(page, limit)?;
+    let (total, domains) = config.domain().get_domains(page, limit)?;
 
     Ok(ConfigDomainListResponse { total, domains })
 }
@@ -197,31 +134,26 @@ pub enum ConfigDomainUpdateType {
 }
 
 #[tauri::command]
-#[tracing::instrument(skip(app_state))]
+#[tracing::instrument(skip(portal, config))]
 pub async fn config_domain_update(
-    app_state: tauri::State<'_, AppState>,
+    portal: State<'_, PortalService>,
+    config: State<'_, ConfigService>,
     req: ConfigDomainUpdateRequest,
 ) -> CoreResult<()> {
-    let Some(ref storage) = *app_state.storage.lock().await else {
-        return Err(core_error!("storage not initialize"));
-    };
-
     match req.update_type {
         ConfigDomainUpdateType::SetPrimary => {
-            let current_signaling = app_state.signaling_client.lock().await;
-            if let Some((domain_id, _)) = *current_signaling {
-                if domain_id == req.id {
-                    return Ok(());
-                }
+            let client = portal.0.lock().await;
+            if client.domain_id() == req.id {
+                return Ok(());
             }
 
-            storage.domain().set_domain_is_primary(req.id)?;
+            config.domain().set_domain_is_primary(req.id)?;
         }
-        ConfigDomainUpdateType::Password(new_password) => storage
+        ConfigDomainUpdateType::Password(new_password) => config
             .domain()
             .set_domain_device_password(req.id, &new_password)?,
         ConfigDomainUpdateType::Remarks(new_remarks) => {
-            storage.domain().set_domain_remarks(req.id, &new_remarks)?
+            config.domain().set_domain_remarks(req.id, &new_remarks)?
         }
     }
 
@@ -229,13 +161,9 @@ pub async fn config_domain_update(
 }
 
 #[tauri::command]
-#[tracing::instrument(skip(app_state))]
-pub async fn config_language_get(app_state: State<'_, AppState>) -> CoreResult<String> {
-    let Some(ref storage) = *app_state.storage.lock().await else {
-        return Err(core_error!("storage not initialize"));
-    };
-
-    Ok(storage.kv().get_language()?.unwrap_or_default())
+#[tracing::instrument(skip(config))]
+pub async fn config_language_get(config: State<'_, ConfigService>) -> CoreResult<String> {
+    Ok(config.kv().get_language()?.unwrap_or_default())
 }
 
 #[derive(Serialize, Clone)]
@@ -244,17 +172,13 @@ struct UpdateLanguageEvent {
 }
 
 #[tauri::command]
-#[tracing::instrument(skip(app_state, app_handle))]
+#[tracing::instrument(skip(app_handle, config))]
 pub async fn config_language_set(
-    app_state: State<'_, AppState>,
     app_handle: AppHandle,
+    config: State<'_, ConfigService>,
     language: String,
 ) -> CoreResult<()> {
-    let Some(ref storage) = *app_state.storage.lock().await else {
-        return Err(core_error!("storage not initialize"));
-    };
-
-    storage.kv().set_language(&language)?;
+    config.kv().set_language(&language)?;
 
     app_handle
         .emit_all(
@@ -330,39 +254,24 @@ pub async fn config_language_set(
 }
 
 #[tauri::command]
-#[tracing::instrument(skip(app_state))]
-pub async fn config_theme_get(app_state: State<'_, AppState>) -> CoreResult<Option<Theme>> {
-    let Some(ref storage) = *app_state.storage.lock().await else {
-        return Err(core_error!("storage not initialize"));
-    };
-
-    storage.kv().get_theme()
+#[tracing::instrument(skip(config))]
+pub async fn config_theme_get(config: State<'_, ConfigService>) -> CoreResult<Option<Theme>> {
+    config.kv().get_theme()
 }
 
 #[tauri::command]
-#[tracing::instrument(skip(app_state))]
-pub async fn config_theme_set(app_state: State<'_, AppState>, theme: Theme) -> CoreResult<()> {
-    let Some(ref storage) = *app_state.storage.lock().await else {
-        return Err(core_error!("storage not initialize"));
-    };
-
-    storage.kv().set_theme(theme)?;
-
-    Ok(())
+#[tracing::instrument(skip(config))]
+pub async fn config_theme_set(config: State<'_, ConfigService>, theme: Theme) -> CoreResult<()> {
+    config.kv().set_theme(theme)
 }
 
 #[tauri::command]
-#[tracing::instrument(skip(app_state))]
+#[tracing::instrument(skip(config))]
 pub async fn config_history_get(
-    app_state: State<'_, AppState>,
+    config: State<'_, ConfigService>,
     time_range: Option<(i64, i64)>,
 ) -> CoreResult<Vec<Record>> {
-    let Some(ref storage) = *app_state.storage.lock().await else {
-        return Err(core_error!("storage not initialize"));
-    };
-
     tracing::info!(?time_range, "query");
-    let records = storage.history().query(time_range)?;
-
+    let records = config.history().query(time_range)?;
     Ok(records)
 }

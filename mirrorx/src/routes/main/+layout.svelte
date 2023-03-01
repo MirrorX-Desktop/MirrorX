@@ -90,9 +90,6 @@
 				await commands.invoke_utility_hide_macos_zoom_button();
 			}
 
-			await commands.invoke_config_init();
-			console.log('finish init config');
-
 			let theme = await commands.invoke_config_theme_get();
 			if (theme && theme != 'auto') {
 				document.getElementsByTagName('html').item(0)?.setAttribute('data-theme', theme);
@@ -114,14 +111,10 @@
 			await commands.invoke_config_language_set(language);
 			console.log('finish set locale');
 
-			await commands.invoke_lan_init(false);
-			console.log('finish init lan discover');
+			await commands.invoke_portal_switch(false);
 
 			current_domain.set(await commands.invoke_config_domain_get());
 			console.log(`current domain: ${get(current_domain)}`);
-
-			await commands.invoke_signaling_connect(false);
-			console.log('finish init signaling');
 
 			console.log('finish init current domain');
 		} catch (error: any) {

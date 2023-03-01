@@ -3,7 +3,7 @@
 	import {
 		invoke_config_domain_get,
 		invoke_config_domain_update,
-		invoke_signaling_connect
+		invoke_portal_switch
 	} from '$lib/components/command';
 	import { onDestroy, onMount } from 'svelte';
 	import LL from '$lib/i18n/i18n-svelte';
@@ -17,11 +17,14 @@
 	let domain_name: string = '';
 
 	onMount(async () => {
-		unlisten_fn = await listen<{ domain_id: number; domain_name: string }>('/dialog/domain_switch', (event) => {
-			domain_id = event.payload.domain_id;
-			domain_name = event.payload.domain_name;
-			show = true;
-		});
+		unlisten_fn = await listen<{ domain_id: number; domain_name: string }>(
+			'/dialog/domain_switch',
+			(event) => {
+				domain_id = event.payload.domain_id;
+				domain_name = event.payload.domain_name;
+				show = true;
+			}
+		);
 	});
 
 	onDestroy(() => {
@@ -33,7 +36,7 @@
 	const yes = async () => {
 		try {
 			await invoke_config_domain_update(domain_id, 'set_primary');
-			await invoke_signaling_connect(true);
+			await invoke_portal_switch(true);
 			let new_primary_domain = await invoke_config_domain_get();
 			current_domain.set(new_primary_domain);
 			await emit('update_domains');

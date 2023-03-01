@@ -4,8 +4,8 @@
 		invoke_config_domain_get_by_name,
 		invoke_config_domain_get,
 		invoke_config_domain_update,
-		invoke_signaling_connect,
-		invoke_signaling_visit
+		invoke_portal_visit,
+		invoke_portal_switch
 	} from '$lib/components/command';
 	import { onDestroy, onMount } from 'svelte';
 	import LL from '$lib/i18n/i18n-svelte';
@@ -29,12 +29,15 @@
 	let is_connecting: boolean = false;
 
 	onMount(async () => {
-		unlisten_fn = await listen<{ domain_name: string; device_id: number }>('/dialog/history_connect', async (event) => {
-			domain_name = event.payload.domain_name;
-			domain_id = (await invoke_config_domain_get_by_name(domain_name)).id;
-			remote_device_id = formatDeviceID(event.payload.device_id);
-			show = true;
-		});
+		unlisten_fn = await listen<{ domain_name: string; device_id: number }>(
+			'/dialog/history_connect',
+			async (event) => {
+				domain_name = event.payload.domain_name;
+				domain_id = (await invoke_config_domain_get_by_name(domain_name)).id;
+				remote_device_id = formatDeviceID(event.payload.device_id);
+				show = true;
+			}
+		);
 	});
 
 	onDestroy(() => {
@@ -54,12 +57,12 @@
 			let primary_domain = get(current_domain);
 			if (primary_domain?.name != domain_name) {
 				await invoke_config_domain_update(domain_id, 'set_primary');
-				await invoke_signaling_connect(true);
+				await invoke_portal_switch(true);
 				let new_primary_domain = await invoke_config_domain_get();
 				current_domain.set(new_primary_domain);
 				await emit('update_domains');
 			}
-			await invoke_signaling_visit(remote_device_id, input_password, visit_desktop);
+			await invoke_portal_visit(remote_device_id, input_password, visit_desktop);
 		} catch (error: any) {
 			let err: string = error.toString();
 			if (err.includes('Internal')) {

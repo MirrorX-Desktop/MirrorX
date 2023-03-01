@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
 	import { emit, listen, type UnlistenFn } from '@tauri-apps/api/event';
-	import { invoke_lan_connect, invoke_signaling_visit } from '$lib/components/command';
+	import { invoke_lan_connect } from '$lib/components/command';
 	import { onDestroy, onMount } from 'svelte';
 	import Fa from 'svelte-fa';
 	import { emitNotification } from '$lib/components/notification';
