@@ -168,7 +168,7 @@ impl Service {
         visit_desktop: bool,
     ) -> CoreResult<(
         SocketAddr,
-        String,
+        Vec<u8>,
         OpeningKey<NonceValue>,
         SealingKey<NonceValue>,
     )> {

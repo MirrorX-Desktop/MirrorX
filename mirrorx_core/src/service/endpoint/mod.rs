@@ -38,6 +38,7 @@ pub async fn create_video_and_audio_endpoint_client(
     let video_frame_tx = serve_video_decode(endpoint_id, render_frame_tx);
     serve_audio_decode(endpoint_id, audio_frame_rx);
 
+    tracing::info!("begin client");
     let client = EndPointClient::new_active_endpoint(
         endpoint_id,
         key_pair,
@@ -47,7 +48,7 @@ pub async fn create_video_and_audio_endpoint_client(
         visit_credentials,
     )
     .await?;
-
+    tracing::info!("end client");
     Ok((client, render_frame_rx))
 }
 

@@ -93,7 +93,7 @@ pub fn serve_audio_decode(id: EndPointID, mut decode_rx: Receiver<EndPointAudioF
                         let _ = stream.pause();
                     }
 
-                    tracing::error!("audio decode process exit");
+                    tracing::info!("audio decode process exit");
                     return;
                 }
             }

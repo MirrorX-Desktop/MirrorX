@@ -29,7 +29,7 @@ pub async fn handle_passive_visit_request(
     let mut reply = VisitPassiveReply {
         active_device_id: req.active_visit_req.active_device_id,
         passive_device_id: req.active_visit_req.passive_device_id,
-        visit_credentials: visit_credentials.to_string(),
+        visit_credentials: visit_credentials.as_bytes().to_vec(),
         access_result: Err(PortalError::Internal),
     };
 

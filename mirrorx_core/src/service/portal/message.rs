@@ -100,6 +100,6 @@ pub struct ActiveVisitReply {
 pub struct VisitPassiveReply {
     pub active_device_id: i64,
     pub passive_device_id: i64,
-    pub visit_credentials: String,
+    pub visit_credentials: Vec<u8>,
     pub access_result: Result<Vec<u8>, PortalError>,
 }

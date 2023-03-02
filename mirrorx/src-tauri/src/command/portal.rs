@@ -135,7 +135,7 @@ pub async fn portal_visit(
             endpoint_id,
             Some((opening_key, sealing_key)),
             EndPointStream::ActiveTCP(endpoint_addr),
-            Some(visit_credentials.into_bytes()),
+            Some(visit_credentials),
         )
         .await?;
 
@@ -168,7 +168,7 @@ pub async fn portal_visit(
             endpoint_id,
             Some((opening_key, sealing_key)),
             EndPointStream::ActiveTCP(endpoint_addr),
-            Some(visit_credentials.into_bytes()),
+            Some(visit_credentials),
         )
         .await?;
 
