@@ -1,4 +1,4 @@
-use mirrorx_core::service::endpoint::EndPointClient;
+use mirrorx_core::service::endpoint;
 use moka::future::{Cache, CacheBuilder};
 use std::sync::Arc;
 use tauri::async_runtime::Mutex;
@@ -20,7 +20,7 @@ impl PortalService {
     }
 }
 
-pub struct FileTransferCache(Cache<String, Arc<EndPointClient>>);
+pub struct FileTransferCache(Cache<String, Arc<endpoint::Service>>);
 
 impl Default for FileTransferCache {
     fn default() -> Self {

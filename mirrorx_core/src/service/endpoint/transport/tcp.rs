@@ -1,10 +1,9 @@
-use super::RECV_MESSAGE_TIMEOUT;
 use crate::{
     core_error,
     error::{CoreError, CoreResult},
     service::endpoint::{
         id::EndPointID,
-        message::{EndPointHandshakeRequest, EndPointHandshakeResponse},
+        message::{EndPointHandshakeRequest, EndPointHandshakeResponse, EndPointMessage},
     },
     utility::{
         bincode::{bincode_deserialize, bincode_serialize},
@@ -17,7 +16,7 @@ use futures::{
     SinkExt, StreamExt,
 };
 use ring::aead::{OpeningKey, SealingKey};
-use std::ops::Deref;
+use std::{ops::Deref, time::Duration};
 use tokio::{
     net::TcpStream,
     sync::mpsc::{Receiver, Sender},
@@ -30,7 +29,7 @@ pub async fn serve_tcp(
     sealing_key: Option<SealingKey<NonceValue>>,
     opening_key: Option<OpeningKey<NonceValue>>,
     mut visit_credentials: Option<Vec<u8>>,
-) -> CoreResult<(Sender<Vec<u8>>, Receiver<Bytes>)> {
+) -> CoreResult<(Sender<Vec<u8>>, Receiver<EndPointMessage>)> {
     let mut framed = Framed::new(
         stream,
         LengthDelimitedCodec::builder()
@@ -43,7 +42,7 @@ pub async fn serve_tcp(
         serve_handshake(&mut framed, visit_credentials, endpoint_id).await?;
     }
 
-    let (tx, rx) = tokio::sync::mpsc::channel(32);
+    let (tx, rx) = tokio::sync::mpsc::channel(1);
     let (sink, stream) = framed.split();
     serve_tcp_write(endpoint_id, rx, sealing_key, sink);
     let rx = serve_tcp_read(endpoint_id, opening_key, stream)?;
@@ -69,7 +68,7 @@ async fn serve_handshake(
         .await
         .map_err(|_| CoreError::OutgoingMessageChannelDisconnect)?;
 
-    let handshake_response_buffer = tokio::time::timeout(RECV_MESSAGE_TIMEOUT, stream.next())
+    let handshake_response_buffer = tokio::time::timeout(Duration::from_secs(30), stream.next())
         .await
         .map_err(|_| CoreError::Timeout)?
         .ok_or(CoreError::OutgoingMessageChannelDisconnect)??;
@@ -87,7 +86,7 @@ fn serve_tcp_read(
     endpoint_id: EndPointID,
     mut opening_key: Option<OpeningKey<NonceValue>>,
     mut stream: SplitStream<Framed<TcpStream, LengthDelimitedCodec>>,
-) -> CoreResult<tokio::sync::mpsc::Receiver<Bytes>> {
+) -> CoreResult<tokio::sync::mpsc::Receiver<EndPointMessage>> {
     let (tx, rx) = tokio::sync::mpsc::channel(1);
 
     tokio::spawn(async move {
@@ -118,9 +117,15 @@ fn serve_tcp_read(
                 buffer.len()
             };
 
-            buffer.truncate(buffer_len);
+            let message: EndPointMessage = match bincode_deserialize(&buffer[0..buffer_len]) {
+                Ok(message) => message,
+                Err(err) => {
+                    tracing::error!(?err, "deserialize endpoint message failed");
+                    continue;
+                }
+            };
 
-            if tx.send(buffer.freeze()).await.is_err() {
+            if tx.send(message).await.is_err() {
                 tracing::error!(?endpoint_id, "output channel closed");
                 break;
             }

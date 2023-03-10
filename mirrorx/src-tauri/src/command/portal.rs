@@ -3,14 +3,10 @@ use mirrorx_core::{
     core_error,
     error::CoreResult,
     service::{
-        endpoint::{
-            create_endpoint_client, create_video_and_audio_endpoint_client, EndPointID,
-            EndPointStream,
-        },
+        endpoint::{self, EndPointID, EndPointStreamType},
         portal,
     },
 };
-use std::sync::Arc;
 use tauri::{AppHandle, State};
 use tauri_egui::EguiPluginHandle;
 
@@ -131,10 +127,10 @@ pub async fn portal_visit(
     };
 
     if visit_desktop {
-        let (client, render_frame_rx) = create_video_and_audio_endpoint_client(
+        let endpoint_service = endpoint::Service::new(
             endpoint_id,
+            EndPointStreamType::ActiveTCP(endpoint_addr),
             Some((opening_key, sealing_key)),
-            EndPointStream::ActiveTCP(endpoint_addr),
             Some(visit_credentials),
         )
         .await?;
@@ -147,8 +143,7 @@ pub async fn portal_visit(
                         cc,
                         gl_context.clone(),
                         endpoint_id,
-                        Arc::new(client),
-                        render_frame_rx,
+                        endpoint_service,
                     ))
                 } else {
                     panic!("get gl context failed");
@@ -164,17 +159,17 @@ pub async fn portal_visit(
             return Err(core_error!("create remote desktop window failed"));
         }
     } else {
-        let client = create_endpoint_client(
+        let endpoint_service = endpoint::Service::new(
             endpoint_id,
+            EndPointStreamType::ActiveTCP(endpoint_addr),
             Some((opening_key, sealing_key)),
-            EndPointStream::ActiveTCP(endpoint_addr),
             Some(visit_credentials),
         )
         .await?;
 
         file_transfer_cache
             .0
-            .insert(remote_device_id.clone(), Arc::new(client))
+            .insert(remote_device_id.clone(), endpoint_service)
             .await;
 
         let (tx, rx) = tokio::sync::oneshot::channel();

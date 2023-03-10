@@ -1,13 +1,13 @@
 use crate::{
     error::CoreResult,
     service::endpoint::{
+        self,
         message::{EndPointFileTransferBlock, EndPointFileTransferError, EndPointMessage},
-        ClientSendStream,
     },
 };
 use moka::future::{Cache, CacheBuilder};
 use once_cell::sync::Lazy;
-use std::{path::Path, time::Duration};
+use std::{path::Path, sync::Arc, time::Duration};
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt, BufReader, BufWriter},
     sync::mpsc::{UnboundedReceiver, UnboundedSender},
@@ -42,10 +42,7 @@ pub async fn delete_file_append_session(id: &str) {
     APPEND_FILES.invalidate(id).await
 }
 
-pub async fn append_file_block(
-    client_send_stream: ClientSendStream,
-    block: EndPointFileTransferBlock,
-) {
+pub async fn append_file_block(service: Arc<endpoint::Service>, block: EndPointFileTransferBlock) {
     if let Some(tx) = APPEND_FILES.get(&block.id) {
         if tx.send(block.data).is_err() {
             tracing::error!(id = block.id, "append file block channel failed");
@@ -53,7 +50,7 @@ pub async fn append_file_block(
     } else {
         let id = block.id;
         tracing::error!(?id, "file session not exists");
-        if let Err(err) = client_send_stream
+        if let Err(err) = service
             .send(&EndPointMessage::FileTransferError(
                 EndPointFileTransferError { id: id.clone() },
             ))
@@ -104,7 +101,7 @@ async fn save_file_from_remote(
 
 pub async fn send_file_to_remote(
     id: String,
-    client_send_stream: ClientSendStream,
+    service: Arc<endpoint::Service>,
     path: &Path,
 ) -> CoreResult<()> {
     let file = tokio::fs::File::open(path).await?;
@@ -141,7 +138,7 @@ pub async fn send_file_to_remote(
                 }
             };
 
-            if let Err(err) = client_send_stream.send(&message).await {
+            if let Err(err) = service.send(&message).await {
                 tracing::error!(?err, "send file message failed");
                 break;
             }

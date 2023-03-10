@@ -4,5 +4,5 @@ pub mod fs_download_file;
 pub mod fs_send_file;
 pub mod fs_visit_directory;
 pub mod negotiate;
-pub mod switch_display;
+pub mod switch_screen;
 pub mod video_frame;

@@ -25,7 +25,7 @@ pub enum EndPointMessage {
     CallReply(u16, #[serde(with = "serde_bytes")] Vec<u8>), // Vec -> Result<T, String>
     VideoFrame(EndPointVideoFrame),
     AudioFrame(EndPointAudioFrame),
-    InputCommand(EndPointInput),
+    InputCommand(EndPointInputEvent),
     FileTransferBlock(EndPointFileTransferBlock),
     FileTransferError(EndPointFileTransferError),
 }
@@ -177,7 +177,7 @@ pub enum InputEvent {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct EndPointInput {
+pub struct EndPointInputEvent {
     pub events: Vec<InputEvent>,
 }
 

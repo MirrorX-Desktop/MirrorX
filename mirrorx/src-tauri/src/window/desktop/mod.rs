@@ -6,8 +6,9 @@ use egui_extras::RetainedImage;
 use mirrorx_core::{
     component::screen::input::key::MouseKey,
     service::endpoint::{
-        message::{EndPointInput, EndPointMessage, InputEvent, KeyboardEvent, MouseEvent},
-        EndPointClient, EndPointID,
+        self,
+        message::{EndPointInputEvent, EndPointMessage, InputEvent, KeyboardEvent, MouseEvent},
+        EndPointID,
     },
     DesktopDecodeFrame,
 };
@@ -45,12 +46,11 @@ impl DesktopWindow {
     pub fn new(
         endpoint_id: EndPointID,
         gl_context: Arc<Context>,
-        client: Arc<EndPointClient>,
-        render_frame_rx: tokio::sync::mpsc::Receiver<DesktopDecodeFrame>,
+        endpoint_service: Arc<endpoint::Service>,
     ) -> Self {
         let frame_slot = Arc::new(Mutex::new(DesktopDecodeFrame::default()));
 
-        let state = State::new(endpoint_id, client, render_frame_rx, frame_slot.clone());
+        let state = State::new(endpoint_id, endpoint_service, todo!(), frame_slot.clone());
 
         let desktop_render = Arc::new(RwLock::new(
             Render::new(gl_context.as_ref()).expect("create desktop render failed"),
@@ -379,7 +379,7 @@ impl DesktopWindow {
         if let Err(err) = self
             .state
             .endpoint_client()
-            .try_send(&EndPointMessage::InputCommand(EndPointInput {
+            .try_send(&EndPointMessage::InputCommand(EndPointInputEvent {
                 events: input_commands,
             }))
         {

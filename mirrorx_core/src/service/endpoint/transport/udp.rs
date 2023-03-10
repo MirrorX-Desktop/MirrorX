@@ -1,10 +1,9 @@
-use super::RECV_MESSAGE_TIMEOUT;
 use crate::{
     core_error,
     error::{CoreError, CoreResult},
     service::endpoint::{
         id::EndPointID,
-        message::{EndPointHandshakeRequest, EndPointHandshakeResponse},
+        message::{EndPointHandshakeRequest, EndPointHandshakeResponse, EndPointMessage},
     },
     utility::{
         bincode::{bincode_deserialize, bincode_serialize},
@@ -17,7 +16,7 @@ use futures::{
     SinkExt, StreamExt,
 };
 use ring::aead::{OpeningKey, SealingKey};
-use std::{net::SocketAddr, ops::Deref};
+use std::{net::SocketAddr, ops::Deref, time::Duration};
 use tokio::{net::UdpSocket, sync::mpsc::Sender};
 use tokio_util::{codec::LengthDelimitedCodec, udp::UdpFramed};
 
@@ -27,7 +26,10 @@ pub async fn serve_udp(
     sealing_key: Option<SealingKey<NonceValue>>,
     opening_key: Option<OpeningKey<NonceValue>>,
     mut visit_credentials: Option<Vec<u8>>,
-) -> CoreResult<(Sender<Vec<u8>>, tokio::sync::mpsc::Receiver<Bytes>)> {
+) -> CoreResult<(
+    Sender<Vec<u8>>,
+    tokio::sync::mpsc::Receiver<EndPointMessage>,
+)> {
     let remote_addr = socket.peer_addr()?;
     let mut framed = UdpFramed::new(
         socket,
@@ -41,7 +43,7 @@ pub async fn serve_udp(
         serve_udp_handshake(remote_addr, &mut framed, visit_credentials, endpoint_id).await?;
     }
 
-    let (tx, rx) = tokio::sync::mpsc::channel(32);
+    let (tx, rx) = tokio::sync::mpsc::channel(1);
     let (sink, stream) = framed.split();
     serve_udp_write(remote_addr, rx, sealing_key, sink);
     let rx = serve_udp_read(remote_addr, opening_key, stream)?;
@@ -70,7 +72,7 @@ async fn serve_udp_handshake(
 
     // should we try receive 3 or more times because udp is connect less?
     let (handshake_response_buffer, response_remote_addr) =
-        tokio::time::timeout(RECV_MESSAGE_TIMEOUT, stream.next())
+        tokio::time::timeout(Duration::from_secs(30), stream.next())
             .await
             .map_err(|_| CoreError::Timeout)?
             .ok_or(CoreError::OutgoingMessageChannelDisconnect)??;
@@ -92,7 +94,7 @@ fn serve_udp_read(
     remote_addr: SocketAddr,
     mut opening_key: Option<OpeningKey<NonceValue>>,
     mut stream: SplitStream<UdpFramed<LengthDelimitedCodec>>,
-) -> CoreResult<tokio::sync::mpsc::Receiver<Bytes>> {
+) -> CoreResult<tokio::sync::mpsc::Receiver<EndPointMessage>> {
     let (tx, rx) = tokio::sync::mpsc::channel(1);
 
     tokio::spawn(async move {
@@ -117,16 +119,27 @@ fn serve_udp_read(
                 }
             };
 
-            if let Some(ref mut opening_key) = opening_key {
-                if let Err(err) =
-                    opening_key.open_in_place(ring::aead::Aad::empty(), buffer.as_mut())
-                {
-                    tracing::error!(?err, "open endpoint message packet failed");
-                    break;
+            let buffer_len = if let Some(ref mut opening_key) = opening_key {
+                match opening_key.open_in_place(ring::aead::Aad::empty(), buffer.as_mut()) {
+                    Ok(output) => output.len(),
+                    Err(err) => {
+                        tracing::error!(?err, "open endpoint message packet failed");
+                        break;
+                    }
                 }
-            }
+            } else {
+                buffer.len()
+            };
 
-            if tx.send(buffer.freeze()).await.is_err() {
+            let message: EndPointMessage = match bincode_deserialize(&buffer[0..buffer_len]) {
+                Ok(message) => message,
+                Err(err) => {
+                    tracing::error!(?err, "deserialize endpoint message failed");
+                    continue;
+                }
+            };
+
+            if tx.send(message).await.is_err() {
                 tracing::error!(?remote_addr, "output channel closed");
                 break;
             }

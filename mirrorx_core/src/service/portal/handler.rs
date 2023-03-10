@@ -5,7 +5,7 @@ use super::message::{
 use crate::{
     service::{
         config,
-        endpoint::{create_endpoint_client, EndPointID},
+        endpoint::{self, EndPointID, EndPointStreamType},
     },
     utility::{
         bincode::{bincode_deserialize, bincode_serialize},
@@ -48,13 +48,13 @@ pub async fn handle_passive_visit_request(
         {
             Ok((secret, sealing_key, opening_key)) => {
                 tokio::spawn(async move {
-                    if let Err(err) = create_endpoint_client(
+                    if let Err(err) = endpoint::Service::new(
                         EndPointID::DeviceID {
                             local_device_id: req.active_visit_req.passive_device_id,
                             remote_device_id: req.active_visit_req.active_device_id,
                         },
+                        EndPointStreamType::ActiveTCP(req.relay_addr),
                         Some((opening_key, sealing_key)),
-                        crate::service::endpoint::EndPointStream::ActiveTCP(req.relay_addr),
                         Some(visit_credentials.as_bytes().to_vec()),
                     )
                     .await

@@ -174,12 +174,12 @@ pub async fn file_manager_send_file(
 
     let id = uuid::Uuid::new_v4().to_string();
 
-    let client = file_transfer_cache
+    let endpoint_service = file_transfer_cache
         .0
         .get(&remote_device_id)
         .ok_or_else(|| core_error!("remote file manager not exist"))?;
 
-    let _: EndPointSendFileReply = client
+    let _: EndPointSendFileReply = endpoint_service
         .call(EndPointCallRequest::SendFileRequest(
             EndPointSendFileRequest {
                 id: id.clone(),
@@ -190,9 +190,7 @@ pub async fn file_manager_send_file(
         ))
         .await?;
 
-    let tx = client.new_send_stream();
-
-    send_file_to_remote(id.clone(), tx, &local_path).await?;
+    send_file_to_remote(id.clone(), endpoint_service, &local_path).await?;
 
     Ok((id, size))
 }

@@ -6,7 +6,7 @@ pub enum EndPointID {
         local_device_id: i64,
         remote_device_id: i64,
     },
-    LANID {
+    IP {
         local_ip: IpAddr,
         remote_ip: IpAddr,
     },
@@ -21,14 +21,14 @@ impl Display for EndPointID {
             } => {
                 write!(
                     f,
-                    "DeviceID(local:{local_device_id}, remote:{remote_device_id})"
+                    "DeviceID (local:{local_device_id}, remote:{remote_device_id})"
                 )
             }
-            EndPointID::LANID {
+            EndPointID::IP {
                 local_ip,
                 remote_ip,
             } => {
-                write!(f, "LANID(local:{local_ip}, remote:{remote_ip})")
+                write!(f, "IP (local:{local_ip}, remote:{remote_ip})")
             }
         }
     }

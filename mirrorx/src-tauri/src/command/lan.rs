@@ -3,10 +3,7 @@ use mirrorx_core::{
     core_error,
     error::CoreResult,
     service::{
-        endpoint::{
-            create_endpoint_client, create_video_and_audio_endpoint_client, EndPointID,
-            EndPointStream,
-        },
+        endpoint::{self, EndPointID, EndPointStreamType},
         lan::service::Node,
     },
 };
@@ -44,16 +41,16 @@ pub async fn lan_connect(
 
     let remote_addr = SocketAddr::new(remote_ip, 48001);
 
-    let endpoint_id = EndPointID::LANID {
+    let endpoint_id = EndPointID::IP {
         local_ip: IpAddr::V4(Ipv4Addr::UNSPECIFIED),
         remote_ip,
     };
 
     if visit_desktop {
-        let (client, render_frame_rx) = create_video_and_audio_endpoint_client(
+        let endpoint_service = endpoint::Service::new(
             endpoint_id,
+            EndPointStreamType::ActiveTCP(remote_addr),
             None,
-            EndPointStream::ActiveTCP(remote_addr),
             None,
         )
         .await?;
@@ -66,8 +63,7 @@ pub async fn lan_connect(
                         cc,
                         gl_context.clone(),
                         endpoint_id,
-                        Arc::new(client),
-                        render_frame_rx,
+                        endpoint_service,
                     ))
                 } else {
                     panic!("get gl context failed");
@@ -83,17 +79,17 @@ pub async fn lan_connect(
             return Err(core_error!("create remote desktop window failed"));
         }
     } else {
-        let client = create_endpoint_client(
+        let endpoint_service = endpoint::Service::new(
             endpoint_id,
+            EndPointStreamType::ActiveTCP(remote_addr),
             None,
-            EndPointStream::ActiveTCP(remote_addr),
             None,
         )
         .await?;
 
         file_transfer_cache
             .0
-            .insert(remote_ip.to_string(), Arc::new(client))
+            .insert(remote_ip.to_string(), endpoint_service)
             .await;
 
         let (tx, rx) = tokio::sync::oneshot::channel();

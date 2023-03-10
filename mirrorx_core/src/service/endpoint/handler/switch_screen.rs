@@ -3,13 +3,16 @@ use crate::{
         audio::{encoder::AudioEncoder, recorder::new_record_stream_and_rx},
         screen::Screen,
     },
+    core_error,
     error::{CoreError, CoreResult},
     service::endpoint::{
-        client::ClientSendStream,
+        self,
         message::{EndPointMessage, EndPointSwitchScreenReply, EndPointSwitchScreenRequest},
+        Service,
     },
 };
 use cpal::traits::StreamTrait;
+use std::sync::Arc;
 
 pub struct NegotiateFinishedRequest {
     pub active_device_id: i64,
@@ -18,23 +21,16 @@ pub struct NegotiateFinishedRequest {
     pub texture_id: i64,
 }
 
-pub fn handle_switch_screen_request(
-    current_screen: &mut Option<Screen>,
+pub async fn handle_switch_screen_request(
+    service: Arc<Service>,
     req: EndPointSwitchScreenRequest,
-    client_send_stream: ClientSendStream,
 ) -> CoreResult<EndPointSwitchScreenReply> {
-    // spawn_desktop_capture_and_encode_process(client.clone());
-    // spawn_audio_capture_and_encode_process(client);
-    // todo!()
-
-    if let Some(old_screen) = current_screen {
-        old_screen.stop();
+    let new_screen = Screen::new(&req.display_id, service.clone())?;
+    if service.update_screen(new_screen).await.is_err() {
+        return Err(core_error!("switch screen failed"));
     }
 
-    let new_screen = Screen::new(&req.display_id, client_send_stream.clone())?;
-    *current_screen = Some(new_screen);
-
-    spawn_audio_capture_and_encode_process(client_send_stream);
+    spawn_audio_capture_and_encode_process(service);
 
     Ok(EndPointSwitchScreenReply {
         display_id: req.display_id,
@@ -200,7 +196,7 @@ fn spawn_desktop_capture_and_encode_process(client: Arc<EndPointClient>) {
 //     });
 // }
 
-fn spawn_audio_capture_and_encode_process(client_send_stream: ClientSendStream) {
+fn spawn_audio_capture_and_encode_process(service: Arc<endpoint::Service>) {
     // let mut exit_rx = client.close_receiver();
 
     tokio::task::spawn_blocking(move || loop {
@@ -234,8 +230,8 @@ fn spawn_audio_capture_and_encode_process(client_send_stream: ClientSendStream) 
                 match rx.blocking_recv() {
                     Some(audio_frame) => match audio_encoder.encode(audio_frame) {
                         Ok(frame) => {
-                            if let Err(err) = client_send_stream
-                                .blocking_send(&EndPointMessage::AudioFrame(frame))
+                            if let Err(err) =
+                                service.blocking_send(&EndPointMessage::AudioFrame(frame))
                             {
                                 match err {
                                     CoreError::OutgoingMessageChannelDisconnect => {

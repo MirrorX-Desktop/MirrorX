@@ -1,6 +1,6 @@
 use crate::utility::format_device_id;
 use mirrorx_core::{
-    service::endpoint::{EndPointClient, EndPointID},
+    service::endpoint::{self, EndPointID},
     DesktopDecodeFrame,
 };
 use std::sync::{Arc, Mutex};
@@ -8,7 +8,7 @@ use tokio::sync::mpsc::Receiver;
 
 pub struct State {
     format_remote_device_id: String,
-    endpoint_client: Arc<EndPointClient>,
+    endpoint_client: Arc<endpoint::Service>,
     desktop_frame_scaled: bool,
     desktop_frame_scalable: bool,
     render_rx: Receiver<DesktopDecodeFrame>,
@@ -19,7 +19,7 @@ pub struct State {
 impl State {
     pub fn new(
         endpoint_id: EndPointID,
-        client: Arc<EndPointClient>,
+        client: Arc<endpoint::Service>,
         render_frame_rx: tokio::sync::mpsc::Receiver<DesktopDecodeFrame>,
         frame_slot: Arc<Mutex<DesktopDecodeFrame>>,
     ) -> Self {
@@ -28,7 +28,7 @@ impl State {
                 remote_device_id: remote,
                 ..
             } => format_device_id(remote),
-            EndPointID::LANID {
+            EndPointID::IP {
                 remote_ip: remote, ..
             } => remote.to_string(),
         };
@@ -48,7 +48,7 @@ impl State {
         self.format_remote_device_id.as_ref()
     }
 
-    pub fn endpoint_client(&self) -> Arc<EndPointClient> {
+    pub fn endpoint_client(&self) -> Arc<endpoint::Service> {
         self.endpoint_client.clone()
     }
 

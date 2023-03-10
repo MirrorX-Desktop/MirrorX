@@ -4,8 +4,8 @@ use crate::{
     core_error,
     error::CoreResult,
     service::endpoint::{
+        self,
         message::{EndPointMessage, EndPointVideoFrame},
-        ClientSendStream,
     },
 };
 use mirrorx_native::ffmpeg::{
@@ -17,7 +17,7 @@ use std::sync::Arc;
 pub struct VideoEncoder {
     encoder_config: Arc<dyn EncoderConfig>,
     encode_context: Option<EncodeContext>,
-    client_send_stream: ClientSendStream,
+    service: Arc<endpoint::Service>,
 }
 
 unsafe impl Send for VideoEncoder {}
@@ -25,7 +25,7 @@ unsafe impl Send for VideoEncoder {}
 impl VideoEncoder {
     pub fn new(
         encoder_config: impl EncoderConfig + 'static,
-        client_send_stream: ClientSendStream,
+        service: Arc<endpoint::Service>,
     ) -> CoreResult<VideoEncoder> {
         unsafe {
             av_log_set_level(AV_LOG_INFO);
@@ -35,7 +35,7 @@ impl VideoEncoder {
         Ok(VideoEncoder {
             encoder_config: Arc::new(encoder_config),
             encode_context: None,
-            client_send_stream,
+            service,
         })
     }
 
@@ -116,7 +116,7 @@ impl VideoEncoder {
                     .to_vec(),
                 };
 
-                self.client_send_stream
+                self.service
                     .blocking_send(&EndPointMessage::VideoFrame(frame))?;
 
                 av_packet_unref(encode_context.packet);
