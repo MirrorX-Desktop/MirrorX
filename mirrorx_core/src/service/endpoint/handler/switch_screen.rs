@@ -14,13 +14,6 @@ use crate::{
 use cpal::traits::StreamTrait;
 use std::sync::Arc;
 
-pub struct NegotiateFinishedRequest {
-    pub active_device_id: i64,
-    pub passive_device_id: i64,
-    pub expect_frame_rate: u8,
-    pub texture_id: i64,
-}
-
 pub async fn handle_switch_screen_request(
     service: Arc<Service>,
     req: EndPointSwitchScreenRequest,

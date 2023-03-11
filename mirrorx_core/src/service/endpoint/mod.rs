@@ -1,8 +1,8 @@
+mod handler;
 mod id;
 mod service;
 mod transport;
 
-pub mod handler;
 pub mod message;
 
 pub use id::EndPointID;

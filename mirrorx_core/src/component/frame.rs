@@ -13,14 +13,12 @@ pub struct DesktopEncodeFrame {
 
 unsafe impl Send for DesktopEncodeFrame {}
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq)]
 pub enum DesktopDecodeFrameFormat {
     NV12,
     YUV420P,
 }
 
-// todo: remove clone after stable
-#[derive(Clone)]
 pub struct DesktopDecodeFrame {
     pub width: i32,
     pub height: i32,

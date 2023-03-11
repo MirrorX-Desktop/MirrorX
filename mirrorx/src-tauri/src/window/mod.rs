@@ -59,7 +59,7 @@ pub fn create_desktop_window(
 
     // cc.egui_ctx.set_debug_on_hover(true);
 
-    crate::window::desktop::DesktopWindow::new(endpoint_id, gl_context, client)
+    crate::window::DesktopWindow::new(endpoint_id, gl_context, client)
 }
 
 fn set_fonts(ctx: &tauri_egui::egui::Context) {

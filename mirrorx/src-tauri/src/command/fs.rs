@@ -9,11 +9,6 @@ use mirrorx_core::{
     },
     core_error,
     error::CoreResult,
-    service::endpoint::message::{
-        EndPointCallRequest, EndPointDownloadFileReply, EndPointDownloadFileRequest,
-        EndPointFileTransferError, EndPointMessage, EndPointSendFileReply, EndPointSendFileRequest,
-        EndPointVisitDirectoryReply, EndPointVisitDirectoryRequest,
-    },
 };
 use rayon::prelude::*;
 use serde::Serialize;
@@ -49,11 +44,7 @@ pub async fn file_manager_visit_remote(
         .get(&remote_device_id)
         .ok_or_else(|| core_error!("remote file manager not exist"))?;
 
-    let reply: EndPointVisitDirectoryReply = client
-        .call(EndPointCallRequest::VisitDirectoryRequest(
-            EndPointVisitDirectoryRequest { path },
-        ))
-        .await?;
+    let reply = client.call_visit_directory(path).await?;
 
     let path = reply.dir.path;
 
@@ -72,7 +63,7 @@ pub async fn file_manager_visit_remote(
             .into_par_iter()
             .map(|entry| {
                 let (hash, icon) = match entry.icon {
-                    IconType::Hashed(hashable) => (Some(hashable), None),
+                    IconType::Hashed(hashed_icon) => (Some(hashed_icon), None),
                     IconType::Bytes(v) => (None, v),
                 };
 
@@ -116,7 +107,7 @@ pub async fn file_manager_visit_local(path: Option<PathBuf>) -> CoreResult<Direc
             .into_par_iter()
             .map(|entry| {
                 let (hash, icon) = match entry.icon {
-                    IconType::Hashed(hashable) => (Some(hashable), None),
+                    IconType::Hashed(hashed_icon) => (Some(hashed_icon), None),
                     IconType::Bytes(v) => (None, v),
                 };
 
@@ -179,15 +170,8 @@ pub async fn file_manager_send_file(
         .get(&remote_device_id)
         .ok_or_else(|| core_error!("remote file manager not exist"))?;
 
-    let _: EndPointSendFileReply = endpoint_service
-        .call(EndPointCallRequest::SendFileRequest(
-            EndPointSendFileRequest {
-                id: id.clone(),
-                filename,
-                path: remote_path,
-                size,
-            },
-        ))
+    let _ = endpoint_service
+        .call_send_file(id.clone(), filename, remote_path, size)
         .await?;
 
     send_file_to_remote(id.clone(), endpoint_service, &local_path).await?;
@@ -214,22 +198,10 @@ pub async fn file_manager_download_file(
         .get(&remote_device_id)
         .ok_or_else(|| core_error!("remote file manager not exist"))?;
 
-    let reply: EndPointDownloadFileReply = client
-        .call(EndPointCallRequest::DownloadFileRequest(
-            EndPointDownloadFileRequest {
-                id: id.clone(),
-                path: remote_path,
-            },
-        ))
-        .await?;
+    let reply = client.call_download_file(id.clone(), remote_path).await?;
 
     if let Err(err) = create_file_append_session(id.clone(), &local_path).await {
-        let _ = client
-            .send(&EndPointMessage::FileTransferError(
-                EndPointFileTransferError { id: id.clone() },
-            ))
-            .await;
-
+        client.tell_file_transfer_error(id.clone()).await;
         return Err(err);
     }
 

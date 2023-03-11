@@ -22,7 +22,7 @@ pub struct EndPointHandshakeResponse {
 pub enum EndPointMessage {
     Error,
     CallRequest(u16, EndPointCallRequest),
-    CallReply(u16, #[serde(with = "serde_bytes")] Vec<u8>), // Vec -> Result<T, String>
+    CallReply(u16, Option<EndPointCallReply>),
     VideoFrame(EndPointVideoFrame),
     AudioFrame(EndPointAudioFrame),
     InputCommand(EndPointInputEvent),
@@ -37,6 +37,15 @@ pub enum EndPointCallRequest {
     VisitDirectoryRequest(EndPointVisitDirectoryRequest),
     SendFileRequest(EndPointSendFileRequest),
     DownloadFileRequest(EndPointDownloadFileRequest),
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub enum EndPointCallReply {
+    NegotiateReply(EndPointNegotiateReply),
+    SwitchScreenReply(EndPointSwitchScreenReply),
+    VisitDirectoryReply(EndPointVisitDirectoryReply),
+    SendFileReply(EndPointSendFileReply),
+    DownloadFileReply(EndPointDownloadFileReply),
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -68,12 +77,6 @@ pub enum VideoCodec {
     Hevc,
     VP8,
     VP9,
-}
-
-impl Default for VideoCodec {
-    fn default() -> Self {
-        VideoCodec::H264
-    }
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -122,12 +125,6 @@ impl From<SampleFormat> for AudioSampleFormat {
             SampleFormat::F64 => AudioSampleFormat::F64,
             _ => panic!("unsupported sample format, this should not be called"),
         }
-    }
-}
-
-impl Default for AudioSampleFormat {
-    fn default() -> Self {
-        AudioSampleFormat::I16
     }
 }
 

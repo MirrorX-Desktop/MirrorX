@@ -1,86 +1,93 @@
-use crate::utility::format_device_id;
 use mirrorx_core::{
-    service::endpoint::{self, EndPointID},
-    DesktopDecodeFrame,
+    component::screen::display::Display, error::CoreError,
+    service::endpoint::message::EndPointNegotiateReply, DesktopDecodeFrame,
 };
-use std::sync::{Arc, Mutex};
-use tokio::sync::mpsc::Receiver;
+use std::sync::Arc;
+use tokio::sync::mpsc::{channel, Receiver, Sender};
+
+pub enum StateCommand {
+    ErrorHappened(CoreError),
+    NegotiateFinished(EndPointNegotiateReply),
+    UpdateVideoFrame(DesktopDecodeFrame),
+    SwitchDisplay(String),
+}
 
 pub struct State {
-    format_remote_device_id: String,
-    endpoint_client: Arc<endpoint::Service>,
-    desktop_frame_scaled: bool,
-    desktop_frame_scalable: bool,
-    render_rx: Receiver<DesktopDecodeFrame>,
-    frame_slot: Arc<Mutex<DesktopDecodeFrame>>,
-    frame_size: (i32, i32),
+    egui_ctx: Option<tauri_egui::egui::Context>,
+    state_command_rx: Receiver<StateCommand>,
+    errors: Vec<CoreError>,
+    displays: Vec<Display>,
+    current_display_id: Option<String>,
+    is_switching_current_display_id: bool,
+    video_frame: Option<Arc<DesktopDecodeFrame>>,
 }
 
 impl State {
-    pub fn new(
-        endpoint_id: EndPointID,
-        client: Arc<endpoint::Service>,
-        render_frame_rx: tokio::sync::mpsc::Receiver<DesktopDecodeFrame>,
-        frame_slot: Arc<Mutex<DesktopDecodeFrame>>,
-    ) -> Self {
-        let format_remote_device_id = match endpoint_id {
-            EndPointID::DeviceID {
-                remote_device_id: remote,
-                ..
-            } => format_device_id(remote),
-            EndPointID::IP {
-                remote_ip: remote, ..
-            } => remote.to_string(),
-        };
+    pub fn new() -> (Self, Sender<StateCommand>) {
+        let (state_command_tx, state_command_rx) = channel(180);
 
-        Self {
-            format_remote_device_id,
-            endpoint_client: client,
-            desktop_frame_scaled: true,
-            desktop_frame_scalable: true,
-            render_rx: render_frame_rx,
-            frame_slot,
-            frame_size: (0, 0),
+        (
+            Self {
+                egui_ctx: None,
+                state_command_rx,
+                errors: Vec::new(),
+                displays: Vec::new(),
+                current_display_id: None,
+                is_switching_current_display_id: false,
+                video_frame: None,
+            },
+            state_command_tx,
+        )
+    }
+
+    pub fn process_state_command(&mut self) {
+        while let Ok(command) = self.state_command_rx.try_recv() {
+            match command {
+                StateCommand::ErrorHappened(error) => {
+                    self.push_error(error);
+                    // recover state
+                    self.is_switching_current_display_id = false;
+                }
+                StateCommand::NegotiateFinished(reply) => {
+                    self.displays = reply.displays;
+                }
+                StateCommand::UpdateVideoFrame(frame) => self.video_frame = Some(Arc::new(frame)),
+                StateCommand::SwitchDisplay(display_id) => {
+                    self.current_display_id = Some(display_id);
+                }
+            }
         }
     }
 
-    pub fn format_remote_device_id(&self) -> &str {
-        self.format_remote_device_id.as_ref()
+    pub fn set_egui_context(&mut self, ctx: tauri_egui::egui::Context) {
+        self.egui_ctx = Some(ctx)
     }
 
-    pub fn endpoint_client(&self) -> Arc<endpoint::Service> {
-        self.endpoint_client.clone()
+    pub fn get_errors(&self) -> &[CoreError] {
+        self.errors.as_ref()
     }
 
-    pub fn desktop_frame_scaled(&self) -> bool {
-        self.desktop_frame_scaled
+    pub fn push_error(&mut self, error: CoreError) {
+        self.errors.push(error)
     }
 
-    pub fn update_desktop_frame(&mut self) -> (i32, i32) {
-        let mut new_frame = None;
-        while let Ok(frame) = self.render_rx.try_recv() {
-            new_frame = Some(frame);
-        }
-
-        if let Some(new_frame) = new_frame {
-            self.frame_size = (new_frame.width, new_frame.height);
-            (*self.frame_slot.lock().unwrap()) = new_frame;
-        }
-
-        self.frame_size
+    pub fn get_displays(&self) -> &[Display] {
+        self.displays.as_ref()
     }
 
-    pub fn desktop_frame_scalable(&self) -> bool {
-        self.desktop_frame_scalable
-    }
-}
-
-impl State {
-    pub fn set_desktop_frame_scaled(&mut self, scaled: bool) {
-        self.desktop_frame_scaled = scaled
+    pub fn get_current_display_id(&self) -> Option<String> {
+        self.current_display_id.clone()
     }
 
-    pub fn set_desktop_frame_scalable(&mut self, scalable: bool) {
-        self.desktop_frame_scalable = scalable
+    pub fn take_video_frame(&mut self) -> Option<Arc<DesktopDecodeFrame>> {
+        self.video_frame.take()
+    }
+
+    pub fn get_is_switching_current_display_id(&self) -> bool {
+        self.is_switching_current_display_id
+    }
+
+    pub fn set_is_switching_current_display_id(&mut self, is_switching: bool) {
+        self.is_switching_current_display_id = is_switching;
     }
 }

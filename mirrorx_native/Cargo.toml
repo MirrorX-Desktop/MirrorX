@@ -16,3 +16,8 @@ objc-foundation = "0.1.1"
 objc_id = "0.1.1"
 core-foundation = "0.9.3"
 core-graphics = { version = "0.22.3", features = ["highsierra"] }
+
+[profile.release]
+lto = true
+incremental = true
+strip = true

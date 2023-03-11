@@ -138,10 +138,10 @@ pub async fn portal_visit(
         if let Err(err) = egui_plugin.create_window(
             window_label,
             Box::new(move |cc| {
-                if let Some(gl_context) = cc.gl.as_ref() {
+                if let Some(gl_context) = cc.gl.clone() {
                     Box::new(create_desktop_window(
                         cc,
-                        gl_context.clone(),
+                        gl_context,
                         endpoint_id,
                         endpoint_service,
                     ))
