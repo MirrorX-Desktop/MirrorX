@@ -452,16 +452,6 @@ impl Duplicator {
                     "DXGI_OUTDUPL_POINTER_SHAPE_INFO: DXGI_OUTDUPL_POINTER_SHAPE_TYPE_COLOR"
                 );
 
-                tracing::trace!(
-                    "visible,{},{},{},{:?}",
-                    self.mouse_position_x,
-                    self.mouse_position_y,
-                    self.mouse_visible,
-                    self.mouse_shape_buffer
-                );
-
-                std::fs::write(r"F:\ddd_image", &self.mouse_shape_buffer).unwrap();
-
                 pointer_left = self.mouse_position_x;
                 pointer_top = self.mouse_position_y;
                 pointer_width = self.mouse_shape_info.Width as i32;

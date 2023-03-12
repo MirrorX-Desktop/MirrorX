@@ -282,8 +282,8 @@ impl Service {
 
     pub async fn spawn_video_decode_task(&self) -> CoreResult<Receiver<DesktopDecodeFrame>> {
         let endpoint_id = self.endpoint_id;
-        let (render_tx, render_rx) = tokio::sync::mpsc::channel(1);
-        let (decode_tx, mut decode_rx) = tokio::sync::mpsc::channel(120);
+        let (render_tx, render_rx) = tokio::sync::mpsc::channel(180);
+        let (decode_tx, mut decode_rx) = tokio::sync::mpsc::channel(180);
 
         tokio::task::spawn_blocking(move || {
             tracing::info!(?endpoint_id, "video decode process");

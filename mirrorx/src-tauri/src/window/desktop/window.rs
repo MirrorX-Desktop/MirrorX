@@ -460,8 +460,12 @@ impl DesktopWindow {
 
 impl tauri_egui::eframe::App for DesktopWindow {
     fn update(&mut self, ctx: &tauri_egui::egui::Context, _: &mut tauri_egui::eframe::Frame) {
+        let _ = self
+            .command_tx
+            .try_send(Command::UpdateEGUIContext(ctx.clone()));
         self.state.set_egui_context(ctx.clone());
         self.state.process_state_command();
+        ctx.request_repaint_after(Duration::from_millis(16));
 
         CentralPanel::default()
             .frame(tauri_egui::egui::Frame::none())

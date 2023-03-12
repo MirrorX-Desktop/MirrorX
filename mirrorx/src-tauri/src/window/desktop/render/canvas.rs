@@ -293,10 +293,10 @@ unsafe fn prepare_gl(
         .map_err(|err| format!("create vertex shader failed: {err}"))?;
 
     gl.shader_source(vertex_shader, constant::VERTEX_SHADER_SOURCE);
-    check_for_gl_error!(&gl);
+    check_for_gl_error!(gl);
 
     gl.compile_shader(vertex_shader);
-    check_for_gl_error!(&gl);
+    check_for_gl_error!(gl);
 
     if !gl.get_shader_compile_status(vertex_shader) {
         return Err(format!(
@@ -310,10 +310,10 @@ unsafe fn prepare_gl(
         .map_err(|err| format!("create fragment shader failed: {err}"))?;
 
     gl.shader_source(fragment_shader, constant::FRAGMENT_SHADER_SOURCE);
-    check_for_gl_error!(&gl);
+    check_for_gl_error!(gl);
 
     gl.compile_shader(fragment_shader);
-    check_for_gl_error!(&gl);
+    check_for_gl_error!(gl);
 
     if !gl.get_shader_compile_status(fragment_shader) {
         return Err(format!(
@@ -323,16 +323,16 @@ unsafe fn prepare_gl(
     }
 
     gl.attach_shader(program, vertex_shader);
-    check_for_gl_error!(&gl);
+    check_for_gl_error!(gl);
 
     gl.attach_shader(program, fragment_shader);
-    check_for_gl_error!(&gl);
+    check_for_gl_error!(gl);
 
     gl.bind_attrib_location(program, 0, "aPos");
-    check_for_gl_error!(&gl);
+    check_for_gl_error!(gl);
 
     gl.bind_attrib_location(program, 1, "aTexCoord");
-    check_for_gl_error!(&gl);
+    check_for_gl_error!(gl);
 
     gl.link_program(program);
     if !gl.get_program_link_status(program) {
@@ -343,16 +343,16 @@ unsafe fn prepare_gl(
     }
 
     gl.detach_shader(program, vertex_shader);
-    check_for_gl_error!(&gl);
+    check_for_gl_error!(gl);
 
     gl.detach_shader(program, fragment_shader);
-    check_for_gl_error!(&gl);
+    check_for_gl_error!(gl);
 
     gl.delete_shader(vertex_shader);
-    check_for_gl_error!(&gl);
+    check_for_gl_error!(gl);
 
     gl.delete_shader(fragment_shader);
-    check_for_gl_error!(&gl);
+    check_for_gl_error!(gl);
 
     let ebo = gl
         .create_buffer()
@@ -367,16 +367,16 @@ unsafe fn prepare_gl(
         .map_err(|err| format!("create vbo failed: {err}"))?;
 
     gl.bind_vertex_array(Some(vao));
-    check_for_gl_error!(&gl);
+    check_for_gl_error!(gl);
 
     gl.bind_buffer(ARRAY_BUFFER, Some(vbo));
-    check_for_gl_error!(&gl);
+    check_for_gl_error!(gl);
 
     gl.buffer_data_u8_slice(ARRAY_BUFFER, constant::VERTEX_VERTICES_SLICE, STATIC_DRAW);
-    check_for_gl_error!(&gl);
+    check_for_gl_error!(gl);
 
     gl.vertex_attrib_pointer_f32(0, 3, FLOAT, false, 5 * std::mem::size_of::<f32>() as i32, 0);
-    check_for_gl_error!(&gl);
+    check_for_gl_error!(gl);
 
     gl.vertex_attrib_pointer_f32(
         1,
@@ -386,23 +386,23 @@ unsafe fn prepare_gl(
         5 * std::mem::size_of::<f32>() as i32,
         3 * std::mem::size_of::<f32>() as i32,
     );
-    check_for_gl_error!(&gl);
+    check_for_gl_error!(gl);
 
     gl.enable_vertex_attrib_array(0);
-    check_for_gl_error!(&gl);
+    check_for_gl_error!(gl);
 
     gl.enable_vertex_attrib_array(1);
-    check_for_gl_error!(&gl);
+    check_for_gl_error!(gl);
 
     gl.bind_buffer(ELEMENT_ARRAY_BUFFER, Some(ebo));
-    check_for_gl_error!(&gl);
+    check_for_gl_error!(gl);
 
     gl.buffer_data_u8_slice(
         ELEMENT_ARRAY_BUFFER,
         constant::VERTICES_INDICES_SLICE,
         STATIC_DRAW,
     );
-    check_for_gl_error!(&gl);
+    check_for_gl_error!(gl);
 
     Ok((program, vao, vbo, ebo))
 }

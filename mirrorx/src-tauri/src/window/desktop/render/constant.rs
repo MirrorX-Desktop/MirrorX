@@ -54,17 +54,17 @@ uniform sampler2D yuv420p_textureV;
 in vec2 texCoord;
 layout (location = 0) out vec4 fragColor;
 
-// const mat3 YCbCrToRGBmatrix = mat3(
-//     1.164, 0.000, 1.857,
-//     1.164,-0.217,-0.543,
-//     1.164, 2.016, 0.000
-// );
-
 const mat3 YCbCrToRGBmatrix = mat3(
-    1.000,   0.000,   1.570,
-    1.000,  -0.187,  -0.467,
-    1.000,   1.856,   0.000
+    1.164, 0.000, 1.857,
+    1.164,-0.217,-0.543,
+    1.164, 2.016, 0.000
 );
+
+// const mat3 YCbCrToRGBmatrix = mat3(
+//     1.000,   0.000,   1.570,
+//     1.000,  -0.187,  -0.467,
+//     1.000,   1.856,   0.000
+// );
 
 void main(void)
 {
