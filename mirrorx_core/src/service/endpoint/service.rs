@@ -429,73 +429,79 @@ async fn service_task(
     let mut current_screen: Option<Screen> = None;
 
     loop {
-        if let Ok(command) = command_rx.try_recv() {
-            match command {
-                ServiceCommand::UpdateVideoFrameTx(video_frame_tx) => {
-                    current_video_frame_tx = Some(video_frame_tx)
-                }
-                ServiceCommand::UpdateAudioFrameTx(audio_frame_tx) => {
-                    current_audio_frame_tx = Some(audio_frame_tx);
-                }
-                ServiceCommand::UpdateScreen(mut new_screen) => {
-                    if let Some(mut old_screen) = current_screen.take() {
-                        old_screen.stop_capture_desktop();
-                        drop(old_screen);
+        tokio::select! {
+            command = command_rx.recv() => match command {
+                Some(command) => match command {
+                    ServiceCommand::UpdateVideoFrameTx(video_frame_tx) => {
+                        current_video_frame_tx = Some(video_frame_tx)
                     }
+                    ServiceCommand::UpdateAudioFrameTx(audio_frame_tx) => {
+                        current_audio_frame_tx = Some(audio_frame_tx);
+                    }
+                    ServiceCommand::UpdateScreen(mut new_screen) => {
+                        if let Some(mut old_screen) = current_screen.take() {
+                            old_screen.stop_capture_desktop();
+                            drop(old_screen);
+                        }
 
-                    new_screen.start_capture_desktop();
-                    current_screen = Some(new_screen);
-                }
-            }
-        }
-
-        let message = match stream_rx.recv().await {
-            Some(buffer) => buffer,
-            None => break,
-        };
-
-        match message {
-            EndPointMessage::Error => {
-                // handle_error(active_device_id, passive_device_id);
-            }
-            EndPointMessage::VideoFrame(video_frame) => {
-                if let Some(ref tx) = current_video_frame_tx {
-                    if tx.send(video_frame).await.is_err() {
-                        tracing::error!("endpoint video frame channel closed");
-                        break;
+                        new_screen.start_capture_desktop();
+                        current_screen = Some(new_screen);
                     }
+                },
+                None => {
+                    tracing::info!("service command channel closed");
+                    break;
                 }
-            }
-            EndPointMessage::AudioFrame(audio_frame) => {
-                if let Some(ref tx) = current_audio_frame_tx {
-                    if tx.send(audio_frame).await.is_err() {
-                        tracing::error!("endpoint audio frame channel closed");
-                        break;
+            },
+            message = stream_rx.recv() => match message {
+                Some(message) => match message {
+                    EndPointMessage::Error => {
+                        // handle_error(active_device_id, passive_device_id);
                     }
-                }
-            }
-            EndPointMessage::InputCommand(input_event) => {
-                if let Some(ref screen) = current_screen {
-                    if screen.send_input_event(input_event).await.is_err() {
-                        tracing::error!("endpoint input command channel closed");
-                        break;
+                    EndPointMessage::VideoFrame(video_frame) => {
+                        if let Some(ref tx) = current_video_frame_tx {
+                            if tx.send(video_frame).await.is_err() {
+                                tracing::error!("endpoint video frame channel closed");
+                                break;
+                            }
+                        }
                     }
+                    EndPointMessage::AudioFrame(audio_frame) => {
+                        if let Some(ref tx) = current_audio_frame_tx {
+                            if tx.send(audio_frame).await.is_err() {
+                                tracing::error!("endpoint audio frame channel closed");
+                                break;
+                            }
+                        }
+                    }
+                    EndPointMessage::InputCommand(input_event) => {
+                        if let Some(ref screen) = current_screen {
+                            if screen.send_input_event(input_event).await.is_err() {
+                                tracing::error!("endpoint input command channel closed");
+                                break;
+                            }
+                        }
+                    }
+                    EndPointMessage::CallRequest(call_id, req) => {
+                        tokio::spawn(handle_call(service.clone(), call_id, req));
+                    }
+                    EndPointMessage::CallReply(call_id, reply) => {
+                        if let Some(tx) = service.pending_calls.get(&call_id) {
+                            let _ = tx.try_send(reply);
+                        }
+                        service.pending_calls.invalidate(&call_id)
+                    }
+                    EndPointMessage::FileTransferBlock(block) => {
+                        append_file_block(service.clone(), block).await
+                    }
+                    EndPointMessage::FileTransferError(message) => {
+                        delete_file_append_session(&message.id).await
+                    }
+                },
+                None => {
+                    tracing::info!("stream channel closed");
+                    break;
                 }
-            }
-            EndPointMessage::CallRequest(call_id, req) => {
-                tokio::spawn(handle_call(service.clone(), call_id, req));
-            }
-            EndPointMessage::CallReply(call_id, reply) => {
-                if let Some(tx) = service.pending_calls.get(&call_id) {
-                    let _ = tx.try_send(reply);
-                }
-                service.pending_calls.invalidate(&call_id)
-            }
-            EndPointMessage::FileTransferBlock(block) => {
-                append_file_block(service.clone(), block).await
-            }
-            EndPointMessage::FileTransferError(message) => {
-                delete_file_append_session(&message.id).await
             }
         }
     }
