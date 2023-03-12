@@ -1,5 +1,5 @@
 use super::{
-    command::{spawn_command_process_task, Command},
+    service::{spawn_window_service_task, Command},
     state::State,
     widget::desktop_canvas::DesktopCanvas,
 };
@@ -8,14 +8,7 @@ use mirrorx_core::{
     component::screen::input::key::MouseKey,
     core_error,
     error::{CoreError, CoreResult},
-    service::endpoint::{
-        self,
-        message::{
-            EndPointInputEvent, EndPointMessage, EndPointNegotiateReply, InputEvent, KeyboardEvent,
-            MouseEvent,
-        },
-        EndPointID,
-    },
+    service::endpoint::{self, message::*, EndPointID},
     DesktopDecodeFrame,
 };
 use std::{
@@ -49,8 +42,12 @@ impl DesktopWindow {
         gl_context: Arc<Context>,
         service: Arc<endpoint::Service>,
     ) -> Self {
-        let (state, state_command_tx) = State::new();
-        let command_tx = spawn_command_process_task(endpoint_id, service, state_command_tx);
+        let (mut state, state_command_tx) = State::new();
+
+        let command_tx = spawn_window_service_task(endpoint_id, service, state_command_tx);
+        if command_tx.blocking_send(Command::Negotiate).is_err() {
+            state.push_error(core_error!("prepare negotiate failed"));
+        }
 
         let desktop_canvas = DesktopCanvas::new(gl_context);
 
@@ -83,7 +80,7 @@ impl DesktopWindow {
         }
 
         if let Err(err) = self.desktop_canvas.draw(self.state.take_video_frame(), ui) {
-            todo!()
+            self.state.push_error(err);
         }
     }
 
@@ -157,54 +154,54 @@ impl DesktopWindow {
         }
     }
 
-    fn build_panel(&mut self, ui: &mut Ui) {
-        // match self.state.visit_state() {
-        //     state::VisitState::Connecting => {
-        //         ui.centered_and_justified(|ui| {
-        //             let (rect, response) = ui.allocate_exact_size(
-        //                 Vec2::new(160.0, 80.0),
-        //                 Sense::focusable_noninteractive(),
-        //             );
+    // fn build_panel(&mut self, ui: &mut Ui) {
+    // match self.state.visit_state() {
+    //     state::VisitState::Connecting => {
+    //         ui.centered_and_justified(|ui| {
+    //             let (rect, response) = ui.allocate_exact_size(
+    //                 Vec2::new(160.0, 80.0),
+    //                 Sense::focusable_noninteractive(),
+    //             );
 
-        //             ui.allocate_ui_at_rect(rect, |ui| {
-        //                 ui.spinner();
-        //                 ui.label("connecting");
-        //             });
+    //             ui.allocate_ui_at_rect(rect, |ui| {
+    //                 ui.spinner();
+    //                 ui.label("connecting");
+    //             });
 
-        //             response
-        //         });
-        //     }
-        //     state::VisitState::Negotiating => {
-        //         ui.centered_and_justified(|ui| {
-        //             let (rect, response) = ui.allocate_exact_size(
-        //                 Vec2::new(160.0, 80.0),
-        //                 Sense::focusable_noninteractive(),
-        //             );
+    //             response
+    //         });
+    //     }
+    //     state::VisitState::Negotiating => {
+    //         ui.centered_and_justified(|ui| {
+    //             let (rect, response) = ui.allocate_exact_size(
+    //                 Vec2::new(160.0, 80.0),
+    //                 Sense::focusable_noninteractive(),
+    //             );
 
-        //             ui.allocate_ui_at_rect(rect, |ui| {
-        //                 ui.spinner();
-        //                 ui.label("negotiating");
-        //             });
+    //             ui.allocate_ui_at_rect(rect, |ui| {
+    //                 ui.spinner();
+    //                 ui.label("negotiating");
+    //             });
 
-        //             response
-        //         });
-        //     }
-        //     state::VisitState::Serving => {
-        // self.build_desktop_texture(ui);
-        // self.build_toolbar(ui);
-        //     }
-        //     state::VisitState::ErrorOccurred => {
-        //         ui.centered_and_justified(|ui| {
-        //             ui.label(
-        //                 self.state
-        //                     .last_error()
-        //                     .map(|err| err.to_string())
-        //                     .unwrap_or_else(|| String::from("An unknown error occurred")),
-        //             );
-        //         });
-        //     }
-        // }
-    }
+    //             response
+    //         });
+    //     }
+    //     state::VisitState::Serving => {
+    // self.build_desktop_texture(ui);
+    // self.build_toolbar(ui);
+    //     }
+    //     state::VisitState::ErrorOccurred => {
+    //         ui.centered_and_justified(|ui| {
+    //             ui.label(
+    //                 self.state
+    //                     .last_error()
+    //                     .map(|err| err.to_string())
+    //                     .unwrap_or_else(|| String::from("An unknown error occurred")),
+    //             );
+    //         });
+    //     }
+    // }
+    // }
 
     // fn build_desktop_texture(&mut self, ui: &mut Ui) {
     //     let (frame_width, frame_height) = self.state.update_desktop_frame();

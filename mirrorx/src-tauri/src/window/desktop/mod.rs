@@ -1,5 +1,5 @@
-mod command;
 mod render;
+mod service;
 mod state;
 mod widget;
 mod window;

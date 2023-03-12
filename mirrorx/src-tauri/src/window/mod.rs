@@ -2,6 +2,7 @@ mod desktop;
 
 use self::desktop::DesktopWindow;
 use mirrorx_core::{
+    error::CoreResult,
     service::endpoint::{self, EndPointID},
     DesktopDecodeFrame,
 };

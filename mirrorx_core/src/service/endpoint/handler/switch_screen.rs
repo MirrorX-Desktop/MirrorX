@@ -118,7 +118,7 @@ fn spawn_desktop_capture_and_encode_process(client: Arc<EndPointClient>) {
 }
 
 // #[cfg(target_os = "windows")]
-// fn spawn_desktop_capture_and_encode_process(client: Arc<EndPointClient>) {
+// fn spawn_desktop_capture_and_encode_process(service: Arc<endpoint::Service>) {
 //     let (capture_frame_tx, mut capture_frame_rx) = tokio::sync::mpsc::channel(180);
 
 //     tokio::task::spawn_blocking(move || {
@@ -159,7 +159,7 @@ fn spawn_desktop_capture_and_encode_process(client: Arc<EndPointClient>) {
 //             // }
 
 //             let mut encoder =
-//                 match VideoEncoder::new(libx264::Libx264Config::default(), client.clone()) {
+//                 match VideoEncoder::new(libx264::Libx264Config::default(), service.clone()) {
 //                     Ok(encoder) => encoder,
 //                     Err(err) => {
 //                         tracing::error!(?err, "video encoder initialize failed");
