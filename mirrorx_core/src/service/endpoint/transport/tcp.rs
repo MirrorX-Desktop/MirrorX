@@ -30,6 +30,8 @@ pub async fn serve_tcp(
     opening_key: Option<OpeningKey<NonceValue>>,
     mut visit_credentials: Option<Vec<u8>>,
 ) -> CoreResult<(Sender<Vec<u8>>, Receiver<EndPointMessage>)> {
+    stream.set_nodelay(true)?;
+
     let mut framed = Framed::new(
         stream,
         LengthDelimitedCodec::builder()
@@ -42,7 +44,7 @@ pub async fn serve_tcp(
         serve_handshake(&mut framed, visit_credentials, endpoint_id).await?;
     }
 
-    let (tx, rx) = tokio::sync::mpsc::channel(1);
+    let (tx, rx) = tokio::sync::mpsc::channel(180);
     let (sink, stream) = framed.split();
     serve_tcp_write(endpoint_id, rx, sealing_key, sink);
     let rx = serve_tcp_read(endpoint_id, opening_key, stream)?;
@@ -87,7 +89,7 @@ fn serve_tcp_read(
     mut opening_key: Option<OpeningKey<NonceValue>>,
     mut stream: SplitStream<Framed<TcpStream, LengthDelimitedCodec>>,
 ) -> CoreResult<tokio::sync::mpsc::Receiver<EndPointMessage>> {
-    let (tx, rx) = tokio::sync::mpsc::channel(1);
+    let (tx, rx) = tokio::sync::mpsc::channel(180);
 
     tokio::spawn(async move {
         loop {
