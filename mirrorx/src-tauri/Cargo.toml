@@ -50,6 +50,9 @@ default = ["custom-protocol"]
 # DO NOT remove this
 custom-protocol = ["tauri/custom-protocol"]
 
+[profile.dev.package.num-bigint-dig]
+opt-level = 3
+
 [profile.release]
 lto = true
 incremental = true

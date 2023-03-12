@@ -45,7 +45,7 @@ impl DesktopWindow {
         let (mut state, state_command_tx) = State::new();
 
         let command_tx = spawn_window_service_task(endpoint_id, service, state_command_tx);
-        if command_tx.blocking_send(Command::Negotiate).is_err() {
+        if command_tx.try_send(Command::Negotiate).is_err() {
             state.push_error(core_error!("prepare negotiate failed"));
         }
 
@@ -129,7 +129,7 @@ impl DesktopWindow {
     }
 
     fn push_command(&mut self, command: Command) -> bool {
-        if self.command_tx.blocking_send(command).is_err() {
+        if self.command_tx.try_send(command).is_err() {
             self.state.push_error(core_error!("command process exited"));
             return false;
         }

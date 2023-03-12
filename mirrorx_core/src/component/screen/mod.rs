@@ -3,6 +3,8 @@ mod duplicator;
 pub mod display;
 pub mod input;
 
+use scopeguard::defer;
+
 use self::display::Display;
 
 use super::video_encoder::{config::libx264::Libx264Config, encoder::VideoEncoder};
@@ -100,6 +102,10 @@ impl Screen {
         let (capture_frame_tx, mut capture_frame_rx) = tokio::sync::mpsc::channel(180);
 
         tokio::task::spawn_blocking(move || {
+            defer! {
+                tracing::info!("desktop duplicator exited");
+            }
+
             if duplicator_start_rx.blocking_recv().is_err() {
                 return;
             }
@@ -126,17 +132,19 @@ impl Screen {
                     }
                 };
             }
-
-            tracing::info!("desktop duplicator exited");
         });
 
-        tokio::task::spawn_blocking(move || loop {
+        tokio::task::spawn_blocking(move || {
+            defer! {
+                tracing::info!("video encoder exited");
+            }
+
             loop {
                 match capture_frame_rx.blocking_recv() {
                     Some(capture_frame) => {
                         if let Err(err) = encoder.encode(capture_frame) {
                             if let CoreError::OutgoingMessageChannelDisconnect = err {
-                                break;
+                                return;
                             } else {
                                 tracing::warn!(?err, "video encode failed");
                             }
@@ -144,12 +152,10 @@ impl Screen {
                     }
                     None => {
                         tracing::error!("capture frame channel closed");
-                        break;
+                        return;
                     }
                 }
             }
-
-            tracing::info!("video encoder exited");
         });
     }
 
@@ -157,7 +163,7 @@ impl Screen {
         display: Display,
         mut input_event_rx: tokio::sync::mpsc::Receiver<EndPointInputEvent>,
     ) {
-        tokio::spawn(async move {
+        tokio::task::spawn_blocking(move || {
             while let Some(input_event) = input_event_rx.blocking_recv() {
                 for event in input_event.events {
                     match event {
