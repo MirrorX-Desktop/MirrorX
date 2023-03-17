@@ -1,0 +1,15 @@
+[workspace]
+members = [
+    "app/desktop/mirrorx",
+    "app/desktop/mirrorx_viewport",
+    "mirrorx_core",
+    "mirrorx_native",
+]
+
+[profile.dev.package.num-bigint-dig]
+opt-level = 3
+
+[profile.release]
+lto = true
+incremental = true
+strip = true

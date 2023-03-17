@@ -1,0 +1,60 @@
+{
+  "build": {
+    "beforeBuildCommand": "yarn install --immutable && yarn run build",
+    "beforeDevCommand": "yarn install --immutable && yarn run dev",
+    "devPath": "http://localhost:5173",
+    "distDir": "../build"
+  },
+  "package": {
+    "productName": "MirrorX",
+    "version": "0.1.5"
+  },
+  "tauri": {
+    "allowlist": {
+      "all": true
+    },
+    "bundle": {
+      "active": true,
+      "category": "DeveloperTool",
+      "copyright": "",
+      "deb": {
+        "depends": []
+      },
+      "externalBin": [],
+      "icon": [
+        "assets/icons/32x32.png",
+        "assets/icons/128x128.png",
+        "assets/icons/128x128@2x.png",
+        "assets/icons/icon.icns",
+        "assets/icons/icon.ico"
+      ],
+      "identifier": "app.mirrorx",
+      "longDescription": "",
+      "macOS": {
+        "entitlements": null,
+        "exceptionDomain": "",
+        "frameworks": [],
+        "providerShortName": null,
+        "signingIdentity": null
+      },
+      "resources": [],
+      "shortDescription": "",
+      "targets": "all",
+      "windows": {
+        "certificateThumbprint": null,
+        "digestAlgorithm": "sha256",
+        "timestampUrl": ""
+      }
+    },
+    "systemTray": {
+      "iconPath": "assets/icons/icon.png",
+      "iconAsTemplate": true
+    },
+    "security": {
+      "csp": null
+    },
+    "updater": {
+      "active": false
+    }
+  }
+}
