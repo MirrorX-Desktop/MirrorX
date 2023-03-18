@@ -1,6 +1,5 @@
+use crate::{app::widget::peer_connect::PeerConnectWidget, asset::*};
 use eframe::{egui::*, Frame};
-
-use crate::app::widget::peer_connect::PeerConnectWidget;
 
 pub struct TitleBar {
     close_button: TitleBarControlButton,
@@ -81,13 +80,13 @@ impl TitleBarControlButton {
         let background_anim_progress = ui.ctx().animate_value_with_time(
             self.background_anim_id,
             if hovered { 1.0 } else { 0.0 },
-            0.2,
+            0.15,
         );
 
         let foreground_anim_progress = ui.ctx().animate_value_with_time(
             self.foreground_anim_id,
             if hovered { 1.0 } else { 0.1 },
-            0.2,
+            0.15,
         );
 
         // background
@@ -113,24 +112,23 @@ impl TitleBarControlButton {
 
         // "x" or "-" font
 
-        let galley = ui.painter().layout(
-            if self.is_close_button {
-                String::from("\u{e5cd}")
-            } else {
-                String::from("\u{e15b}")
-            },
-            FontId::proportional(24.0),
+        let image = if self.is_close_button {
+            &StaticImageCache::current().close_48
+        } else {
+            &StaticImageCache::current().remove_48
+        };
+
+        ui.painter().image(
+            image.texture_id(ui.ctx()),
+            rect.shrink(10.0),
+            Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)),
             Color32::from_rgba_unmultiplied(
-                255,
-                255,
-                255,
+                254,
+                254,
+                254,
                 (255.0 * foreground_anim_progress) as u8,
             ),
-            0.0,
         );
-
-        let font_rect = Rect::from_center_size(rect.center(), galley.size());
-        ui.painter().galley(font_rect.min, galley);
 
         if response.clicked() {
             if self.is_close_button {

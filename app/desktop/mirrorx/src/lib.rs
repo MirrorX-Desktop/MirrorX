@@ -1,4 +1,4 @@
-mod asset;
+pub mod asset;
 
 pub mod app;
 

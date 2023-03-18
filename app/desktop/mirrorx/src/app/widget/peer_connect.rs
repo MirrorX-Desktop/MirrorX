@@ -1,13 +1,13 @@
+use crate::asset::StaticImageCache;
 use eframe::egui::*;
-
-const ICON_DESKTOP: &str = "\u{e30c}";
-const ICON_FILE_FOLDER: &str = "\u{e2c7}";
 
 pub struct PeerConnectWidget {
     resource_type_is_desktop: bool,
     resource_type_dropdown_id: Id,
     domain_dropdown_id: Id,
     edit_content: String,
+    resource_type_hovered: bool,
+    domain_hovered: bool,
 }
 
 impl PeerConnectWidget {
@@ -17,14 +17,24 @@ impl PeerConnectWidget {
             resource_type_dropdown_id: Id::new(uuid::Uuid::new_v4()),
             domain_dropdown_id: Id::new(uuid::Uuid::new_v4()),
             edit_content: String::default(),
+            resource_type_hovered: false,
+            domain_hovered: false,
         }
     }
 
     pub fn draw(&mut self, ui: &mut Ui) {
         let inner = ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
             ui.add_space(6.0);
+            ui.style_mut()
+                .visuals
+                .widgets
+                .noninteractive
+                .bg_stroke
+                .color = Color32::from_rgb(101, 101, 101);
 
             let resource_type_response = self.draw_resource_type_dropdown(ui);
+
+            ui.separator();
 
             let peer_id_input_response = ui.add(
                 TextEdit::singleline(&mut self.edit_content)
@@ -43,9 +53,14 @@ impl PeerConnectWidget {
 
             let domain_response = self.draw_domain_dropdown(ui);
 
+            ui.add(Separator::default().spacing(0.0));
+
+            let button_response = self.draw_connect_button(ui);
+
             resource_type_response
                 .union(peer_id_input_response)
                 .union(domain_response)
+                .union(button_response)
         });
 
         ui.painter().rect(
@@ -57,54 +72,46 @@ impl PeerConnectWidget {
                 color: Color32::from_rgb(101, 101, 101),
             },
         );
-
-        ui.add_space(8.0);
-        let connect_to_peer_response =
-            Button::new(RichText::new("\u{e5c8}").font(FontId::proportional(16.0)))
-                .min_size(vec2(28.0, 28.0))
-                .stroke(Stroke {
-                    width: 1.0,
-                    color: Color32::from_rgb(101, 101, 101),
-                })
-                .ui(ui)
-                .on_hover_text(RichText::new("Click to connect peer").color(Color32::WHITE));
-
-        if connect_to_peer_response.clicked() {}
     }
 
     fn draw_resource_type_dropdown(&mut self, ui: &mut Ui) -> Response {
         // connect type label
-        let label_response = Label::new(
-            RichText::new(if self.resource_type_is_desktop {
-                ICON_DESKTOP
-            } else {
-                ICON_FILE_FOLDER
-            })
-            .font(FontId::proportional(16.0)),
-        )
-        .sense(Sense::click())
-        .ui(ui);
+        let resource_image = if self.resource_type_is_desktop {
+            &StaticImageCache::current().desktop_windows_48
+        } else {
+            &StaticImageCache::current().folder_48
+        };
+
+        let color = if self.resource_type_hovered {
+            ui.style().visuals.widgets.active.fg_stroke.color
+        } else {
+            ui.style().visuals.widgets.noninteractive.fg_stroke.color
+        };
+
+        let image_response = ui.add(
+            Image::new(resource_image.texture_id(ui.ctx()), vec2(16.0, 16.0))
+                .tint(color)
+                .sense(Sense::click()),
+        );
 
         // dropdown button
-        let dropdown_response =
-            Button::new(RichText::new("\u{e5cf}").font(FontId::proportional(16.0)))
-                .frame(false)
-                .ui(ui);
+        let dropdown_response = ImageButton::new(
+            StaticImageCache::current()
+                .expand_more_48
+                .texture_id(ui.ctx()),
+            vec2(16.0, 16.0),
+        )
+        .tint(color)
+        .frame(false)
+        .ui(ui);
 
-        ui.style_mut()
-            .visuals
-            .widgets
-            .noninteractive
-            .bg_stroke
-            .color = Color32::from_rgb(101, 101, 101);
-        ui.separator();
+        let mut union_response = image_response.union(dropdown_response);
+        self.resource_type_hovered = union_response.hovered();
 
         let popup_id = ui.make_persistent_id(self.resource_type_dropdown_id);
-        if label_response.clicked() || dropdown_response.clicked() {
+        if union_response.clicked() {
             ui.memory_mut(|mem| mem.toggle_popup(popup_id));
         }
-
-        let mut union_response = label_response.union(dropdown_response);
 
         // dropdown list
         popup::popup_above_or_below_widget(
@@ -116,9 +123,8 @@ impl PeerConnectWidget {
                 ui.set_min_width(100.0);
                 if ui
                     .selectable_label(
-                        false,
-                        RichText::new(format!("{ICON_DESKTOP} Desktop"))
-                            .font(FontId::proportional(16.0)),
+                        self.resource_type_is_desktop,
+                        RichText::new("\u{e30c} Desktop".to_string()),
                     )
                     .clicked()
                 {
@@ -127,9 +133,8 @@ impl PeerConnectWidget {
 
                 if ui
                     .selectable_label(
-                        false,
-                        RichText::new(format!("{ICON_FILE_FOLDER} Files"))
-                            .font(FontId::proportional(16.0)),
+                        !self.resource_type_is_desktop,
+                        RichText::new("\u{e2c7} Files".to_string()),
                     )
                     .clicked()
                 {
@@ -148,23 +153,39 @@ impl PeerConnectWidget {
 
     fn draw_domain_dropdown(&mut self, ui: &mut Ui) -> Response {
         // hash tag and domain name
-        let label_response =
-            Label::new(RichText::new("#mirrorx.cloud").font(FontId::monospace(16.0)))
-                .sense(Sense::click())
-                .ui(ui);
+
+        let color = if self.domain_hovered {
+            ui.style().visuals.widgets.active.fg_stroke.color
+        } else {
+            ui.style().visuals.widgets.noninteractive.fg_stroke.color
+        };
+
+        let label_response = Label::new(
+            RichText::new("#mirrorx.cloud")
+                .font(FontId::monospace(16.0))
+                .color(color),
+        )
+        .sense(Sense::click())
+        .ui(ui);
 
         // dropdown button
-        let dropdown_response =
-            Button::new(RichText::new("\u{e5cf}").font(FontId::proportional(16.0)))
-                .frame(false)
-                .ui(ui);
-
-        let popup_id = ui.make_persistent_id(self.domain_dropdown_id);
-        if label_response.clicked() || dropdown_response.clicked() {
-            ui.memory_mut(|mem| mem.toggle_popup(popup_id));
-        }
+        let dropdown_response = ImageButton::new(
+            StaticImageCache::current()
+                .expand_more_48
+                .texture_id(ui.ctx()),
+            vec2(16.0, 16.0),
+        )
+        .tint(color)
+        .frame(false)
+        .ui(ui);
 
         let mut union_response = label_response.union(dropdown_response);
+        self.domain_hovered = union_response.hovered();
+
+        let popup_id = ui.make_persistent_id(self.domain_dropdown_id);
+        if union_response.clicked() {
+            ui.memory_mut(|mem| mem.toggle_popup(popup_id));
+        }
 
         // dropdown list
         popup::popup_above_or_below_widget(
@@ -185,5 +206,34 @@ impl PeerConnectWidget {
         }
 
         union_response
+    }
+
+    fn draw_connect_button(&mut self, ui: &mut Ui) -> Response {
+        let (rect, response) = ui.allocate_at_least(vec2(28.0, 28.0), Sense::click());
+
+        let (bg_color, fg_color) = if response.hovered() {
+            (
+                ui.style().visuals.widgets.active.bg_fill,
+                ui.style().visuals.widgets.active.fg_stroke.color,
+            )
+        } else {
+            (
+                Color32::TRANSPARENT,
+                ui.style().visuals.widgets.noninteractive.fg_stroke.color,
+            )
+        };
+
+        ui.painter()
+            .rect_filled(rect.shrink2(vec2(1.0, 0.0)), Rounding::none(), bg_color);
+        ui.painter().image(
+            StaticImageCache::current()
+                .arrow_forward_48
+                .texture_id(ui.ctx()),
+            rect.shrink(4.0),
+            Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)),
+            fg_color,
+        );
+
+        response.on_hover_text(RichText::new("Click to connect peer").color(Color32::WHITE))
     }
 }

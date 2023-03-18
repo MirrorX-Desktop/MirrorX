@@ -1,4 +1,4 @@
-use crate::asset::IMAGE_LOGO;
+use crate::asset::StaticImageCache;
 use eframe::{egui::*, epaint::*};
 
 #[derive(Debug, Hash, PartialEq, Eq, Copy)]
@@ -144,42 +144,25 @@ impl NavButton {
             ),
         );
 
-        let icon_code = match self.button_type {
-            NavButtonType::Home => None,
-            NavButtonType::Lan => Some("\u{eb2f}"),
-            NavButtonType::History => Some("\u{f17d}"),
-            NavButtonType::Settings => Some("\u{e429}"),
+        // foreground
+        let (icon_image, shrink) = match self.button_type {
+            NavButtonType::Home => (&StaticImageCache::current().logo_1024, 4.0),
+            NavButtonType::Lan => (&StaticImageCache::current().lan_48, 8.0),
+            NavButtonType::History => (&StaticImageCache::current().history_toggle_off_48, 8.0),
+            NavButtonType::Settings => (&StaticImageCache::current().tune_48, 8.0),
         };
 
-        // foreground
-        if let Some(icon_code) = icon_code {
-            let galley = ui.painter().layout(
-                icon_code.to_string(),
-                FontId::proportional(24.0),
-                Color32::from_rgba_unmultiplied(
-                    255,
-                    255,
-                    255,
-                    (255.0 * foreground_anim_progress) as u8,
-                ),
-                0.0,
-            );
-
-            let font_rect = Rect::from_center_size(rect.center(), galley.size());
-            ui.painter().galley(font_rect.min, galley);
-        } else {
-            ui.painter().image(
-                IMAGE_LOGO.texture_id(ui.ctx()),
-                rect.shrink(3.0),
-                Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)),
-                Color32::from_rgba_unmultiplied(
-                    255,
-                    255,
-                    255,
-                    (255.0 * foreground_anim_progress) as u8,
-                ),
-            );
-        }
+        ui.painter().image(
+            icon_image.texture_id(ui.ctx()),
+            rect.shrink(shrink),
+            Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)),
+            Color32::from_rgba_unmultiplied(
+                255,
+                255,
+                255,
+                (255.0 * foreground_anim_progress) as u8,
+            ),
+        );
 
         // indicator
         let indicator_min = rect.right_top() + vec2(5.0, 5.0);

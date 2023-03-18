@@ -6,9 +6,6 @@ members = [
     "mirrorx_native",
 ]
 
-[profile.dev.package.num-bigint-dig]
-opt-level = 3
-
 [profile.release]
 lto = true
 incremental = true

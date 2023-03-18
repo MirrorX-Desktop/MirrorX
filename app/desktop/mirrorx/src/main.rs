@@ -1,5 +1,7 @@
 #[tokio::main]
 async fn main() -> eframe::Result<()> {
+    mirrorx::asset::StaticImageCache::load().unwrap();
+
     rust_i18n::set_locale("zh");
 
     let options = eframe::NativeOptions {
