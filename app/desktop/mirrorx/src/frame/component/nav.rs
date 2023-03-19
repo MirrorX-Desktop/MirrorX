@@ -1,42 +1,24 @@
-use crate::frame::asset::StaticImageCache;
+use crate::frame::{asset::StaticImageCache, viewport::PageType};
 use eframe::{egui::*, epaint::*};
 
-#[derive(Debug, Hash, PartialEq, Eq, Copy)]
-pub enum NavButtonType {
-    Home,
-    Lan,
-    History,
-    Settings,
-}
-
-impl Clone for NavButtonType {
-    fn clone(&self) -> Self {
-        match self {
-            Self::Home => Self::Home,
-            Self::Lan => Self::Lan,
-            Self::History => Self::History,
-            Self::Settings => Self::Settings,
-        }
-    }
-}
-
 pub struct NavBar {
-    select_nav_button_type: NavButtonType,
+    current_page_type: PageType,
     nav_buttons: Vec<NavButton>,
 }
 
 impl NavBar {
     pub fn new() -> Self {
         Self {
-            select_nav_button_type: NavButtonType::Home,
+            current_page_type: PageType::Home,
             nav_buttons: vec![
-                NavButton::new(NavButtonType::Home),
-                NavButton::new(NavButtonType::Lan),
-                NavButton::new(NavButtonType::History),
-                NavButton::new(NavButtonType::Settings),
+                NavButton::new(PageType::Home),
+                NavButton::new(PageType::Lan),
+                NavButton::new(PageType::History),
+                NavButton::new(PageType::Settings),
             ],
         }
     }
+
     pub fn draw(&mut self, ui: &mut eframe::egui::Ui) {
         let rect = Rect::from_x_y_ranges(0f32..=64f32, 0f32..=ui.available_height());
 
@@ -53,45 +35,45 @@ impl NavBar {
                 ui.add_space(11.0);
                 ui.style_mut().spacing.item_spacing = vec2(0.0, 8.0);
                 for button in self.nav_buttons.iter_mut() {
-                    if button.draw(ui, self.select_nav_button_type).clicked() {
-                        self.select_nav_button_type = button.button_type;
+                    if button.draw(ui, self.current_page_type).clicked() {
+                        self.current_page_type = button.button_type;
                     };
                 }
             });
         });
     }
+
+    pub fn current_page_type(&self) -> PageType {
+        self.current_page_type
+    }
 }
 
 pub struct NavButton {
-    button_type: NavButtonType,
+    button_type: PageType,
     background_anim_id: Id,
     foreground_anim_id: Id,
     indicator_anim_id: Id,
 }
 
 impl NavButton {
-    pub fn new(button_type: NavButtonType) -> Self {
+    pub fn new(page_type: PageType) -> Self {
         Self {
-            button_type,
+            button_type: page_type,
             background_anim_id: Id::new(uuid::Uuid::new_v4()),
             foreground_anim_id: Id::new(uuid::Uuid::new_v4()),
             indicator_anim_id: Id::new(uuid::Uuid::new_v4()),
         }
     }
 
-    pub fn draw(
-        &mut self,
-        ui: &mut eframe::egui::Ui,
-        selected_button_type: NavButtonType,
-    ) -> Response {
+    pub fn draw(&mut self, ui: &mut eframe::egui::Ui, selected_page_type: PageType) -> Response {
         let (rect, response) = ui.allocate_at_least(vec2(42.0, 42.0), Sense::click());
 
         let response = response.on_hover_ui_at_pointer(|ui| {
             let tooltip_str = match self.button_type {
-                NavButtonType::Home => rust_i18n::t!("tooltip.nav.home"),
-                NavButtonType::Lan => rust_i18n::t!("tooltip.nav.lan"),
-                NavButtonType::History => rust_i18n::t!("tooltip.nav.history"),
-                NavButtonType::Settings => rust_i18n::t!("tooltip.nav.settings"),
+                PageType::Home => rust_i18n::t!("tooltip.nav.home"),
+                PageType::Lan => rust_i18n::t!("tooltip.nav.lan"),
+                PageType::History => rust_i18n::t!("tooltip.nav.history"),
+                PageType::Settings => rust_i18n::t!("tooltip.nav.settings"),
             };
 
             ui.colored_label(Color32::WHITE, tooltip_str);
@@ -102,7 +84,7 @@ impl NavButton {
                 .set_cursor_icon(eframe::egui::CursorIcon::PointingHand);
         }
 
-        let selected = selected_button_type == self.button_type;
+        let selected = selected_page_type == self.button_type;
 
         let background_anim_progress = ui.ctx().animate_value_with_time(
             self.background_anim_id,
@@ -146,10 +128,10 @@ impl NavButton {
 
         // foreground
         let (icon_image, shrink) = match self.button_type {
-            NavButtonType::Home => (&StaticImageCache::current().logo_1024, 4.0),
-            NavButtonType::Lan => (&StaticImageCache::current().lan_48, 8.0),
-            NavButtonType::History => (&StaticImageCache::current().history_toggle_off_48, 8.0),
-            NavButtonType::Settings => (&StaticImageCache::current().tune_48, 8.0),
+            PageType::Home => (&StaticImageCache::current().logo_1024, 4.0),
+            PageType::Lan => (&StaticImageCache::current().lan_48, 8.0),
+            PageType::History => (&StaticImageCache::current().history_toggle_off_48, 8.0),
+            PageType::Settings => (&StaticImageCache::current().tune_48, 8.0),
         };
 
         ui.painter().image(

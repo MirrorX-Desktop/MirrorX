@@ -1,6 +1,7 @@
 mod app;
 mod asset;
 mod component;
+mod page;
 mod viewport;
 mod widget;
 

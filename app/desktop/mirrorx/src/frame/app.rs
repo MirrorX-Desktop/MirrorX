@@ -7,7 +7,7 @@ pub struct App {
 
 impl App {
     pub fn new(cc: &eframe::CreationContext) -> Self {
-        // cc.egui_ctx.set_debug_on_hover(true);
+        cc.egui_ctx.set_debug_on_hover(true);
 
         prepare_fonts(cc);
 
