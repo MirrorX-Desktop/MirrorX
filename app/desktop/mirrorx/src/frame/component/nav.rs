@@ -1,4 +1,4 @@
-use crate::asset::StaticImageCache;
+use crate::frame::asset::StaticImageCache;
 use eframe::{egui::*, epaint::*};
 
 #[derive(Debug, Hash, PartialEq, Eq, Copy)]

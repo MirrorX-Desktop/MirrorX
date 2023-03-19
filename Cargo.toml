@@ -8,5 +8,5 @@ members = [
 
 [profile.release]
 lto = true
-incremental = true
 strip = true
+codegen-units = 1

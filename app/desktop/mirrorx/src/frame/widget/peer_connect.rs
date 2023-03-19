@@ -1,4 +1,4 @@
-use crate::asset::StaticImageCache;
+use crate::frame::asset::StaticImageCache;
 use eframe::egui::*;
 
 pub struct PeerConnectWidget {
@@ -162,7 +162,7 @@ impl PeerConnectWidget {
 
         let label_response = Label::new(
             RichText::new("#mirrorx.cloud")
-                .font(FontId::monospace(16.0))
+                .font(FontId::proportional(16.0))
                 .color(color),
         )
         .sense(Sense::click())

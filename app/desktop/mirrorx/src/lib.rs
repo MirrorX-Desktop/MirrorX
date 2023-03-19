@@ -1,5 +1,3 @@
-pub mod asset;
-
-pub mod app;
+pub mod frame;
 
 rust_i18n::i18n!("locales");

@@ -1,5 +1,5 @@
 use super::component::nav::NavBar;
-use crate::app::component::titlebar::TitleBar;
+use crate::frame::component::titlebar::TitleBar;
 use eframe::egui::*;
 
 pub struct Viewport {

@@ -1,11 +1,8 @@
-use eframe::egui::FontTweak;
-
-mod component;
-mod viewport;
-mod widget;
+use super::{asset, viewport::Viewport};
+use eframe::egui::{FontData, FontTweak};
 
 pub struct App {
-    viewport: viewport::Viewport,
+    viewport: Viewport,
 }
 
 impl App {
@@ -18,7 +15,7 @@ impl App {
         set_window_shadow();
 
         Self {
-            viewport: viewport::Viewport::new(),
+            viewport: Viewport::new(),
         }
     }
 }
@@ -38,7 +35,7 @@ fn prepare_fonts(cc: &eframe::CreationContext) {
     proportional_font_names.push(String::from("NotoSans"));
     fonts.font_data.insert(
         String::from("NotoSans"),
-        eframe::egui::FontData::from_static(crate::asset::FONT_NOTO_SANS).tweak(FontTweak {
+        FontData::from_static(asset::FONT_NOTO_SANS).tweak(FontTweak {
             scale: 1.0,
             y_offset_factor: -0.24,
             y_offset: 0.0,
@@ -49,14 +46,14 @@ fn prepare_fonts(cc: &eframe::CreationContext) {
     monospace_font_names.push(String::from("NotoSansMono"));
     fonts.font_data.insert(
         String::from("NotoSansMono"),
-        eframe::egui::FontData::from_static(crate::asset::FONT_NOTO_SANS_MONO),
+        FontData::from_static(asset::FONT_NOTO_SANS_MONO),
     );
 
     // Noto Sans SC
     proportional_font_names.push(String::from("NotoSansSC"));
     fonts.font_data.insert(
         String::from("NotoSansSC"),
-        eframe::egui::FontData::from_static(crate::asset::FONT_NOTO_SANS_SC).tweak(FontTweak {
+        FontData::from_static(asset::FONT_NOTO_SANS_SC).tweak(FontTweak {
             scale: 1.0,
             y_offset_factor: -0.24,
             y_offset: 0.0,
@@ -67,28 +64,28 @@ fn prepare_fonts(cc: &eframe::CreationContext) {
     proportional_font_names.push(String::from("NotoSansTC"));
     fonts.font_data.insert(
         String::from("NotoSansTC"),
-        eframe::egui::FontData::from_static(crate::asset::FONT_NOTO_SANS_TC),
+        FontData::from_static(asset::FONT_NOTO_SANS_TC),
     );
 
     // Noto Sans JP
     proportional_font_names.push(String::from("NotoSansJP"));
     fonts.font_data.insert(
         String::from("NotoSansJP"),
-        eframe::egui::FontData::from_static(crate::asset::FONT_NOTO_SANS_JP),
+        FontData::from_static(asset::FONT_NOTO_SANS_JP),
     );
 
     // Noto Sans KR
     proportional_font_names.push(String::from("NotoSansKR"));
     fonts.font_data.insert(
         String::from("NotoSansKR"),
-        eframe::egui::FontData::from_static(crate::asset::FONT_NOTO_SANS_KR),
+        FontData::from_static(asset::FONT_NOTO_SANS_KR),
     );
 
-    // Material Icons
+    // Material Symbols
     proportional_font_names.push(String::from("MaterialSymbols"));
     fonts.font_data.insert(
         String::from("MaterialSymbols"),
-        eframe::egui::FontData::from_static(crate::asset::FONT_MATERIAL_SYMBOLS).tweak(FontTweak {
+        FontData::from_static(asset::FONT_MATERIAL_SYMBOLS).tweak(FontTweak {
             scale: 1.0,
             y_offset_factor: 0.0,
             y_offset: 0.0,

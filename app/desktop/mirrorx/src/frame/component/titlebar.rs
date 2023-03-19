@@ -1,4 +1,4 @@
-use crate::{app::widget::peer_connect::PeerConnectWidget, asset::*};
+use crate::frame::{asset::StaticImageCache, widget::peer_connect::PeerConnectWidget};
 use eframe::{egui::*, Frame};
 
 pub struct TitleBar {

@@ -4,34 +4,36 @@ use once_cell::sync::{Lazy, OnceCell};
 // Fonts
 
 pub static FONT_MATERIAL_SYMBOLS: &[u8] =
-    include_bytes!("../assets/fonts/MaterialSymbolsRounded[FILL,GRAD,opsz,wght].ttf");
-pub static FONT_NOTO_SANS: &[u8] = include_bytes!("../assets/fonts/NotoSans-Regular.ttf");
-pub static FONT_NOTO_SANS_MONO: &[u8] = include_bytes!("../assets/fonts/NotoSansMono-Regular.ttf");
-pub static FONT_NOTO_SANS_SC: &[u8] = include_bytes!("../assets/fonts/NotoSansSC-Regular.otf");
-pub static FONT_NOTO_SANS_TC: &[u8] = include_bytes!("../assets/fonts/NotoSansTC-Regular.otf");
-pub static FONT_NOTO_SANS_JP: &[u8] = include_bytes!("../assets/fonts/NotoSansJP-Regular.otf");
-pub static FONT_NOTO_SANS_KR: &[u8] = include_bytes!("../assets/fonts/NotoSansKR-Regular.otf");
+    include_bytes!("../../assets/fonts/MaterialSymbolsRounded[FILL,GRAD,opsz,wght].ttf");
+pub static FONT_NOTO_SANS: &[u8] = include_bytes!("../../assets/fonts/NotoSans-Regular.ttf");
+pub static FONT_NOTO_SANS_MONO: &[u8] =
+    include_bytes!("../../assets/fonts/NotoSansMono-Regular.ttf");
+pub static FONT_NOTO_SANS_SC: &[u8] = include_bytes!("../../assets/fonts/NotoSansSC-Regular.otf");
+pub static FONT_NOTO_SANS_TC: &[u8] = include_bytes!("../../assets/fonts/NotoSansTC-Regular.otf");
+pub static FONT_NOTO_SANS_JP: &[u8] = include_bytes!("../../assets/fonts/NotoSansJP-Regular.otf");
+pub static FONT_NOTO_SANS_KR: &[u8] = include_bytes!("../../assets/fonts/NotoSansKR-Regular.otf");
 
 // Images
 
-static IMAGE_LOGO_1024: &[u8] = include_bytes!("../assets/images/logo_1024.svg");
+static IMAGE_LOGO_1024: &[u8] = include_bytes!("../../assets/images/logo_1024.svg");
 static IMAGE_CLOSE_48: &[u8] =
-    include_bytes!("../assets/images/close_FILL0_wght400_GRAD0_opsz48.svg");
+    include_bytes!("../../assets/images/close_FILL0_wght400_GRAD0_opsz48.svg");
 static IMAGE_REMOVE_48: &[u8] =
-    include_bytes!("../assets/images/remove_FILL0_wght400_GRAD0_opsz48.svg");
+    include_bytes!("../../assets/images/remove_FILL0_wght400_GRAD0_opsz48.svg");
 static IMAGE_ARROW_FORWARD_48: &[u8] =
-    include_bytes!("../assets/images/arrow_forward_FILL0_wght400_GRAD0_opsz48.svg");
+    include_bytes!("../../assets/images/arrow_forward_FILL0_wght400_GRAD0_opsz48.svg");
 static IMAGE_DESKTOP_WINDOWS_48: &[u8] =
-    include_bytes!("../assets/images/desktop_windows_FILL0_wght400_GRAD0_opsz48.svg");
+    include_bytes!("../../assets/images/desktop_windows_FILL0_wght400_GRAD0_opsz48.svg");
 static IMAGE_EXPAND_MORE_48: &[u8] =
-    include_bytes!("../assets/images/expand_more_FILL0_wght400_GRAD0_opsz48.svg");
+    include_bytes!("../../assets/images/expand_more_FILL0_wght400_GRAD0_opsz48.svg");
 static IMAGE_FOLDER_48: &[u8] =
-    include_bytes!("../assets/images/folder_FILL0_wght400_GRAD0_opsz48.svg");
+    include_bytes!("../../assets/images/folder_FILL0_wght400_GRAD0_opsz48.svg");
 static IMAGE_HISTORY_TOGGLE_OFF_48: &[u8] =
-    include_bytes!("../assets/images/history_toggle_off_FILL0_wght400_GRAD0_opsz48.svg");
-static IMAGE_LAN_48: &[u8] = include_bytes!("../assets/images/lan_FILL0_wght400_GRAD0_opsz48.svg");
+    include_bytes!("../../assets/images/history_toggle_off_FILL0_wght400_GRAD0_opsz48.svg");
+static IMAGE_LAN_48: &[u8] =
+    include_bytes!("../../assets/images/lan_FILL0_wght400_GRAD0_opsz48.svg");
 static IMAGE_TUNE_48: &[u8] =
-    include_bytes!("../assets/images/tune_FILL0_wght400_GRAD0_opsz48.svg");
+    include_bytes!("../../assets/images/tune_FILL0_wght400_GRAD0_opsz48.svg");
 
 // Cache
 
