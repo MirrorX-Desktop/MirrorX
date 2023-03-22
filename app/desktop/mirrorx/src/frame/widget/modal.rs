@@ -25,10 +25,10 @@ impl Modal {
         }
     }
 
-    pub fn show<R>(
+    pub fn show(
         &self,
         title: &str,
-        draw_content_fn: impl FnOnce(&mut Ui) -> InnerResponse<R>,
+        draw_content_fn: impl FnOnce(&mut Ui),
         button_handle_fn: &[(&str, &dyn Fn())],
     ) {
         let is_open = self.ctx.memory(|mem| mem.is_popup_open(self.id));
@@ -54,7 +54,7 @@ impl Modal {
                         .movable(false)
                         .resizable(false)
                         .show(ui.ctx(), |ui| {
-                            Frame::none().show(ui, draw_content_fn);
+                            draw_content_fn(ui);
 
                             if button_handle_fn.is_empty() {
                                 return;
@@ -65,7 +65,7 @@ impl Modal {
                             let inner_width = ui.available_width();
 
                             let (rect, _) =
-                                ui.allocate_exact_size(vec2(inner_width, 36.0), Sense::click());
+                                ui.allocate_exact_size(vec2(inner_width, 34.0), Sense::click());
 
                             let space = 6.0;
 
@@ -77,19 +77,23 @@ impl Modal {
                             };
 
                             ui.allocate_ui_at_rect(rect, |ui| {
-                                ui.style_mut().spacing.item_spacing = vec2(space, 0.0);
+                                let mut min = ui.next_widget_position() + vec2(0.0, 1.0);
 
-                                ui.horizontal_centered(|ui| {
-                                    for (name, handler) in button_handle_fn.iter() {
-                                        if Button::new(*name)
-                                            .min_size(vec2(button_width, ui.available_height()))
-                                            .ui(ui)
-                                            .clicked()
-                                        {
-                                            handler();
-                                        }
+                                for (i, (name, handler)) in button_handle_fn.iter().enumerate() {
+                                    let rect = Rect::from_min_size(min, vec2(button_width, 32.0));
+
+                                    ui.allocate_ui_at_rect(rect, |ui| {
+                                        ui.centered_and_justified(|ui| {
+                                            if ui.add(Button::new(*name)).clicked() {
+                                                handler();
+                                            }
+                                        });
+                                    });
+
+                                    if i != button_handle_fn.len() - 1 {
+                                        min += vec2(button_width + space, 0.0);
                                     }
-                                });
+                                }
                             });
                         });
                 });

@@ -42,6 +42,8 @@ pub struct UIState {
     pub permanent_password: String,
     pub is_login: bool,
     pub my_devices: Vec<MyDevice>,
+    pub login_email: String,
+    pub login_password: String,
 }
 
 impl UIState {
@@ -60,6 +62,8 @@ impl UIState {
             is_login: false,
             permanent_password: String::from("AABBVV"),
             my_devices: Vec::new(),
+            login_email: String::default(),
+            login_password: String::default(),
         })
     }
 }

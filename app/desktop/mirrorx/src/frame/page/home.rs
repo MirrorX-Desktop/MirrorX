@@ -126,14 +126,102 @@ impl HomePage {
                     modal.show(
                         "Login",
                         |ui| {
-                            ui.with_layout(Layout::top_down(Align::Center), |ui| {
-                                ui.label("AAAA");
-                            })
+                            ui.vertical_centered_justified(|ui| {
+                                ui.allocate_ui_with_layout(
+                                    vec2(160.0, 26.0),
+                                    Layout::left_to_right(Align::Center),
+                                    |ui| {
+                                        ui.add_sized(
+                                            Vec2::splat(20.0),
+                                            Label::new(RichText::new("\u{e853}").size(20.0)),
+                                        );
+
+                                        ui.add_sized(
+                                            ui.available_size(),
+                                            TextEdit::singleline(&mut ui_state.login_email)
+                                                .hint_text("Email")
+                                                .font(FontId::proportional(20.0))
+                                                .vertical_align(Align::Center),
+                                        );
+                                    },
+                                );
+
+                                ui.add_space(4.0);
+
+                                ui.allocate_ui_with_layout(
+                                    vec2(160.0, 26.0),
+                                    Layout::left_to_right(Align::Center),
+                                    |ui| {
+                                        ui.add_sized(
+                                            Vec2::splat(20.0),
+                                            Label::new(RichText::new("\u{f042}").size(20.0)),
+                                        );
+
+                                        ui.add_sized(
+                                            ui.available_size(),
+                                            TextEdit::singleline(&mut ui_state.login_password)
+                                                .hint_text("Password")
+                                                .font(FontId::proportional(20.0))
+                                                .vertical_align(Align::Center)
+                                                .password(true),
+                                        );
+                                    },
+                                );
+
+                                ui.add_space(4.0);
+
+                                ui.allocate_ui(vec2(ui.available_width(), 38.0), |ui| {
+                                    StripBuilder::new(ui)
+                                        .size(Size::relative(0.5))
+                                        .size(Size::remainder())
+                                        .horizontal(|mut strip| {
+                                            strip.cell(|ui| {
+                                                ui.centered_and_justified(|ui| {
+                                                    ui.style_mut()
+                                                        .visuals
+                                                        .widgets
+                                                        .active
+                                                        .expansion = 0.0;
+                                                    ui.add(
+                                                        Button::new(
+                                                            RichText::new("Login")
+                                                                .size(18.0)
+                                                                .color(Color32::WHITE),
+                                                        )
+                                                        .stroke(Stroke::new(1.0, Color32::WHITE))
+                                                        .fill(Color32::from_rgb(57, 117, 226)),
+                                                    );
+                                                });
+                                            });
+                                            strip.cell(|ui| {
+                                                ui.centered_and_justified(|ui| {
+                                                    if ui
+                                                        .button(RichText::new("Cancel").size(18.0))
+                                                        .clicked()
+                                                    {
+                                                        modal.close();
+                                                    }
+                                                });
+                                            });
+                                        });
+                                });
+
+                                ui.add(Separator::default().spacing(4.0));
+
+                                ui.add_sized(
+                                    vec2(ui.available_width(), 38.0),
+                                    Button::new(RichText::new("Login with Github").size(18.0)),
+                                );
+
+                                ui.add_space(4.0);
+
+                                ui.add_sized(
+                                    vec2(ui.available_width(), 38.0),
+                                    Button::new(RichText::new("Login with Google").size(18.0)),
+                                );
+                            });
                         },
-                        &[
-                            ("Ok", &(|| eprintln!("ok"))),
-                            ("Cancel", &(|| modal.close())),
-                        ],
+                        &[],
                     );
 
                     ui.centered_and_justified(|ui| {

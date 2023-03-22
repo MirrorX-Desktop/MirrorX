@@ -43,7 +43,8 @@ impl PeerConnectWidget {
                     .clip_text(false)
                     .margin(vec2(4.0, 0.0))
                     .vertical_align(Align::Center)
-                    .horizontal_align(Align::Max),
+                    .horizontal_align(Align::Max)
+                    .hint_text("Peer ID"),
             );
 
             let peer_id_input_response = peer_id_input_response.on_hover_text(
