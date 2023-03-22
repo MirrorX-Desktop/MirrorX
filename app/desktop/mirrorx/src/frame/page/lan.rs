@@ -1,4 +1,5 @@
 use super::Page;
+use crate::frame::state::UIState;
 
 pub struct LanPage {}
 
@@ -7,8 +8,9 @@ impl LanPage {
         Self {}
     }
 }
+
 impl Page for LanPage {
-    fn draw(&mut self, ui: &mut eframe::egui::Ui) {
+    fn draw(&mut self, ui: &mut eframe::egui::Ui, ui_state: &mut UIState) {
         ui.label("lan");
     }
 }

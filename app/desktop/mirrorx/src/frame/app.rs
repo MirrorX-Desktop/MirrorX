@@ -1,13 +1,24 @@
-use super::{asset, viewport::Viewport};
+use super::{
+    asset,
+    state::{update_ui_state, UIEvent, UIState},
+    viewport::Viewport,
+};
 use eframe::egui::{FontData, FontTweak};
+use tokio::sync::mpsc::UnboundedReceiver;
 
 pub struct App {
     viewport: Viewport,
+    ui_state: UIState,
+    ui_event_rx: UnboundedReceiver<UIEvent>,
 }
 
 impl App {
-    pub fn new(cc: &eframe::CreationContext) -> Self {
-        cc.egui_ctx.set_debug_on_hover(true);
+    pub fn new(
+        cc: &eframe::CreationContext,
+        ui_state: UIState,
+        ui_event_rx: UnboundedReceiver<UIEvent>,
+    ) -> Self {
+        // cc.egui_ctx.set_debug_on_hover(true);
 
         prepare_fonts(cc);
 
@@ -16,13 +27,16 @@ impl App {
 
         Self {
             viewport: Viewport::new(),
+            ui_state,
+            ui_event_rx,
         }
     }
 }
 
 impl eframe::App for App {
     fn update(&mut self, ctx: &eframe::egui::Context, frame: &mut eframe::Frame) {
-        self.viewport.draw(ctx, frame);
+        update_ui_state(&mut self.ui_state, &mut self.ui_event_rx);
+        self.viewport.draw(ctx, frame, &mut self.ui_state);
     }
 }
 

@@ -1,22 +1,19 @@
-use super::Page;
-use eframe::{egui::*, emath::*, epaint::*};
+use std::rc::Rc;
 
+use super::Page;
+use crate::frame::{
+    state::UIState,
+    widget::{modal::Modal, my_device_card::MyDeviceCard},
+};
+use eframe::egui::*;
+use egui_extras::{Size, StripBuilder};
+
+#[derive(Default)]
 pub struct HomePage {}
 
 impl HomePage {
-    pub fn new() -> Self {
-        Self {}
-    }
-
     fn draw_status_bar(&mut self, ui: &mut Ui) {
-        let (rect, _) = ui.allocate_at_least(
-            vec2(60.0, 30.0),
-            Sense {
-                click: false,
-                drag: false,
-                focusable: false,
-            },
-        );
+        let (rect, _) = ui.allocate_at_least(vec2(60.0, 30.0), Sense::hover());
 
         ui.allocate_ui_at_rect(
             Rect::from_min_size(rect.min, vec2(rect.width() - 8.0, rect.height())),
@@ -28,123 +25,141 @@ impl HomePage {
         );
     }
 
-    fn draw_panel(&mut self, ui: &mut Ui) {
-        let (rect, _) = ui.allocate_exact_size(
-            vec2(760.0, 440.0),
-            Sense {
-                click: false,
-                drag: false,
-                focusable: false,
-            },
-        );
+    fn draw_panel(&mut self, ui: &mut Ui, ui_state: &mut UIState) {
+        let (rect, _) = ui.allocate_exact_size(vec2(780.0, 480.0), Sense::hover());
 
         ui.allocate_ui_at_rect(rect, |ui| {
-            // ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
-            // ui.allocate_ui_at_rect(
-            //     Rect::from_min_size(
-            //         ui.available_rect_before_wrap().min,
-            //         vec2(ui.available_width() / 2.0, ui.available_height()),
-            //     ),
-            //     |ui| {
-            //         ui.painter().rect_filled(
-            //             ui.available_rect_before_wrap(),
-            //             Rounding::none(),
-            //             Color32::RED,
-            //         );
-            //     },
-            // );
-
-            // ui.allocate_ui_at_rect(
-            //     Rect::from_min_size(
-            //         ui.available_rect_before_wrap().min + vec2(ui.available_width() / 2.0, 0.0),
-            //         vec2(ui.available_width() / 2.0, ui.available_height()),
-            //     ),
-            //     |ui| {
-            //         ui.painter().rect_filled(
-            //             ui.available_rect_before_wrap(),
-            //             Rounding::none(),
-            //             Color32::GREEN,
-            //         );
-            //     },
-            // );
-            // });
-            ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
-                let (left_rect, _) = ui.allocate_exact_size(
-                    vec2(ui.available_width() / 2.0, ui.available_height()),
-                    Sense::click(),
-                );
-
-                let (separator_rect, _) =
-                    ui.allocate_exact_size(vec2(1.0, ui.available_height()), Sense::click());
-
-                let (right_rect, _) = ui.allocate_exact_size(
-                    vec2(ui.available_width(), ui.available_height()),
-                    Sense::click(),
-                );
-
-                ui.allocate_ui_at_rect(left_rect, |ui| {
-                    self.draw_panel_left(ui);
+            StripBuilder::new(ui)
+                .size(Size::relative(0.4))
+                .size(Size::relative(0.03))
+                .size(Size::remainder())
+                .horizontal(|mut strip| {
+                    strip.cell(|ui| {
+                        self.draw_panel_left(ui, ui_state);
+                    });
+                    strip.cell(|ui| {
+                        ui.add(Separator::default().vertical());
+                    });
+                    strip.cell(|ui| {
+                        self.draw_panel_right(ui, ui_state);
+                    });
                 });
-
-                ui.allocate_ui_at_rect(separator_rect, |ui| {
-                    ui.separator();
-                });
-
-                ui.allocate_ui_at_rect(right_rect, |ui| {
-                    self.draw_panel_right(ui);
-                });
-            });
         });
     }
 
-    fn draw_panel_left(&mut self, ui: &mut Ui) {
+    fn draw_panel_left(&mut self, ui: &mut Ui, ui_state: &mut UIState) {
         ui.centered_and_justified(|ui| {
             ui.with_layout(Layout::top_down(Align::Min), |ui| {
-                ui.label(RichText::new("Peer ID").size(32.0));
+                ui.label(RichText::new("Peer ID").size(32.0).strong());
 
                 ui.add_space(18.0);
-                ui.label(RichText::new("mmmm").size(18.0));
+                ui.label(
+                    RichText::new(format!("{}#{}", ui_state.peer_id, ui_state.peer_domain))
+                        .size(18.0),
+                );
 
                 ui.add_space(18.0);
-                ui.label(RichText::new("Password").size(32.0));
+                ui.label(RichText::new("Password").size(32.0).strong());
 
                 ui.add_space(18.0);
-                ui.checkbox(&mut true, RichText::new("Use Time Based OTP").size(18.0));
+                ui.checkbox(
+                    &mut ui_state.use_totp_password,
+                    RichText::new("Use Time Based OTP").size(18.0),
+                );
 
                 ui.add_space(18.0);
                 ui.vertical_centered(|ui| {
-                    ui.label(RichText::new("F G I 2 X L").size(24.0));
-                });
-
-                ui.add_space(18.0);
-                ui.checkbox(&mut true, RichText::new("Use One-Time Password").size(18.0));
-
-                ui.add_space(18.0);
-                ui.vertical_centered(|ui| {
-                    ui.label(RichText::new("F G I 2 X L").size(24.0));
+                    ui.label(RichText::new(&ui_state.totp_password).size(24.0));
                 });
 
                 ui.add_space(18.0);
                 ui.checkbox(
-                    &mut true,
+                    &mut ui_state.use_otp_password,
+                    RichText::new("Use One-Time Password").size(18.0),
+                );
+
+                ui.add_space(18.0);
+                ui.vertical_centered(|ui| {
+                    ui.label(RichText::new(&ui_state.otp_password).size(24.0));
+                });
+
+                ui.add_space(18.0);
+                ui.checkbox(
+                    &mut ui_state.use_permanent_password,
                     RichText::new("Use Permanent Password").size(18.0),
                 );
 
                 ui.add_space(18.0);
                 ui.vertical_centered(|ui| {
-                    ui.text_edit_singleline(&mut "aaaa");
+                    ui.label(RichText::new(&ui_state.permanent_password).size(24.0));
                 });
             })
         });
     }
 
-    fn draw_panel_right(&mut self, ui: &mut Ui) {
-        ui.label("B");
+    fn draw_panel_right(&mut self, ui: &mut Ui, ui_state: &mut UIState) {
+        ui.vertical(|ui| {
+            ui.label(RichText::new("My Devices").size(32.0).strong());
+
+            let mut devices_card_rect = ui.available_rect_before_wrap();
+            devices_card_rect.set_height(if ui_state.my_devices.is_empty() {
+                80.0
+            } else {
+                200.0
+            });
+
+            ui.allocate_ui_at_rect(devices_card_rect, |ui| {
+                if ui_state.is_login {
+                    ScrollArea::horizontal()
+                        .auto_shrink([false, false])
+                        .always_show_scroll(false)
+                        .show(ui, |ui| {
+                            ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
+                                ui.style_mut().spacing.item_spacing = vec2(4.0, 0.0);
+                                for device in ui_state.my_devices.iter_mut() {
+                                    MyDeviceCard::draw(ui, device);
+                                }
+                            });
+                        });
+                } else {
+                    let modal = Modal::new("login_modal", ui.ctx());
+                    modal.show(
+                        "Login",
+                        |ui| {
+                            ui.with_layout(Layout::top_down(Align::Center), |ui| {
+                                ui.label("AAAA");
+                            })
+                        },
+                        &[
+                            ("Ok", &(|| eprintln!("ok"))),
+                            ("Cancel", &(|| modal.close())),
+                        ],
+                    );
+
+                    ui.centered_and_justified(|ui| {
+                        if ui
+                            .link(
+                                RichText::new("Login to see account associated online devices")
+                                    .size(16.0),
+                            )
+                            .clicked()
+                        {
+                            modal.open();
+                        }
+                    });
+                }
+            });
+
+            ui.add_space(8.0);
+            ui.separator();
+
+            ui.label(RichText::new("Recent Connect").size(32.0).strong());
+        });
     }
 }
 
 impl Page for HomePage {
-    fn draw(&mut self, ui: &mut eframe::egui::Ui) {
+    fn draw(&mut self, ui: &mut eframe::egui::Ui, ui_state: &mut UIState) {
         ui.with_layout(
             Layout::bottom_up(Align::Center).with_cross_justify(true),
             |ui| {
@@ -156,18 +171,11 @@ impl Page for HomePage {
                 ui.add(Separator::default().spacing(0.0));
 
                 // panel
-                let (panel_rect, _) = ui.allocate_exact_size(
-                    ui.available_size(),
-                    Sense {
-                        click: false,
-                        drag: false,
-                        focusable: false,
-                    },
-                );
+                let (panel_rect, _) = ui.allocate_exact_size(ui.available_size(), Sense::hover());
 
                 ui.allocate_ui_at_rect(panel_rect, |ui| {
                     ui.centered_and_justified(|ui| {
-                        self.draw_panel(ui);
+                        self.draw_panel(ui, ui_state);
                     });
                 });
             },

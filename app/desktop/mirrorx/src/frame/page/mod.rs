@@ -8,6 +8,8 @@ pub use home::HomePage;
 pub use lan::LanPage;
 pub use settings::SettingsPage;
 
+use super::state::UIState;
+
 pub trait Page {
-    fn draw(&mut self, ui: &mut eframe::egui::Ui);
+    fn draw(&mut self, ui: &mut eframe::egui::Ui, ui_state: &mut UIState);
 }

@@ -1,15 +1,16 @@
-use crate::frame::{asset::StaticImageCache, viewport::PageType};
+use crate::frame::{
+    asset::StaticImageCache,
+    state::{PageType, UIState},
+};
 use eframe::{egui::*, epaint::*};
 
 pub struct NavBar {
-    current_page_type: PageType,
     nav_buttons: Vec<NavButton>,
 }
 
 impl NavBar {
     pub fn new() -> Self {
         Self {
-            current_page_type: PageType::Home,
             nav_buttons: vec![
                 NavButton::new(PageType::Home),
                 NavButton::new(PageType::Lan),
@@ -19,7 +20,7 @@ impl NavBar {
         }
     }
 
-    pub fn draw(&mut self, ui: &mut eframe::egui::Ui) {
+    pub fn draw(&mut self, ui: &mut eframe::egui::Ui, ui_state: &mut UIState) {
         let rect = Rect::from_x_y_ranges(0f32..=64f32, 0f32..=ui.available_height());
 
         ui.painter()
@@ -35,16 +36,12 @@ impl NavBar {
                 ui.add_space(11.0);
                 ui.style_mut().spacing.item_spacing = vec2(0.0, 8.0);
                 for button in self.nav_buttons.iter_mut() {
-                    if button.draw(ui, self.current_page_type).clicked() {
-                        self.current_page_type = button.button_type;
+                    if button.draw(ui, &ui_state.current_page_type).clicked() {
+                        ui_state.current_page_type = button.button_type.clone();
                     };
                 }
             });
         });
-    }
-
-    pub fn current_page_type(&self) -> PageType {
-        self.current_page_type
     }
 }
 
@@ -65,7 +62,7 @@ impl NavButton {
         }
     }
 
-    pub fn draw(&mut self, ui: &mut eframe::egui::Ui, selected_page_type: PageType) -> Response {
+    pub fn draw(&mut self, ui: &mut eframe::egui::Ui, selected_page_type: &PageType) -> Response {
         let (rect, response) = ui.allocate_at_least(vec2(42.0, 42.0), Sense::click());
 
         let response = response.on_hover_ui_at_pointer(|ui| {
@@ -84,7 +81,7 @@ impl NavButton {
                 .set_cursor_icon(eframe::egui::CursorIcon::PointingHand);
         }
 
-        let selected = selected_page_type == self.button_type;
+        let selected = selected_page_type.eq(&self.button_type);
 
         let background_anim_progress = ui.ctx().animate_value_with_time(
             self.background_anim_id,

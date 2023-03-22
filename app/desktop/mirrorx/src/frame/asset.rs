@@ -34,7 +34,10 @@ static IMAGE_LAN_48: &[u8] =
     include_bytes!("../../assets/images/lan_FILL0_wght400_GRAD0_opsz48.svg");
 static IMAGE_TUNE_48: &[u8] =
     include_bytes!("../../assets/images/tune_FILL0_wght400_GRAD0_opsz48.svg");
-
+static IMAGE_DVR_48: &[u8] =
+    include_bytes!("../../assets/images/dvr_FILL0_wght400_GRAD0_opsz48.svg");
+static IMAGE_SMART_PHONE_48: &[u8] =
+    include_bytes!("../../assets/images/smartphone_FILL0_wght400_GRAD0_opsz48.svg");
 // Cache
 
 static STATIC_IMAGE_CACHE: Lazy<OnceCell<StaticImageCache>> = Lazy::new(OnceCell::new);
@@ -50,57 +53,68 @@ pub struct StaticImageCache {
     pub lan_48: RetainedImage,
     pub remove_48: RetainedImage,
     pub tune_48: RetainedImage,
+    pub dvr_48: RetainedImage,
+    pub smart_phone_48: RetainedImage,
 }
 
 impl StaticImageCache {
     pub fn load() -> anyhow::Result<()> {
-        let image_logo_1024 = RetainedImage::from_svg_bytes("image_logo_1024", IMAGE_LOGO_1024)
+        let logo_1024 = RetainedImage::from_svg_bytes("image_logo_1024", IMAGE_LOGO_1024)
             .map_err(|err| anyhow::anyhow!(err))?;
 
-        let image_arrow_forward_48 =
+        let arrow_forward_48 =
             RetainedImage::from_svg_bytes("image_arrow_forward_48", IMAGE_ARROW_FORWARD_48)
                 .map_err(|err| anyhow::anyhow!(err))?;
 
-        let image_close_48 = RetainedImage::from_svg_bytes("image_close_48", IMAGE_CLOSE_48)
+        let close_48 = RetainedImage::from_svg_bytes("image_close_48", IMAGE_CLOSE_48)
             .map_err(|err| anyhow::anyhow!(err))?;
 
-        let image_desktop_windows_48 =
+        let desktop_windows_48 =
             RetainedImage::from_svg_bytes("image_desktop_windows_48", IMAGE_DESKTOP_WINDOWS_48)
                 .map_err(|err| anyhow::anyhow!(err))?;
 
-        let image_expand_more_48 =
+        let expand_more_48 =
             RetainedImage::from_svg_bytes("image_expand_more_48", IMAGE_EXPAND_MORE_48)
                 .map_err(|err| anyhow::anyhow!(err))?;
 
-        let image_folder_48 = RetainedImage::from_svg_bytes("image_folder_48", IMAGE_FOLDER_48)
+        let folder_48 = RetainedImage::from_svg_bytes("image_folder_48", IMAGE_FOLDER_48)
             .map_err(|err| anyhow::anyhow!(err))?;
 
-        let image_history_toggle_off_48 = RetainedImage::from_svg_bytes(
+        let history_toggle_off_48 = RetainedImage::from_svg_bytes(
             "image_history_toggle_off_48",
             IMAGE_HISTORY_TOGGLE_OFF_48,
         )
         .map_err(|err| anyhow::anyhow!(err))?;
 
-        let image_lan_48 = RetainedImage::from_svg_bytes("image_lan_48", IMAGE_LAN_48)
+        let lan_48 = RetainedImage::from_svg_bytes("image_lan_48", IMAGE_LAN_48)
             .map_err(|err| anyhow::anyhow!(err))?;
 
-        let image_remove_48 = RetainedImage::from_svg_bytes("image_remove_48", IMAGE_REMOVE_48)
+        let remove_48 = RetainedImage::from_svg_bytes("image_remove_48", IMAGE_REMOVE_48)
             .map_err(|err| anyhow::anyhow!(err))?;
 
-        let image_tune_48 = RetainedImage::from_svg_bytes("image_tune_48", IMAGE_TUNE_48)
+        let tune_48 = RetainedImage::from_svg_bytes("image_tune_48", IMAGE_TUNE_48)
             .map_err(|err| anyhow::anyhow!(err))?;
+
+        let dvr_48 = RetainedImage::from_svg_bytes("image_dvr_48", IMAGE_DVR_48)
+            .map_err(|err| anyhow::anyhow!(err))?;
+
+        let smart_phone_48 =
+            RetainedImage::from_svg_bytes("image_smart_phone_48", IMAGE_SMART_PHONE_48)
+                .map_err(|err| anyhow::anyhow!(err))?;
 
         let cache = StaticImageCache {
-            logo_1024: image_logo_1024,
-            arrow_forward_48: image_arrow_forward_48,
-            close_48: image_close_48,
-            desktop_windows_48: image_desktop_windows_48,
-            expand_more_48: image_expand_more_48,
-            folder_48: image_folder_48,
-            history_toggle_off_48: image_history_toggle_off_48,
-            lan_48: image_lan_48,
-            remove_48: image_remove_48,
-            tune_48: image_tune_48,
+            logo_1024,
+            arrow_forward_48,
+            close_48,
+            desktop_windows_48,
+            expand_more_48,
+            folder_48,
+            history_toggle_off_48,
+            lan_48,
+            remove_48,
+            tune_48,
+            dvr_48,
+            smart_phone_48,
         };
 
         anyhow::ensure!(

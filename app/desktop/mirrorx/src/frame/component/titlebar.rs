@@ -1,4 +1,6 @@
-use crate::frame::{asset::StaticImageCache, widget::peer_connect::PeerConnectWidget};
+use crate::frame::{
+    asset::StaticImageCache, state::UIState, widget::peer_connect::PeerConnectWidget,
+};
 use eframe::{egui::*, Frame};
 
 pub struct TitleBar {
@@ -16,7 +18,7 @@ impl TitleBar {
         }
     }
 
-    pub fn draw(&mut self, ui: &mut Ui, frame: &mut Frame) {
+    pub fn draw(&mut self, ui: &mut Ui, frame: &mut Frame, ui_state: &mut UIState) {
         let (rect, response) = ui.allocate_at_least(
             Vec2 {
                 x: ui.available_width(),
@@ -33,7 +35,7 @@ impl TitleBar {
 
         ui.allocate_ui_at_rect(peer_id_rect, |ui| {
             ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
-                self.peer_connect_editor.draw(ui);
+                self.peer_connect_editor.draw(ui, ui_state);
             });
         });
 
