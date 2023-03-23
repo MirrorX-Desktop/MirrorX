@@ -1,5 +1,6 @@
 mod app;
 mod asset;
+mod color;
 mod component;
 mod page;
 mod state;

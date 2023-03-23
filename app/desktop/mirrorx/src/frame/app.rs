@@ -3,7 +3,8 @@ use super::{
     state::{update_ui_state, UIEvent, UIState},
     viewport::Viewport,
 };
-use eframe::egui::{FontData, FontTweak};
+use eframe::{egui::*, epaint::TextShape};
+use std::time::Duration;
 use tokio::sync::mpsc::UnboundedReceiver;
 
 pub struct App {
@@ -34,10 +35,63 @@ impl App {
 }
 
 impl eframe::App for App {
-    fn update(&mut self, ctx: &eframe::egui::Context, frame: &mut eframe::Frame) {
+    fn update(&mut self, ctx: &Context, frame: &mut eframe::Frame) {
         update_ui_state(&mut self.ui_state, &mut self.ui_event_rx);
         self.viewport.draw(ctx, frame, &mut self.ui_state);
+        draw_notifications(ctx, &mut self.ui_state);
     }
+}
+
+fn draw_notifications(ctx: &Context, ui_state: &mut UIState) {
+    if ui_state.notifications.is_empty() {
+        return;
+    }
+
+    let id = Id::new("notifications");
+    let rect = ctx.screen_rect().shrink2(vec2(120.0, 60.0));
+    let notifications = ui_state.notifications.poll_notifications();
+    let ui = Ui::new(
+        ctx.clone(),
+        LayerId::new(eframe::egui::Order::Tooltip, id),
+        id,
+        rect,
+        rect.expand(2.0),
+    );
+
+    let mut start_pos = ui.next_widget_position();
+    for notification in notifications {
+        const PADDING: f32 = 8.0;
+        let galley = ui.painter().layout(
+            notification.content.clone(),
+            FontId::proportional(14.0),
+            Color32::WHITE,
+            ui.available_width() - PADDING * 2.0,
+        );
+
+        let notification_rect = Rect::from_min_size(
+            start_pos,
+            vec2(ui.available_width(), galley.size().y + PADDING * 2.0),
+        );
+
+        ui.painter().rect(
+            notification_rect,
+            Rounding::same(6.0),
+            Color32::LIGHT_GREEN,
+            Stroke::new(1.0, Color32::DARK_GREEN),
+        );
+
+        ui.painter().add(TextShape {
+            pos: start_pos + Vec2::splat(PADDING),
+            galley,
+            underline: Stroke::NONE,
+            override_text_color: None,
+            angle: 0.0,
+        });
+
+        start_pos += vec2(0.0, notification_rect.height() + PADDING * 1.5);
+    }
+
+    ctx.request_repaint_after(Duration::from_secs(1));
 }
 
 fn prepare_fonts(cc: &eframe::CreationContext) {

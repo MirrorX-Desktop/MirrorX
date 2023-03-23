@@ -1,3 +1,5 @@
+use std::{collections::VecDeque, time::Instant};
+
 use once_cell::sync::{Lazy, OnceCell};
 use tokio::sync::mpsc::UnboundedReceiver;
 
@@ -44,6 +46,7 @@ pub struct UIState {
     pub my_devices: Vec<MyDevice>,
     pub login_email: String,
     pub login_password: String,
+    pub notifications: NotificationHub,
 }
 
 impl UIState {
@@ -64,8 +67,49 @@ impl UIState {
             my_devices: Vec::new(),
             login_email: String::default(),
             login_password: String::default(),
+            notifications: NotificationHub::new(),
         })
     }
 }
 
 pub fn update_ui_state(ui_state: &mut UIState, ui_event_rx: &mut UnboundedReceiver<UIEvent>) {}
+
+pub struct Notification {
+    pub content: String,
+    pub ts: Instant,
+}
+
+pub struct NotificationHub {
+    notifications: Vec<Notification>,
+}
+
+impl NotificationHub {
+    pub fn new() -> Self {
+        Self {
+            notifications: Vec::new(),
+        }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.notifications.is_empty()
+    }
+
+    pub fn push_notification(&mut self, content: String) {
+        self.notifications.push(Notification {
+            content,
+            ts: Instant::now(),
+        })
+    }
+
+    pub fn poll_notifications(&mut self) -> &[Notification] {
+        while let Some(notification) = self.notifications.first() {
+            if Instant::now().duration_since(notification.ts).as_secs() >= 5 {
+                self.notifications.remove(0);
+            } else {
+                break;
+            }
+        }
+
+        &self.notifications
+    }
+}
