@@ -1,28 +1,50 @@
-use std::rc::Rc;
-
 use super::Page;
 use crate::frame::{
+    asset::StaticImageCache,
     state::UIState,
-    widget::{modal::Modal, my_device_card::MyDeviceCard},
+    widget::{modal::Modal, my_device_card::MyDeviceCard, peer_connect::PeerConnectWidget},
 };
 use eframe::egui::*;
 use egui_extras::{Size, StripBuilder};
 
 #[derive(Default)]
-pub struct HomePage {}
+pub struct HomePage {
+    peer_connect: PeerConnectWidget,
+}
 
 impl HomePage {
-    fn draw_status_bar(&mut self, ui: &mut Ui) {
-        let (rect, _) = ui.allocate_at_least(vec2(60.0, 30.0), Sense::hover());
-
-        ui.allocate_ui_at_rect(
-            Rect::from_min_size(rect.min, vec2(rect.width() - 8.0, rect.height())),
-            |ui| {
-                ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                    ui.label(RichText::new("\u{e1d8}").font(FontId::proportional(18.0)));
-                });
-            },
+    fn draw_status_bar(&mut self, ui: &mut Ui, ui_state: &mut UIState) {
+        ui.painter().rect(
+            ui.available_rect_before_wrap(),
+            Rounding::none(),
+            ui_state.theme_color.background_level2,
+            Stroke::NONE,
         );
+
+        let available_rect = ui.available_rect_before_wrap().shrink(12.0);
+        ui.allocate_ui_at_rect(available_rect, |ui| {
+            ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
+                StaticImageCache::current()
+                    .github
+                    .show_size(ui, vec2(20.0, 20.0));
+                ui.add_space(12.0);
+                ui.label(RichText::new("\u{e518}").size(20.0));
+                ui.add_space(12.0);
+                ui.label(RichText::new("\u{e1ba}").size(20.0));
+
+                // draw right connect panel
+                let (right_rect, _) = ui.allocate_exact_size(ui.available_size(), Sense::click());
+
+                ui.allocate_ui_at_rect(right_rect, |ui| {
+                    ui.with_layout(
+                        Layout::right_to_left(Align::Center).with_main_align(Align::Max),
+                        |ui| {
+                            self.peer_connect.draw(ui, ui_state);
+                        },
+                    );
+                });
+            });
+        });
     }
 
     fn draw_panel(&mut self, ui: &mut Ui, ui_state: &mut UIState) {
@@ -155,26 +177,18 @@ impl HomePage {
 
 impl Page for HomePage {
     fn draw(&mut self, ui: &mut eframe::egui::Ui, ui_state: &mut UIState) {
-        ui.with_layout(
-            Layout::bottom_up(Align::Center).with_cross_justify(true),
-            |ui| {
-                ui.style_mut().spacing.item_spacing = Vec2::ZERO;
-
-                // status bar
-                ui.allocate_ui(vec2(0.0, 0.0), |ui| self.draw_status_bar(ui));
-
-                ui.add(Separator::default().spacing(0.0));
-
-                // panel
-                let (panel_rect, _) = ui.allocate_exact_size(ui.available_size(), Sense::hover());
-
-                ui.allocate_ui_at_rect(panel_rect, |ui| {
+        let central_content_height = ui.available_height() - 58.0;
+        StripBuilder::new(ui)
+            .size(Size::exact(central_content_height))
+            .size(Size::remainder())
+            .vertical(|mut strip| {
+                strip.cell(|ui| {
                     ui.centered_and_justified(|ui| {
                         self.draw_panel(ui, ui_state);
                     });
                 });
-            },
-        );
+                strip.cell(|ui| self.draw_status_bar(ui, ui_state));
+            });
     }
 }
 

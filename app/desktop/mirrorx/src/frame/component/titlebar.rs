@@ -16,7 +16,6 @@ pub enum ControlButtonType {
 pub struct TitleBar {
     close_button: TitleBarControlButton,
     min_button: TitleBarControlButton,
-    peer_connect_editor: PeerConnectWidget,
     device_nav_button: TitleBarNavButton,
     lan_nav_button: TitleBarNavButton,
     history_nav_button: TitleBarNavButton,
@@ -31,7 +30,6 @@ impl TitleBar {
         Self {
             close_button: TitleBarControlButton::new(ControlButtonType::Close),
             min_button: TitleBarControlButton::new(ControlButtonType::Min),
-            peer_connect_editor: PeerConnectWidget::new(),
             device_nav_button: TitleBarNavButton::new(PageType::Device),
             lan_nav_button: TitleBarNavButton::new(PageType::Lan),
             history_nav_button: TitleBarNavButton::new(PageType::History),
@@ -47,7 +45,8 @@ impl TitleBar {
         ui.allocate_ui_at_rect(rect, |ui| {
             ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
                 ui.style_mut().spacing.item_spacing = Vec2::ZERO;
-                ui.add_space(12.0);
+                StaticImageCache::current().logo.show_scaled(ui, 0.45);
+                ui.add_space(32.0);
                 self.device_nav_button.draw(ui, ui_state);
                 ui.add_space(32.0);
                 self.lan_nav_button.draw(ui, ui_state);
@@ -95,7 +94,7 @@ impl TitleBar {
         ui.painter().rect(
             indicator_rect,
             Rounding::same(6.0),
-            ui_state.theme_color.primary_300,
+            ui_state.theme_color.primary_400,
             Stroke::NONE,
         );
     }

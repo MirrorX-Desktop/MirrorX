@@ -11,8 +11,8 @@ pub struct PeerConnectWidget {
     domain_hovered: bool,
 }
 
-impl PeerConnectWidget {
-    pub fn new() -> Self {
+impl Default for PeerConnectWidget {
+    fn default() -> Self {
         Self {
             resource_type_dropdown_id: Id::new(uuid::Uuid::new_v4()),
             domain_dropdown_id: Id::new(uuid::Uuid::new_v4()),
@@ -20,43 +20,40 @@ impl PeerConnectWidget {
             domain_hovered: false,
         }
     }
+}
 
+impl PeerConnectWidget {
     pub fn draw(&mut self, ui: &mut Ui, ui_state: &mut UIState) {
-        let inner = ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
-            ui.add_space(6.0);
+        let button_response = self.draw_connect_button(ui, ui_state);
 
-            let resource_type_response = self.draw_resource_type_dropdown(ui, ui_state);
+        ui.add(Separator::default().spacing(1.0));
 
-            ui.add(Separator::default().spacing(1.0));
+        let domain_response = self.draw_domain_dropdown(ui, ui_state);
 
-            let peer_id_input_response = ui.add(
-                TextEdit::singleline(&mut ui_state.peer_connect_content)
-                    .font(FontId::proportional(16.0))
-                    .frame(false)
-                    .desired_width(120.0)
-                    .clip_text(false)
-                    .margin(vec2(4.0, 0.0))
-                    .vertical_align(Align::Center)
-                    .hint_text("Peer ID"),
-            );
+        let peer_id_input_response = ui.add(
+            TextEdit::singleline(&mut ui_state.peer_connect_content)
+                .font(FontId::proportional(16.0))
+                .frame(false)
+                .desired_width(220.0)
+                .margin(vec2(4.0, 0.0))
+                .vertical_align(Align::Center)
+                .hint_text("Peer ID"),
+        );
 
-            let peer_id_input_response = peer_id_input_response
-                .on_hover_text_at_pointer("Input the peer id you want to connect");
+        let peer_id_input_response =
+            peer_id_input_response.on_hover_text("Input the peer id you want to connect");
 
-            let domain_response = self.draw_domain_dropdown(ui, ui_state);
+        ui.add(Separator::default().spacing(1.0));
 
-            ui.add(Separator::default().spacing(1.0));
+        let resource_type_response = self.draw_resource_type_dropdown(ui, ui_state);
 
-            let button_response = self.draw_connect_button(ui, ui_state);
-
-            resource_type_response
-                .union(peer_id_input_response)
-                .union(domain_response)
-                .union(button_response)
-        });
+        let union_response = resource_type_response
+            .union(peer_id_input_response)
+            .union(domain_response)
+            .union(button_response);
 
         ui.painter().rect(
-            inner.response.rect,
+            union_response.rect,
             Rounding::same(3.0),
             Color32::TRANSPARENT,
             Stroke {
@@ -81,13 +78,7 @@ impl PeerConnectWidget {
             ui_state.theme_color.text_primary
         };
 
-        let image_response = ui.add(
-            Image::new(resource_image.texture_id(ui.ctx()), vec2(16.0, 16.0))
-                .tint(color)
-                .sense(Sense::click()),
-        );
-
-        // dropdown button
+        // dropdown expand button
         let dropdown_response = ImageButton::new(
             StaticImageCache::current()
                 .expand_more_48
@@ -97,6 +88,18 @@ impl PeerConnectWidget {
         .tint(color)
         .frame(false)
         .ui(ui);
+
+        // resource type image
+        let mut image_response = ui.add(
+            Image::new(resource_image.texture_id(ui.ctx()), vec2(18.0, 18.0))
+                .tint(color)
+                .sense(Sense::click()),
+        );
+
+        // add space on resource type image left
+        image_response.rect.min.x -= 4.0;
+
+        ui.add_space(100.0);
 
         let mut union_response = image_response.union(dropdown_response);
         self.resource_type_hovered = union_response.hovered();
@@ -111,7 +114,7 @@ impl PeerConnectWidget {
             ui,
             popup_id,
             &union_response,
-            AboveOrBelow::Below,
+            AboveOrBelow::Above,
             |ui| {
                 ui.set_min_width(100.0);
                 if ui
@@ -137,7 +140,7 @@ impl PeerConnectWidget {
         );
 
         if !ui.memory(|mem| mem.is_popup_open(popup_id)) {
-            union_response = union_response.on_hover_text_at_pointer("Choose control type");
+            union_response = union_response.on_hover_text("Choose control type");
         }
 
         union_response
@@ -152,15 +155,6 @@ impl PeerConnectWidget {
             ui_state.theme_color.text_primary
         };
 
-        let label_response = Label::new(
-            RichText::new(format!("#{}", ui_state.peer_domain))
-                .font(FontId::proportional(16.0))
-                .color(color),
-        )
-        .sense(Sense::click())
-        .ui(ui);
-
-        // dropdown button
         let dropdown_response = ImageButton::new(
             StaticImageCache::current()
                 .expand_more_48
@@ -169,6 +163,14 @@ impl PeerConnectWidget {
         )
         .tint(color)
         .frame(false)
+        .ui(ui);
+
+        let label_response = Label::new(
+            RichText::new(format!("#{}", ui_state.peer_domain))
+                .font(FontId::proportional(16.0))
+                .color(color),
+        )
+        .sense(Sense::click())
         .ui(ui);
 
         let mut union_response = label_response.union(dropdown_response);
@@ -184,7 +186,7 @@ impl PeerConnectWidget {
             ui,
             popup_id,
             &union_response,
-            AboveOrBelow::Below,
+            AboveOrBelow::Above,
             |ui| {
                 ui.set_min_width(200.0);
                 ui.label("Some more info, or things you can select:");
@@ -193,14 +195,15 @@ impl PeerConnectWidget {
         );
 
         if !ui.memory(|mem| mem.is_popup_open(popup_id)) {
-            union_response = union_response.on_hover_text_at_pointer("Choose peer domain");
+            union_response = union_response.on_hover_text("Choose peer domain");
         }
 
         union_response
     }
 
     fn draw_connect_button(&mut self, ui: &mut Ui, ui_state: &mut UIState) -> Response {
-        let (rect, response) = ui.allocate_at_least(vec2(28.0, 28.0), Sense::click());
+        let (rect, response) =
+            ui.allocate_at_least(Vec2::splat(ui.available_height()), Sense::click());
 
         let (bg_color, fg_color) = if response.hovered() {
             (
@@ -232,7 +235,7 @@ impl PeerConnectWidget {
         );
 
         response
-            .on_hover_text_at_pointer("Click to connect peer")
+            .on_hover_text("Click to connect peer")
             .on_hover_cursor(CursorIcon::PointingHand)
     }
 }

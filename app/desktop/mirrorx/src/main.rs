@@ -12,9 +12,9 @@ async fn main() -> eframe::Result<()> {
     let options = eframe::NativeOptions {
         maximized: false,
         resizable: false,
-        initial_window_size: Some(eframe::epaint::vec2(960.0, 680.0)),
-        max_window_size: Some(eframe::epaint::vec2(960.0, 640.0)),
-        min_window_size: Some(eframe::epaint::vec2(960.0, 640.0)),
+        initial_window_size: Some(eframe::epaint::vec2(960.0, 660.0)),
+        max_window_size: Some(eframe::epaint::vec2(960.0, 660.0)),
+        min_window_size: Some(eframe::epaint::vec2(960.0, 660.0)),
         decorated: false,
         ..Default::default()
     };

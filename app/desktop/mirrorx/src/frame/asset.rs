@@ -15,8 +15,7 @@ pub static FONT_NOTO_SANS_KR: &[u8] = include_bytes!("../../assets/fonts/NotoSan
 
 // Images
 
-static IMAGE_LOGO_103: &[u8] = include_bytes!("../../assets/images/logo.png");
-static IMAGE_LOGO_1024: &[u8] = include_bytes!("../../assets/images/logo_1024.svg");
+static IMAGE_LOGO_TITLE: &[u8] = include_bytes!("../../assets/images/logo_title.png");
 static IMAGE_CLOSE_48: &[u8] =
     include_bytes!("../../assets/images/close_FILL0_wght700_GRAD0_opsz48.svg");
 static IMAGE_REMOVE_48: &[u8] =
@@ -39,13 +38,15 @@ static IMAGE_DVR_48: &[u8] =
     include_bytes!("../../assets/images/dvr_FILL0_wght400_GRAD0_opsz48.svg");
 static IMAGE_SMART_PHONE_48: &[u8] =
     include_bytes!("../../assets/images/smartphone_FILL0_wght400_GRAD0_opsz48.svg");
+static IMAGE_GITHUB: &[u8] = include_bytes!("../../assets/images/github-mark.svg");
+static IMAGE_GITHUB_WHITE: &[u8] = include_bytes!("../../assets/images/github-mark-white.svg");
+
 // Cache
 
 static STATIC_IMAGE_CACHE: Lazy<OnceCell<StaticImageCache>> = Lazy::new(OnceCell::new);
 
 pub struct StaticImageCache {
     pub logo: RetainedImage,
-    pub logo_1024: RetainedImage,
     pub arrow_forward_48: RetainedImage,
     pub close_48: RetainedImage,
     pub desktop_windows_48: RetainedImage,
@@ -57,14 +58,13 @@ pub struct StaticImageCache {
     pub tune_48: RetainedImage,
     pub dvr_48: RetainedImage,
     pub smart_phone_48: RetainedImage,
+    pub github: RetainedImage,
+    pub github_white: RetainedImage,
 }
 
 impl StaticImageCache {
     pub fn load() -> anyhow::Result<()> {
-        let logo = RetainedImage::from_image_bytes("image_logo", IMAGE_LOGO_103)
-            .map_err(|err| anyhow::anyhow!(err))?;
-
-        let logo_1024 = RetainedImage::from_svg_bytes("image_logo_1024", IMAGE_LOGO_1024)
+        let logo = RetainedImage::from_image_bytes("image_logo", IMAGE_LOGO_TITLE)
             .map_err(|err| anyhow::anyhow!(err))?;
 
         let arrow_forward_48 =
@@ -107,9 +107,14 @@ impl StaticImageCache {
             RetainedImage::from_svg_bytes("image_smart_phone_48", IMAGE_SMART_PHONE_48)
                 .map_err(|err| anyhow::anyhow!(err))?;
 
+        let github = RetainedImage::from_svg_bytes("image_github", IMAGE_GITHUB)
+            .map_err(|err| anyhow::anyhow!(err))?;
+
+        let github_white = RetainedImage::from_svg_bytes("image_github_white", IMAGE_GITHUB_WHITE)
+            .map_err(|err| anyhow::anyhow!(err))?;
+
         let cache = StaticImageCache {
             logo,
-            logo_1024,
             arrow_forward_48,
             close_48,
             desktop_windows_48,
@@ -121,6 +126,8 @@ impl StaticImageCache {
             tune_48,
             dvr_48,
             smart_phone_48,
+            github,
+            github_white,
         };
 
         anyhow::ensure!(

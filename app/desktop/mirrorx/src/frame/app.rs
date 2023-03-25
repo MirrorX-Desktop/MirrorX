@@ -53,6 +53,8 @@ impl eframe::App for App {
             self.ui_state.theme_color.neutral_outlined_color;
         style.visuals.widgets.noninteractive.fg_stroke.color =
             self.ui_state.theme_color.text_primary;
+        style.visuals.widgets.inactive.fg_stroke.color = self.ui_state.theme_color.text_primary;
+
         ctx.set_style(style);
 
         self.viewport.draw(ctx, frame, &mut self.ui_state);
