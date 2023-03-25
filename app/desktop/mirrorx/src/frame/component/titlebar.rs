@@ -6,6 +6,7 @@ use crate::frame::{
     widget::peer_connect::PeerConnectWidget,
 };
 use eframe::{egui::*, epaint::TextShape, Frame};
+use interpolation::Ease;
 
 pub enum ControlButtonType {
     Min,
@@ -20,6 +21,9 @@ pub struct TitleBar {
     lan_nav_button: TitleBarNavButton,
     history_nav_button: TitleBarNavButton,
     settings_nav_button: TitleBarNavButton,
+    indicator_anim_id: Id,
+    current_indicator_pos: Pos2,
+    target_indicator_pos: Pos2,
 }
 
 impl TitleBar {
@@ -32,6 +36,9 @@ impl TitleBar {
             lan_nav_button: TitleBarNavButton::new(PageType::Lan),
             history_nav_button: TitleBarNavButton::new(PageType::History),
             settings_nav_button: TitleBarNavButton::new(PageType::Settings),
+            indicator_anim_id: Id::new(uuid::Uuid::new_v4()),
+            current_indicator_pos: Pos2::ZERO,
+            target_indicator_pos: Pos2::ZERO,
         }
     }
 
@@ -48,12 +55,49 @@ impl TitleBar {
                 self.history_nav_button.draw(ui, ui_state);
                 ui.add_space(32.0);
                 self.settings_nav_button.draw(ui, ui_state);
+                self.draw_menu_indicator(ui, ui_state);
             })
         });
 
         if response.is_pointer_button_down_on() {
             frame.drag_window();
         }
+    }
+
+    pub fn draw_menu_indicator(&mut self, ui: &mut Ui, ui_state: &mut UIState) {
+        self.target_indicator_pos = match ui_state.current_page_type {
+            PageType::Device => self.device_nav_button.center_pos,
+            PageType::Lan => self.lan_nav_button.center_pos,
+            PageType::History => self.history_nav_button.center_pos,
+            PageType::Settings => self.settings_nav_button.center_pos,
+        };
+
+        let anim_progress = ui.ctx().animate_bool_with_time(
+            self.indicator_anim_id,
+            !self
+                .target_indicator_pos
+                .x
+                .eq(&self.current_indicator_pos.x),
+            0.3,
+        );
+
+        if self.target_indicator_pos.x != self.current_indicator_pos.x {
+            self.current_indicator_pos.x = interpolation::lerp(
+                &self.current_indicator_pos.x,
+                &self.target_indicator_pos.x,
+                &anim_progress.bounce_in_out(),
+            );
+        }
+
+        let indicator_rect =
+            Rect::from_center_size(pos2(self.current_indicator_pos.x, 40.0), vec2(30.0, 4.0));
+
+        ui.painter().rect(
+            indicator_rect,
+            Rounding::same(6.0),
+            ui_state.theme_color.primary_300,
+            Stroke::NONE,
+        );
     }
 
     pub fn draw(&mut self, ui: &mut Ui, frame: &mut Frame, ui_state: &mut UIState) {
@@ -90,11 +134,9 @@ impl TitleBarControlButton {
 
         let hovered = response.hovered();
 
-        let foreground_anim_progress = ui.ctx().animate_value_with_time(
-            self.foreground_anim_id,
-            if hovered { 1.0 } else { 0.0 },
-            0.15,
-        );
+        let foreground_anim_progress =
+            ui.ctx()
+                .animate_bool_with_time(self.foreground_anim_id, hovered, 0.3);
 
         let image = match self.button_type {
             ControlButtonType::Min => &StaticImageCache::current().remove_48,
@@ -144,6 +186,7 @@ pub struct TitleBarNavButton {
     foreground_anim_id: Id,
     current_foreground_color: Color32,
     target_foreground_color: Color32,
+    center_pos: Pos2,
 }
 
 impl TitleBarNavButton {
@@ -153,6 +196,7 @@ impl TitleBarNavButton {
             foreground_anim_id: Id::new(uuid::Uuid::new_v4()),
             current_foreground_color: Color32::TRANSPARENT,
             target_foreground_color: Color32::TRANSPARENT,
+            center_pos: Pos2::ZERO,
         }
     }
 
@@ -173,17 +217,14 @@ impl TitleBarNavButton {
 
         let (rect, response) = ui.allocate_at_least(galley.size(), Sense::click());
 
-        let foreground_anim_progress = ui.ctx().animate_value_with_time(
+        self.center_pos = rect.center();
+
+        let foreground_anim_progress = ui.ctx().animate_bool_with_time(
             self.foreground_anim_id,
-            if self
+            !self
                 .current_foreground_color
-                .eq(&self.target_foreground_color)
-            {
-                0.0
-            } else {
-                1.0
-            },
-            0.15,
+                .eq(&self.target_foreground_color),
+            0.3,
         );
 
         let selected = ui_state.current_page_type.eq(&self.page_type);
@@ -197,12 +238,11 @@ impl TitleBarNavButton {
 
         self.target_foreground_color = color;
 
-        // this guard reduce drawing cpu usage when current page type unchanged
         if self.target_foreground_color != self.current_foreground_color {
             let current_color_array = interpolation::lerp(
                 &self.current_foreground_color.to_array(),
                 &self.target_foreground_color.to_array(),
-                &foreground_anim_progress,
+                &foreground_anim_progress.bounce_in(),
             );
 
             self.current_foreground_color = Color32::from_rgba_premultiplied(
