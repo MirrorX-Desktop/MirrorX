@@ -236,7 +236,7 @@ pub struct ThemeColor {
 }
 
 impl ThemeColor {
-    pub fn select_style(style: ThemeColorStyle) -> &'static ThemeColor {
+    pub fn select_style(style: &ThemeColorStyle) -> &'static ThemeColor {
         match style {
             ThemeColorStyle::Light => &THEME_COLOR_LIGHT,
             ThemeColorStyle::Dark => &THEME_COLOR_DARK,

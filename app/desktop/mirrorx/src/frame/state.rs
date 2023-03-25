@@ -3,11 +3,13 @@ use std::{collections::VecDeque, time::Instant};
 use once_cell::sync::{Lazy, OnceCell};
 use tokio::sync::mpsc::UnboundedReceiver;
 
+use super::color::{ThemeColor, ThemeColorStyle};
+
 pub enum UIEvent {}
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone)]
 pub enum PageType {
-    Home,
+    Device,
     Lan,
     History,
     Settings,
@@ -31,6 +33,7 @@ pub struct MyDevice {
 }
 
 pub struct UIState {
+    pub theme_color: &'static ThemeColor,
     pub current_page_type: PageType,
     pub connect_type: ConnectType,
     pub peer_id: String,
@@ -52,7 +55,8 @@ pub struct UIState {
 impl UIState {
     pub fn new() -> anyhow::Result<Self> {
         Ok(Self {
-            current_page_type: PageType::Home,
+            theme_color: ThemeColor::select_style(&ThemeColorStyle::Light),
+            current_page_type: PageType::Device,
             connect_type: ConnectType::Desktop,
             peer_id: String::default(),
             peer_domain: String::from("mirrorx.cloud"),

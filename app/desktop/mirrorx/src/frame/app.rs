@@ -3,7 +3,10 @@ use super::{
     state::{update_ui_state, UIEvent, UIState},
     viewport::Viewport,
 };
-use eframe::{egui::*, epaint::TextShape};
+use eframe::{
+    egui::*,
+    epaint::{Shadow, TextShape},
+};
 use std::time::Duration;
 use tokio::sync::mpsc::UnboundedReceiver;
 
@@ -37,6 +40,21 @@ impl App {
 impl eframe::App for App {
     fn update(&mut self, ctx: &Context, frame: &mut eframe::Frame) {
         update_ui_state(&mut self.ui_state, &mut self.ui_event_rx);
+
+        let mut style = (*ctx.style()).clone();
+        style.visuals.window_fill = self.ui_state.theme_color.background_popup;
+        style.visuals.window_stroke =
+            Stroke::new(1.0, self.ui_state.theme_color.neutral_outlined_border);
+        style.visuals.popup_shadow = Shadow {
+            extrusion: 1.5,
+            color: self.ui_state.theme_color.background_level3,
+        };
+        style.visuals.widgets.noninteractive.bg_stroke.color =
+            self.ui_state.theme_color.neutral_outlined_color;
+        style.visuals.widgets.noninteractive.fg_stroke.color =
+            self.ui_state.theme_color.text_primary;
+        ctx.set_style(style);
+
         self.viewport.draw(ctx, frame, &mut self.ui_state);
         draw_notifications(ctx, &mut self.ui_state);
     }

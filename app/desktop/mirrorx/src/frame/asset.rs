@@ -15,11 +15,12 @@ pub static FONT_NOTO_SANS_KR: &[u8] = include_bytes!("../../assets/fonts/NotoSan
 
 // Images
 
+static IMAGE_LOGO_103: &[u8] = include_bytes!("../../assets/images/logo.png");
 static IMAGE_LOGO_1024: &[u8] = include_bytes!("../../assets/images/logo_1024.svg");
 static IMAGE_CLOSE_48: &[u8] =
-    include_bytes!("../../assets/images/close_FILL0_wght400_GRAD0_opsz48.svg");
+    include_bytes!("../../assets/images/close_FILL0_wght700_GRAD0_opsz48.svg");
 static IMAGE_REMOVE_48: &[u8] =
-    include_bytes!("../../assets/images/remove_FILL0_wght400_GRAD0_opsz48.svg");
+    include_bytes!("../../assets/images/remove_FILL0_wght700_GRAD0_opsz48.svg");
 static IMAGE_ARROW_FORWARD_48: &[u8] =
     include_bytes!("../../assets/images/arrow_forward_FILL0_wght400_GRAD0_opsz48.svg");
 static IMAGE_DESKTOP_WINDOWS_48: &[u8] =
@@ -43,6 +44,7 @@ static IMAGE_SMART_PHONE_48: &[u8] =
 static STATIC_IMAGE_CACHE: Lazy<OnceCell<StaticImageCache>> = Lazy::new(OnceCell::new);
 
 pub struct StaticImageCache {
+    pub logo: RetainedImage,
     pub logo_1024: RetainedImage,
     pub arrow_forward_48: RetainedImage,
     pub close_48: RetainedImage,
@@ -59,6 +61,9 @@ pub struct StaticImageCache {
 
 impl StaticImageCache {
     pub fn load() -> anyhow::Result<()> {
+        let logo = RetainedImage::from_image_bytes("image_logo", IMAGE_LOGO_103)
+            .map_err(|err| anyhow::anyhow!(err))?;
+
         let logo_1024 = RetainedImage::from_svg_bytes("image_logo_1024", IMAGE_LOGO_1024)
             .map_err(|err| anyhow::anyhow!(err))?;
 
@@ -103,6 +108,7 @@ impl StaticImageCache {
                 .map_err(|err| anyhow::anyhow!(err))?;
 
         let cache = StaticImageCache {
+            logo,
             logo_1024,
             arrow_forward_48,
             close_48,

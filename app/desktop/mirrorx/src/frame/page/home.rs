@@ -50,7 +50,7 @@ impl HomePage {
     fn draw_panel_left(&mut self, ui: &mut Ui, ui_state: &mut UIState) {
         ui.centered_and_justified(|ui| {
             ui.with_layout(Layout::top_down(Align::Min), |ui| {
-                ui.label(RichText::new("Peer ID").size(32.0).strong());
+                ui.label(RichText::new("Peer ID").size(32.0));
 
                 ui.add_space(18.0);
                 ui.label(
@@ -59,7 +59,7 @@ impl HomePage {
                 );
 
                 ui.add_space(18.0);
-                ui.label(RichText::new("Password").size(32.0).strong());
+                ui.label(RichText::new("Password").size(32.0));
 
                 ui.add_space(18.0);
                 ui.checkbox(
@@ -99,7 +99,7 @@ impl HomePage {
 
     fn draw_panel_right(&mut self, ui: &mut Ui, ui_state: &mut UIState) {
         ui.vertical(|ui| {
-            ui.label(RichText::new("My Devices").size(32.0).strong());
+            ui.label(RichText::new("My Devices").size(32.0));
 
             let mut devices_card_rect = ui.available_rect_before_wrap();
             devices_card_rect.set_height(if ui_state.my_devices.is_empty() {
@@ -148,7 +148,7 @@ impl HomePage {
             ui.add_space(8.0);
             ui.separator();
 
-            ui.label(RichText::new("Recent Connect").size(32.0).strong());
+            ui.label(RichText::new("Recent Connect").size(32.0));
         });
     }
 }

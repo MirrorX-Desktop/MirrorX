@@ -24,16 +24,10 @@ impl PeerConnectWidget {
     pub fn draw(&mut self, ui: &mut Ui, ui_state: &mut UIState) {
         let inner = ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
             ui.add_space(6.0);
-            ui.style_mut()
-                .visuals
-                .widgets
-                .noninteractive
-                .bg_stroke
-                .color = Color32::from_rgb(101, 101, 101);
 
             let resource_type_response = self.draw_resource_type_dropdown(ui, ui_state);
 
-            ui.separator();
+            ui.add(Separator::default().spacing(1.0));
 
             let peer_id_input_response = ui.add(
                 TextEdit::singleline(&mut ui_state.peer_connect_content)
@@ -43,19 +37,17 @@ impl PeerConnectWidget {
                     .clip_text(false)
                     .margin(vec2(4.0, 0.0))
                     .vertical_align(Align::Center)
-                    .horizontal_align(Align::Max)
                     .hint_text("Peer ID"),
             );
 
-            let peer_id_input_response = peer_id_input_response.on_hover_text(
-                RichText::new("Input the peer id you want to connect").color(Color32::WHITE),
-            );
+            let peer_id_input_response = peer_id_input_response
+                .on_hover_text_at_pointer("Input the peer id you want to connect");
 
             let domain_response = self.draw_domain_dropdown(ui, ui_state);
 
-            ui.add(Separator::default().spacing(0.0));
+            ui.add(Separator::default().spacing(1.0));
 
-            let button_response = self.draw_connect_button(ui);
+            let button_response = self.draw_connect_button(ui, ui_state);
 
             resource_type_response
                 .union(peer_id_input_response)
@@ -65,11 +57,11 @@ impl PeerConnectWidget {
 
         ui.painter().rect(
             inner.response.rect,
-            ui.style().visuals.widgets.inactive.rounding,
+            Rounding::same(3.0),
             Color32::TRANSPARENT,
             Stroke {
                 width: 1.0,
-                color: Color32::from_rgb(101, 101, 101),
+                color: ui.style().visuals.widgets.noninteractive.bg_stroke.color,
             },
         );
     }
@@ -84,9 +76,9 @@ impl PeerConnectWidget {
         };
 
         let color = if self.resource_type_hovered {
-            ui.style().visuals.widgets.active.fg_stroke.color
+            ui_state.theme_color.primary_plain_color
         } else {
-            ui.style().visuals.widgets.noninteractive.fg_stroke.color
+            ui_state.theme_color.text_primary
         };
 
         let image_response = ui.add(
@@ -145,8 +137,7 @@ impl PeerConnectWidget {
         );
 
         if !ui.memory(|mem| mem.is_popup_open(popup_id)) {
-            union_response = union_response
-                .on_hover_text(RichText::new("Choose control type").color(Color32::WHITE));
+            union_response = union_response.on_hover_text_at_pointer("Choose control type");
         }
 
         union_response
@@ -156,9 +147,9 @@ impl PeerConnectWidget {
         // hash tag and domain name
 
         let color = if self.domain_hovered {
-            ui.style().visuals.widgets.active.fg_stroke.color
+            ui_state.theme_color.primary_plain_color
         } else {
-            ui.style().visuals.widgets.noninteractive.fg_stroke.color
+            ui_state.theme_color.text_primary
         };
 
         let label_response = Label::new(
@@ -202,30 +193,35 @@ impl PeerConnectWidget {
         );
 
         if !ui.memory(|mem| mem.is_popup_open(popup_id)) {
-            union_response = union_response
-                .on_hover_text(RichText::new("Choose peer domain").color(Color32::WHITE));
+            union_response = union_response.on_hover_text_at_pointer("Choose peer domain");
         }
 
         union_response
     }
 
-    fn draw_connect_button(&mut self, ui: &mut Ui) -> Response {
+    fn draw_connect_button(&mut self, ui: &mut Ui, ui_state: &mut UIState) -> Response {
         let (rect, response) = ui.allocate_at_least(vec2(28.0, 28.0), Sense::click());
 
         let (bg_color, fg_color) = if response.hovered() {
             (
-                ui.style().visuals.widgets.active.bg_fill,
-                ui.style().visuals.widgets.active.fg_stroke.color,
+                ui_state.theme_color.primary_plain_active_bg,
+                ui_state.theme_color.primary_plain_color,
             )
         } else {
-            (
-                Color32::TRANSPARENT,
-                ui.style().visuals.widgets.noninteractive.fg_stroke.color,
-            )
+            (Color32::TRANSPARENT, ui_state.theme_color.text_primary)
         };
 
-        ui.painter()
-            .rect_filled(rect.shrink2(vec2(1.0, 0.0)), Rounding::none(), bg_color);
+        ui.painter().rect_filled(
+            rect,
+            Rounding {
+                nw: 0.0,
+                ne: 3.0,
+                sw: 0.0,
+                se: 3.0,
+            },
+            bg_color,
+        );
+
         ui.painter().image(
             StaticImageCache::current()
                 .arrow_forward_48
@@ -235,6 +231,8 @@ impl PeerConnectWidget {
             fg_color,
         );
 
-        response.on_hover_text(RichText::new("Click to connect peer").color(Color32::WHITE))
+        response
+            .on_hover_text_at_pointer("Click to connect peer")
+            .on_hover_cursor(CursorIcon::PointingHand)
     }
 }
