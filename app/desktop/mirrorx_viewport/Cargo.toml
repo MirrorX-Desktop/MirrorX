@@ -6,5 +6,17 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-eframe = "0.21.3"
 tokio = { version = "1.26.0", features = ["full"] }
+slint = "0.3.5"
+
+[target.x86_64-pc-windows-msvc.dependencies]
+windows = { version = "0.47.0", features = [
+    "Win32_Graphics_Dwm",
+    "Win32_Foundation",
+    "Win32_UI_Controls",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_System_Threading",
+] }
+
+[build-dependencies]
+slint-build = "0.3.5"

@@ -1,14 +1,19 @@
-use crate::frame::{
-    asset::StaticImageCache,
-    state::{ConnectType, UIState},
-};
+use crate::frame::{asset::StaticImageCache, state::SharedState};
 use eframe::egui::*;
+
+#[derive(Debug, Hash, PartialEq, Eq)]
+enum ConnectType {
+    Desktop,
+    Files,
+}
 
 pub struct PeerConnectWidget {
     resource_type_dropdown_id: Id,
     domain_dropdown_id: Id,
     resource_type_hovered: bool,
     domain_hovered: bool,
+    input_peer_id: String,
+    connect_type: ConnectType,
 }
 
 impl Default for PeerConnectWidget {
@@ -18,12 +23,14 @@ impl Default for PeerConnectWidget {
             domain_dropdown_id: Id::new(uuid::Uuid::new_v4()),
             resource_type_hovered: false,
             domain_hovered: false,
+            input_peer_id: String::default(),
+            connect_type: ConnectType::Desktop,
         }
     }
 }
 
 impl PeerConnectWidget {
-    pub fn draw(&mut self, ui: &mut Ui, ui_state: &mut UIState) {
+    pub fn draw(&mut self, ui: &mut Ui, ui_state: &SharedState) {
         let button_response = self.draw_connect_button(ui, ui_state);
 
         ui.add(Separator::default().spacing(1.0));
@@ -31,7 +38,7 @@ impl PeerConnectWidget {
         let domain_response = self.draw_domain_dropdown(ui, ui_state);
 
         let peer_id_input_response = ui.add(
-            TextEdit::singleline(&mut ui_state.peer_connect_content)
+            TextEdit::singleline(&mut self.input_peer_id)
                 .font(FontId::proportional(16.0))
                 .frame(false)
                 .desired_width(220.0)
@@ -63,19 +70,17 @@ impl PeerConnectWidget {
         );
     }
 
-    fn draw_resource_type_dropdown(&mut self, ui: &mut Ui, ui_state: &mut UIState) -> Response {
+    fn draw_resource_type_dropdown(&mut self, ui: &mut Ui, ui_state: &SharedState) -> Response {
         // connect type label
-        let resource_image = match ui_state.connect_type {
-            crate::frame::state::ConnectType::Desktop => {
-                &StaticImageCache::current().desktop_windows_48
-            }
-            crate::frame::state::ConnectType::Files => &StaticImageCache::current().folder_48,
+        let resource_image = match self.connect_type {
+            ConnectType::Desktop => &StaticImageCache::current().desktop_windows_48,
+            ConnectType::Files => &StaticImageCache::current().folder_48,
         };
 
         let color = if self.resource_type_hovered {
-            ui_state.theme_color.primary_plain_color
+            ui_state.theme_color().primary_plain_color
         } else {
-            ui_state.theme_color.text_primary
+            ui_state.theme_color().text_primary
         };
 
         // dropdown expand button
@@ -119,22 +124,22 @@ impl PeerConnectWidget {
                 ui.set_min_width(100.0);
                 if ui
                     .selectable_label(
-                        ui_state.connect_type.eq(&ConnectType::Desktop),
+                        self.connect_type.eq(&ConnectType::Desktop),
                         RichText::new("\u{e30c} Desktop".to_string()),
                     )
                     .clicked()
                 {
-                    ui_state.connect_type = ConnectType::Desktop;
+                    self.connect_type = ConnectType::Desktop;
                 }
 
                 if ui
                     .selectable_label(
-                        ui_state.connect_type.eq(&ConnectType::Files),
+                        self.connect_type.eq(&ConnectType::Files),
                         RichText::new("\u{e2c7} Files".to_string()),
                     )
                     .clicked()
                 {
-                    ui_state.connect_type = ConnectType::Files;
+                    self.connect_type = ConnectType::Files;
                 }
             },
         );
@@ -146,13 +151,13 @@ impl PeerConnectWidget {
         union_response
     }
 
-    fn draw_domain_dropdown(&mut self, ui: &mut Ui, ui_state: &mut UIState) -> Response {
+    fn draw_domain_dropdown(&mut self, ui: &mut Ui, ui_state: &SharedState) -> Response {
         // hash tag and domain name
 
         let color = if self.domain_hovered {
-            ui_state.theme_color.primary_plain_color
+            ui_state.theme_color().primary_plain_color
         } else {
-            ui_state.theme_color.text_primary
+            ui_state.theme_color().text_primary
         };
 
         let dropdown_response = ImageButton::new(
@@ -201,17 +206,17 @@ impl PeerConnectWidget {
         union_response
     }
 
-    fn draw_connect_button(&mut self, ui: &mut Ui, ui_state: &mut UIState) -> Response {
+    fn draw_connect_button(&mut self, ui: &mut Ui, ui_state: &SharedState) -> Response {
         let (rect, response) =
             ui.allocate_at_least(Vec2::splat(ui.available_height()), Sense::click());
 
         let (bg_color, fg_color) = if response.hovered() {
             (
-                ui_state.theme_color.primary_plain_active_bg,
-                ui_state.theme_color.primary_plain_color,
+                ui_state.theme_color().primary_plain_active_bg,
+                ui_state.theme_color().primary_plain_color,
             )
         } else {
-            (Color32::TRANSPARENT, ui_state.theme_color.text_primary)
+            (Color32::TRANSPARENT, ui_state.theme_color().text_primary)
         };
 
         ui.painter().rect_filled(

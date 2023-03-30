@@ -1,0 +1,86 @@
+import {Theme} from "../global/theme.slint";
+
+component TabItem {
+    in property <string> title;
+    in property <bool> selected;
+    callback clicked <=> area.clicked;
+
+    VerticalLayout {
+    alignment: center;
+
+        Text {
+            font-size: 20px;
+            text: title;
+            color: selected ? Theme.palette.text-primary : area.has-hover ? Theme.palette.neutral-plain-hover-color : Theme.palette.neutral-plain-disabled-color;
+            vertical-alignment: center;
+
+            Rectangle {
+                y: 28px;
+                width: selected ? parent.width * 0.6 : 0px;
+                height: 4px;
+                border-radius: 1.5px;
+                background: Theme.palette.primary-400;
+                
+                animate width { 
+                    duration: 150ms;
+                    easing: ease-in-out;
+                }
+            }
+
+            area := TouchArea {
+                mouse-cursor: pointer;
+            }
+
+            animate color { 
+                duration: 150ms;
+                easing: ease-in-out;
+            }
+        }
+    }
+}
+
+export component TabBar {
+    out property <string> selected-tab : "devices";
+
+    VerticalLayout { 
+        alignment: center;
+
+        HorizontalLayout {
+            spacing: 24px;
+            alignment: start;
+
+            TabItem { 
+                title: "我的设备";
+                selected: selected-tab == "devices";
+                clicked => { 
+                    selected-tab = "devices";
+                }
+            }
+
+            TabItem { 
+                title: "局域网";
+                selected: selected-tab == "lan";
+                clicked => { 
+                    selected-tab = "lan";
+                }
+            }
+
+            TabItem { 
+                title: "历史";
+                selected: selected-tab == "history";
+                clicked => { 
+                    selected-tab = "history";
+                }
+            }
+
+            TabItem { 
+                title: "设置";
+                selected: selected-tab == "settings";
+                clicked => { 
+                    selected-tab = "settings";
+                }
+            }
+        }
+    }
+}
+

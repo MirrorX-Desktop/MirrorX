@@ -1,27 +1,23 @@
 use super::{
     asset,
-    state::{update_ui_state, UIEvent, UIState},
+    state::{start_ui_event_processor, SharedState, UIEvent},
     viewport::Viewport,
 };
+use crossbeam::atomic::AtomicCell;
 use eframe::{
     egui::*,
     epaint::{Shadow, TextShape},
 };
-use std::time::Duration;
+use std::{rc::Rc, sync::atomic::AtomicPtr, time::Duration};
 use tokio::sync::mpsc::UnboundedReceiver;
 
 pub struct App {
     viewport: Viewport,
-    ui_state: UIState,
-    ui_event_rx: UnboundedReceiver<UIEvent>,
+    atomic_state: AtomicCell<SharedState>,
 }
 
 impl App {
-    pub fn new(
-        cc: &eframe::CreationContext,
-        ui_state: UIState,
-        ui_event_rx: UnboundedReceiver<UIEvent>,
-    ) -> Self {
+    pub fn new(cc: &eframe::CreationContext) -> Self {
         // cc.egui_ctx.set_debug_on_hover(true);
 
         prepare_fonts(cc);
@@ -29,90 +25,93 @@ impl App {
         #[cfg(target_os = "windows")]
         set_window_shadow();
 
+        let atomic_state = AtomicCell::new(SharedState::default());
+
+        start_ui_event_processor(atomic_state);
+
         Self {
             viewport: Viewport::new(),
-            ui_state,
-            ui_event_rx,
+            atomic_state,
         }
     }
 }
 
 impl eframe::App for App {
     fn update(&mut self, ctx: &Context, frame: &mut eframe::Frame) {
-        update_ui_state(&mut self.ui_state, &mut self.ui_event_rx);
+        let state_snapshot = self.atomic_state.into_inner();
 
-        let mut style = (*ctx.style()).clone();
-        style.visuals.window_fill = self.ui_state.theme_color.background_popup;
-        style.visuals.window_stroke =
-            Stroke::new(1.0, self.ui_state.theme_color.neutral_outlined_border);
-        style.visuals.popup_shadow = Shadow {
-            extrusion: 1.5,
-            color: self.ui_state.theme_color.background_level3,
-        };
-        style.visuals.widgets.noninteractive.bg_stroke.color =
-            self.ui_state.theme_color.neutral_outlined_color;
-        style.visuals.widgets.noninteractive.fg_stroke.color =
-            self.ui_state.theme_color.text_primary;
-        style.visuals.widgets.inactive.fg_stroke.color = self.ui_state.theme_color.text_primary;
+        // let mut style = (*ctx.style()).clone();
+        // style.visuals.window_fill = self.ui_state.theme_color.background_popup;
+        // style.visuals.window_stroke =
+        //     Stroke::new(1.0, self.ui_state.theme_color.neutral_outlined_border);
+        // style.visuals.popup_shadow = Shadow {
+        //     extrusion: 1.5,
+        //     color: self.ui_state.theme_color.background_level3,
+        // };
+        // style.visuals.widgets.noninteractive.bg_stroke.color =
+        //     self.ui_state.theme_color.neutral_outlined_color;
+        // style.visuals.widgets.noninteractive.fg_stroke.color =
+        //     self.ui_state.theme_color.text_primary;
+        // style.visuals.widgets.inactive.fg_stroke.color = self.ui_state.theme_color.text_primary;
 
-        ctx.set_style(style);
+        // ctx.set_style(style);
 
-        self.viewport.draw(ctx, frame, &mut self.ui_state);
-        draw_notifications(ctx, &mut self.ui_state);
+        self.viewport.draw(ctx, frame, &state_snapshot);
+        // draw_notifications(ctx, &state_snapshot);
     }
 }
 
-fn draw_notifications(ctx: &Context, ui_state: &mut UIState) {
-    if ui_state.notifications.is_empty() {
-        return;
-    }
+// fn draw_notifications(ctx: &Context, ui_state: &SharedState) {
+//     if ui_state.notifications.is_empty() {
+//         return;
+//     }
 
-    let id = Id::new("notifications");
-    let rect = ctx.screen_rect().shrink2(vec2(120.0, 60.0));
-    let notifications = ui_state.notifications.poll_notifications();
-    let ui = Ui::new(
-        ctx.clone(),
-        LayerId::new(eframe::egui::Order::Tooltip, id),
-        id,
-        rect,
-        rect.expand(2.0),
-    );
+//     let id = Id::new("notifications");
+//     let rect = ctx.screen_rect().shrink2(vec2(120.0, 60.0));
+//     let notifications = ui_state.notifications.poll_notifications();
+//     let ui = Ui::new(
+//         ctx.clone(),
+//         LayerId::new(eframe::egui::Order::Tooltip, id),
+//         id,
+//         rect,
+//         rect.expand(2.0),
+//     );
 
-    let mut start_pos = ui.next_widget_position();
-    for notification in notifications {
-        const PADDING: f32 = 8.0;
-        let galley = ui.painter().layout(
-            notification.content.clone(),
-            FontId::proportional(14.0),
-            Color32::WHITE,
-            ui.available_width() - PADDING * 2.0,
-        );
+//     let mut start_pos = ui.next_widget_position();
+//     for notification in notifications {
+//         const PADDING: f32 = 8.0;
+//         let galley = ui.painter().layout(
+//             notification.content.clone(),
+//             FontId::proportional(14.0),
+//             Color32::WHITE,
+//             ui.available_width() - PADDING * 2.0,
+//         );
 
-        let notification_rect = Rect::from_min_size(
-            start_pos,
-            vec2(ui.available_width(), galley.size().y + PADDING * 2.0),
-        );
+//         let notification_rect = Rect::from_min_size(
+//             start_pos,
+//             vec2(ui.available_width(), galley.size().y + PADDING * 2.0),
+//         );
 
-        ui.painter().rect(
-            notification_rect,
-            Rounding::same(6.0),
-            Color32::LIGHT_GREEN,
-            Stroke::new(1.0, Color32::DARK_GREEN),
-        );
+//         ui.painter().rect(
+//             notification_rect,
+//             Rounding::same(6.0),
+//             Color32::LIGHT_GREEN,
+//             Stroke::new(1.0, Color32::DARK_GREEN),
+//         );
 
-        ui.painter().add(TextShape {
-            pos: start_pos + Vec2::splat(PADDING),
-            galley,
-            underline: Stroke::NONE,
-            override_text_color: None,
-            angle: 0.0,
-        });
+//         ui.painter().add(TextShape {
+//             pos: start_pos + Vec2::splat(PADDING),
+//             galley,
+//             underline: Stroke::NONE,
+//             override_text_color: None,
+//             angle: 0.0,
+//         });
 
-        start_pos += vec2(0.0, notification_rect.height() + PADDING * 1.5);
-    }
+//         start_pos += vec2(0.0, notification_rect.height() + PADDING * 1.5);
+//     }
 
-    ctx.request_repaint_after(Duration::from_secs(1));
-}
+//     ctx.request_repaint_after(Duration::from_secs(1));
+// }
 
 fn prepare_fonts(cc: &eframe::CreationContext) {
     let mut fonts = eframe::egui::FontDefinitions::empty();

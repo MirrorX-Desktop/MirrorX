@@ -1,0 +1,61 @@
+import { VerticalBox } from "std-widgets.slint";
+import { CloseButton } from "close_button.slint";
+import { MinButton } from "min_button.slint";
+import { Event } from "../global/event.slint";
+import { TabBar } from "tabbar.slint";
+import { Theme } from "../global/theme.slint";
+
+export component TitleBar {
+    out property <string> selected-tab <=> tabbar.selected-tab;
+    private property <image> mirrorxLightImage : @image-url("../images/mirrorx_light.png");
+    private property <image> mirrorxDarkImage : @image-url("../images/mirrorx_dark.png");
+
+    HorizontalLayout {
+
+        Rectangle { 
+            width: 100px;
+
+            VerticalLayout {
+                alignment: center;
+                padding-left: 12px;
+    
+                Image {
+                    width: 100px;
+                    source: Theme.palette.is-light ? mirrorxLightImage : mirrorxDarkImage;
+                }
+            }
+        }
+
+
+        Rectangle { 
+            horizontal-stretch: 2;
+
+            area := TouchArea { 
+                moved => {
+                    Event.drag-window(area.mouse-x - area.pressed-x, area.mouse-y - area.pressed-y);
+                }
+            }
+
+            HorizontalLayout {
+                alignment: center;
+                
+                tabbar := TabBar { }
+            }
+        }
+
+
+        Rectangle { 
+            width: 100px;
+
+            HorizontalLayout {
+                padding-right: 12px;
+                padding-top: 12px;
+                padding-bottom: 12px;
+                alignment: end;
+                spacing: 6px;
+                MinButton { }
+                CloseButton { }
+            }
+        }
+    }
+}

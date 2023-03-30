@@ -1,11 +1,13 @@
-use std::ops::SubAssign;
+use std::{mem::MaybeUninit, rc::Rc};
 
 use crate::frame::{
     asset::StaticImageCache,
-    state::{PageType, UIState},
-    widget::peer_connect::PeerConnectWidget,
+    color::{ThemeColor, ThemeColorStyle},
+    state::SharedState,
+    view::ViewId,
+    widget::StatefulWidget,
 };
-use eframe::{egui::*, epaint::TextShape, Frame};
+use eframe::{egui::*, epaint::TextShape, Frame, Theme};
 use interpolation::Ease;
 
 pub enum ControlButtonType {
@@ -40,21 +42,29 @@ impl TitleBar {
         }
     }
 
-    pub fn draw_menu(&mut self, ui: &mut Ui, frame: &mut Frame, ui_state: &mut UIState) {
+    pub fn draw_menu(
+        &mut self,
+        ui: &mut Ui,
+        frame: &mut Frame,
+        current_page_type: &mut PageType,
+        ui_state: &SharedState,
+    ) {
         let (rect, response) = ui.allocate_exact_size(ui.available_size(), Sense::click());
         ui.allocate_ui_at_rect(rect, |ui| {
             ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
                 ui.style_mut().spacing.item_spacing = Vec2::ZERO;
                 StaticImageCache::current().logo.show_scaled(ui, 0.45);
                 ui.add_space(32.0);
-                self.device_nav_button.draw(ui, ui_state);
+                self.device_nav_button.draw(ui, current_page_type, ui_state);
                 ui.add_space(32.0);
-                self.lan_nav_button.draw(ui, ui_state);
+                self.lan_nav_button.draw(ui, current_page_type, ui_state);
                 ui.add_space(32.0);
-                self.history_nav_button.draw(ui, ui_state);
+                self.history_nav_button
+                    .draw(ui, current_page_type, ui_state);
                 ui.add_space(32.0);
-                self.settings_nav_button.draw(ui, ui_state);
-                self.draw_menu_indicator(ui, ui_state);
+                self.settings_nav_button
+                    .draw(ui, current_page_type, ui_state);
+                self.draw_menu_indicator(ui, current_page_type, ui_state);
             })
         });
 
@@ -63,8 +73,13 @@ impl TitleBar {
         }
     }
 
-    pub fn draw_menu_indicator(&mut self, ui: &mut Ui, ui_state: &mut UIState) {
-        self.target_indicator_pos = match ui_state.current_page_type {
+    pub fn draw_menu_indicator(
+        &mut self,
+        ui: &mut Ui,
+        current_page_type: &PageType,
+        ui_state: &SharedState,
+    ) {
+        self.target_indicator_pos = match current_page_type {
             PageType::Device => self.device_nav_button.center_pos,
             PageType::Lan => self.lan_nav_button.center_pos,
             PageType::History => self.history_nav_button.center_pos,
@@ -94,12 +109,18 @@ impl TitleBar {
         ui.painter().rect(
             indicator_rect,
             Rounding::same(6.0),
-            ui_state.theme_color.primary_400,
+            ui_state.theme_color().primary_400,
             Stroke::NONE,
         );
     }
 
-    pub fn draw(&mut self, ui: &mut Ui, frame: &mut Frame, ui_state: &mut UIState) {
+    pub fn draw(
+        &mut self,
+        ui: &mut Ui,
+        frame: &mut Frame,
+        current_page_type: &mut PageType,
+        ui_state: &SharedState,
+    ) {
         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
             ui.style_mut().spacing.item_spacing = Vec2::ZERO;
             ui.add_space(12.0);
@@ -110,7 +131,7 @@ impl TitleBar {
             ui.add(Separator::default().shrink(12.0).spacing(0.0));
             ui.add_space(12.0);
             ui.label("SSSSSSSSSSSSSSSSSSS");
-            self.draw_menu(ui, frame, ui_state);
+            self.draw_menu(ui, frame, current_page_type, ui_state);
         });
     }
 }
@@ -128,7 +149,7 @@ impl TitleBarControlButton {
         }
     }
 
-    pub fn draw(&mut self, ui: &mut Ui, frame: &mut Frame, ui_state: &mut UIState) {
+    pub fn draw(&mut self, ui: &mut Ui, frame: &mut Frame, ui_state: &SharedState) {
         let (rect, response) = ui.allocate_exact_size(Vec2::splat(24.0), Sense::click());
 
         let hovered = response.hovered();
@@ -144,11 +165,11 @@ impl TitleBarControlButton {
 
         let (normal_color, hover_color) = match self.button_type {
             ControlButtonType::Min => (
-                ui_state.theme_color.neutral_400,
-                ui_state.theme_color.neutral_600,
+                ui_state.theme_color().neutral_400,
+                ui_state.theme_color().neutral_600,
             ),
             ControlButtonType::Close => (
-                ui_state.theme_color.neutral_400,
+                ui_state.theme_color().neutral_400,
                 Color32::from_rgb(211, 51, 40),
             ),
         };
@@ -180,71 +201,70 @@ impl TitleBarControlButton {
     }
 }
 
-pub struct TitleBarNavButton {
-    page_type: PageType,
-    foreground_anim_id: Id,
-    current_foreground_color: Color32,
-    target_foreground_color: Color32,
-    center_pos: Pos2,
+pub struct TitleBarNavButton<'a> {
+    view_id: ViewId,
+    text: &'a str,
+    fg_anim_id: Id,
+    current_fg_color: Color32,
+    target_fg_color: Color32,
 }
 
-impl TitleBarNavButton {
-    pub fn new(page_type: PageType) -> Self {
+impl<'a> TitleBarNavButton<'a> {
+    pub fn new(view_id: ViewId) -> Self {
         Self {
-            page_type,
-            foreground_anim_id: Id::new(uuid::Uuid::new_v4()),
-            current_foreground_color: Color32::TRANSPARENT,
-            target_foreground_color: Color32::TRANSPARENT,
-            center_pos: Pos2::ZERO,
+            view_id,
+            text: "",
+            fg_anim_id: Id::new(uuid::Uuid::new_v4()),
+            current_fg_color: Color32::TRANSPARENT,
+            target_fg_color: Color32::TRANSPARENT,
         }
     }
+}
 
-    pub fn draw(&mut self, ui: &mut Ui, ui_state: &mut UIState) {
-        let title = match self.page_type {
-            PageType::Device => "Device",
-            PageType::Lan => "LAN",
-            PageType::History => "History",
-            PageType::Settings => "Settings",
+impl<'a> StatefulWidget for TitleBarNavButton<'a> {
+    fn update_state(&mut self, shared_state: &SharedState) {
+        self.text = match self.view_id {
+            ViewId::Device => "Device",
+            ViewId::Lan => "LAN",
+            ViewId::History => "History",
+            ViewId::Settings => "Settings",
         };
 
+        let selected = self.view_id == shared_state.current_view_id();
+
+        self.target_fg_color = if selected {
+            shared_state.theme_color().neutral_900
+        } else if response.hovered() {
+            shared_state.theme_color().neutral_400
+        } else {
+            shared_state.theme_color().neutral_300
+        };
+    }
+
+    fn update_view(&self, ui: &mut Ui) -> Option<Response> {
         let galley = ui.painter().layout(
-            title.to_string(),
+            self.text.to_string(),
             FontId::proportional(18.0),
-            self.current_foreground_color,
+            self.current_fg_color,
             f32::INFINITY,
         );
 
         let (rect, response) = ui.allocate_at_least(galley.size(), Sense::click());
 
-        self.center_pos = rect.center();
-
         let foreground_anim_progress = ui.ctx().animate_bool_with_time(
-            self.foreground_anim_id,
-            !self
-                .current_foreground_color
-                .eq(&self.target_foreground_color),
+            self.fg_anim_id,
+            !self.current_fg_color.eq(&self.target_fg_color),
             0.3,
         );
 
-        let selected = ui_state.current_page_type.eq(&self.page_type);
-        let color = if selected {
-            ui_state.theme_color.neutral_900
-        } else if response.hovered() {
-            ui_state.theme_color.neutral_400
-        } else {
-            ui_state.theme_color.neutral_300
-        };
-
-        self.target_foreground_color = color;
-
-        if self.target_foreground_color != self.current_foreground_color {
+        if self.target_fg_color != self.current_fg_color {
             let current_color_array = interpolation::lerp(
-                &self.current_foreground_color.to_array(),
-                &self.target_foreground_color.to_array(),
+                &self.current_fg_color.to_array(),
+                &self.target_fg_color.to_array(),
                 &foreground_anim_progress.bounce_in(),
             );
 
-            self.current_foreground_color = Color32::from_rgba_premultiplied(
+            self.current_fg_color = Color32::from_rgba_premultiplied(
                 current_color_array[0],
                 current_color_array[1],
                 current_color_array[2],
@@ -256,12 +276,14 @@ impl TitleBarNavButton {
             pos: rect.min,
             galley,
             underline: Stroke::NONE,
-            override_text_color: Some(self.current_foreground_color),
+            override_text_color: Some(self.current_fg_color),
             angle: 0.0,
         });
 
         if response.on_hover_cursor(CursorIcon::PointingHand).clicked() {
-            ui_state.current_page_type = self.page_type.clone();
+            // todo : change view id
         }
+
+        Some(response)
     }
 }

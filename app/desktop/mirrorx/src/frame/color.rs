@@ -3,6 +3,7 @@
 
 use eframe::epaint::Color32;
 use once_cell::sync::Lazy;
+use std::rc::Rc;
 
 macro_rules! hex_color {
     ($color:literal) => {{
@@ -11,12 +12,14 @@ macro_rules! hex_color {
     }};
 }
 
+#[derive(Debug, Clone, Copy)]
 pub enum ThemeColorStyle {
     Light,
     Dark,
 }
 
 pub struct ThemeColor {
+    pub style: ThemeColorStyle,
     pub background_backdrop: Color32,
     pub background_body: Color32,
     pub background_level1: Color32,
@@ -236,7 +239,7 @@ pub struct ThemeColor {
 }
 
 impl ThemeColor {
-    pub fn select_style(style: &ThemeColorStyle) -> &'static ThemeColor {
+    pub fn select_style(style: ThemeColorStyle) -> &'static ThemeColor {
         match style {
             ThemeColorStyle::Light => &THEME_COLOR_LIGHT,
             ThemeColorStyle::Dark => &THEME_COLOR_DARK,
@@ -245,6 +248,7 @@ impl ThemeColor {
 }
 
 static THEME_COLOR_LIGHT: Lazy<ThemeColor> = Lazy::new(|| ThemeColor {
+    style: ThemeColorStyle::Light,
     background_backdrop: Color32::from_rgba_unmultiplied(255, 255, 255, 128),
     background_body: hex_color!("#FFFFFF"),
     background_level1: hex_color!("#F7F7F8"),
@@ -464,6 +468,7 @@ static THEME_COLOR_LIGHT: Lazy<ThemeColor> = Lazy::new(|| ThemeColor {
 });
 
 static THEME_COLOR_DARK: Lazy<ThemeColor> = Lazy::new(|| ThemeColor {
+    style: ThemeColorStyle::Dark,
     background_backdrop: Color32::from_rgba_unmultiplied(37, 37, 45, 128),
     background_body: hex_color!("#131318"),
     background_level1: hex_color!("#25252D"),

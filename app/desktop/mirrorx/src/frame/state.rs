@@ -1,88 +1,114 @@
-use std::{collections::VecDeque, time::Instant};
+use super::{
+    color::{ThemeColor, ThemeColorStyle},
+    view::ViewId,
+};
+use crossbeam::atomic::AtomicCell;
+use std::{
+    rc::Rc,
+    sync::{atomic::AtomicPtr, Arc},
+    time::Instant,
+};
+use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
 
-use once_cell::sync::{Lazy, OnceCell};
-use tokio::sync::mpsc::UnboundedReceiver;
-
-use super::color::{ThemeColor, ThemeColorStyle};
-
-pub enum UIEvent {}
-
-#[derive(Debug, Hash, PartialEq, Eq, Clone)]
-pub enum PageType {
-    Device,
-    Lan,
-    History,
-    Settings,
+pub enum UIEvent {
+    UpdateThemeColorStyle(ThemeColorStyle),
 }
 
-#[derive(Debug, Hash, PartialEq, Eq, Clone)]
-pub enum ConnectType {
-    Desktop,
-    Files,
+impl UIEvent {
+    pub fn name(&self) -> &str {
+        match self {
+            UIEvent::UpdateThemeColorStyle(_) => "UpdateThemeColorStyle",
+        }
+    }
 }
 
+#[derive(Clone)]
 pub enum MyDeviceType {
     Computer,
     Phone,
 }
 
+#[derive(Clone)]
 pub struct MyDevice {
     pub name: String,
     pub device_type: MyDeviceType,
     pub is_this_computer: bool,
 }
 
-pub struct UIState {
-    pub theme_color: &'static ThemeColor,
-    pub current_page_type: PageType,
-    pub connect_type: ConnectType,
-    pub peer_id: String,
-    pub peer_domain: String,
-    pub peer_connect_content: String,
-    pub use_totp_password: bool,
-    pub totp_password: String,
-    pub use_otp_password: bool,
-    pub otp_password: String,
-    pub use_permanent_password: bool,
-    pub permanent_password: String,
-    pub is_login: bool,
-    pub my_devices: Vec<MyDevice>,
-    pub login_email: String,
-    pub login_password: String,
-    pub notifications: NotificationHub,
+#[derive(Clone)]
+pub enum Peer {
+    Temporary {
+        id: u32,
+        domain: String,
+    },
+    Registered {
+        id: u32,
+        nickname: String,
+        domain: String,
+    },
 }
 
-impl UIState {
-    pub fn new() -> anyhow::Result<Self> {
-        Ok(Self {
-            theme_color: ThemeColor::select_style(&ThemeColorStyle::Light),
-            current_page_type: PageType::Device,
-            connect_type: ConnectType::Desktop,
-            peer_id: String::default(),
-            peer_domain: String::from("mirrorx.cloud"),
-            peer_connect_content: String::default(),
-            use_totp_password: true,
-            totp_password: String::from("ABCDEF"),
-            use_otp_password: true,
-            otp_password: String::from("ABCDEF"),
-            use_permanent_password: false,
-            is_login: false,
-            permanent_password: String::from("AABBVV"),
-            my_devices: Vec::new(),
-            login_email: String::default(),
-            login_password: String::default(),
-            notifications: NotificationHub::new(),
-        })
+pub struct SharedState {
+    tx: UnboundedSender<UIEvent>,
+    theme_color: &'static ThemeColor,
+    current_view_id: ViewId,
+    peer: Peer,
+    use_totp: bool,
+    totp: String,
+    use_otp: bool,
+    otp: String,
+    use_permanent_password: bool,
+    permanent_password: String,
+    my_devices: Vec<MyDevice>,
+    notifications: NotificationHub,
+}
+
+impl SharedState {
+    pub fn new(tx: UnboundedSender<UIEvent>) -> Self {
+        // Self {
+        //     tx,
+        //     theme_color: ThemeColor::select_style(&ThemeColorStyle::Light),
+
+        //     use_totp: true,
+        //     totp: String::from("ABCDEF"),
+        //     use_otp: true,
+        //     otp: String::from("ABCDEF"),
+        //     use_permanent_password: false,
+
+        //     permanent_password: String::from("AABBVV"),
+        //     my_devices: Vec::new(),
+
+        //     notifications: NotificationHub::new(),
+        // }
+        todo!()
+    }
+
+    pub fn theme_color(&self) -> &ThemeColor {
+        self.theme_color
+    }
+
+    pub fn set_theme_color(&self, theme_color_style: ThemeColorStyle) {
+        self.send_ui_event(UIEvent::UpdateThemeColorStyle(theme_color_style));
+    }
+
+    pub fn current_view_id(&self) -> ViewId {
+        self.current_view_id
+    }
+
+    pub fn send_ui_event(&self, event: UIEvent) {
+        if let Err(event) = self.tx.send(event) {
+            tracing::error!(name = event.0.name(), "send ui event failed");
+        }
     }
 }
 
-pub fn update_ui_state(ui_state: &mut UIState, ui_event_rx: &mut UnboundedReceiver<UIEvent>) {}
-
+#[derive(Clone)]
 pub struct Notification {
     pub content: String,
     pub ts: Instant,
 }
 
+#[derive(Clone)]
 pub struct NotificationHub {
     notifications: Vec<Notification>,
 }
@@ -116,4 +142,20 @@ impl NotificationHub {
 
         &self.notifications
     }
+}
+
+pub fn start_ui_event_processor(atomic_state: AtomicCell<SharedState>) {
+    let mut state = SharedState::default();
+    let (tx, rx) = unbounded_channel();
+    tokio::spawn(async move {
+        loop {
+            let Some(event) = rx.recv().await else {
+                tracing::info!("ui event processor exit");
+                return;
+            };
+
+            // update shared ui_event
+            atomic_state.swap(state.clone());
+        }
+    });
 }

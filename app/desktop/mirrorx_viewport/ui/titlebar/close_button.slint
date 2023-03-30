@@ -1,0 +1,32 @@
+import { Event } from "../global/event.slint";
+import { Theme } from "../global/theme.slint";
+
+export component CloseButton {
+    private property <image> closeImage : @image-url("../images/close_FILL0_wght700_GRAD0_opsz48.svg") ;
+
+    VerticalLayout { 
+        alignment: center;
+        HorizontalLayout { 
+            alignment: center;
+
+            Image {
+                width: 24px;
+                height: 24px;
+                colorize: area.has-hover ? Theme.palette.danger-500 : Theme.palette.neutral-plain-disabled-color;
+                source: closeImage;
+
+                animate colorize { 
+                    duration: 150ms;
+                    easing: ease-in-out;
+                }
+
+                area := TouchArea {
+                    clicked => { 
+                        Event.close-button-clicked();
+                    }
+                    mouse-cursor: pointer;
+                }
+            }
+        }
+    }
+}
