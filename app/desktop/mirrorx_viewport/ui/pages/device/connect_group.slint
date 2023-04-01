@@ -1,0 +1,280 @@
+import {Button} from "std-widgets.slint";
+import { HorizontalBox } from "std-widgets.slint";
+import { Theme } from "../../global/theme.slint";
+
+component ConnectResourceSwitch {
+    out property <bool> connect_desktop: true;
+
+    width: 72px;
+    height: 36px;
+
+    Rectangle {
+        x: connect-desktop ? 3px: 39px;
+        y: 3px;
+        border-radius: 2px;
+        width: 30px;
+        height: 30px;
+        background: connect-desktop ? Theme.palette.primary-500 : Theme.palette.success-500;
+        
+        animate x { 
+            duration: 150ms;
+            easing: ease-in-out;
+        }
+    }
+
+    HorizontalLayout {
+    
+        Rectangle { 
+            width: 36px;
+            height: 36px;
+
+            VerticalLayout { 
+                alignment: center;
+                HorizontalLayout { 
+                    alignment: center;
+
+                    Image {
+                        width: 21px;
+                        height: 21px;
+                        source: @image-url("../../images/computer_FILL0_wght700_GRAD0_opsz48.svg");
+                        colorize: root.connect-desktop ? Theme.palette.neutral-solid-color : Theme.palette.neutral-solid-disabled-color;
+                    
+                        animate colorize { 
+                            duration: 150ms;
+                            easing: ease-in-out;
+                        }
+                    }
+                }
+            }
+        }
+
+        Rectangle {
+            width: 36px;
+            height: 36px;
+
+            VerticalLayout { 
+                alignment: center;
+                HorizontalLayout { 
+                    alignment: center;
+                    
+                    Image {
+                        width: 21px;
+                        height: 21px;
+                        source: @image-url("../../images/folder_open_FILL0_wght700_GRAD0_opsz48.svg");
+                        colorize: !root.connect-desktop ? Theme.palette.neutral-solid-color : Theme.palette.neutral-solid-disabled-color;
+                    
+                        animate colorize { 
+                            duration: 150ms;
+                            easing: ease-in-out;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // divider between two images
+    Rectangle {
+        x: 35px;
+        width: 2px;
+        height: 20px;
+        border-width: 0px;
+        background: Theme.palette.divider;
+    }
+
+    // right divider
+    Rectangle {
+        x: 70px;
+        width: 2px;
+        border-width: 0px;
+        background: Theme.palette.divider;
+    }
+
+    area := TouchArea {
+        mouse-cursor: MouseCursor.pointer;
+        clicked => { 
+            connect-desktop = !connect-desktop;
+        }
+    }
+}
+
+component ConnectButton {
+    private property <color> normal_color: connect-desktop ? Theme.palette.primary-500: Theme.palette.success-500;
+    private property <color> hover_color: connect-desktop ? Theme.palette.primary-400: Theme.palette.success-400;
+    private property <color> active_color: connect-desktop ? Theme.palette.primary-600: Theme.palette.success-600;
+
+
+    in property <bool> connect_desktop;
+
+    width: 36px;
+    height: 36px;
+
+    VerticalLayout {
+        alignment: center;
+        HorizontalLayout { 
+            alignment: center;
+
+            Image {
+                width: 24px;
+                height: 24px;
+                source: @image-url("../../images/arrow_forward_FILL0_wght700_GRAD0_opsz48.svg");
+                colorize: area.pressed ? active-color : area.has-hover ? hover-color : normal-color;
+                
+                animate colorize { 
+                    duration: 150ms;
+                    easing: ease-in-out;
+                }
+            }
+        } 
+    }
+
+    area := TouchArea {
+        mouse-cursor: MouseCursor.pointer;
+    }
+}
+
+component DomainDropdown {
+    private property <image> expand_more_image : @image-url("../../images/expand_more_FILL0_wght400_GRAD0_opsz48.svg");
+    private property <image> expand_less_image : @image-url("../../images/expand_less_FILL0_wght400_GRAD0_opsz48.svg");
+    private property <color> color:area.pressed ? Theme.palette.text-tertiary : area.has-hover ? Theme.palette.text-secondary : Theme.palette.text-primary;
+    
+    in property <length> font_size;
+
+    height: 36px;
+
+    Rectangle { 
+        VerticalLayout {  
+            alignment: center;
+
+            HorizontalLayout { 
+                Text { 
+                    text: "#mirrorx.cloud";
+                    vertical-alignment: center;
+                    font-size: root.font-size;
+                    color: root.color;
+                
+                    animate color { 
+                        duration: 150ms;
+                        easing: ease-in-out;
+                    }
+                }
+
+                Image {
+                    width:24px;
+                    height: 24px;
+                    colorize: root.color;
+                    source: expand-less-image;
+
+                    animate colorize { 
+                        duration: 150ms;
+                        easing: ease-in-out;
+                    }
+                }
+            }
+        }
+
+        area := TouchArea {
+            mouse-cursor: MouseCursor.pointer;
+        }
+    }
+}
+
+// This widget was inspired by coop_widgets: https://codeberg.org/flovansl/co_sl
+
+component ConnectPeerIDEdit {
+    private property <length> computed_x;
+    private property <length> padding-outer: i_layout.padding-left + i_layout.padding-right;
+
+    in property <bool> enabled <=> i_input.enabled;
+    in-out property <string> text <=> i_input.text;
+
+    forward-focus: i_input;
+
+    i_container := Rectangle {
+        
+        i_layout := HorizontalLayout {  
+            padding_left: 8px;
+            spacing: 8px;
+     
+            Rectangle {  
+                min_width: 200px;
+                clip: true;
+    
+                i_input := TextInput {
+                    visible: true;
+                    x: min(0px, max(parent.width - self.width, root.computed_x));
+                    width: max(parent.width, self.preferred-width);
+                    height: 100%;
+                    color: Theme.palette.text-primary;
+                    vertical-alignment: center;
+                    font_size: 20px;
+        
+                    cursor-position-changed(cpos) => {
+                        if(cpos.x + root.computed_x < root.padding_outer) {
+                            root.computed_x = - cpos.x + root.padding_outer;
+                        } else if(cpos.x + root.computed_x > parent.width - root.padding_outer) {
+                            root.computed_x = parent.width - cpos.x - root.padding_outer;
+                        }
+                    }
+                } 
+    
+                Text {
+                    text <=> root.text;
+                    vertical-alignment: center;
+                    x: min(0px, max(parent.width - self.width, root.computed_x));
+                    width: max(parent.width, self.preferred-width);
+                    y: (parent.height - self.height) / 2;
+                    color: Theme.palette.text-primary;
+                    opacity: i_input.opacity;
+                    font_size: 20px;
+                }
+    
+                if (root.text == "") : Text {
+                    x: 0;
+                    text: "Peer ID";
+                    y: (parent.height - self.height) / 2;
+                    color: Theme.palette.text-secondary;
+                    opacity: i_input.opacity;
+                    font_size: 20px;
+                }
+            }
+    
+            DomainDropdown { 
+                font-size: 20px;
+            }
+        }
+    }
+
+    states [
+        disabled when !root.enabled: {
+            i_container.opacity: 155;
+            i_input.opacity: 155;
+        }
+    ]
+}
+
+export component ConnectGroup {
+    Rectangle { 
+       
+        clip: true;
+        border-radius: 4px;
+        border-color: Theme.palette.divider;
+        border-width: 2px;
+        background: Theme.palette.neutral-outlined-hover-bg;
+
+        HorizontalLayout { 
+            resource_switch := ConnectResourceSwitch {  }
+
+            ConnectPeerIDEdit {  }
+
+            Rectangle { 
+                width: 2px;
+                background: Theme.palette.divider;
+            }
+
+            ConnectButton { 
+                connect-desktop: resource-switch.connect-desktop;
+            }
+        }
+    }
+}

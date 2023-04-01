@@ -1,6 +1,7 @@
 import { Button, VerticalBox } from "std-widgets.slint";
 import { TitleBar } from "titlebar/titlebar.slint";
 import { Theme } from "global/theme.slint";
+import {DevicePage} from "pages/device/page.slint";
 
 export * from "global/global.slint";
 
@@ -21,7 +22,9 @@ export component App inherits Window {
 
         Rectangle {
             background: Theme.palette.background-body;
-            Text {
+            if titlebar.selected-tab == "devices" : DevicePage{}
+
+            if titlebar.selected-tab != "devices" : Text {
                 text: titlebar.selected-tab;
             }
         }

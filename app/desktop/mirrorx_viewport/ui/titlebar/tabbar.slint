@@ -18,7 +18,8 @@ component TabItem {
                 y: 28px;
                 width: selected ? parent.width * 0.6 : 0px;
                 height: 4px;
-                border-radius: 1.5px;
+                border-radius: 2px;
+                clip: true;
                 background: Theme.palette.primary-400;
                 
                 animate width { 
@@ -50,7 +51,7 @@ export component TabBar {
             alignment: start;
 
             TabItem { 
-                title: "我的设备";
+                title: "Devices";
                 selected: selected-tab == "devices";
                 clicked => { 
                     selected-tab = "devices";

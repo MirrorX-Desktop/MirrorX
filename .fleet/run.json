@@ -1,9 +1,0 @@
-{
-    "configurations": [
-        {
-            "type": "cargo",
-            "name": "run",
-            "cargoArgs": ["run","-p","mirrorx"],
-        },
-    ]
-}

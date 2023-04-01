@@ -1,9 +1,10 @@
 [workspace]
+resolver = "2"
 members = [
     # "app/desktop/mirrorx",
     "app/desktop/mirrorx_viewport",
-    "mirrorx_core",
-    "mirrorx_native",
+    # "mirrorx_core",
+    # "mirrorx_native",
 ]
 
 [profile.release]
