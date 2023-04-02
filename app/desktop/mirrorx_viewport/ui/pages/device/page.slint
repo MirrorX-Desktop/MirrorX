@@ -1,11 +1,14 @@
-import {Theme} from "../../global/theme.slint";
+import { Theme } from "../../global/theme.slint";
 import { HorizontalBox, Button, LineEdit } from "std-widgets.slint";
-import {ConnectGroup} from "connect_group.slint";
+import { ConnectGroup } from "connect_group.slint";
+import { AccountButton } from "account_button.slint";
+import { ConnectionStatus } from "connection_status.slint";
+import { CentralContent } from "central_content.slint";
 
 export component DevicePage {
     VerticalLayout { 
         Rectangle { 
-            
+            CentralContent {  }
         }
 
         Rectangle { 
@@ -19,38 +22,16 @@ export component DevicePage {
                 VerticalLayout {
                     alignment: center;
                     HorizontalLayout {
+                        alignment: start;
                         spacing: 16px;
+                 
+                        AccountButton {  }
 
-                        Image { 
-                            width: 24px;
-                            height: 24px;
-                            source: Theme.palette.is-light ? @image-url("../../images/github-mark.svg") : @image-url("../../images/github-mark-white.svg");
-                            
-                            TouchArea { 
-                                mouse-cursor: MouseCursor.pointer;
-                                clicked => { 
-                                    // open url
-                                }
-                            }
-                        }
-
-                        Image { 
-                            width: 24px;
-                            height: 24px;
-                            source: @image-url("../../images/signal_wifi_4_bar_FILL0_wght400_GRAD0_opsz48.svg");
-                            colorize: Theme.palette.text-primary;
-
-                            TouchArea { 
-                                mouse-cursor: MouseCursor.pointer;
-                                clicked => { 
-                                    // open url
-                                }
-                            }
-                        }
+                        ConnectionStatus {  }
                     }
                 }
-            
-            
+                
+
                 VerticalLayout {
                     alignment: center;
                     

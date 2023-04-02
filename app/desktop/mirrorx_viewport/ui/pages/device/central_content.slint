@@ -1,0 +1,305 @@
+import { Theme } from "../../global/theme.slint";
+import { ScrollView, Button } from "std-widgets.slint";
+import { ImageButton } from "../../common/image_button.slint";
+
+component AccountArea {
+    
+    HorizontalLayout { 
+        padding: 8px;
+        alignment: space-between;
+
+        Rectangle { 
+            HorizontalLayout { 
+                VerticalLayout { 
+                    VerticalLayout {           
+                        alignment: center;
+
+                        HorizontalLayout { 
+                            alignment: start;
+                            spacing: 4px;
+                            
+                            Text { 
+                                vertical-alignment: center;
+                                text: "ID";
+                                color: Theme.palette.text-primary;
+                                font-size: 16px;
+                            }
+
+                            Rectangle { 
+                                border-radius: 4px;
+                                background: Theme.palette.success-500;
+
+                                VerticalLayout { 
+                                    alignment: center;
+
+                                    Rectangle {
+                                        HorizontalLayout { 
+                                            padding-left: 4px;
+                                            padding-right: 4px;
+                                            spacing: 2px;
+
+                                            Text { 
+                                                text: "临时ID";
+                                                vertical-alignment: center;
+                                                color: Theme.palette.common-white;
+                                            }
+        
+                                            Image { 
+                                                width: 16px;
+                                                height: 16px;
+                                                source: @image-url("../../images/help_FILL0_wght400_GRAD0_opsz48.svg");
+                                                colorize: Theme.palette.common-white;
+                                            }
+                                        }  
+
+                                        popup := PopupWindow {                         
+                                            x: 0px; 
+                                            y: parent.height + 6px;
+
+                                            VerticalLayout {
+                                                Rectangle { 
+                                                    min-height: 1px;
+                                                    height: 100%;
+                                                    width: 100%;                                             
+                                                    border-radius: 4px;
+                                                    background: Theme.palette.neutral-solid-active-bg;
+                                                
+                                                    VerticalLayout {
+                                                        padding: 8px;
+                                                        height: 100%;
+                                                        width: 100%;
+
+                                                        Text {
+                                                            height: 100%;
+                                                            preferred-width: 300px;
+                                                            wrap: word-wrap;
+                                                            font-size: 14px;
+                                                            text: "临时ID是指在未登录时，由服务器随机分配的ID。客户端运行期间您可以一直占用该ID，但是在客户端关闭后该ID将被服务器回收，下次客户端启动时将会随机获得一个新的临时ID。";
+                                                            color: Theme.palette.neutral-solid-color;
+                                                        } 
+                                                    }
+                                                }
+                                            }
+                                        }
+
+                                        area := TouchArea { 
+                                            mouse-cursor: MouseCursor.help;
+                                            clicked => { 
+                                                popup.show();
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            Rectangle {
+                                border-radius: 4px;
+                                background: Theme.palette.primary-500;
+
+                                HorizontalLayout { 
+                                    padding-left: 4px;
+                                    padding-right: 4px;
+
+                                    Text { 
+                                        text: "2FA";
+                                        vertical-alignment: center;
+                                        color: Theme.palette.common-white;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    Text {
+                        vertical-stretch: 2;
+                        vertical-alignment: center;
+                        color: Theme.palette.text-primary;
+                        text: "15255263#mirrorx.cloud";
+                        font-size: 28px;
+                    }
+                }
+            }
+        }
+
+        Rectangle {
+            HorizontalLayout { 
+                VerticalLayout { 
+                    VerticalLayout {           
+                        alignment: center;
+
+                        HorizontalLayout { 
+                            spacing: 4px;
+                            
+                            Text { 
+                                vertical-alignment: center;
+                                text: "一次性密码";
+                                color: Theme.palette.text-primary;
+                                font-size: 16px;
+                            }
+    
+                            ImageButton {
+                                width: 20px;
+                                height: 20px;
+                                source: @image-url("../../images/help_FILL0_wght400_GRAD0_opsz48.svg");
+                                normal-color: Theme.palette.neutral-500;
+                                hover-color: Theme.palette.neutral-400;
+                                press-color: Theme.palette.neutral-600;
+                            }
+
+                            ImageButton {
+                                width: 20px;
+                                height: 20px;
+                                source: @image-url("../../images/refresh_FILL0_wght400_GRAD0_opsz48.svg");
+                                normal-color: Theme.palette.neutral-500;
+                                hover-color: Theme.palette.neutral-400;
+                                press-color: Theme.palette.neutral-600;
+                            }
+                        }
+                    }
+                    
+                    Text {
+                        vertical-stretch: 2;
+                        vertical-alignment: center;
+                        color: Theme.palette.text-primary;
+                        text: "KI0sm1";
+                        font-size: 28px;
+                    }
+                }
+            }
+        }
+    }
+}
+
+export component CentralContent {
+    VerticalLayout { 
+        alignment: center;
+        HorizontalLayout { 
+            alignment: center;
+            Rectangle { 
+                width: 90%;
+                height: 90%;
+
+                VerticalLayout { 
+                    spacing: 16px;
+                    Rectangle { 
+                        height: 80px;
+                        border-radius: 4px;
+                        background: Theme.palette.background-level2;
+                    
+                        AccountArea {  }
+                    }
+
+                    Rectangle { 
+                        vertical-stretch: 1;
+                        border-radius: 4px;
+                        background: Theme.palette.background-level2;
+                       
+                        VerticalLayout { 
+                            padding: 8px;
+                            spacing: 8px;
+                            HorizontalLayout { 
+                                alignment: space-between;
+
+                                Text { 
+                                    text: "Associated Devices";
+                                    font-size: 18px;
+                                    vertical-alignment: center;
+                                    color: Theme.palette.text-primary;
+                                }
+
+                                Text { 
+                                    text: "Reload";
+                                    font-size: 14px;
+                                    color: Theme.palette.primary-300;
+                                    vertical-alignment: center;
+                                }
+                            }
+
+                            Rectangle {
+                                background: Theme.palette.background-level3;
+                                border-radius: 4px;
+
+                                HorizontalLayout { 
+                                    padding-left: 24px;
+                                    padding-right: 24px;
+
+                                    Flickable {
+                                        HorizontalLayout { 
+                                            spacing: 24px;
+    
+                                            for d in [ 1,2,3,4,5,6,7 ]:VerticalLayout { 
+                                                alignment: center;
+    
+                                                Rectangle { 
+                                                    width: 186px;
+                                                    height: 256px;
+                                                    background: Theme.palette.background-level2;
+                                                    border-width: 1px;
+                                                    border-color: Theme.palette.divider;
+                                                    border-radius: 4px;
+
+
+                                                    VerticalLayout { 
+                                                        padding: 16px;
+
+                                                        Rectangle { 
+                                                            height: 130px;
+                                                            VerticalLayout { 
+                                                                alignment: center;
+                                                                HorizontalLayout { 
+                                                                    alignment: center;
+                                                                    Image {
+                                                                        width: 96px;
+                                                                        height: 96px;
+                                                                        source: @image-url("../../images/desktop_windows_FILL0_wght400_GRAD0_opsz48.svg");
+                                                                        colorize: Theme.palette.text-primary;
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+
+                                                        Rectangle { 
+                                                            VerticalLayout { 
+                                                                Text {
+                                                                    text: "DDDDDDDDDDABCdddddddddddddddddddddD-Computer";
+                                                                    overflow: elide;
+                                                                    font-size: 14px;
+                                                                    font-weight: 600;
+                                                                    vertical-alignment: center;
+                                                                    color: Theme.palette.text-primary;
+                                                                }
+        
+                                                                Text { 
+                                                                    text: "This computer";
+                                                                    color: Theme.palette.text-primary;
+                                                                    vertical-alignment: center;
+                                                                }
+                                                            }
+                                                        }
+                                                        
+                                                        Rectangle { 
+                                                            VerticalLayout { 
+                                                                alignment: center;
+                                                                HorizontalLayout { 
+                                                                    alignment: stretch;
+
+                                                                    Button { 
+                                                                        text: "Share";
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

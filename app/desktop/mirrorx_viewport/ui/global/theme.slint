@@ -442,10 +442,10 @@ export global Theme {
     private property <Palette> dark:{
         is_light: false,
         background_backdrop: rgba(37, 37, 45, 128),
-        background_body: #131318,
-        background_level1: #25252D,
-        background_level2: #434356,
-        background_level3: #5A5A72,
+        background_body: #232427, //#131318
+        background_level1: #2F3135, //#25252D,
+        background_level2: #2A2B2F, // #434356
+        background_level3: #1F2023, //#5A5A72,
         background_popup: #25252D,
         background_surface: #09090D,
         background_tooltip: #5A5A72,
@@ -659,7 +659,7 @@ export global Theme {
         warning_solid_hover_bg: #BF8700,
     };
 
-    out property <Palette> palette: light;
+    out property <Palette> palette: dark;
 
     public function change_palette(use_light:bool) {
         if (use_light) {

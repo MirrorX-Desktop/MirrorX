@@ -1,0 +1,24 @@
+export component ImageButton {
+    in property <image> source;
+    in property <color> normal_color;
+    in property <color> hover_color;
+    in property <color> press_color;
+
+    callback clicked <=> area.clicked;
+
+    Image {
+        width: 100%;
+        height: 100%;
+        source <=> root.source;
+        colorize: area.pressed ? press-color : area.has-hover ? hover-color : normal-color;
+
+        animate colorize { 
+            duration: 150ms;
+            easing: ease-in-out;
+        }
+    }
+
+    area := TouchArea {
+        mouse-cursor: MouseCursor.pointer;
+    }
+}

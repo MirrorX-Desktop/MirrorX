@@ -11,7 +11,7 @@ component TabItem {
         Text {
             font-size: 20px;
             text: title;
-            color: selected ? Theme.palette.text-primary : area.has-hover ? Theme.palette.neutral-plain-hover-color : Theme.palette.neutral-plain-disabled-color;
+            color: selected ? Theme.palette.text-primary : area.has-hover ? Theme.palette.text-secondary : Theme.palette.text-tertiary;
             vertical-alignment: center;
 
             Rectangle {
@@ -51,7 +51,7 @@ export component TabBar {
             alignment: start;
 
             TabItem { 
-                title: "Devices";
+                title: "设备";
                 selected: selected-tab == "devices";
                 clicked => { 
                     selected-tab = "devices";
