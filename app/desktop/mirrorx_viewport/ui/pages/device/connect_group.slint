@@ -4,13 +4,13 @@ import { Theme } from "../../global/theme.slint";
 component ConnectResourceSwitch {
     out property <bool> connect_desktop: true;
 
-    width: 72px;
+    width: 70px; // 36px * 2 - 3px (stack part) + 1 (right divider)
     height: 36px;
 
     Rectangle {
-        x: connect-desktop ? 3px: 39px;
+        x: connect-desktop ? 3px: 33px;
         y: 3px;
-        border-radius: 2px;
+        border-radius: 3px;
         width: 30px;
         height: 30px;
         background: connect-desktop ? Theme.palette.primary-500 : Theme.palette.success-500;
@@ -21,70 +21,62 @@ component ConnectResourceSwitch {
         }
     }
 
-    HorizontalLayout {
-    
-        Rectangle { 
-            width: 36px;
-            height: 36px;
-
-            VerticalLayout { 
-                alignment: center;
-                HorizontalLayout { 
-                    alignment: center;
-
-                    Image {
-                        width: 21px;
-                        height: 21px;
-                        source: @image-url("../../images/computer_FILL0_wght700_GRAD0_opsz48.svg");
-                        colorize: root.connect-desktop ? Theme.palette.neutral-solid-color : Theme.palette.neutral-solid-disabled-color;
-                    
-                        animate colorize { 
-                            duration: 150ms;
-                            easing: ease-in-out;
-                        }
-                    }
-                }
-            }
-        }
-
-        Rectangle {
-            width: 36px;
-            height: 36px;
-
-            VerticalLayout { 
-                alignment: center;
-                HorizontalLayout { 
-                    alignment: center;
-                    
-                    Image {
-                        width: 21px;
-                        height: 21px;
-                        source: @image-url("../../images/folder_open_FILL0_wght700_GRAD0_opsz48.svg");
-                        colorize: !root.connect-desktop ? Theme.palette.neutral-solid-color : Theme.palette.neutral-solid-disabled-color;
-                    
-                        animate colorize { 
-                            duration: 150ms;
-                            easing: ease-in-out;
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    // divider between two images
     Rectangle {
-        x: 35px;
-        width: 2px;
-        height: 20px;
-        border-width: 0px;
-        background: Theme.palette.divider;
+        x: 0px;
+        width: 36px;
+        height: 36px;
+
+        VerticalLayout { 
+            alignment: center;
+            HorizontalLayout { 
+                alignment: center;
+
+                Image {
+                    width: 21px;
+                    height: 21px;
+                    source: @image-url("../../images/dvr_FILL0_wght400_GRAD0_opsz48.svg");
+                    colorize: root.connect-desktop ? Theme.palette.neutral-solid-color : Theme.palette.neutral-solid-disabled-color;
+                
+                    animate colorize { 
+                        duration: 150ms;
+                        easing: ease-in-out;
+                    }
+                }
+            }
+        }
     }
+
+    Rectangle {
+        x: 30px;
+        width: 36px;
+        height: 36px;
+
+        VerticalLayout { 
+            alignment: center;
+            HorizontalLayout { 
+                alignment: center;
+                
+                Image {
+                    width: 21px;
+                    height: 21px;
+                    source: @image-url("../../images/folder_FILL0_wght400_GRAD0_opsz48.svg");
+                    colorize: !root.connect-desktop ? Theme.palette.neutral-solid-color : Theme.palette.neutral-solid-disabled-color;
+                
+                    animate colorize { 
+                        duration: 150ms;
+                        easing: ease-in-out;
+                    }
+                }
+            }
+        }
+    }
+    
 
     // right divider
     Rectangle {
-        x: 70px;
-        width: 2px;
+        x: 66px;
+        width: 1px;
+        height: 26px;
         border-width: 0px;
         background: Theme.palette.divider;
     }
@@ -234,7 +226,7 @@ component ConnectPeerIDEdit {
                     y: (parent.height - self.height) / 2;
                     color: Theme.palette.text-secondary;
                     opacity: i_input.opacity;
-                    font_size: 20px;
+                    font_size: 16px;
                 }
             }
     
@@ -257,17 +249,20 @@ export component ConnectGroup {
        
         clip: true;
         border-radius: 4px;
-        border-color: Theme.palette.divider;
-        border-width: 2px;
-        background: Theme.palette.neutral-outlined-hover-bg;
+        // border-color: Theme.palette.divider;
+        // border-width: 2px;
+        background: Theme.palette.background-level3;
 
         HorizontalLayout { 
-            resource_switch := ConnectResourceSwitch {  }
+            resource_switch := ConnectResourceSwitch { }
 
-            ConnectPeerIDEdit {  }
+            ConnectPeerIDEdit { }
 
-            Rectangle { 
-                width: 2px;
+            Rectangle {
+                y: 5px;
+                width: 1px;
+                height: 26px;
+                border-width: 0px;
                 background: Theme.palette.divider;
             }
 

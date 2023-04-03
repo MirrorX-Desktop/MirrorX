@@ -1,7 +1,7 @@
 slint::include_modules!();
 
 fn main() {
-    let ui = App::new();
+    let ui = App::new().unwrap();
 
     let ui_handle = ui.as_weak();
     ui.global::<Event>().on_close_button_clicked(move || {
