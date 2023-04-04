@@ -1,3 +1,3 @@
-pub mod frame;
+slint::include_modules!();
 
-rust_i18n::i18n!("locales");
+pub mod app;
