@@ -12,28 +12,23 @@ export component App inherits Window {
     no-frame: true;
     default-font-family: "Microsoft YaHei UI";
     background: Theme.palette.background-level1;
-
     callback init_app();
-
     init => {
         init-app();
     }
-
     VerticalLayout {
-        
-        Rectangle {  
+        Rectangle {
             height: 48px;
-            titlebar := TitleBar {}
+            titlebar := TitleBar { }
         }
 
         Rectangle {
-           
             background: Theme.palette.background-body;
-            if titlebar.selected-tab == "devices" : DevicePage {}
+            if titlebar.selected-tab == "devices": DevicePage { }
 
-            if titlebar.selected-tab != "devices" : Text {
+            if titlebar.selected-tab != "devices": Text {
                 text: titlebar.selected-tab;
             }
         }
-     }
+    }
 }

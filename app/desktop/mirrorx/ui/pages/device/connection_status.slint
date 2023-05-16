@@ -3,14 +3,12 @@ import { Theme } from "../../global/theme.slint";
 export component ConnectionStatus {
     width: 24px;
     height: 24px;
-
-    Image { 
+    Image {
         width: 100%;
         height: 100%;
         source: @image-url("../../images/signal_wifi_4_bar_FILL0_wght400_GRAD0_opsz48.svg");
         colorize: Theme.palette.text-primary;
-
-        TouchArea { 
+        TouchArea {
             mouse-cursor: MouseCursor.pointer;
             clicked => { 
                 // open url

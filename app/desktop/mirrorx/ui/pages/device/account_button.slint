@@ -3,19 +3,17 @@ import { Theme } from "../../global/theme.slint";
 export component AccountButton {
     width: 24px;
     height: 24px;
-
-    Image { 
+    Image {
         width: 100%;
         height: 100%;
         source: @image-url("../../images/account_circle_FILL0_wght400_GRAD0_opsz48.svg");
-        colorize: area.pressed ? Theme.palette.text-tertiary : area.has-hover ? Theme.palette.text-secondary : Theme.palette.text-primary;
-
-        animate colorize { 
+        colorize: area.pressed? Theme.palette.text-tertiary: area.has-hover? Theme.palette.text-secondary: Theme.palette.text-primary;
+        animate colorize{ 
             duration: 150ms;
-            easing: ease-in-out;
+        easing: ease-in-out;
         }
 
-        area := TouchArea { 
+        area := TouchArea {
             mouse-cursor: MouseCursor.pointer;
             clicked => { 
                 // open url

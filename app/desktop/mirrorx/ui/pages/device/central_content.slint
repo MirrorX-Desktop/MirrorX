@@ -4,72 +4,62 @@ import { ImageButton } from "../../common/image_button.slint";
 
 component AccountArea {
     width: 100%;
-    
-    HorizontalLayout { 
+    HorizontalLayout {
         padding: 8px;
         alignment: space-between;
-
-        Rectangle { 
-            HorizontalLayout { 
-                VerticalLayout { 
-                    VerticalLayout {           
+        Rectangle {
+            HorizontalLayout {
+                VerticalLayout {
+                    VerticalLayout {
                         alignment: center;
-
-                        HorizontalLayout { 
+                        HorizontalLayout {
                             alignment: start;
                             spacing: 4px;
-                            
-                            Text { 
+                            Text {
                                 vertical-alignment: center;
                                 text: "ID";
                                 color: Theme.palette.text-primary;
                                 font-size: 16px;
                             }
 
-                            Rectangle { 
+                            Rectangle {
                                 border-radius: 4px;
                                 background: Theme.palette.success-500;
-
-                                VerticalLayout { 
+                                VerticalLayout {
                                     alignment: center;
-
                                     Rectangle {
-                                        HorizontalLayout { 
+                                        HorizontalLayout {
                                             padding-left: 4px;
                                             padding-right: 4px;
                                             spacing: 2px;
-
-                                            Text { 
+                                            Text {
                                                 text: "临时ID";
                                                 vertical-alignment: center;
                                                 color: Theme.palette.common-white;
                                             }
-        
-                                            Image { 
+
+                                            Image {
                                                 width: 16px;
                                                 height: 16px;
                                                 source: @image-url("../../images/help_FILL0_wght400_GRAD0_opsz48.svg");
                                                 colorize: Theme.palette.common-white;
                                             }
-                                        }  
+                                        }
 
-                                        popup := PopupWindow {                         
-                                            x: 0px; 
+                                        popup := PopupWindow {
+                                            x: 0px;
                                             y: parent.height + 6px;
-
                                             VerticalLayout {
-                                                Rectangle { 
+                                                Rectangle {
                                                     min-height: 1px;
                                                     height: 100%;
-                                                    width: 100%;                                             
+                                                    width: 100%;
                                                     border-radius: 4px;
                                                     background: Theme.palette.neutral-solid-active-bg;
-                                                
                                                     VerticalLayout {
                                                         padding: 8px;
                                                         height: 100%;
                                                         width: 100%;
-
                                                         Text {
                                                             height: 100%;
                                                             preferred-width: 300px;
@@ -77,13 +67,13 @@ component AccountArea {
                                                             font-size: 14px;
                                                             text: "临时ID是指在未登录时，由服务器随机分配的ID。客户端运行期间您可以一直占用该ID，但是在客户端关闭后该ID将被服务器回收，下次客户端启动时将会随机获得一个新的临时ID。";
                                                             color: Theme.palette.neutral-solid-color;
-                                                        } 
+                                                        }
                                                     }
                                                 }
                                             }
                                         }
 
-                                        area := TouchArea { 
+                                        area := TouchArea {
                                             mouse-cursor: MouseCursor.help;
                                             clicked => { 
                                                 popup.show();
@@ -96,12 +86,10 @@ component AccountArea {
                             Rectangle {
                                 border-radius: 4px;
                                 background: Theme.palette.primary-500;
-
-                                HorizontalLayout { 
+                                HorizontalLayout {
                                     padding-left: 4px;
                                     padding-right: 4px;
-
-                                    Text { 
+                                    Text {
                                         text: "2FA";
                                         vertical-alignment: center;
                                         color: Theme.palette.common-white;
@@ -110,7 +98,7 @@ component AccountArea {
                             }
                         }
                     }
-                    
+
                     Text {
                         vertical-stretch: 2;
                         vertical-alignment: center;
@@ -123,21 +111,19 @@ component AccountArea {
         }
 
         Rectangle {
-            HorizontalLayout { 
-                VerticalLayout { 
-                    VerticalLayout {           
+            HorizontalLayout {
+                VerticalLayout {
+                    VerticalLayout {
                         alignment: center;
-
-                        HorizontalLayout { 
+                        HorizontalLayout {
                             spacing: 4px;
-                            
-                            Text { 
+                            Text {
                                 vertical-alignment: center;
                                 text: "一次性密码";
                                 color: Theme.palette.text-primary;
                                 font-size: 16px;
                             }
-    
+
                             ImageButton {
                                 width: 20px;
                                 height: 20px;
@@ -157,7 +143,7 @@ component AccountArea {
                             }
                         }
                     }
-                    
+
                     Text {
                         vertical-stretch: 2;
                         vertical-alignment: center;
@@ -174,44 +160,39 @@ component AccountArea {
 export component CentralContent {
     width: 100%;
     height: 100%;
-
-    VerticalLayout { 
+    VerticalLayout {
         alignment: center;
-        HorizontalLayout { 
+        HorizontalLayout {
             alignment: center;
-            Rectangle { 
+            Rectangle {
                 width: 90%;
                 height: 90%;
-
-                VerticalLayout { 
+                VerticalLayout {
                     spacing: 16px;
-                    Rectangle { 
+                    Rectangle {
                         height: 80px;
                         border-radius: 4px;
                         background: Theme.palette.background-level2;
-                    
-                        AccountArea {  }
+                        AccountArea { }
                     }
 
-                    Rectangle { 
+                    Rectangle {
                         vertical-stretch: 1;
                         border-radius: 4px;
                         background: Theme.palette.background-level2;
-                       
-                        VerticalLayout { 
+                        VerticalLayout {
                             padding: 8px;
                             spacing: 8px;
-                            HorizontalLayout { 
+                            HorizontalLayout {
                                 alignment: space-between;
-
-                                Text { 
+                                Text {
                                     text: "Associated Devices";
                                     font-size: 18px;
                                     vertical-alignment: center;
                                     color: Theme.palette.text-primary;
                                 }
 
-                                Text { 
+                                Text {
                                     text: "Reload";
                                     font-size: 14px;
                                     color: Theme.palette.primary-300;
@@ -222,35 +203,28 @@ export component CentralContent {
                             Rectangle {
                                 background: Theme.palette.background-level3;
                                 border-radius: 4px;
-
-                                HorizontalLayout { 
+                                HorizontalLayout {
                                     padding-left: 24px;
                                     padding-right: 24px;
-
                                     Flickable {
-                                        HorizontalLayout { 
+                                        HorizontalLayout {
                                             spacing: 24px;
-    
-                                            for d in [ 1,2,3,4,5,6,7 ]:VerticalLayout { 
+                                            for d in [1, 2, 3, 4, 5, 6, 7]: VerticalLayout {
                                                 alignment: center;
-    
-                                                Rectangle { 
+                                                Rectangle {
                                                     width: 186px;
                                                     height: 256px;
                                                     background: Theme.palette.background-level2;
                                                     border-width: 1px;
                                                     border-color: Theme.palette.divider;
                                                     border-radius: 4px;
-
-
-                                                    VerticalLayout { 
+                                                    VerticalLayout {
                                                         padding: 16px;
-
-                                                        Rectangle { 
+                                                        Rectangle {
                                                             height: 130px;
-                                                            VerticalLayout { 
+                                                            VerticalLayout {
                                                                 alignment: center;
-                                                                HorizontalLayout { 
+                                                                HorizontalLayout {
                                                                     alignment: center;
                                                                     Image {
                                                                         width: 96px;
@@ -262,8 +236,8 @@ export component CentralContent {
                                                             }
                                                         }
 
-                                                        Rectangle { 
-                                                            VerticalLayout { 
+                                                        Rectangle {
+                                                            VerticalLayout {
                                                                 Text {
                                                                     text: "DDDDDDDDDDABCdddddddddddddddddddddD-Computer";
                                                                     overflow: elide;
@@ -272,22 +246,21 @@ export component CentralContent {
                                                                     vertical-alignment: center;
                                                                     color: Theme.palette.text-primary;
                                                                 }
-        
-                                                                Text { 
+
+                                                                Text {
                                                                     text: "This computer";
                                                                     color: Theme.palette.text-primary;
                                                                     vertical-alignment: center;
                                                                 }
                                                             }
                                                         }
-                                                        
-                                                        Rectangle { 
-                                                            VerticalLayout { 
-                                                                alignment: center;
-                                                                HorizontalLayout { 
-                                                                    alignment: stretch;
 
-                                                                    Button { 
+                                                        Rectangle {
+                                                            VerticalLayout {
+                                                                alignment: center;
+                                                                HorizontalLayout {
+                                                                    alignment: stretch;
+                                                                    Button {
                                                                         text: "Share";
                                                                     }
                                                                 }

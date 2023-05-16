@@ -6,30 +6,26 @@ import { TabBar } from "tabbar.slint";
 import { Theme } from "../global/theme.slint";
 
 export component TitleBar {
-    out property <string> selected-tab <=> tabbar.selected-tab;
-    private property <image> mirrorxLightImage : @image-url("../images/mirrorx_light.png");
-    private property <image> mirrorxDarkImage : @image-url("../images/mirrorx_dark.png");
-
+    out property <string> selected-tab<=> tabbar.selected-tab;
+    private property <image> mirrorxLightImage: @image-url("../images/mirrorx_light.png");
+    private property <image> mirrorxDarkImage: @image-url("../images/mirrorx_dark.png");
     width: 100%;
-
     HorizontalLayout {
-        
-        Rectangle { 
+        Rectangle {
             width: 150px;
             VerticalLayout {
                 alignment: center;
                 padding-left: 12px;
-    
                 Image {
                     width: 100px;
-                    source: Theme.palette.is-light ? mirrorxLightImage : mirrorxDarkImage;
+                    source: Theme.palette.is-light? mirrorxLightImage: mirrorxDarkImage;
                 }
             }
         }
 
-        Rectangle { 
+        Rectangle {
             horizontal-stretch: 2;
-            area := TouchArea { 
+            area := TouchArea {
                 moved => {
                     Event.drag-window(area.mouse-x - area.pressed-x, area.mouse-y - area.pressed-y);
                 }
@@ -37,14 +33,12 @@ export component TitleBar {
 
             HorizontalLayout {
                 alignment: center;
-                
                 tabbar := TabBar { }
             }
         }
 
-        Rectangle { 
+        Rectangle {
             width: 150px;
-
             HorizontalLayout {
                 padding-right: 12px;
                 padding-top: 12px;
@@ -52,6 +46,7 @@ export component TitleBar {
                 alignment: end;
                 spacing: 6px;
                 MinButton { }
+
                 CloseButton { }
             }
         }

@@ -438,7 +438,6 @@ export global Theme {
         warning_solid_disabled_color: #EAC54F,
         warning_solid_hover_bg: #D4A72C,
     };
-
     private property <Palette> dark:{
         is_light: false,
         background_backdrop: rgba(37, 37, 45, 128),
@@ -658,14 +657,13 @@ export global Theme {
         warning_solid_disabled_color: #633C01,
         warning_solid_hover_bg: #BF8700,
     };
-
     out property <Palette> palette: light;
-
     public function change_palette(use_light:bool) {
-        if (use_light) {
-            palette = light;
-        } else {
-            palette = dark;
+        if (use_light){
+            palette= light;
+        } else{
+            palette= dark;
         }
     }
+
 }
